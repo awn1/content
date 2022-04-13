@@ -1,0 +1,30 @@
+default:
+  image: docker-io.art.code.pan.run/devdemisto/gitlab-content-ci:1.0.0.27109
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - /builds/xsoar/content/artifacts/*
+    when: always
+
+stages:
+  - build
+
+# include:
+#   - local: .gitlab/ci/global.yml
+
+run-build:
+  tags:
+    - gce
+  needs: []
+  stage: build
+  services:
+    - name: docker.art.code.pan.run/build-tools--image-dind:20.10.12-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
+    - docker build server-image-build -t test/server-image-build
+    - ./server-image-build/run.sh

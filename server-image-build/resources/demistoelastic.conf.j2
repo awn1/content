@@ -1,0 +1,36 @@
+{
+        "Server": {
+                "HttpsPort": "443",
+                "externalEntities": "audit, incident, configuration"
+        },
+        "container": {
+                "engine": {
+                        "type": "{{ container_engine_type }}"
+                }
+        },
+        "elasticsearch": {
+            "aggregations": {
+                "optimize": true
+            },
+            "defaultReplicasPerIndex": 0,
+            "defaultShardsPerIndex": 1,
+            "enabled": true,
+            "indexPrefix": "prefix",
+            "maxResultWindow": 10000,
+            "proxy": false,
+            "refreshIntervals": {
+                "*": "1s"
+            },
+            "refreshOnBulkInsert": true,
+            "responseHeaderTimeoutSeconds": 30,
+            "url": "http://127.0.0.1:9200"
+	    },
+        "version.control.enabled": false,
+        "reputation.calc.algorithm.manual": 3,
+        "reputation.calc.algorithm.tasks": 3,
+        "log.level": "debug",
+        "log.rolling.backups": 15,
+        "content.install.always.sync": true,
+        "password.policy.default.Enabled": false,
+        "marketplace.content.useragent.product": "XSOAR Server Dev Test Build"
+}

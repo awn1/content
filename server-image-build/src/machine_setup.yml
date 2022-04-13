@@ -1,0 +1,64 @@
+- name: get network info
+  gcp_compute_network_info:
+    project: "{{ gcp_project }}"
+    filters:
+    - name = "{{ network_type }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ xsoar_content_build_creds }}"
+  register: network
+
+- name: validate network
+  assert: 
+    that: network.resources|length == 1
+    fail_msg: found "{{ network.resources }}" as network should be 1
+    quiet: quiet_mode
+
+- set_fact:
+    network: "{{ network.resources[0] }}"
+
+
+- name: get subnetwork info
+  gcp_compute_subnetwork_info:
+    project: "{{ gcp_project }}"
+    region: "{{ inctance_region }}"
+    filters:
+    - name = "{{ subnetwork_type }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ xsoar_content_build_creds }}"
+  register: subnetwork
+
+- name: validate subnetwork
+  assert: 
+    that: subnetwork.resources|length == 1
+    fail_msg: found "{{ subnetwork.resources }}" as subnetwork should be 1
+    quiet: quiet_mode
+
+- set_fact:
+    subnetwork: "{{ subnetwork.resources[0] }}"
+
+
+- name: create an instance
+  gcp_compute_instance:
+    disks:
+    - auto_delete: 'true'
+      boot: 'true'
+      initialize_params:
+        source_image: "{{ disk_image }}"
+    network_interfaces:
+    - network: "{{ network }}"
+      subnetwork: "{{ subnetwork }}"
+    name: "{{ base_instance_name }}"
+    machine_type: e2-highcpu-4
+    tags:
+      items:
+      - us-central1
+      - https-server
+    zone: "{{ instance_zone }}"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ xsoar_content_build_creds }}"
+    state: present
+
+- name: Pause for 1 minutes
+  pause:
+    minutes: 1

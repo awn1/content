@@ -1,0 +1,110 @@
+- name: Create temporary file
+  tempfile:
+    state: file
+  register: google_service_account_credentials
+
+- name: Copy service Account file
+  copy:
+    src: "{{ gcp_serevr_storage_cred_file }}"
+    dest: "{{ google_service_account_credentials.path }}"
+    force: yes
+    mode: 0755
+  become: yes
+
+- name: Authenticate to Gcloud.
+  shell: "gcloud auth activate-service-account --key-file {{ google_service_account_credentials.path }}"
+  become: yes
+
+- name: delete GCP service account file
+  file:
+    path: "{{ google_service_account_credentials.path }}"
+    state: absent
+  become: yes
+
+- name: Download Demisto Server From GCS bucket
+  shell: "gsutil cp gs://xsoar-ci-artifacts-server/{{ gcs_url }} {{ download_dir }}/demisto.sh"
+  become: yes
+
+- name: Revoke Gcloud service account
+  shell: "gcloud auth revoke --all"
+  become: yes
+
+- name: Changing perm of Demisto installer
+  file:
+    dest: "{{ download_dir }}/demisto.sh"
+    mode: +x
+  become_user: 'root'
+  become: yes
+
+- name: add demisto uesr
+  user:
+    name: demisto
+
+- name: Create A Home Directory For Demisto User
+  file:
+    path: /home/demisto
+    state: directory
+    owner: demisto
+    group: demisto
+    mode: 0775
+  become: yes
+
+- name: Run Installer.
+  shell: echo "samba-common samba-common/dhcp boolean false" | debconf-set-selections
+  become: yes
+
+- name: Run Installer.
+  shell: "{{ download_dir }}/demisto.sh -- -y -do-not-start-server"
+  become: yes
+
+- name: Create Marketplace License file
+  template:
+    src: /server-image-build/resources/demisto.lic.j2
+    dest: /usr/local/demisto/demisto.lic
+    owner: demisto
+    group: demisto
+    force: yes
+  become: yes
+
+- name: Create OTC file
+  template:
+    src: /server-image-build/resources/otc.conf.json.j2
+    dest: /var/lib/demisto/otc.conf.json
+    owner: demisto
+    group: demisto
+    force: yes
+  become: yes
+
+# - name: Create conf file with elastic search DB
+#   template:
+#     src: demistoelastic.conf.j2
+#     dest: /etc/demisto.conf
+#     owner: demisto
+#     group: demisto
+#     force: yes
+#   become: yes
+
+- name: Create conf file with bolt DB
+  template:
+    src: /server-image-build/resources/demisto.conf.j2
+    dest: /etc/demisto.conf
+    owner: demisto
+    group: demisto
+    force: yes
+  become: yes
+
+# - name: Copy ID RSA file
+#   template:
+#     src: id_rsa_f5256ae5ac4b84fb60541482f1e96cf9.j2
+#     dest: /home/gcp-user/id_rsa_f5256ae5ac4b84fb60541482f1e96cf9
+#     owner: gcp-user
+#     force: yes
+#     mode: 0400
+#   become: yes
+
+- name: Start Demisto Server
+  systemd:
+    name: demisto
+    enabled: yes
+    state: started
+  become: yes

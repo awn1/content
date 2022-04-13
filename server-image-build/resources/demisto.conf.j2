@@ -1,0 +1,18 @@
+{
+        "Server": {
+                "HttpsPort": "443"
+        },
+        "container": {
+                "engine": {
+                        "type": "{{ container_engine_type }}"
+                }
+        },
+        "version.control.enabled": false,
+        "reputation.calc.algorithm.manual": 3,
+        "reputation.calc.algorithm.tasks": 3,
+        "log.level": "debug",
+        "log.rolling.backups": 15,
+        "content.install.always.sync": true,
+        "password.policy.default.Enabled": false,
+        "marketplace.content.useragent.product": "XSOAR Server Dev Test Build"
+}

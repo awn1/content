@@ -1,0 +1,88 @@
+- name: 'deploy gcp vm'
+  hosts: localhost
+  connection: local
+  become: false
+  gather_facts: no
+  vars: 
+    xsoar_content_build_creds: /server-image-build/secrets/xsoar_content_build_creds
+    gcp_cred_kind: "serviceaccount"
+    gcp_project: "xsoar-content-build"
+    instance_zone: us-central1-a
+    inctance_region: us-central1
+    base_instance_name: "{{ lookup('env', 'BASE_INSTANCE_NAME') }}"
+  
+  tasks:
+
+  - import_tasks: machine_setup.yml
+    vars:
+      disk_image: projects/debian-cloud/global/images/debian-10-buster-v20220406
+      disk_name: base-xsoar-build-centos-disk
+      create_disk: yes
+      network_type: internal
+      subnetwork_type: internal
+
+  - name: login with gcloud
+    shell: "gcloud auth activate-service-account --key-file {{ xsoar_content_build_creds }}"
+
+  - name: tunnle command
+    shell: "gcloud compute start-iap-tunnel {{ base_instance_name }} 22 --local-host-port=localhost:4477 --zone={{ instance_zone }} --project={{ gcp_project }}"
+    async: 100000
+    poll: 0
+    register: tunnel_job
+
+  - name: Pause for 1 minutes
+    pause:
+      minutes: 1
+
+  - add_host:
+      hostname: gcp_vm
+      ansible_connection: ssh
+      ansible_ssh_port: 4477
+      ansible_ssh_host: localhost
+      ansible_ssh_user: gitlab-ami-build
+      ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+      ansible_ssh_private_key_file: /server-image-build/secrets/ssh_key
+
+
+- name: install server
+  hosts: gcp_vm
+  become: true
+  vars:
+    xsoar_content_build_creds: /server-image-build/secrets/xsoar_content_build_creds
+    download_dir: /temp
+    adminpass: "{{ lookup('env', 'XSOAR_ADMIN_PASS') }}"
+    gcp_serevr_storage_cred_file: /server-image-build/secrets/xsoar_server_storage_creds
+    gcs_url: "{{ lookup('env', 'GCS_URL') }}"
+  tasks:
+  - import_tasks: machine_installation.yml
+
+  - import_tasks: server_installation.yml
+    vars:
+      xsoar_server_storage_creds_store_path: /home/gcp-user/xsoar_server_storage_creds.json
+      xsoar_server_storage_creds: /server-image-build/secrets/xsoar_server_storage_creds
+      gcs_url: "{{ lookup('env', 'GCS_URL') }}"
+      container_engine_type: docker
+
+
+- name: new host
+  hosts: localhost
+  vars:
+    xsoar_content_build_creds: /server-image-build/secrets/xsoar_content_build_creds
+    gcp_cred_kind: "serviceaccount"
+    gcp_project: "xsoar-content-build"
+    instance_zone: us-central1-a
+    inctance_region: us-central1
+    server_img_name: "{{ lookup('env', 'SERVER_IMG_NAME') }}"
+    base_instance_name: "{{ lookup('env', 'BASE_INSTANCE_NAME') }}"
+
+  tasks:
+  - name: Wait for asynchronous job to end
+    async_status:
+      jid: '{{ tunnel_job.ansible_job_id }}'
+      mode: cleanup
+
+  - name: Create image
+    shell: "gcloud beta compute machine-images create {{ server_img_name }} --project={{ gcp_project }} --source-instance={{ base_instance_name }} --source-instance-zone={{ instance_zone }} --storage-location={{ inctance_region }} --quiet"
+  - name: Delete inctanse
+    shell: "gcloud compute instances delete {{ base_instance_name }} --project={{ gcp_project }} --zone={{ instance_zone }} --quiet"
+

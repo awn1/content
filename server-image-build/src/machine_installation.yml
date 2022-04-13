@@ -1,0 +1,139 @@
+- name: Create temp dir
+  file:
+    path: "{{ download_dir }}"
+    state: directory
+    mode: 0755
+  become: yes
+
+- name: Adding no-proxy env variable to all processes for RHEL AMI's
+  lineinfile:
+    path: /etc/environment
+    line: 'no_proxy=.docker.io,.docker.com,storage.googleapis.com,xsoar-registry.pan.dev,xsoar-registry-dev.web.app'
+  become: yes
+
+- name: update all packages installed on the system
+  apt:
+    name:
+      - "*"
+    state: latest
+    force_apt_get: true
+    autoclean: true
+  become: true
+
+- name: install docker and python installation dependencies
+  apt:
+    name:
+      - docker
+      - gcc
+      - make
+      - openssl
+      - zlib1g-dev
+      - build-essential
+      - libncurses5-dev
+      - libgdbm-dev
+      - libnss3-dev
+      - libssl-dev
+      - libreadline-dev
+      - libffi-dev
+      - libsqlite3-dev
+      - libbz2-dev
+    state: latest
+    autoclean: true
+  become: true
+
+- name: Install python3
+  shell:
+    executable: /bin/bash
+    cmd: |
+      set -e
+      PYTHON_VERSION="3.10.4"
+      curl "https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz" -s -o "Python-$PYTHON_VERSION.tgz"
+      tar -xf Python-$PYTHON_VERSION.tgz
+      rm -rf Python-$PYTHON_VERSION.tgz
+      pushd "Python-$PYTHON_VERSION"
+      ./configure --enable-optimizations
+      make -j $(nproc)
+      sudo make altinstall
+      popd
+      rm -rf "Python-$PYTHON_VERSION"
+      if [ "$(python3.10 --version)" != "Python $PYTHON_VERSION" ]
+      then
+        echo "$(python3.10 --version) is installed expected Python $PYTHON_VERSION." > /dev/stderr
+        exit 1
+      fi
+  become: true
+
+- name: remove unneccery python installation dependencies
+  apt:
+    name:
+      - gcc
+      - make
+      - zlib1g-dev
+      - build-essential
+      - libncurses5-dev
+      - libgdbm-dev
+      - libnss3-dev
+      - libssl-dev
+      - libreadline-dev
+      - libffi-dev
+      - libsqlite3-dev
+      - libbz2-dev
+    state: absent
+    autoclean: true
+  become: true
+
+- name: configure pip
+  copy:
+    src: /server-image-build/pip.conf
+    dest: /etc/pip.conf
+    mode: 0755
+    force: yes
+
+- name: Install proxy
+  shell: |
+    python3.10 -m pip install --user pipx
+    python3.10 -m pipx ensurepath
+    . ~/.profile
+    pipx install mitmproxy
+    pipx inject mitmproxy dateparser MarkupSafe==2.0.1
+  become: true
+
+- name: Create mitmdump service
+  template:
+    src: /server-image-build/resources/mitmdump_systemd_file.service
+    dest: /lib/systemd/system/mitmdump.service
+    owner: root
+    mode: 0600
+    force: yes
+  become: yes
+
+- name: Create mitmdump executable file
+  template:
+    src: /server-image-build/resources/mitmproxy_starter.sh
+    dest: /home/gcp-user/mitmproxy_starter.sh
+    owner: root
+    mode: 0111
+    force: yes
+  become: yes
+
+# - name: Create startup executable file
+#   template:
+#     src: startup_script.sh.j2
+#     dest: "{{ startup_script }}"
+#     owner: root
+#     mode: 0700
+#     force: yes
+#   become: yes
+
+- name: Create gitconfig file
+  template:
+    src: /server-image-build/resources/gitconfig.j2
+    dest: /home/gcp-user/.gitconfig
+    owner: gcp-user
+    group: gcp-user
+    force: yes
+  become: yes
+
+# - name: Run Elastic Search Docker Container
+#   shell: docker run --name elastic-7.16.2 -d -p 9200:9200 -p 9300:9300 -e 'discovery.type=single-node' docker.elastic.co/elasticsearch/elasticsearch:7.16.2
+
