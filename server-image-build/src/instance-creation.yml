@@ -10,7 +10,8 @@
     instance_zone: us-central1-a
     inctance_region: us-central1
     base_instance_name: "{{ lookup('env', 'BASE_INSTANCE_NAME') }}"
-  
+    ci_running: "{{ lookup('env', 'CI') }}"
+
   tasks:
 
   - import_tasks: machine_setup.yml
@@ -29,20 +30,33 @@
     async: 100000
     poll: 0
     register: tunnel_job
+    when: ci_running is undefined or not ci_running | bool
 
   - name: Pause for 1 minutes
     pause:
       minutes: 1
+    when: ci_running is undefined or not ci_running | bool
+
+  - name: ssh key permittions change
+    shell: chmod 400 /server-image-build/secrets/ssh_key
+    become: true
 
   - add_host:
       hostname: gcp_vm
-      ansible_connection: ssh
       ansible_ssh_port: 4477
       ansible_ssh_host: localhost
-      ansible_ssh_user: gitlab-ami-build
+      ansible_ssh_user: gcp-user
       ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
       ansible_ssh_private_key_file: /server-image-build/secrets/ssh_key
+    when: ci_running is undefined or not ci_running | bool
 
+  - add_host:
+      hostname: gcp_vm
+      ansible_ssh_host: "{{ instance.networkInterfaces[0].networkIP }}"
+      ansible_ssh_user: gcp-user
+      ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+      ansible_ssh_private_key_file: /server-image-build/secrets/ssh_key
+    when: ci_running is defined and ci_running | bool
 
 - name: install server
   hosts: gcp_vm
@@ -74,12 +88,14 @@
     inctance_region: us-central1
     server_img_name: "{{ lookup('env', 'SERVER_IMG_NAME') }}"
     base_instance_name: "{{ lookup('env', 'BASE_INSTANCE_NAME') }}"
+    ci_running: "{{ lookup('env', 'CI') }}"
 
   tasks:
   - name: Wait for asynchronous job to end
     async_status:
-      jid: '{{ tunnel_job.ansible_job_id }}'
+      jid: "{{ tunnel_job.ansible_job_id }}"
       mode: cleanup
+    when: tunnel_job is defined and tunnel_job.ansible_job_id is defined
 
   - name: Create image
     shell: "gcloud beta compute machine-images create {{ server_img_name }} --project={{ gcp_project }} --source-instance={{ base_instance_name }} --source-instance-zone={{ instance_zone }} --storage-location={{ inctance_region }} --quiet"

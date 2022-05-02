@@ -27,4 +27,7 @@ run-build:
   script:
     - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
     - docker build server-image-build -t test/server-image-build
+    - export BASE_INSTANCE_NAME="test-instance-name"
+    - export GCS_URL="server/master-1849641/0/demistoserver-6.5-1849641.sh"
+    - export SERVER_IMG_NAME="test-image-name"
     - ./server-image-build/run.sh
