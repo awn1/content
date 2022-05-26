@@ -1,9 +1,11 @@
 from typing import Iterator, Optional
 from google.oauth2.service_account import Credentials
 from google.cloud import compute_v1
+import re
 
 
 CREDS = None
+ZONE_PATERN = r"^https:\/\/www\.googleapis\.com\/compute\/v\d\/projects\/[a-z\-]+\/zones\/(?P<zone>[a-z\-\d]+)\/instances\/[a-z\-\d]+$"
 
 
 def creds(creds_file: Optional[str] = None):
@@ -45,7 +47,7 @@ class Instance:
         Instance.instance_client.insert(
             request=compute_v1.InsertInstanceRequest(
                 project=creds().project_id,
-                zone=iamge.zone,
+                zone=re.iamge.zone,
                 source_machine_image=iamge.self_link,
                 instance_resource=compute_v1.types.Instance(
                     name=instance_name
