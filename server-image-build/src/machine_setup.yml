@@ -66,6 +66,6 @@
       shutdown-script: "{{lookup('file', '/server-image-build/resources/shutdown_script.sh') }}"
   register: instance
 
-- name: Pause for 1 minutes
+- name: wait for the instance to start
   pause:
     minutes: 1
