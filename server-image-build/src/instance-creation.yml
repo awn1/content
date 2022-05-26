@@ -16,11 +16,12 @@
 
   - import_tasks: machine_setup.yml
     vars:
-      disk_image: projects/debian-cloud/global/images/debian-10-buster-v20220406
-      disk_name: base-xsoar-build-centos-disk
+      disk_image: projects/debian-cloud/global/images/debian-11-bullseye-v20220519
+      disk_name: base-xsoar-build-debian-disk
       create_disk: yes
       network_type: internal
       subnetwork_type: internal
+      instance_service_account:  gitlab-ami-build@xsoar-content-build.iam.gserviceaccount.com
 
   - name: login with gcloud
     shell: "gcloud auth activate-service-account --key-file {{ xsoar_content_build_creds }}"
@@ -66,7 +67,7 @@
     download_dir: /temp
     adminpass: "{{ lookup('env', 'XSOAR_ADMIN_PASS') }}"
     gcp_serevr_storage_cred_file: /server-image-build/secrets/xsoar_server_storage_creds
-    gcs_url: "{{ lookup('env', 'GCS_URL') }}"
+    gcs_url: "{{ lookup('env', 'INSTALLER_URL') }}"
   tasks:
   - import_tasks: machine_installation.yml
 
@@ -74,7 +75,7 @@
     vars:
       xsoar_server_storage_creds_store_path: /home/gcp-user/xsoar_server_storage_creds.json
       xsoar_server_storage_creds: /server-image-build/secrets/xsoar_server_storage_creds
-      gcs_url: "{{ lookup('env', 'GCS_URL') }}"
+      gcs_url: "{{ lookup('env', 'INSTALLER_URL') }}"
       container_engine_type: docker
 
 

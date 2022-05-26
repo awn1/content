@@ -11,6 +11,10 @@
     line: 'no_proxy=.docker.io,.docker.com,storage.googleapis.com,xsoar-registry.pan.dev,xsoar-registry-dev.web.app'
   become: yes
 
+- name: adding docker repo to apt
+  script: /server-image-build/resources/add_docker_repo.sh
+  become: true
+
 - name: update all packages installed on the system
   apt:
     name:
@@ -23,63 +27,14 @@
 - name: install docker and python installation dependencies
   apt:
     name:
-      - docker
-      - gcc
-      - make
-      - openssl
-      - zlib1g-dev
-      - build-essential
-      - libncurses5-dev
-      - libgdbm-dev
-      - libnss3-dev
-      - libssl-dev
-      - libreadline-dev
-      - libffi-dev
-      - libsqlite3-dev
-      - libbz2-dev
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+      - python3
+      - python3-pip
+      - python3-venv
     state: latest
-    autoclean: true
-  become: true
-
-- name: Install python3
-  shell:
-    executable: /bin/bash
-    cmd: |
-      set -e
-      PYTHON_VERSION="3.10.4"
-      curl "https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz" -s -o "Python-$PYTHON_VERSION.tgz"
-      tar -xf Python-$PYTHON_VERSION.tgz
-      rm -rf Python-$PYTHON_VERSION.tgz
-      pushd "Python-$PYTHON_VERSION"
-      ./configure --enable-optimizations
-      make -j $(nproc)
-      sudo make altinstall
-      popd
-      rm -rf "Python-$PYTHON_VERSION"
-      if [ "$(python3.10 --version)" != "Python $PYTHON_VERSION" ]
-      then
-        echo "$(python3.10 --version) is installed expected Python $PYTHON_VERSION." > /dev/stderr
-        exit 1
-      fi
-  become: true
-
-- name: remove unneccery python installation dependencies
-  apt:
-    name:
-      - gcc
-      - make
-      - zlib1g-dev
-      - build-essential
-      - libncurses5-dev
-      - libgdbm-dev
-      - libnss3-dev
-      - libssl-dev
-      - libreadline-dev
-      - libffi-dev
-      - libsqlite3-dev
-      - libbz2-dev
-    state: absent
-    autoclean: true
   become: true
 
 - name: configure pip
@@ -90,12 +45,7 @@
     force: yes
 
 - name: Install proxy
-  shell: |
-    python3.10 -m pip install --user pipx
-    python3.10 -m pipx ensurepath
-    . ~/.profile
-    pipx install mitmproxy
-    pipx inject mitmproxy dateparser MarkupSafe==2.0.1
+  script: /server-image-build/resources/install_proxy.sh
   become: true
 
 - name: Create mitmdump service

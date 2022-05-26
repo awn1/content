@@ -58,6 +58,12 @@
     auth_kind: "{{ gcp_cred_kind }}"
     service_account_file: "{{ xsoar_content_build_creds }}"
     state: present
+    service_accounts:
+    - email: "{{ instance_service_account }}"
+      scopes:
+      - https://www.googleapis.com/auth/compute
+    metadata:
+      shutdown-script: "{{lookup('file', '/server-image-build/resources/shutdown_script.sh') }}"
   register: instance
 
 - name: Pause for 1 minutes

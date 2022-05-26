@@ -22,11 +22,11 @@
   become: yes
 
 - name: Download Demisto Server From GCS bucket
-  shell: "gsutil cp gs://xsoar-ci-artifacts-server/{{ gcs_url }} {{ download_dir }}/demisto.sh"
+  shell: "gsutil cp gs://{{ gcs_url }} {{ download_dir }}/demisto.sh"
   become: yes
 
 - name: Revoke Gcloud service account
-  shell: "gcloud auth revoke --all"
+  shell: "gcloud auth revoke --all || echo 'expected failure'"
   become: yes
 
 - name: Changing perm of Demisto installer
@@ -49,7 +49,7 @@
     mode: 0775
   become: yes
 
-- name: Run Installer.
+- name: samba-common pre config
   shell: echo "samba-common samba-common/dhcp boolean false" | debconf-set-selections
   become: yes
 
@@ -93,18 +93,13 @@
     force: yes
   become: yes
 
-# - name: Copy ID RSA file
-#   template:
-#     src: id_rsa_f5256ae5ac4b84fb60541482f1e96cf9.j2
-#     dest: /home/gcp-user/id_rsa_f5256ae5ac4b84fb60541482f1e96cf9
-#     owner: gcp-user
-#     force: yes
-#     mode: 0400
-#   become: yes
-
 - name: Start Demisto Server
   systemd:
     name: demisto
     enabled: yes
     state: started
   become: yes
+
+- name: wait for server startup
+  pause:
+    minutes: 5
