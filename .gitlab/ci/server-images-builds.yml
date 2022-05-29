@@ -35,7 +35,7 @@
 
 .config-pip:
   before_script:
-    - cp server-image-build/pip.conf 
+    - cp .gitlab/ci/ci_resources/pip.conf /etc/pip.conf
 
 Build-Server-Master-Image-job:
   stage: build-server-images
@@ -108,6 +108,7 @@ Delete-Server-Images:
   needs: []
   extends:
     - .delete-server-images-schedule-rule # put in comment for testing
+    - .config-pip
   script:
     - cd gcp
     - pipenv sync || (python3 -m pip install pipenv && pipenv sync)
