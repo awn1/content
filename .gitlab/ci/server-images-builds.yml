@@ -103,7 +103,7 @@ Delete-Server-Images:
   stage: delete-server-images
   needs: []
   extendes:
-    - .delete-server-images-schedule-rule
+    - .delete-server-images-schedule-rule # put in comment for testing
   script:
     - cd gcp
     - pipenv sync || (python3 -m pip install pipenv && pipenv sync)
