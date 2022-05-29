@@ -18,7 +18,7 @@
   rules:
     - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_SERVER_GA_IMAGE == "true"'
 
-.delete-images-schedule-rule:
+.delete-server-images-schedule-rule:
   rules:
     - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $DELETE_SERVER_IMAGES == "true"'
 
@@ -102,7 +102,7 @@ Build-Server-6.2-Image-job:
 Delete-Server-Images:
   stage: delete-server-images
   needs: []
-  extendes:
+  extends:
     - .delete-server-images-schedule-rule # put in comment for testing
   script:
     - cd gcp
