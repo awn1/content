@@ -33,6 +33,10 @@
     DOCKER_DRIVER: overlay2
     DOCKER_TLS_CERTDIR: ""
 
+.config-pip:
+  before_script:
+    - cp server-image-build/pip.conf 
+
 Build-Server-Master-Image-job:
   stage: build-server-images
   needs: []
