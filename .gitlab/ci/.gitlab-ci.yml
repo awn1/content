@@ -3,6 +3,7 @@ default:
 
 stages:
   - build-server-images
+  - delete-server-images
 
 include:
   - local: .gitlab/ci/server-images-builds.yml

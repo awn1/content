@@ -1,0 +1,164 @@
+{
+  "Private-Content-Build": [
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    }
+  ],
+  "Bucket-Upload": [
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server 6.8",
+      "imagefilter": "ga-6-8",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server 6.6",
+      "imagefilter": "ga-6-6",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server 6.5",
+      "imagefilter": "ga-6-5",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server 6.2",
+      "imagefilter": "ga-6-2",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    }
+  ],
+  "Content-Env": [
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server 6.8",
+      "imagefilter": "ga-6-8",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server 6.6",
+      "imagefilter": "ga-6-6",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server 6.5",
+      "imagefilter": "ga-6-5",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server 6.2",
+      "imagefilter": "ga-6-2",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    }
+  ],
+  "Content-Master": [
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    }
+  ],
+  "Server Master": [
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    }
+  ],
+  "Nightly": [
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    }
+  ]
+}

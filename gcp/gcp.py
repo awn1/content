@@ -5,18 +5,29 @@ import re
 
 
 CREDS = None
-ZONE_PATERN = r"^https:\/\/www\.googleapis\.com\/compute\/v\d\/projects\/[a-z\-]+\/zones\/(?P<zone>[a-z\-\d]+)\/instances\/[a-z\-\d]+$"
+ZONE_PATERN = re.compile(
+    r"^https:\/\/www\.googleapis\.com\/compute\/v\d\/projects\/[a-z\-]+\/zones\/(?P<zone>[a-z\-\d]+)\/instances\/[a-z\-\d]+$"
+)
+
+
+def get_image_zone(image: compute_v1.MachineImage) -> str:
+    return re.match(
+        ZONE_PATERN, image.source_instance).group('zone')
 
 
 def creds(creds_file: Optional[str] = None):
     global CREDS
-    if CREDS is None and creds_file is None:
+    if CREDS is None and creds_file is not None:
         CREDS = Credentials.from_service_account_file(creds_file)
+        Images.images_client = compute_v1.MachineImagesClient(
+            credentials=CREDS)
+        Instance.instance_client = compute_v1.InstancesClient(
+            credentials=CREDS)
     return CREDS
 
 
 class Images:
-    images_client = compute_v1.MachineImagesClient(creds())
+    images_client = None
 
     @staticmethod
     def images_for_server_version(version: str) -> Iterator[compute_v1.MachineImage]:
@@ -33,24 +44,36 @@ class Images:
         return latest
 
     @staticmethod
-    def delete_images(version: str, from_date: str):
-        for image in Images.images_for_server_version(version):
-            if Images.creation_timestamp < from_date:
-                Images.images_client.delete(image)
+    def delete(version: str, amount: int):
+        images_to_delete = list(
+            Images.images_for_server_version(version))[amount:]
+        for image in images_to_delete:
+            Images.images_client.delete(
+                machine_image=image.name,
+                project=creds().project_id
+            )
 
 
 class Instance:
-    instance_client = compute_v1.InstancesClient(creds())
+    instance_client = None
 
-    @staticmethod
-    def create(instance_name: str, iamge: compute_v1.MachineImage):
+    @ staticmethod
+    def create(instance_name: str, image: compute_v1.MachineImage):
         Instance.instance_client.insert(
             request=compute_v1.InsertInstanceRequest(
                 project=creds().project_id,
-                zone=re.iamge.zone,
-                source_machine_image=iamge.self_link,
+                zone=get_image_zone(image),
+                source_machine_image=image.self_link,
                 instance_resource=compute_v1.types.Instance(
                     name=instance_name
                 )
             )
+        )
+
+    @staticmethod
+    def describe(instance_name: str, instance_zone: str):
+        return Instance.instance_client.get(
+            instance=instance_name,
+            project=creds().project_id,
+            zone=instance_zone
         )
