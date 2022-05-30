@@ -39,7 +39,7 @@
 
 - name: configure pip
   copy:
-    src: /server-image-build/pip.conf
+    src: /server-image-build/ci_resources/pip.conf
     dest: /etc/pip.conf
     mode: 0755
     force: yes
