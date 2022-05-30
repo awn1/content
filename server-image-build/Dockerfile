@@ -2,13 +2,13 @@ FROM demisto/python3:3.10.4.27798
 
 
 # Network setup
-COPY crt_files/ /usr/local/share/ca-certificates
+COPY ci_resources/crt_files/ /usr/local/share/ca-certificates
 RUN sed -i -e 's|https://dl-cdn\.alpinelinux\.org|https://art.code.pan.run/artifactory/alpine|g' /etc/apk/repositories
 RUN apk add --no-cache --update ca-certificates-cacert
 RUN /usr/sbin/update-ca-certificates
 RUN apk update
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-COPY pip.conf pip.conf
+COPY ci_resources/pip.conf pip.conf
 
 # Install OpenSSH
 RUN mkdir .ssh && apk --update add --no-cache openssh
