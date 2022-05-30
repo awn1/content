@@ -117,7 +117,7 @@ Delete-Server-Images:
     - .config-pip
   script:
     - cd gcp
-    - pipenv sync || (python3 -m pip install pipenv && pipenv sync)
+    - pipenv sync || (python3 -m pip --upgrade pip && python3 -m pip install pipenv && pipenv sync)
     - python3 ./delete_old_images.py --server-version "master" --images-to-reserve 20 --creds $XSOAR_CONTENT_BUILD_CREDS
     - python3 ./delete_old_images.py --server-version "ga-6-8" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
     - python3 ./delete_old_images.py --server-version "ga-6-6" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
