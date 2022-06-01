@@ -64,6 +64,7 @@
       - https://www.googleapis.com/auth/compute
     metadata:
       shutdown-script: "{{lookup('file', '/server-image-build/resources/shutdown_script.sh') }}"
+      startup-script: "sudo shutdown +300"
   register: instance
 
 - name: wait for the instance to start
