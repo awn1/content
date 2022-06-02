@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import Iterator, Optional
 from google.oauth2.service_account import Credentials
 from google.cloud import compute_v1
@@ -5,14 +6,6 @@ import re
 
 
 CREDS = None
-ZONE_PATERN = re.compile(
-    r"^https:\/\/www\.googleapis\.com\/compute\/v\d\/projects\/[a-z\-]+\/zones\/(?P<zone>[a-z\-\d]+)\/instances\/[a-z\-\d]+$"
-)
-
-
-def get_image_zone(image: compute_v1.MachineImage) -> str:
-    return re.match(
-        ZONE_PATERN, image.source_instance).group('zone')
 
 
 def creds(creds_file: Optional[str] = None):
@@ -29,6 +22,16 @@ def creds(creds_file: Optional[str] = None):
 class Images:
     images_client = None
 
+    zone_patern = re.compile(
+        r"^https:\/\/www\.googleapis\.com\/compute\/v\d\/projects\/[a-z\-]+\/zones\/(?P<zone>[a-z\-\d]+)\/instances\/[a-z\-\d]+$"
+    )
+
+    @staticmethod
+    def get_image_zone(image: compute_v1.MachineImage) -> str:
+        return re.match(
+            Images.zone_patern, image.source_instance).group('zone')
+
+    @lru_cache
     @staticmethod
     def images_for_server_version(version: str) -> Iterator[compute_v1.MachineImage]:
         return Images.images_client.list(
@@ -57,12 +60,12 @@ class Images:
 class Instance:
     instance_client = None
 
-    @ staticmethod
+    @staticmethod
     def create(instance_name: str, image: compute_v1.MachineImage):
         Instance.instance_client.insert(
             request=compute_v1.InsertInstanceRequest(
                 project=creds().project_id,
-                zone=get_image_zone(image),
+                zone=Images.get_image_zone(image),
                 source_machine_image=image.self_link,
                 instance_resource=compute_v1.types.Instance(
                     name=instance_name
