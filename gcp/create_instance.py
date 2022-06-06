@@ -39,7 +39,7 @@ def options_handler():
     return parser.parse_args()
 
 
-def instance_config(env_type: str, instancesconfig_file_path: str = '/Users/esharf/dev/demisto/infra/gcp/instancesconfig.json') -> Dict[str, str]:
+def instance_config(env_type: str, instancesconfig_file_path: str = './gcp/instancesconfig.json') -> Dict[str, str]:
     with open(instancesconfig_file_path, 'r') as inst_config:
         try:
             return json.load(inst_config)[env_type]
