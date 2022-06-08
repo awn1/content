@@ -27,6 +27,7 @@
 - name: install docker and python installation dependencies
   apt:
     name:
+      - lsof
       - docker-ce
       - docker-ce-cli
       - containerd.io
