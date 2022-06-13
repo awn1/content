@@ -65,7 +65,7 @@ def create_instances(inst_config):
     for i, instance in enumerate(inst_config):
         version = instance['imagefilter']
         role = instance['role']
-        instance_name = f'{version}-{i}-{pipline_id}'
+        instance_name = f'{version}-{pipline_id}-{i}'
         latest_image = Images.get_latest_image(instance['imagefilter'])
         logging.info(
             f"creating instance '{instance_name}' for role '{role}' using image '{latest_image.name}'")
