@@ -100,6 +100,11 @@
     state: started
   become: yes
 
+- name: prevent shutdown
+  shell: "sudo shutdown -c"
+  become: yes
+
 - name: wait for server startup
-  pause:
-    minutes: 5
+  shell: "wget https://localhost/health --no-check-certificate -O/dev/null"
+  retries: 15
+  delay: 20
