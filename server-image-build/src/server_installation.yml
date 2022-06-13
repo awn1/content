@@ -106,5 +106,7 @@
 
 - name: wait for server startup
   shell: "curl https://localhost/health -kf"
+  register: server_available
+  until: server_available is not failed
   retries: 15
   delay: 20
