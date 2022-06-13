@@ -105,6 +105,6 @@
   become: yes
 
 - name: wait for server startup
-  shell: "wget https://localhost/health --no-check-certificate -O/dev/null"
+  shell: "curl https://localhost/health -kf"
   retries: 15
   delay: 20
