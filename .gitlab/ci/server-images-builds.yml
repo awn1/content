@@ -16,9 +16,9 @@
   - *build-docker-image
   - ./server-image-build/run.sh
 
-.build-server-master-images-schedule-rule:
+.build-server-dev-images-schedule-rule:
   rules:
-    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_SERVER_MASTER_IMAGE == "true"'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_SERVER_DEV_IMAGE == "true"'
 
 .build-server-ga-images-schedule-rule:
   rules:
@@ -32,7 +32,7 @@
   tags:
     - gce
   services:
-    - name: docker.art.code.pan.run/build-tools--image-dind:20.10.12-dind
+    - name: docker.art.code.pan.run/build-tools--image-dind:latest
       alias: docker
   variables:
     DOCKER_HOST: tcp://docker:2375
@@ -43,17 +43,17 @@
   before_script:
     - cp .gitlab/ci/ci_resources/pip.conf /etc/pip.conf
 
-Build-Server-Master-Image-job:
+Build-Server-Dev-Image-job:
   stage: build-server-images
   needs: []
   extends:
-    - .build-server-master-images-schedule-rule # put in comment for testing
+    - .build-server-dev-images-schedule-rule # put in comment for testing
     - .docker-job
   script:
     - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
     - export VERSION="master"
-    - export LAST_SUCCESS_BUILD_PATH=$(gsutil ls -d "gs://xsoar-ci-artifacts-server-dev/server/master-???????/0/ci_status_success" | tail -n 1 | grep -o -E "gs://xsoar-ci-artifacts-server-dev/server/master-[0-9]+/0")
-    - export INSTALLER_URL="xsoar-ci-artifacts-server-dev/$(gsutil ls -d "$LAST_SUCCESS_BUILD_PATH/demistoserver-*.sh" | grep -o -E "server/master-[0-9]+/0/demistoserver-[0-9.-]+\.sh")"
+    - export LAST_SUCCESS_BUILD_PATH=$(gsutil ls -d "gs://xsoar-ci-artifacts-server/server/dev-6-??????/0/ci_status_success" | tail -n 1 | grep -o -E "gs://xsoar-ci-artifacts-server-/server/dev-6-[0-9]+/0")
+    - export INSTALLER_URL="xsoar-ci-artifacts-server/$(gsutil ls -d "$LAST_SUCCESS_BUILD_PATH/demistoserver-*.sh" | grep -o -E "server/dev-6-[0-9]+/0/demistoserver-[0-9.-]+\.sh")"
     - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
