@@ -44,6 +44,7 @@
       boot: 'true'
       initialize_params:
         source_image: "{{ disk_image }}"
+        disk_size_gb: 50
     network_interfaces:
     - network: "{{ network }}"
       subnetwork: "{{ subnetwork }}"
