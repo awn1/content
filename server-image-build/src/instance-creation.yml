@@ -21,7 +21,7 @@
       create_disk: yes
       network_type: internal
       subnetwork_type: internal
-      instance_service_account:  gitlab-ami-build@xsoar-content-build.iam.gserviceaccount.com
+      instance_service_account:  vm-instance-service-account@xsoar-content-build.iam.gserviceaccount.com
 
   - name: login with gcloud
     shell: "gcloud auth activate-service-account --key-file {{ xsoar_content_build_creds }}"
