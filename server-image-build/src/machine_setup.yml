@@ -44,12 +44,12 @@
       boot: 'true'
       initialize_params:
         source_image: "{{ disk_image }}"
-        disk_size_gb: 50
+        disk_size_gb: 500
     network_interfaces:
     - network: "{{ network }}"
       subnetwork: "{{ subnetwork }}"
     name: "{{ base_instance_name }}"
-    machine_type: e2-highcpu-4
+    machine_type: e2-standard-8
     tags:
       items:
       - us-central1
