@@ -117,6 +117,38 @@
       "imagefilter": "master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
+    }
+  ],
+  "#Nightly": [
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
+    },
+    {
+      "role": "Server Master",
+      "imagefilter": "master",
+      "keyname": "oregon-ci",
+      "sshuser": "gcp-user"
     },
     {
       "role": "Server Master",
