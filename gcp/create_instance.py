@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict
 from uuid import uuid4
 
-from gcp import Images, Instance, creds
+from gcp import Images, Instance
 import argparse
 from time import sleep
 
@@ -57,19 +57,21 @@ def instance_config(env_type: str, instancesconfig_file_path: str = './gcp/insta
             raise error from None
 
 
-def create_instances(inst_config):
+def create_instances(inst_config, sa_file_path):
     pipline_id = os.getenv(
         'CI_PIPELINE_ID', '').lower() or f'local-dev-{uuid4()}'
+
+    images_service = Images(sa_file_path)
+    instance_service = Instance(sa_file_path)
     instances = []
 
     for i, instance in enumerate(inst_config):
         version = instance['imagefilter']
         role = instance['role']
         instance_name = f'{version}-{pipline_id}-{i}'
-        latest_image = Images.get_latest_image(instance['imagefilter'])
+        latest_image = images_service.get_latest_image(instance['imagefilter'])
         logging.info(
             f"creating instance '{instance_name}' for role '{role}' using image '{latest_image.name}'")
-        Instance.create(instance_name, latest_image)
         instances.append({
             'InstanceName': instance_name,
             'Key': 'oregon-ci',
@@ -77,26 +79,18 @@ def create_instances(inst_config):
             'SSHuser': 'gcp-user',
             'ImageName': latest_image.name,
             'TunnelPort': 443,
-            'AvailabilityZone': Images.get_image_zone(latest_image)
+            'InstanceDNS': instance_service.create(instance_name, latest_image)
+            'AvailabilityZone': images_service.get_image_zone(latest_image)
         })
 
-    for instance in instances:
-        for _ in range(5):
-            ip = Instance.describe(
-                instance['InstanceName'], instance['AvailabilityZone']).network_interfaces[0].network_i_p
-            if ip:
-                instance['InstanceDNS'] = ip
-                break
-            sleep(5)
     return instances
 
 
 def main():
     options = options_handler()
-    creds(options.creds)
     logging.info('creating {options.instance_count} instances')
     inst_config = instance_config(options.env_type)
-    instances = create_instances(inst_config)
+    instances = create_instances(inst_config, options.creds)
     with open(options.outfile, 'w') as env_results_file:
         json.dump(instances, env_results_file, indent=4)
 

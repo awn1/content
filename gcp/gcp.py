@@ -1,26 +1,18 @@
 from functools import lru_cache
-from typing import Iterator, Optional
+from typing import Iterator
 from google.oauth2.service_account import Credentials
 from google.cloud import compute_v1
 import re
 
 
-CREDS = None
-
-
-def creds(creds_file: Optional[str] = None):
-    global CREDS
-    if CREDS is None and creds_file is not None:
-        CREDS = Credentials.from_service_account_file(creds_file)
-        Images.images_client = compute_v1.MachineImagesClient(
-            credentials=CREDS)
-        Instance.instance_client = compute_v1.InstancesClient(
-            credentials=CREDS)
-    return CREDS
-
-
 class Images:
-    images_client = None
+
+    def __init__(self, creds: str | Credentials):
+        credentials = creds if isinstance(
+            creds, Credentials) else Credentials.from_service_account_file(creds)
+        self.project_id = credentials.project_id
+        self.images_client = compute_v1.MachineImagesClient(
+            credentials=credentials)
 
     zone_patern = re.compile(
         r"^https:\/\/www\.googleapis\.com\/compute\/v\d\/projects\/[a-z\-]+\/zones\/(?P<zone>[a-z\-\d]+)\/instances\/[a-z\-\d]+$"
@@ -31,52 +23,60 @@ class Images:
         return re.match(
             Images.zone_patern, image.source_instance).group('zone')
 
-    @lru_cache
-    @staticmethod
-    def images_for_server_version(version: str) -> Iterator[compute_v1.MachineImage]:
-        return Images.images_client.list(
+    def images_for_server_version(self, version: str) -> Iterator[compute_v1.MachineImage]:
+        return self.images_client.list(
             request=compute_v1.ListMachineImagesRequest(
-                project=creds().project_id,
+                project=self.project_id,
                 filter=f'name:server-image-{version}-*',
             )
         )
 
-    @staticmethod
-    def get_latest_image(version: str):
-        *_, latest = Images.images_for_server_version(version)
+    @lru_cache
+    def get_latest_image(self, version: str):
+        *_, latest = self.images_for_server_version(version)
         return latest
 
-    @staticmethod
-    def delete(version: str, amount: int):
+    def delete(self, version: str, amount: int):
         images_to_delete = list(
-            Images.images_for_server_version(version))[amount:]
+            self.images_for_server_version(version))[amount:]
         for image in images_to_delete:
-            Images.images_client.delete(
+            self.images_client.delete(
                 machine_image=image.name,
-                project=creds().project_id
+                project=self.project_id
             )
 
 
 class Instance:
-    instance_client = None
 
-    @staticmethod
-    def create(instance_name: str, image: compute_v1.MachineImage):
-        Instance.instance_client.insert(
+    def __init__(self, creds: str | Credentials):
+        credentials = creds if isinstance(
+            creds, Credentials) else Credentials.from_service_account_file(creds)
+        self.project_id = credentials.project_id
+        self.instance_client = compute_v1.InstancesClient(
+            credentials=credentials)
+        self.image_client = Images(credentials)
+
+    def create(self, instance_name: str, image: compute_v1.MachineImage) -> str:
+        insert_op = self.instance_client.insert(
             request=compute_v1.InsertInstanceRequest(
-                project=creds().project_id,
-                zone=Images.get_image_zone(image),
+                project=self.project_id,
+                zone=self.image_client.get_image_zone(image),
                 source_machine_image=image.self_link,
                 instance_resource=compute_v1.types.Instance(
                     name=instance_name
                 )
             )
         )
-
-    @staticmethod
-    def describe(instance_name: str, instance_zone: str):
-        return Instance.instance_client.get(
+        insert_op.done()
+        return self.instance_client.get(
             instance=instance_name,
-            project=creds().project_id,
+            project=self.project_id,
+            zone=self.image_client.get_image_zone(image)
+        ).network_interfaces[0].network_i_p
+
+    def describe(self, instance_name: str, instance_zone: str):
+        return self.instance_client.get(
+            instance=instance_name,
+            project=self.project_id,
             zone=instance_zone
         )

@@ -23,8 +23,8 @@ def options_handler():
 
 def main():
     options = options_handler()
-    creds(options.creds)
-    Images.delete(options.server_version, options.images_to_reserve)
+    Images(options.creds).delete(
+        options.server_version, options.images_to_reserve)
 
 
 if __name__ == '__main__':
