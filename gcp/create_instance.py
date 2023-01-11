@@ -79,7 +79,7 @@ def create_instances(inst_config, sa_file_path):
             'SSHuser': 'gcp-user',
             'ImageName': latest_image.name,
             'TunnelPort': 443,
-            'InstanceDNS': instance_service.create(instance_name, latest_image)
+            'InstanceDNS': instance_service.create(instance_name, latest_image),
             'AvailabilityZone': images_service.get_image_zone(latest_image)
         })
 
