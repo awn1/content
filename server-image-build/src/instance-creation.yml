@@ -90,6 +90,7 @@
     server_img_name: "{{ lookup('env', 'SERVER_IMG_NAME') }}"
     base_instance_name: "{{ lookup('env', 'BASE_INSTANCE_NAME') }}"
     ci_running: "{{ lookup('env', 'CI') }}"
+    server_version: "{{ lookup('env', 'VERSION') }}"
 
   tasks:
   - name: Wait for asynchronous job to end
@@ -104,7 +105,7 @@
     pause:
       minutes: 1
   - name: Create image
-    shell: "gcloud compute images create {{ server_img_name }} --project={{ gcp_project }} --family=xosar-master --source-disk={{ base_instance_name }} --source-disk-zone={{ instance_zone }} --storage-location={{ inctance_region }} --quiet"
+    shell: "gcloud compute images create {{ server_img_name }} --project={{ gcp_project }} --family=xosar-{{ server_version }} --source-disk={{ base_instance_name }} --source-disk-zone={{ instance_zone }} --storage-location={{ inctance_region }} --quiet"
   - name: Delete disk
     shell: "gcloud compute disks delete {{ base_instance_name }} --project={{ gcp_project }} --zone={{ instance_zone }} --quiet"
 
