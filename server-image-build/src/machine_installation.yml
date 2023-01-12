@@ -11,6 +11,15 @@
     line: 'no_proxy=.docker.io,.docker.com,storage.googleapis.com,xsoar-registry.pan.dev,xsoar-registry-dev.web.app'
   become: yes
 
+- name: install docker installation dependencies
+  apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: latest
+
 - name: adding docker repo to apt
   script: /server-image-build/resources/add_docker_repo.sh
   become: true
