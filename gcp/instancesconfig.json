@@ -90,73 +90,73 @@
   "Nightly": [
     {
       "role": "Server Master",
-      "imagefilter": "master",
+      "imagefilter": "xsoar-master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
     },
     {
       "role": "Server Master",
-      "imagefilter": "master",
+      "imagefilter": "xsoar-master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
     },
     {
       "role": "Server Master",
-      "imagefilter": "master",
+      "imagefilter": "xsoar-master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
     },
     {
       "role": "Server Master",
-      "imagefilter": "master",
+      "imagefilter": "xsoar-master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
     },
     {
       "role": "Server Master",
-      "imagefilter": "master",
+      "imagefilter": "xsoar-master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
     },
     {
       "role": "Server Master",
-      "imagefilter": "master",
+      "imagefilter": "xsoar-master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
     },
     {
       "role": "Server Master",
-      "imagefilter": "master",
+      "imagefilter": "xsoar-master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
     },
     {
       "role": "Server Master",
-      "imagefilter": "master",
+      "imagefilter": "xsoar-master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
     },
     {
       "role": "Server Master",
-      "imagefilter": "master",
+      "imagefilter": "xsoar-master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
     },
     {
       "role": "Server Master",
-      "imagefilter": "master",
+      "imagefilter": "xsoar-master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
     },
     {
       "role": "Server Master",
-      "imagefilter": "master",
+      "imagefilter": "xsoar-master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
     },
     {
       "role": "Server Master",
-      "imagefilter": "master",
+      "imagefilter": "xsoar-master",
       "keyname": "oregon-ci",
       "sshuser": "gcp-user"
     }
