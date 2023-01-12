@@ -40,11 +40,11 @@
 - name: create an instance
   gcp_compute_instance:
     disks:
-    - auto_delete: 'true'
+    - auto_delete: 'false'
       boot: 'true'
       initialize_params:
         source_image: "{{ disk_image }}"
-        disk_size_gb: 500
+        disk_size_gb: 100
     network_interfaces:
     - network: "{{ network }}"
       subnetwork: "{{ subnetwork }}"
