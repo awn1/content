@@ -10,7 +10,7 @@
     echo "BUILD_NUMBER: ${BUILD_NUMBER}"
     export SERVER_IMG_NAME="server-image-$VERSION-$BUILD_NUMBER-$(date -u +"%Y-%m-%d")"
     echo "SERVER_IMG_NAME: ${SERVER_IMG_NAME}"
-    export BASE_INSTANCE_NAME="template-$SERVER_IMG_NAME"
+    export BASE_INSTANCE_NAME="template-${CI_PIPELINE_ID}-${SERVER_IMG_NAME}"
     echo "BASE_INSTANCE_NAME: ${BASE_INSTANCE_NAME}"
     echo "INSTALLER_URL: ${INSTALLER_URL}"
     export DOCKER_BUILD_DIR="server-image-build"
