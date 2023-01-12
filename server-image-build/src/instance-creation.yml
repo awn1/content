@@ -100,11 +100,9 @@
 
   - name: Stop inctanse
     shell: "gcloud compute instances stop {{ base_instance_name }} --project={{ gcp_project }} --zone={{ instance_zone }} --quiet"
+  - name: Pause for 1 minutes
+    pause:
+      minutes: 1
   - name: Create image
-    shell: "gcloud compute images create {{ server_img_name }} --project=xsoar-content-build --family=xsoar --source-disk={{ base_instance_name }} --source-disk-zone={{ instance_zone }} --storage-location=us --quiet"
-    shell: "gcloud beta compute machine-images create {{ server_img_name }} --project={{ gcp_project }} --source-instance={{ base_instance_name }} --source-instance-zone={{ instance_zone }} --storage-location={{ inctance_region }} --quiet"
-    retries: 3
-    delay: 10
-  - name: Delete inctanse
-    shell: "gcloud compute instances delete {{ base_instance_name }} --project={{ gcp_project }} --zone={{ instance_zone }} --quiet"
+    shell: "gcloud compute images create {{ server_img_name }} --project={{ gcp_project }} --family=xosar-master --source-disk={{ base_instance_name }} --source-disk-zone={{ instance_zone }} --storage-location={{ instance_zone }} --quiet"
 

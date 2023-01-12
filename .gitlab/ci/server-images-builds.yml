@@ -5,14 +5,15 @@
   - docker build $DOCKER_BUILD_DIR -t "test/$DOCKER_BUILD_DIR"
 
 .create_image: &create-image
-  - export BUILD_NUMBER=$(echo "$INSTALLER_URL" | grep -o -E "\-[0-9]+/" | grep -o -E "[0-9]+")
-  - export SERVER_IMG_NAME="server-image-$VERSION-$BUILD_NUMBER-$(date -u +"%Y-%m-%d")"
-  - export BASE_INSTANCE_NAME="template-$SERVER_IMG_NAME"
-  - echo "installer url:"
-  - echo "$INSTALLER_URL"
-  - echo "image name:"
-  - echo "$SERVER_IMG_NAME"
-  - export DOCKER_BUILD_DIR="server-image-build"
+  - |
+    export BUILD_NUMBER=$(echo "$INSTALLER_URL" | grep -o -E "\-[0-9]+/" | grep -o -E "[0-9]+")
+    echo "BUILD_NUMBER: ${BUILD_NUMBER}"
+    export SERVER_IMG_NAME="server-image-$VERSION-$BUILD_NUMBER-$(date -u +"%Y-%m-%d")"
+    echo "SERVER_IMG_NAME: ${SERVER_IMG_NAME}"
+    export BASE_INSTANCE_NAME="template-$SERVER_IMG_NAME"
+    echo "BASE_INSTANCE_NAME: ${BASE_INSTANCE_NAME}"
+    echo "INSTALLER_URL: ${INSTALLER_URL}"
+    export DOCKER_BUILD_DIR="server-image-build"
   - *build-docker-image
   - ./server-image-build/run.sh
 
