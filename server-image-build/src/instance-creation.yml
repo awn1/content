@@ -16,7 +16,7 @@
 
   - import_tasks: machine_setup.yml
     vars:
-      disk_image: family/debian-11
+      disk_image: projects/debian-cloud/global/images/debian-11-bullseye-v20220519
       disk_name: base-xsoar-build-debian-disk
       create_disk: yes
       network_type: internal
