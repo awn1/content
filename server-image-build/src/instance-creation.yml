@@ -105,7 +105,7 @@
     pause:
       minutes: 1
   - name: Create image
-    shell: "gcloud compute images create {{ server_img_name }} --project={{ gcp_project }} --family=xosar-{{ server_version }} --source-disk={{ base_instance_name }} --source-disk-zone={{ instance_zone }} --storage-location={{ inctance_region }} --quiet"
+    shell: "gcloud compute images create {{ server_img_name }} --project={{ gcp_project }} --family=xsoar-{{ server_version }} --source-disk={{ base_instance_name }} --source-disk-zone={{ instance_zone }} --storage-location={{ inctance_region }} --quiet"
   - name: Delete disk
     shell: "gcloud compute disks delete {{ base_instance_name }} --project={{ gcp_project }} --zone={{ instance_zone }} --quiet"
 

@@ -1,164 +1,148 @@
 {
-  "Private-Content-Build": [
-    {
-      "role": "Server Master",
-      "imagefilter": "master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    }
-  ],
-  "Bucket-Upload": [
-    {
-      "role": "Server Master",
-      "imagefilter": "master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server 6.8",
-      "imagefilter": "ga-6-8",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server 6.6",
-      "imagefilter": "ga-6-6",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server 6.5",
-      "imagefilter": "ga-6-5",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server 6.2",
-      "imagefilter": "ga-6-2",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    }
-  ],
-  "Content-Env": [
-    {
-      "role": "Server Master",
-      "imagefilter": "master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server 6.8",
-      "imagefilter": "ga-6-8",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server 6.6",
-      "imagefilter": "ga-6-6",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server 6.5",
-      "imagefilter": "ga-6-5",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server 6.2",
-      "imagefilter": "ga-6-2",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    }
-  ],
-  "Content-Master": [
-    {
-      "role": "Server Master",
-      "imagefilter": "master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    }
-  ],
-  "Server Master": [
-    {
-      "role": "Server Master",
-      "imagefilter": "master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    }
-  ],
-  "Nightly": [
-    {
-      "role": "Server Master",
-      "imagefilter": "xsoar-master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server Master",
-      "imagefilter": "xsoar-master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server Master",
-      "imagefilter": "xsoar-master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server Master",
-      "imagefilter": "xsoar-master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server Master",
-      "imagefilter": "xsoar-master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server Master",
-      "imagefilter": "xsoar-master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server Master",
-      "imagefilter": "xsoar-master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server Master",
-      "imagefilter": "xsoar-master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server Master",
-      "imagefilter": "xsoar-master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server Master",
-      "imagefilter": "xsoar-master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server Master",
-      "imagefilter": "xsoar-master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    },
-    {
-      "role": "Server Master",
-      "imagefilter": "xsoar-master",
-      "keyname": "oregon-ci",
-      "sshuser": "gcp-user"
-    }
-  ]
+  "globalconfig": {
+    "serviceaccount": "vm-instance-service-account@{project}.iam.gserviceaccount.com",
+    "template": "general-xsoar-server-template", 
+    "sshuser": "gcp-user",
+    "keyname": "oregon-ci"
+  },
+  "config": {
+    "Private-Content-Build": [
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      }
+    ],
+    "Bucket-Upload": [
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server 6.8",
+        "imagename": "server-image-ga-6-8-3434025-2023-01-15",
+        "imagefamily": "ga-6-8"
+      },
+      {
+        "role": "Server 6.6",
+        "imagefamily": "ga-6-6",
+        "imagename": "server-image-ga-6-6-3427106-2023-01-15"
+      },
+      {
+        "role": "Server 6.5",
+        "imagefamily": "ga-6-5",
+        "imagename": "server-image-ga-6-5-3381722-2023-01-15"
+      },
+      {
+        "role": "Server 6.2",
+        "imagefamily": "ga-6-2",
+        "imagename": "server-image-ga-6-2-2718488-2023-01-15"
+      }
+    ],
+    "Content-Env": [
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server 6.8",
+        "imagename":"server-image-ga-6-8-3434025-2023-01-15",
+        "imagefamily": "ga-6-8"
+      },
+      {
+        "role": "Server 6.6",
+        "imagefamily": "ga-6-6",
+        "imagename": "server-image-ga-6-6-3427106-2023-01-15"
+      },
+      {
+        "role": "Server 6.5",
+        "imagefamily": "ga-6-5",
+        "imagename": "server-image-ga-6-5-3381722-2023-01-15"
+      },
+      {
+        "role": "Server 6.2",
+        "imagefamily": "ga-6-2",
+        "imagename": "server-image-ga-6-2-2718488-2023-01-15"
+      }
+    ],
+    "Content-Master": [
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      }
+    ],
+    "Server Master": [
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      }
+    ],
+    "Nightly": [
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+      },
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-219914-2023-01-15"
+        
+      }
+    ]
+  }
 }

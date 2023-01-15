@@ -1,11 +1,10 @@
 import json
 import logging
 import os
-from pathlib import Path
 from typing import Dict
 from uuid import uuid4
 
-from gcp import Images, Instance
+from gcp import InstanceService
 import argparse
 from time import sleep
 
@@ -36,61 +35,39 @@ def options_handler():
                         help='GCP creds',
                         required=True,
                         type=str)
+    parser.add_argument('--zone',
+                        help='GCP zone',
+                        required=True,
+                        type=str)
     return parser.parse_args()
 
 
 def instance_config(env_type: str, instancesconfig_file_path: str = './gcp/instancesconfig.json') -> Dict[str, str]:
     with open(instancesconfig_file_path, 'r') as inst_config:
-        try:
-            return json.load(inst_config)[env_type]
-        except FileNotFoundError as error:
-            logging.error(
-                f'could not find instance config file in {Path(instancesconfig_file_path).absolute()}')
-            raise error from None
-        except json.decoder.JSONDecodeError as error:
-            logging.error(
-                f'failed to parse the instance config file in {Path(instancesconfig_file_path).absolute()}')
-            raise error from None
-        except KeyError as error:
-            logging.error(
-                f'env type {env_type} dosnt exist')
-            raise error from None
+        data = json.load(inst_config)
+    config = data['config'][env_type]
+    global_config = data['globalconfig']
+    return [singel_conf | global_config for singel_conf in config]
 
 
-def create_instances(inst_config, sa_file_path):
+def create_instances(inst_config, sa_file_path, zone):
     pipline_id = os.getenv(
         'CI_PIPELINE_ID', '').lower() or f'local-dev-{uuid4()}'
 
-    images_service = Images(sa_file_path)
-    instance_service = Instance(sa_file_path)
-    instances = []
+    instance_service = InstanceService(sa_file_path, zone)
 
     for i, instance in enumerate(inst_config):
-        version = instance['imagefilter']
-        role = instance['role']
-        instance_name = f'{version}-{pipline_id}-{i}'
-        latest_image = images_service.get_latest_image(instance['imagefilter'])
-        logging.info(
-            f"creating instance '{instance_name}' for role '{role}' using image '{latest_image.name}'")
-        instances.append({
-            'InstanceName': instance_name,
-            'Key': 'oregon-ci',
-            'Role': role,
-            'SSHuser': 'gcp-user',
-            'ImageName': latest_image.name,
-            'TunnelPort': 443,
-            'InstanceDNS': instance_service.create(instance_name, latest_image),
-            'AvailabilityZone': images_service.get_image_zone(latest_image)
-        })
+        version = instance['imagefamily']
+        instance['name'] = f'{version}-{pipline_id}-{i}'
 
-    return instances
+    return instance_service.create_instances(inst_config)
 
 
 def main():
     options = options_handler()
     logging.info('creating {options.instance_count} instances')
     inst_config = instance_config(options.env_type)
-    instances = create_instances(inst_config, options.creds)
+    instances = create_instances(inst_config, options.creds, options.zone)
     with open(options.outfile, 'w') as env_results_file:
         json.dump(instances, env_results_file, indent=4)
 
