@@ -78,20 +78,20 @@
 
 - name: Copy git clone key
     template:
-    src: /server-image-build/resources/git_id_ed25519.j2
-    dest: /home/gcp-user/.ssh/git_id_ed25519
-    owner: gcp-user
-    group: gcp-user
-    force: yes
+      src: /server-image-build/resources/git_id_ed25519.j2
+      dest: /home/gcp-user/.ssh/git_id_ed25519
+      owner: gcp-user
+      group: gcp-user
+      force: yes
   become: yes
 
 - name: Copy ssh config
     template:
-    src: /server-image-build/resources/ssh_config.j2
-    dest: /home/gcp-user/.ssh/config
-    owner: gcp-user
-    group: gcp-user
-    force: yes
+      src: /server-image-build/resources/ssh_config.j2
+      dest: /home/gcp-user/.ssh/config
+      owner: gcp-user
+      group: gcp-user
+      force: yes
   become: yes
 
 
