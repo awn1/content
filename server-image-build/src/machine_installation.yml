@@ -107,7 +107,5 @@
 - name: Clone content-test-data
   git:
     dest: /home/gcp-user/content-test-data
-    repo: git@github.com:demisto/content-test-data.git
-    accept_hostkey: yes
-    key_file: /home/gcp-user/.ssh/git_id_ed25519
+    repo: "https://{{ gitlab_content_test_data_token }}@code.pan.run/xsoar/content-test-data.git"
   become_user: gcp-user

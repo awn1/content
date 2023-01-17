@@ -70,6 +70,8 @@
     gcs_url: "{{ lookup('env', 'INSTALLER_URL') }}"
   tasks:
   - import_tasks: machine_installation.yml
+    vars:
+      gitlab_content_test_data_token:  "{{ lookup('env', 'GITLAB_CONTENT_TEST_DATA_TOKEN') }}"
 
   - import_tasks: server_installation.yml
     vars:
