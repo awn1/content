@@ -1,5 +1,5 @@
 #!/bin/bash
-MITMDUMP_ENV_FILE=/home/ec2-user/mitmdump_rc
+MITMDUMP_ENV_FILE=/home/gcp-user/mitmdump_rc
 
 #Validating env variable file exists
 if [ -f $MITMDUMP_ENV_FILE ];
@@ -47,13 +47,13 @@ fi
 if [[ "$SCRIPT_MODE" == "playback" ]];
   then
     echo "Starting mitmdump in playback mode"
-    /home/ec2-user/.local/bin/mitmdump --ssl-insecure --verbose --listen-port 9997 -s /home/ec2-user/timestamp_replacer.py --set script_mode="$SCRIPT_MODE" --set keys_filepath="$KEYS_FILE_PATH" --set keepserving=true --server-replay-kill-extra --server-replay "$MOCK_FILE_PATH" | tee "$LOG_FILE_PATH" 2>&1
+    /home/gcp-user/.local/bin/mitmdump --ssl-insecure --verbose --listen-port 9997 -s /home/gcp-user/timestamp_replacer.py --set script_mode="$SCRIPT_MODE" --set keys_filepath="$KEYS_FILE_PATH" --set keepserving=true --server-replay-kill-extra --server-replay "$MOCK_FILE_PATH" | tee "$LOG_FILE_PATH" 2>&1
     echo "Exited with status code $?"
 
 elif [[ "$SCRIPT_MODE" == "record" ]];
   then
     echo "Starting mitmdump in record mode"
-    /home/ec2-user/.local/bin/mitmdump --ssl-insecure --verbose --listen-port 9997 -s /home/ec2-user/timestamp_replacer.py --set script_mode="$SCRIPT_MODE" --set keys_filepath="$KEYS_FILE_PATH" --set detect_timestamps=true --save-stream-file "$MOCK_FILE_PATH" | tee "$LOG_FILE_PATH" 2>&1
+    /home/gcp-user/.local/bin/mitmdump --ssl-insecure --verbose --listen-port 9997 -s /home/gcp-user/timestamp_replacer.py --set script_mode="$SCRIPT_MODE" --set keys_filepath="$KEYS_FILE_PATH" --set detect_timestamps=true --save-stream-file "$MOCK_FILE_PATH" | tee "$LOG_FILE_PATH" 2>&1
     echo "Exited with status code $?"
 
 else

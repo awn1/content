@@ -4,7 +4,7 @@ Description=mitmdump service
 [Service]
 Type=simple
 User=root
-ExecStart=/bin/bash /home/ec2-user/mitmproxy_starter.sh
+ExecStart=/bin/bash /home/gcp-user/mitmproxy_starter.sh
 
 [Install]
 WantedBy=multi-user.target

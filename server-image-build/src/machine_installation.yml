@@ -76,14 +76,24 @@
     force: yes
   become: yes
 
-# - name: Create startup executable file
-#   template:
-#     src: startup_script.sh.j2
-#     dest: "{{ startup_script }}"
-#     owner: root
-#     mode: 0700
-#     force: yes
-#   become: yes
+- name: Copy git clone key
+    template:
+    src: /server-image-build/resources/git_id_ed25519.j2
+    dest: /home/gcp-user/.ssh/git_id_ed25519
+    owner: gcp-user
+    group: gcp-user
+    force: yes
+  become: yes
+
+- name: Copy ssh config
+    template:
+    src: /server-image-build/resources/ssh_config.j2
+    dest: /home/gcp-user/.ssh/config
+    owner: gcp-user
+    group: gcp-user
+    force: yes
+  become: yes
+
 
 - name: Create gitconfig file
   template:
@@ -94,6 +104,10 @@
     force: yes
   become: yes
 
-# - name: Run Elastic Search Docker Container
-#   shell: docker run --name elastic-7.16.2 -d -p 9200:9200 -p 9300:9300 -e 'discovery.type=single-node' docker.elastic.co/elasticsearch/elasticsearch:7.16.2
-
+- name: Clone content-test-data
+  git:
+    dest: /home/gcp-user/content-test-data
+    repo: git@github.com:demisto/content-test-data.git
+    accept_hostkey: yes
+    key_file: /home/gcp-user/.ssh/git_id_ed25519
+    become_user: gcp-user
