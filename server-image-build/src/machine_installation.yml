@@ -110,4 +110,4 @@
     repo: git@github.com:demisto/content-test-data.git
     accept_hostkey: yes
     key_file: /home/gcp-user/.ssh/git_id_ed25519
-    become_user: gcp-user
+  become_user: gcp-user
