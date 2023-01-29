@@ -76,25 +76,6 @@
     force: yes
   become: yes
 
-- name: Copy git clone key
-  template:
-    src: /server-image-build/resources/git_id_ed25519.j2
-    dest: /home/gcp-user/.ssh/git_id_ed25519
-    owner: gcp-user
-    group: gcp-user
-    force: yes
-  become: yes
-
-- name: Copy ssh config
-  template:
-    src: /server-image-build/resources/ssh_config.j2
-    dest: /home/gcp-user/.ssh/config
-    owner: gcp-user
-    group: gcp-user
-    force: yes
-  become: yes
-
-
 - name: Create gitconfig file
   template:
     src: /server-image-build/resources/gitconfig.j2
@@ -104,8 +85,12 @@
     force: yes
   become: yes
 
+- name: Reinstall git to make sure that git over https will work.
+  shell: "apt-get reinstall git"
+  become: yes
+
 - name: Clone content-test-data
-  git:
-    dest: /home/gcp-user/content-test-data
-    repo: "https://{{ gitlab_content_test_data_token }}@code.pan.run/xsoar/content-test-data.git"
+  shell: 
+    cmd: gcloud source repos clone content-test-data
+    chdir: /home/gcp-user/content-test-data
   become_user: gcp-user
