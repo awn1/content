@@ -61,6 +61,8 @@
     state: present
     service_accounts:
     - email: "{{ instance_service_account }}"
+      scope:
+      - https://www.googleapis.com/auth/cloud-platform
     metadata:
       shutdown-script: "{{lookup('file', '/server-image-build/resources/shutdown_script.sh') }}"
       startup-script: "sudo shutdown +300"
