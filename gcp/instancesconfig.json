@@ -10,137 +10,127 @@
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       }
     ],
     "Bucket-Upload": [
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server 6.8",
-        "imagename": "server-image-ga-6-8-3434025-2023-01-15",
+        "imagename": "server-image-ga-6-8-3434025-2023-02-01",
         "imagefamily": "ga-6-8"
       },
       {
         "role": "Server 6.6",
         "imagefamily": "ga-6-6",
-        "imagename": "server-image-ga-6-6-3427106-2023-01-15"
+        "imagename": "server-image-ga-6-6-3427106-2023-02-01"
       },
       {
         "role": "Server 6.5",
         "imagefamily": "ga-6-5",
-        "imagename": "server-image-ga-6-5-3381722-2023-01-15"
-      },
-      {
-        "role": "Server 6.2",
-        "imagefamily": "ga-6-2",
-        "imagename": "server-image-ga-6-2-2718488-2023-01-15"
+        "imagename": "server-image-ga-6-5-3381722-2023-02-01"
       }
     ],
     "Content-Env": [
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server 6.8",
-        "imagename":"server-image-ga-6-8-3434025-2023-01-15",
+        "imagename":"server-image-ga-6-8-3434025-2023-02-01",
         "imagefamily": "ga-6-8"
       },
       {
         "role": "Server 6.6",
         "imagefamily": "ga-6-6",
-        "imagename": "server-image-ga-6-6-3427106-2023-01-15"
+        "imagename": "server-image-ga-6-6-3427106-2023-02-01"
       },
       {
         "role": "Server 6.5",
         "imagefamily": "ga-6-5",
-        "imagename": "server-image-ga-6-5-3381722-2023-01-15"
-      },
-      {
-        "role": "Server 6.2",
-        "imagefamily": "ga-6-2",
-        "imagename": "server-image-ga-6-2-2718488-2023-01-15"
+        "imagename": "server-image-ga-6-5-3381722-2023-02-01"
       }
     ],
     "Content-Master": [
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       }
     ],
     "Server Master": [
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       }
     ],
     "Nightly": [
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-219914-2023-01-15"
+        "imagename": "server-image-master-234935-2023-02-02"
         
       }
     ]
