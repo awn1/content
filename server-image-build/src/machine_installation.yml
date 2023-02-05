@@ -56,7 +56,9 @@
 
 - name: Install proxy
   script: /server-image-build/resources/install_proxy.sh
+  become_user: gcp-user
   become: true
+
 
 - name: Create mitmdump service
   template:
