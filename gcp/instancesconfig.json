@@ -1,7 +1,7 @@
 {
   "globalconfig": {
     "serviceaccount": "vm-instance-service-account@{project}.iam.gserviceaccount.com",
-    "template": "test-xsoar-server-template", 
+    "template": "general-xsoar-server-template", 
     "sshuser": "gcp-user",
     "keyname": "oregon-ci"
   },
