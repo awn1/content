@@ -10,72 +10,87 @@
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       }
     ],
     "Bucket-Upload": [
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
+      },
+      {
+        "role": "Server 6.11",
+        "imagename": "server-image-ga-6-11-300044-2023-06-04",
+        "imagefamily": "ga-6-11"
+      },
+      {
+        "role": "Server 6.10",
+        "imagename": "server-image-ga-6-10-258414-2023-06-04",
+        "imagefamily": "ga-6-10"
+      },
+      {
+        "role": "Server 6.9",
+        "imagename": "server-image-ga-6-9-3426841-2023-06-04",
+        "imagefamily": "ga-6-9"
       },
       {
         "role": "Server 6.8",
-        "imagename": "server-image-ga-6-8-3434025-2023-02-01",
+        "imagename": "server-image-ga-6-8-3434025-2023-06-04",
         "imagefamily": "ga-6-8"
-      },
-      {
-        "role": "Server 6.6",
-        "imagefamily": "ga-6-6",
-        "imagename": "server-image-ga-6-6-3427106-2023-02-01"
-      },
-      {
-        "role": "Server 6.5",
-        "imagefamily": "ga-6-5",
-        "imagename": "server-image-ga-6-5-3381722-2023-02-01"
       }
     ],
     "Content-Env": [
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
+      },
+      {
+        "role": "Server 6.11",
+        "imagename": "server-image-ga-6-11-300044-2023-06-04",
+        "imagefamily": "ga-6-11"
+      },
+      {
+        "role": "Server 6.10",
+        "imagename": "server-image-ga-6-10-258414-2023-06-04",
+        "imagefamily": "ga-6-10"
+      },
+      {
+        "role": "Server 6.9",
+        "imagename": "server-image-ga-6-9-3426841-2023-06-04",
+        "imagefamily": "ga-6-9"
       },
       {
         "role": "Server 6.8",
-        "imagename": "server-image-ga-6-8-3434025-2023-02-01",
+        "imagename": "server-image-ga-6-8-3434025-2023-06-04",
         "imagefamily": "ga-6-8"
-      },
-      {
-        "role": "Server 6.6",
-        "imagefamily": "ga-6-6",
-        "imagename": "server-image-ga-6-6-3427106-2023-02-01"
-      },
-      {
-        "role": "Server 6.5",
-        "imagefamily": "ga-6-5",
-        "imagename": "server-image-ga-6-5-3381722-2023-02-01"
       }
     ],
     "Content-Master": [
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       }
     ],
     "Server Master": [
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       }
     ],
     "Nightly": [
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
+      },
+      {
+        "role": "Server Master",
+        "imagefamily": "master",
+        "imagename": "server-image-master-345040-2023-06-04"
       },
       {
         "role": "Server Master",
@@ -85,67 +100,62 @@
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       },
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
-      },
-      {
-        "role": "Server Master",
-        "imagefamily": "master",
-        "imagename": "server-image-master-237427-2023-02-06"
+        "imagename": "server-image-master-345040-2023-06-04"
       }
     ]
   }
