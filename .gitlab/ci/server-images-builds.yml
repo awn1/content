@@ -58,6 +58,45 @@ Build-Server-Dev-Image-job:
     - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
+Build-Server-6.11-Image-job:
+  stage: build-server-images
+  needs: []
+  extends:
+    - .build-server-ga-images-schedule-rule # put in comment for testing
+    - .docker-job
+  script:
+    - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
+    - export VERSION="ga-6-11"
+    - export INSTALLER_URL="xsoar-ci-artifacts-server/$(gsutil ls -d "gs://xsoar-ci-artifacts-server/server/6.11.0-[0-9]*/0/demistoserver-*.sh" | tail -n 1 | grep -o -E "server/[0-9.-]+/0/demistoserver-[0-9.-]+\.sh")"
+    - gcloud auth revoke --all --quiet || echo "expected"
+    - *create-image
+
+Build-Server-6.10-Image-job:
+  stage: build-server-images
+  needs: []
+  extends:
+    - .build-server-ga-images-schedule-rule # put in comment for testing
+    - .docker-job
+  script:
+    - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
+    - export VERSION="ga-6-10"
+    - export INSTALLER_URL="xsoar-ci-artifacts-server/$(gsutil ls -d "gs://xsoar-ci-artifacts-server/server/6.10.0-[0-9]*/0/demistoserver-*.sh" | tail -n 1 | grep -o -E "server/[0-9.-]+/0/demistoserver-[0-9.-]+\.sh")"
+    - gcloud auth revoke --all --quiet || echo "expected"
+    - *create-image
+
+Build-Server-6.9-Image-job:
+  stage: build-server-images
+  needs: []
+  extends:
+    - .build-server-ga-images-schedule-rule # put in comment for testing
+    - .docker-job
+  script:
+    - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
+    - export VERSION="ga-6-9"
+    - export INSTALLER_URL="xsoar-ci-artifacts-server/$(gsutil ls -d "gs://xsoar-ci-artifacts-server/server/6.9.0-[0-9]*/0/demistoserver-*.sh" | tail -n 1 | grep -o -E "server/[0-9.-]+/0/demistoserver-[0-9.-]+\.sh")"
+    - gcloud auth revoke --all --quiet || echo "expected"
+    - *create-image
+
 Build-Server-6.8-Image-job:
   stage: build-server-images
   needs: []
@@ -71,44 +110,6 @@ Build-Server-6.8-Image-job:
     - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
-Build-Server-6.6-Image-job:
-  stage: build-server-images
-  needs: []
-  extends:
-    - .build-server-ga-images-schedule-rule # put in comment for testing
-    - .docker-job
-  script:
-    - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
-    - export VERSION="ga-6-6"
-    - export INSTALLER_URL="xsoar-ci-artifacts-server/$(gsutil ls -d "gs://xsoar-ci-artifacts-server/server/6.6.0-[0-9]*/0/demistoserver-*.sh" | tail -n 1 | grep -o -E "server/[0-9.-]+/0/demistoserver-[0-9.-]+\.sh")"
-    - gcloud auth revoke --all --quiet || echo "expected"
-    - *create-image
-
-Build-Server-6.5-Image-job:
-  stage: build-server-images
-  needs: []
-  extends:
-    - .build-server-ga-images-schedule-rule # put in comment for testing
-    - .docker-job
-  script:
-    - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
-    - export VERSION="ga-6-5"
-    - export INSTALLER_URL="xsoar-ci-artifacts-server/$(gsutil ls -d "gs://xsoar-ci-artifacts-server/server/6.5.0-[0-9]*/0/demistoserver-*.sh" | tail -n 1 | grep -o -E "server/[0-9.-]+/0/demistoserver-[0-9.-]+\.sh")"
-    - gcloud auth revoke --all --quiet || echo "expected"
-    - *create-image
-
-Build-Server-6.2-Image-job:
-  stage: build-server-images
-  needs: []
-  extends:
-    - .build-server-ga-images-schedule-rule # put in comment for testing
-    - .docker-job
-  script:
-    - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
-    - export VERSION="ga-6-2"
-    - export INSTALLER_URL="xsoar-ci-artifacts-server/$(gsutil ls -d "gs://xsoar-ci-artifacts-server/server/6.2.0-[0-9]*/0/demistoserver-*.sh" | tail -n 1 | grep -o -E "server/[0-9.-]+/0/demistoserver-[0-9.-]+\.sh")"
-    - gcloud auth revoke --all --quiet || echo "expected"
-    - *create-image
 
 Delete-Server-Images:
   stage: delete-server-images
@@ -120,7 +121,7 @@ Delete-Server-Images:
     - cd gcp
     - python3 -m pip install google-cloud-compute
     - python3 ./delete_old_images.py --server-version "master" --images-to-reserve 20 --creds $XSOAR_CONTENT_BUILD_CREDS
+    - python3 ./delete_old_images.py --server-version "ga-6-11" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
+    - python3 ./delete_old_images.py --server-version "ga-6-10" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
+    - python3 ./delete_old_images.py --server-version "ga-6-9" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
     - python3 ./delete_old_images.py --server-version "ga-6-8" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
-    - python3 ./delete_old_images.py --server-version "ga-6-6" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
-    - python3 ./delete_old_images.py --server-version "ga-6-5" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
-    - python3 ./delete_old_images.py --server-version "ga-6-2" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
