@@ -81,7 +81,8 @@ class Instance:
             name=self.instance_name,
             service_accounts=[
                 compute_v1.ServiceAccount(
-                    email=self.instance_sa
+                    email=self.instance_sa,
+                    scopes=['https://www.googleapis.com/auth/compute']
                 )
             ],
             disks=[compute_v1.AttachedDisk(
