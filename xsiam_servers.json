@@ -77,7 +77,7 @@
         "base_url": "https://api-xsoar-content-7.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.3.0",
-        "enabled": true,
+        "enabled": false,
         "flow_type": "upload"
     },
     "qa2-test-9998789689851": {
