@@ -9,7 +9,6 @@ import argparse
 from time import sleep
 
 
-
 def options_handler():
     parser = argparse.ArgumentParser(
         description='A script that creates instances for the build')
