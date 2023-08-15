@@ -47,7 +47,7 @@ def instance_config(env_type: str, instancesconfig_file_path: str = './gcp/insta
         data = json.load(inst_config)
     config = data['config'][env_type]
     global_config = data['globalconfig']
-    return [singel_conf | global_config for singel_conf in config]
+    return [global_config | single_conf for single_conf in config]
 
 
 def create_instances(inst_config, sa_file_path, zone):
