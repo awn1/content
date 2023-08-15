@@ -20,6 +20,11 @@
         "imagename": "server-image-master-345040-2023-06-04"
       },
       {
+        "role": "Server 6.12",
+        "imagename": "TODO",
+        "imagefamily": "ga-6-12"
+      },
+      {
         "role": "Server 6.11",
         "imagename": "server-image-ga-6-11-300044-2023-06-04",
         "imagefamily": "ga-6-11"
@@ -33,11 +38,6 @@
         "role": "Server 6.9",
         "imagename": "server-image-ga-6-9-3426841-2023-06-04",
         "imagefamily": "ga-6-9"
-      },
-      {
-        "role": "Server 6.8",
-        "imagename": "server-image-ga-6-8-3434025-2023-06-04",
-        "imagefamily": "ga-6-8"
       }
     ],
     "Content-Env": [
@@ -47,6 +47,11 @@
         "imagename": "server-image-master-345040-2023-06-04"
       },
       {
+        "role": "Server 6.12",
+        "imagename": "TODO",
+        "imagefamily": "ga-6-12"
+      },
+      {
         "role": "Server 6.11",
         "imagename": "server-image-ga-6-11-300044-2023-06-04",
         "imagefamily": "ga-6-11"
@@ -60,11 +65,6 @@
         "role": "Server 6.9",
         "imagename": "server-image-ga-6-9-3426841-2023-06-04",
         "imagefamily": "ga-6-9"
-      },
-      {
-        "role": "Server 6.8",
-        "imagename": "server-image-ga-6-8-3434025-2023-06-04",
-        "imagefamily": "ga-6-8"
       }
     ],
     "Content-Master": [
