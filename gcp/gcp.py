@@ -1,7 +1,8 @@
 from typing import Dict, Iterator, List, Optional, Tuple
 from google.oauth2.service_account import Credentials
-from google.cloud import compute_v1
+from google.cloud import compute_v1, compute
 from google.api_core.extended_operation import ExtendedOperation
+import logging
 
 TEMPLATE_LINK = 'projects/{project_id}/global/instanceTemplates/{template}'
 IMAGE_LINK = 'projects/{project_id}/global/images/{image_name}'
@@ -22,6 +23,21 @@ class Images:
             )
         )
 
+    def get_image_name_from_family(self, image_family: str) -> compute.Image:
+        """
+        Returns the latest image that is part of an image
+        family and is not deprecated.
+        :param image_family: The image family
+        :return: compute.Image
+        """
+        request = compute_v1.GetFromFamilyImageRequest(
+            family=image_family,
+            project=self.project_id,
+        )
+        image: compute.Image = self.images_client.get_from_family(request=request)
+        logging.info('get_image_name_from_family:{image_family} = {image.name}')
+        return image.name
+
     # def delete(self,  version: str, )
 
 
@@ -41,8 +57,9 @@ class Instance:
             project=project_id)
         self.source_image = IMAGE_LINK.format(
             project_id=project_id,
-            image_name=source_image or config_dict['imagename']
+            image_name=config_dict['imagename'] or source_image
         )
+        logging.info('creating Instance from source_image:{source_image} = self.source_image:{self.source_image}')
         self._ip = None
         self.project_id = project_id
         self.role = role or config_dict['role']
@@ -106,17 +123,21 @@ class InstanceService:
         self.project_id = credentials.project_id
         self.instance_client = compute_v1.InstancesClient(
             credentials=credentials)
+        self.images = Images(creds=creds, zone=zone)
 
     def create_instances(self, instances: List[Dict]):
         insert_extended_operations: ExtendedOperation = []
         redeay_instances = []
         for instance_conf in instances:
+            logging.info('creating instances: {instance_conf}')
+
             instance_obj = Instance(
                 instance_name=instance_conf['name'],
                 project_id=self.project_id,
                 zone=self.zone,
                 instance_client=self.instance_client,
-                config_dict=instance_conf
+                config_dict=instance_conf,
+                source_image=self.images.get_image_name_from_family(instance_conf['imagefamily'])
             )
             insert_extended_operations.append((
                 self.instance_client.insert(
