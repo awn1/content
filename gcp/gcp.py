@@ -137,7 +137,7 @@ class InstanceService:
                 zone=self.zone,
                 instance_client=self.instance_client,
                 config_dict=instance_conf,
-                source_image=self.images.get_image_name_from_family(instance_conf['imagefamily'])
+                # source_image=self.images.get_image_name_from_family(instance_conf['imagefamily'])
             )
             insert_extended_operations.append((
                 self.instance_client.insert(
