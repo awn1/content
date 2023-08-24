@@ -59,7 +59,7 @@ class Instance:
             project_id=project_id,
             image_name=config_dict['imagename'] or f"family/{config_dict['imagefamily']}" or source_image
         )
-        logging.info('creating Instance from source_image:{source_image} = self.source_image:{self.source_image}')
+        logging.info(f'creating Instance from source_image:{source_image} = self.source_image:{self.source_image}')
         self._ip = None
         self.project_id = project_id
         self.role = role or config_dict['role']
@@ -129,7 +129,7 @@ class InstanceService:
         insert_extended_operations: ExtendedOperation = []
         redeay_instances = []
         for instance_conf in instances:
-            logging.info('creating instances: {instance_conf}')
+            logging.info(f'creating instances: {instance_conf}')
 
             instance_obj = Instance(
                 instance_name=instance_conf['name'],
