@@ -21,7 +21,6 @@
       },
       {
         "role": "Server 6.11",
-        "imagename": "server-image-ga-6-11-443478-2023-08-15",
         "imagefamily": "ga-6-11"
       },
       {
