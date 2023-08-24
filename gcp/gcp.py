@@ -57,7 +57,7 @@ class Instance:
             project=project_id)
         self.source_image = IMAGE_LINK.format(
             project_id=project_id,
-            image_name=config_dict['imagename'] or source_image
+            image_name=config_dict['imagename'] or f"family/{config_dict['imagefamily']}" or source_image
         )
         logging.info('creating Instance from source_image:{source_image} = self.source_image:{self.source_image}')
         self._ip = None
@@ -136,7 +136,7 @@ class InstanceService:
                 project_id=self.project_id,
                 zone=self.zone,
                 instance_client=self.instance_client,
-                config_dict=instance_conf,
+                config_dict=instance_conf
                 # source_image=self.images.get_image_name_from_family(instance_conf['imagefamily'])
             )
             insert_extended_operations.append((
