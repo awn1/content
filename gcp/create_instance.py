@@ -65,7 +65,7 @@ def create_instances(inst_config, sa_file_path, zone):
 
 def main():
     options = options_handler()
-    logging.info(f'creating {options.instance_count} instances')
+    logging.info('creating {options.instance_count} instances')
     inst_config = instance_config(options.env_type)
     instances = create_instances(inst_config, options.creds, options.zone)
     with open(options.outfile, 'w') as env_results_file:
