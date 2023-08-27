@@ -8,7 +8,7 @@ from gcp import InstanceService
 import argparse
 from time import sleep
 
-log_file_path = os.path.join(os.environ.get('ARTIFACTS_FOLDER', '.'), 'create_instance.log')
+log_file_path = os.path.join(os.environ.get('ARTIFACTS_FOLDER', '.'), 'logs', 'create_instance.log')
 logging.basicConfig(filename=log_file_path, level=logging.INFO)
 
 

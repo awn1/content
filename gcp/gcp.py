@@ -4,7 +4,8 @@ from google.cloud import compute_v1
 from google.api_core.extended_operation import ExtendedOperation
 import logging
 import os
-log_file_path = os.path.join(os.environ.get('ARTIFACTS_FOLDER', '.'), 'create_instance.log')
+
+log_file_path = os.path.join(os.environ.get('ARTIFACTS_FOLDER', '.'), 'logs', 'create_instance.log')
 logging.basicConfig(filename=log_file_path, level=logging.INFO)
 
 TEMPLATE_LINK = 'projects/{project_id}/global/instanceTemplates/{template}'
