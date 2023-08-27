@@ -8,10 +8,7 @@ from gcp import InstanceService
 import argparse
 from time import sleep
 
-# Construct the log file path using the ARTIFACTS_FOLDER variable
 log_file_path = os.path.join(os.environ.get('ARTIFACTS_FOLDER', '.'), 'create_instance.log')
-
-# Configure logging for create_instance.py
 logging.basicConfig(filename=log_file_path, level=logging.INFO)
 
 
@@ -71,7 +68,7 @@ def create_instances(inst_config, sa_file_path, zone):
 
 def main():
     options = options_handler()
-    logging.info('creating {options.instance_count} instances')
+    logging.info(f'Creating {options.instance_count} instances, {options.env_typ=}')
     inst_config = instance_config(options.env_type)
     instances = create_instances(inst_config, options.creds, options.zone)
     with open(options.outfile, 'w') as env_results_file:

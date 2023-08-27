@@ -4,11 +4,9 @@ from google.cloud import compute_v1
 from google.api_core.extended_operation import ExtendedOperation
 import logging
 import os
-# Construct the log file path using the ARTIFACTS_FOLDER variable
 log_file_path = os.path.join(os.environ.get('ARTIFACTS_FOLDER', '.'), 'create_instance.log')
-
-# Configure logging for create_instance.py
 logging.basicConfig(filename=log_file_path, level=logging.INFO)
+
 TEMPLATE_LINK = 'projects/{project_id}/global/instanceTemplates/{template}'
 IMAGE_LINK = 'projects/{project_id}/global/images/{image_name}'
 
@@ -118,7 +116,7 @@ class InstanceService:
         insert_extended_operations: ExtendedOperation = []
         redeay_instances = []
         for instance_conf in instances:
-            logging.info(f'creating instances: {instance_conf=}')
+            logging.info(f'Creating instances: {instance_conf=}')
 
             instance_obj = Instance(
                 instance_name=instance_conf['name'],

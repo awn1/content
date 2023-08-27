@@ -15,7 +15,8 @@
     "Bucket-Upload": [
       {
         "role": "Server Master",
-        "imagefamily": "master"
+        "imagefamily": "master",
+        "imagename": "server-image-master-473000-2023-08-23"
       },
       {
         "role": "Server 6.11",
