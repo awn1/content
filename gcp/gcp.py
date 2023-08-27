@@ -1,6 +1,6 @@
 from typing import Dict, Iterator, List, Optional, Tuple
 from google.oauth2.service_account import Credentials
-from google.cloud import compute_v1, compute
+from google.cloud import compute_v1
 from google.api_core.extended_operation import ExtendedOperation
 import logging
 
@@ -23,21 +23,6 @@ class Images:
             )
         )
 
-    def get_image_name_from_family(self, image_family: str) -> compute.Image:
-        """
-        Returns the latest image that is part of an image
-        family and is not deprecated.
-        :param image_family: The image family
-        :return: compute.Image
-        """
-        request = compute_v1.GetFromFamilyImageRequest(
-            family=image_family,
-            project=self.project_id,
-        )
-        image: compute.Image = self.images_client.get_from_family(request=request)
-        logging.info('get_image_name_from_family:{image_family} = {image.name}')
-        return image.name
-
     # def delete(self,  version: str, )
 
 
@@ -57,7 +42,7 @@ class Instance:
             project=project_id)
         self.source_image = IMAGE_LINK.format(
             project_id=project_id,
-            image_name=config_dict.get('imagename') or f"family/xsoar-{config_dict['imagefamily']}" or source_image
+            image_name=config_dict.get('imagename') or f"family/xsoar-{config_dict['imagefamily']}" or source_image # TODO - when will use source_image
         )
         logging.info(f'Using {self.source_image=}')
         self._ip = None
@@ -123,13 +108,12 @@ class InstanceService:
         self.project_id = credentials.project_id
         self.instance_client = compute_v1.InstancesClient(
             credentials=credentials)
-        self.images = Images(creds=creds, zone=zone)
 
     def create_instances(self, instances: List[Dict]):
         insert_extended_operations: ExtendedOperation = []
         redeay_instances = []
         for instance_conf in instances:
-            logging.info(f'creating instances: {instance_conf}')
+            logging.info(f'creating instances: {instance_conf=}')
 
             instance_obj = Instance(
                 instance_name=instance_conf['name'],
@@ -137,7 +121,6 @@ class InstanceService:
                 zone=self.zone,
                 instance_client=self.instance_client,
                 config_dict=instance_conf
-                # source_image=self.images.get_image_name_from_family(instance_conf['imagefamily'])
             )
             insert_extended_operations.append((
                 self.instance_client.insert(
