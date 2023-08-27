@@ -70,6 +70,7 @@ def main():
     options = options_handler()
     logging.info('creating {options.instance_count} instances')
     inst_config = instance_config(options.env_type)
+    logging.info(f'{options.env_type=}')
     instances = create_instances(inst_config, options.creds, options.zone)
     with open(options.outfile, 'w') as env_results_file:
         json.dump(instances, env_results_file, indent=4)
