@@ -7,6 +7,7 @@ from uuid import uuid4
 from gcp import InstanceService
 import argparse
 from time import sleep
+logging.basicConfig(filename='create_instance.log', level=logging.INFO)
 
 
 def options_handler():

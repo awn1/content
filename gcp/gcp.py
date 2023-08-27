@@ -3,6 +3,7 @@ from google.oauth2.service_account import Credentials
 from google.cloud import compute_v1
 from google.api_core.extended_operation import ExtendedOperation
 import logging
+logging.basicConfig(filename='create_instance.log', level=logging.INFO)
 
 TEMPLATE_LINK = 'projects/{project_id}/global/instanceTemplates/{template}'
 IMAGE_LINK = 'projects/{project_id}/global/images/{image_name}'
