@@ -57,7 +57,7 @@ class Instance:
             project=project_id)
         self.source_image = IMAGE_LINK.format(
             project_id=project_id,
-            image_name=config_dict.get('imagename') or f"family/{config_dict['imagefamily']}" or source_image
+            image_name=config_dict.get('imagename') or f"family/xsoar-{config_dict['imagefamily']}" or source_image
         )
         logging.info(f'Using {self.source_image=}')
         self._ip = None
