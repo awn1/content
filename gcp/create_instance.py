@@ -7,7 +7,12 @@ from uuid import uuid4
 from gcp import InstanceService
 import argparse
 from time import sleep
-logging.basicConfig(filename='create_instance.log', level=logging.INFO)
+
+# Construct the log file path using the ARTIFACTS_FOLDER variable
+log_file_path = os.path.join(os.environ.get('ARTIFACTS_FOLDER', '.'), 'create_instance.log')
+
+# Configure logging for create_instance.py
+logging.basicConfig(filename=log_file_path, level=logging.INFO)
 
 
 def options_handler():

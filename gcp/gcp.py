@@ -3,8 +3,12 @@ from google.oauth2.service_account import Credentials
 from google.cloud import compute_v1
 from google.api_core.extended_operation import ExtendedOperation
 import logging
-logging.basicConfig(filename='create_instance.log', level=logging.INFO)
+import os
+# Construct the log file path using the ARTIFACTS_FOLDER variable
+log_file_path = os.path.join(os.environ.get('ARTIFACTS_FOLDER', '.'), 'create_instance.log')
 
+# Configure logging for create_instance.py
+logging.basicConfig(filename=log_file_path, level=logging.INFO)
 TEMPLATE_LINK = 'projects/{project_id}/global/instanceTemplates/{template}'
 IMAGE_LINK = 'projects/{project_id}/global/images/{image_name}'
 
