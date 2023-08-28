@@ -6,7 +6,6 @@ import logging
 import os
 
 log_file_path = os.path.join(os.environ.get('ARTIFACTS_FOLDER', '.'), 'logs', 'create_instance.log')
-print(log_file_path)
 logging.basicConfig(filename=log_file_path, level=logging.INFO)
 
 TEMPLATE_LINK = 'projects/{project_id}/global/instanceTemplates/{template}'
