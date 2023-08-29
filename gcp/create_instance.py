@@ -18,7 +18,7 @@ def options_handler():
     parser.add_argument("--env-type",
                         "-t",
                         help="The type for a the environment",
-                        choices=[
+                        choices=[  # TODO - maybe we can remove some choices
                             "Nightly",
                             "Content-Env",
                             "Content-Master",
