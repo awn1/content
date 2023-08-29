@@ -19,16 +19,16 @@ def options_handler():
     parser.add_argument("--env-type",
                         "-t",
                         help="The type for a the environment",
-                        choices=[  # TODO - maybe we can remove some choices
+                        choices=[
                             "Nightly",
+                            "Bucket-Upload",
                             "Content-Env",
                             "Content-Master",
                             "Server Master",
+                            "Server 6.11",
+                            "Server 6.10",
+                            "Server 6.9",
                             "Server 6.8",
-                            "Server 6.6",
-                            "Server 6.5",
-                            "Server 6.2",
-                            "Bucket-Upload",
                         ],
                         required=True)
     parser.add_argument("--outfile",
