@@ -7,8 +7,9 @@ from uuid import uuid4
 from gcp import InstanceService
 import argparse
 from time import sleep
+from pathlib import Path
 
-log_file_path = os.path.join(os.environ.get('ARTIFACTS_FOLDER', '.'), 'logs', 'create_instance.log')
+log_file_path = Path(os.environ.get('ARTIFACTS_FOLDER', '.')).joinpath('logs', 'create_instance.log')
 logging.basicConfig(filename=log_file_path, level=logging.INFO)
 
 

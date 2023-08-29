@@ -1,12 +1,9 @@
+import json
 from typing import Dict, Iterator, List, Optional, Tuple
 from google.oauth2.service_account import Credentials
 from google.cloud import compute_v1
 from google.api_core.extended_operation import ExtendedOperation
 import logging
-import os
-
-log_file_path = os.path.join(os.environ.get('ARTIFACTS_FOLDER', '.'), 'logs', 'create_instance.log')
-logging.basicConfig(filename=log_file_path, level=logging.INFO)
 
 TEMPLATE_LINK = 'projects/{project_id}/global/instanceTemplates/{template}'
 IMAGE_LINK = 'projects/{project_id}/global/images/{image_name}'
@@ -46,8 +43,7 @@ class Instance:
             project=project_id)
         self.source_image = IMAGE_LINK.format(
             project_id=project_id,
-            image_name=source_image or config_dict.get('imagename') or f"family/xsoar-{config_dict['imagefamily']}" # TODO - when will use source_image
-        )
+            image_name=source_image or config_dict.get('imagename', f"family/xsoar-{config_dict['imagefamily']}")        )
         logging.info(f'Using {self.source_image=}')
         self._ip = None
         self.project_id = project_id
@@ -117,7 +113,7 @@ class InstanceService:
         insert_extended_operations: ExtendedOperation = []
         redeay_instances = []
         for instance_conf in instances:
-            logging.info(f'Creating instances: {instance_conf=}')
+            logging.info(f'Creating instance: \n{json.dumps(instance_conf, indent=4)}')
 
             instance_obj = Instance(
                 instance_name=instance_conf['name'],
