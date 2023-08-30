@@ -1,9 +1,8 @@
-import json
-from typing import Dict, Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional
 from google.oauth2.service_account import Credentials
 from google.cloud import compute_v1
 from google.api_core.extended_operation import ExtendedOperation
-import logging
+import json
 
 TEMPLATE_LINK = 'projects/{project_id}/global/instanceTemplates/{template}'
 IMAGE_LINK = 'projects/{project_id}/global/images/{image_name}'
