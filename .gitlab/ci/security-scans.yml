@@ -1,0 +1,4 @@
+include:
+  - project: 'engineering-productivity/ci-templates'
+    ref: master
+    file: 'output/security/auto-securecicd.yaml'
