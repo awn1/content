@@ -7,6 +7,10 @@ from uuid import uuid4
 from gcp import InstanceService
 import argparse
 from time import sleep
+from pathlib import Path
+
+log_file_path = Path(os.environ.get('ARTIFACTS_FOLDER', '.')).joinpath('logs', 'create_instances.log')
+logging.basicConfig(filename=log_file_path, level=logging.INFO)
 
 
 def options_handler():
@@ -17,14 +21,14 @@ def options_handler():
                         help="The type for a the environment",
                         choices=[
                             "Nightly",
+                            "Bucket-Upload",
                             "Content-Env",
                             "Content-Master",
                             "Server Master",
+                            "Server 6.11",
+                            "Server 6.10",
+                            "Server 6.9",
                             "Server 6.8",
-                            "Server 6.6",
-                            "Server 6.5",
-                            "Server 6.2",
-                            "Bucket-Upload",
                         ],
                         required=True)
     parser.add_argument("--outfile",
@@ -67,6 +71,7 @@ def main():
     options = options_handler()
     logging.info('creating {options.instance_count} instances')
     inst_config = instance_config(options.env_type)
+    logging.info(f'{options.env_type=}')
     instances = create_instances(inst_config, options.creds, options.zone)
     with open(options.outfile, 'w') as env_results_file:
         json.dump(instances, env_results_file, indent=4)

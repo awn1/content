@@ -1,7 +1,9 @@
-from typing import Dict, Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional
 from google.oauth2.service_account import Credentials
 from google.cloud import compute_v1
 from google.api_core.extended_operation import ExtendedOperation
+import json
+import logging
 
 TEMPLATE_LINK = 'projects/{project_id}/global/instanceTemplates/{template}'
 IMAGE_LINK = 'projects/{project_id}/global/images/{image_name}'
@@ -41,8 +43,8 @@ class Instance:
             project=project_id)
         self.source_image = IMAGE_LINK.format(
             project_id=project_id,
-            image_name=source_image or config_dict['imagename']
-        )
+            image_name=source_image or config_dict.get('imagename', f"family/xsoar-{config_dict['imagefamily']}")        )
+        logging.info(f'Using {self.source_image=}')
         self._ip = None
         self.project_id = project_id
         self.role = role or config_dict['role']
@@ -111,6 +113,8 @@ class InstanceService:
         insert_extended_operations: ExtendedOperation = []
         redeay_instances = []
         for instance_conf in instances:
+            logging.info(f'Creating instance: \n{json.dumps(instance_conf, indent=4)}')
+
             instance_obj = Instance(
                 instance_name=instance_conf['name'],
                 project_id=self.project_id,
