@@ -25,10 +25,10 @@ def options_handler():
                             "Content-Env",
                             "Content-Master",
                             "Server Master",
+                            "Server 6.12",
                             "Server 6.11",
                             "Server 6.10",
                             "Server 6.9",
-                            "Server 6.8",
                         ],
                         required=True)
     parser.add_argument("--outfile",

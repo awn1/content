@@ -18,6 +18,10 @@
         "imagefamily": "master"
       },
       {
+        "role": "Server 6.12",
+        "imagefamily": "ga-6-12"
+      },
+      {
         "role": "Server 6.11",
         "imagefamily": "ga-6-11"
       },
@@ -28,10 +32,6 @@
       {
         "role": "Server 6.9",
         "imagefamily": "ga-6-9"
-      },
-      {
-        "role": "Server 6.8",
-        "imagefamily": "ga-6-8"
       }
     ],
     "Content-Env": [
@@ -40,6 +40,10 @@
         "imagefamily": "master"
       },
       {
+        "role": "Server 6.12",
+        "imagefamily": "ga-6-12"
+      },
+      {
         "role": "Server 6.11",
         "imagefamily": "ga-6-11"
       },
@@ -50,10 +54,6 @@
       {
         "role": "Server 6.9",
         "imagefamily": "ga-6-9"
-      },
-      {
-        "role": "Server 6.8",
-        "imagefamily": "ga-6-8"
       }
     ],
     "Content-Master": [
