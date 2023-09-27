@@ -1,4 +1,4 @@
 include:
-  - project: 'engineering-productivity/ci-templates'
+  - project: ${CI_TEMPLATES_PROJECT}
     ref: master
     file: 'output/security/auto-securecicd.yaml'
