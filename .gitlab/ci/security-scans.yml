@@ -2,3 +2,8 @@ include:
   - project: ${CI_TEMPLATES_PROJECT}
     ref: master
     file: 'output/security/auto-securecicd.yaml'
+
+# This variable must be set in the project/group/instance level, it is here for reference only
+# See: https://docs.gitlab.com/ee/ci/yaml/includes.html#use-variables-with-include
+variables:
+  CI_TEMPLATES_PROJECT: engineering-productivity/ci-templates
