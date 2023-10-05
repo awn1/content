@@ -39,15 +39,15 @@
         "enabled": true,
         "flow_type": "nightly"
     },
-    "qa2-test-9992837971665": {
+    "qa2-test-9991088303796": {
         "ui_url": "https://xsoar-content-9.xdr-qa2-uat.us.paloaltonetworks.com/",
-        "instance_name": "qa2-test-9992837971665",
+        "instance_name": "qa2-test-9991088303796",
         "x-xdr-auth-id": 1,
         "base_url": "https://api-xsoar-content-9.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
-        "demisto_version": "8.3.0",
+        "demisto_version": "8.4.0",
         "enabled": false,
-        "flow_type": "build"
+        "flow_type": "testing"
     },
     "qa2-test-9992015237760": {
         "ui_url": "https://xsoar-content-10.xdr-qa2-uat.us.paloaltonetworks.com/",
@@ -89,5 +89,15 @@
         "demisto_version": "8.3.0",
         "enabled": true,
         "flow_type": "upload"
+    },
+        "qa2-test-9996484028649": {
+        "ui_url": "https://xsoar-content-12.xdr-qa2-uat.us.paloaltonetworks.com",
+        "instance_name": "qa2-test-9996484028649",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-xsoar-content-12.xdr-qa2-uat.us.paloaltonetworks.com",
+        "xsiam_version": "ga",
+        "demisto_version": "8.4.0",
+        "enabled": true,
+        "flow_type": "testing"
     }
 }

@@ -59,25 +59,25 @@
         "xsoar_ng_version": "ga",
         "flow_type": "build"
     },
-    "qa2-test-9998192889944": {
+    "qa2-test-9998207863610": {
         "ui_url": "https://xsoarng-content-7.crtx-qa2-uat.us.paloaltonetworks.com/",
-        "instance_name": "qa2-test-9998192889944",
+        "instance_name": "qa2-test-9998207863610",
         "x-xdr-auth-id": 1,
         "base_url": "https://api-xsoarng-content-7.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "enabled": false,
         "xsoar_ng_version": "ga",
-        "flow_type": "build"
+        "flow_type": "testing"
     },
-    "qa2-test-9999302868747": {
+    "qa2-test-9993622359115": {
         "ui_url": "https://xsoarng-content-8.crtx-qa2-uat.us.paloaltonetworks.com/",
-        "instance_name": "qa2-test-9999302868747",
+        "instance_name": "qa2-test-9993622359115",
         "x-xdr-auth-id": 1,
         "base_url": "https://api-xsoarng-content-8.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "enabled": false,
         "xsoar_ng_version": "ga",
-        "flow_type": "build"
+        "flow_type": "testing"
     },
     "qa2-test-9996578141583": {
         "ui_url": "https://xsoarng-content-9.crtx-qa2-uat.us.paloaltonetworks.com/",
