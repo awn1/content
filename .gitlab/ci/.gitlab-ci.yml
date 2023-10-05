@@ -1,12 +1,9 @@
 default:
-  image: ${DOCKER_IO}/devdemisto/gitlab-content-ci:1.0.0.27109
+  image: docker-io.art.code.pan.run/devdemisto/gitlab-content-ci:1.0.0.27109
 
 stages:
   - build-server-images
   - delete-server-images
-
-variables:
-  DOCKER_IO: docker-io.art.code.pan.run
 
 include:
   - local: .gitlab/ci/server-images-builds.yml
