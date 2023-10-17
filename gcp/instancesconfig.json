@@ -37,7 +37,8 @@
     "Content-Env": [
       {
         "role": "Server Master",
-        "imagefamily": "master"
+        "imagefamily": "master",
+        "imagename": "server-image-master-557486-2023-10-13"
       },
       {
         "role": "Server 6.12",
