@@ -38,7 +38,7 @@
       {
         "role": "Server Master",
         "imagefamily": "master",
-        "imagename": "server-image-master-557486-2023-10-13"
+        "imagename": "server-image-master-556379-2023-10-11"
       },
       {
         "role": "Server 6.12",
