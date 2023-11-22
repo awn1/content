@@ -64,7 +64,7 @@ def instance_config(env_type: str,
 
 
 def create_instances(inst_config: List[Dict], filtered_envs: Dict[str, bool], sa_file_path: str, zone: str) -> List[Dict]:
-    pipline_id = os.getenv(
+    pipeline_id = os.getenv(
         'CI_PIPELINE_ID', '').lower() or f'local-dev-{uuid4()}'
 
     instance_service = InstanceService(sa_file_path, zone)
@@ -73,7 +73,7 @@ def create_instances(inst_config: List[Dict], filtered_envs: Dict[str, bool], sa
     i = 0
     for instance in inst_config:
         if filtered_envs[instance['role']]:
-            name = f"{instance['imagefamily']}-{pipline_id}-{i}"
+            name = f"{instance['imagefamily']}-{pipeline_id}-{i}"
             i += 1
             logging.info(f'creating instance #{i} for {instance["role"]} with name {name}')
             instance_to_create = copy.copy(instance)
