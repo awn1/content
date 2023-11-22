@@ -3,9 +3,12 @@ import copy
 import json
 import logging
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 from uuid import uuid4
+
+import humanize
 
 from gcp import InstanceService
 
@@ -90,6 +93,7 @@ def main():
     options = options_handler()
     logging.info(f'creating instances for infra type: {options.env_type}')
     inst_config = instance_config(options.env_type)
+    start_time = datetime.utcnow()
 
     with open(options.filter_envs) as json_file:
         filtered_envs = json.load(json_file)
@@ -97,6 +101,9 @@ def main():
     instances = create_instances(inst_config, filtered_envs, options.creds, options.zone)
     with open(options.outfile, 'w') as env_results_file:
         json.dump(instances, env_results_file, indent=4)
+
+    duration = humanize.naturaldelta(datetime.utcnow() - start_time, minimum_unit="milliseconds")
+    logging.info(f"Finished creating instances - took:{duration}")
 
 
 if __name__ == '__main__':
