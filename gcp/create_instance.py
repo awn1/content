@@ -40,7 +40,7 @@ def options_handler():
                         required=True,
                         default="./env_results.json")
     parser.add_argument("--filter-envs",
-                        help="path for te filter env file",
+                        help="path for the filter env file",
                         required=True,
                         default="./filter_envs.json")
     parser.add_argument('--creds',
@@ -83,7 +83,7 @@ def create_instances(inst_config: List[Dict], filtered_envs: Dict[str, bool], sa
             logging.info(f'not creating instance for {instance["role"]}')
 
     if instances_to_create:
-        logging.info(f'creating {len(instances_to_create)} instances')
+        logging.info(f'creating {len(instances_to_create)} instance(s)')
         return instance_service.create_instances(instances_to_create)
     logging.info('no instances to create')
     return []
