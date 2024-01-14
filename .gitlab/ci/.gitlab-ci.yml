@@ -7,3 +7,4 @@ stages:
 
 include:
   - local: .gitlab/ci/server-images-builds.yml
+  - local: .gitlab/ci/global.yml

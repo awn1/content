@@ -19,15 +19,15 @@
 
 .build-server-dev-images-schedule-rule:
   rules:
-    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_SERVER_DEV_IMAGE == "true"'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "BUILD_SERVER_DEV_IMAGE"'
 
 .build-server-ga-images-schedule-rule:
   rules:
-    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_SERVER_GA_IMAGE == "true"'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "BUILD_SERVER_GA_IMAGE"'
 
 .delete-server-images-schedule-rule:
   rules:
-    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $DELETE_SERVER_IMAGES == "true"'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "DELETE_SERVER_IMAGES"'
 
 .docker-job:
   tags:
@@ -110,7 +110,6 @@ Build-Server-6.9-Image-job:
     - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
-
 Delete-Server-Images:
   stage: delete-server-images
   needs: []
@@ -125,3 +124,15 @@ Delete-Server-Images:
     - python3 ./delete_old_images.py --server-version "ga-6-11" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
     - python3 ./delete_old_images.py --server-version "ga-6-10" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
     - python3 ./delete_old_images.py --server-version "ga-6-9" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
+
+slack-notify-build-delete-server-images:
+  when: always
+  variables:
+    PIPELINE_ID: "$CI_PIPELINE_ID"
+    WORKFLOW: "$BUILD_TYPE"
+    SLACK_CHANNEL: 'content-infra-images'
+    SLACK_JOB: 'true'
+  extends:
+    - .trigger-slack-notification
+  
+  
