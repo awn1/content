@@ -1,0 +1,20 @@
+default:
+  image: docker-io.art.code.pan.run/devdemisto/gitlab-content-ci:1.0.0.27109
+
+.setup-network-certs: &setup-network-certs
+  - chmod 700 $NETWORK_SETUP
+  - source $NETWORK_SETUP
+
+stages: 
+  - notify
+
+slack-notify:
+  tags:
+    - gke
+  stage: notify
+  before_script:
+    - *setup-network-certs
+  script:
+    - python3 -u ./gitlab_slack_notifier.py -p "$PIPELINE_ID" -s "$SLACK_TOKEN" -c "$GITLAB_STATUS_TOKEN" -ch "$SLACK_CHANNEL" -tw "$WORKFLOW" -ofo "$ON_FAILED_ONLY"
+  retry:
+    max: 2
