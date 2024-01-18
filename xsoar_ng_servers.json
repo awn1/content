@@ -117,7 +117,7 @@
         "demisto_version": "99.99.98",
         "enabled": true,
         "xsoar_ng_version": "8.5",
-        "flow_type": "nightly"
+        "flow_type": "build"
     },
     "qa2-test-9999868314444": {
         "ui_url": "https://xsoarng-content-12.crtx-qa2-uat.us.paloaltonetworks.com/",
@@ -127,7 +127,7 @@
         "demisto_version": "99.99.98",
         "enabled": true,
         "xsoar_ng_version": "8.5",
-        "flow_type": "nightly"
+        "flow_type": "build"
     }
 
 
