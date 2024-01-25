@@ -128,6 +128,24 @@
         "enabled": true,
         "xsoar_ng_version": "8.5",
         "flow_type": "build"
+    },
+    "qa2-test-9998290877308": {
+        "ui_url": "https://xsoarng-content-13.crtx-qa2-uat.us.paloaltonetworks.com",
+        "instance_name": "qa2-test-9998290877308",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-xsoarng-content-13.crtx-qa2-uat.us.paloaltonetworks.com",
+        "demisto_version": "99.99.98",
+        "enabled": true,
+        "flow_type": "build"
+    },
+    "qa2-test-9999457299019": {
+        "ui_url": "https://xsoarng-content-14.crtx-qa2-uat.us.paloaltonetworks.com",
+        "instance_name": "qa2-test-9999457299019",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-xsoarng-content-14.crtx-qa2-uat.us.paloaltonetworks.com",
+        "demisto_version": "99.99.98",
+        "enabled": true,
+        "flow_type": "build"
     }
 
 
