@@ -1,5 +1,5 @@
 default:
-  image: docker-io.art.code.pan.run/devdemisto/gitlab-content-ci:1.0.0.27109
+  image: ${DOCKER_IO}/devdemisto/gitlab-content-ci:1.0.0.27109
 
 stages:
   - build-server-images

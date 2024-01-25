@@ -1,7 +1,7 @@
 FROM demisto/python3:3.10.4.27798
 
 
-# Network setup
+# Network setup todo
 COPY ci_resources/crt_files/ /usr/local/share/ca-certificates
 RUN sed -i -e 's|https://dl-cdn\.alpinelinux\.org|https://art.code.pan.run/artifactory/alpine|g' /etc/apk/repositories
 RUN apk add --no-cache --update ca-certificates-cacert
@@ -15,7 +15,7 @@ RUN mkdir .ssh && apk --update add --no-cache openssh
 
 # Upgrade all packages to latest
 # Install ansible and gcloud
-# Remove dev dependencies
+# Remove dev dependencies TODO
 RUN apk --update add --no-cache --virtual .build-dependencies python3-dev libffi-dev build-base wget \
     && pip install --index-url https://art.code.pan.run/artifactory/api/pypi/pypi.org/simple --trusted-host art.code.pan.run --no-cache-dir ansible google-auth numpy \
     && apk del .build-dependencies
