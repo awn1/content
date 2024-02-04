@@ -89,7 +89,7 @@
         "xsoar_ng_version": "ga",
         "flow_type": "build"
     },
-    "qa2-test-9999469340546": {
+    "qa2-test-9997514631684": {
         "ui_url": "https://xsoarng-content-10.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9997514631684",
         "x-xdr-auth-id": 1,
