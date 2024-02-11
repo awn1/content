@@ -5,6 +5,9 @@ stages:
   - build-server-images
   - delete-server-images
 
+variables:
+  DOCKER_IO: "docker.io" # defined in the project level CI/CD variables
+
 include:
   - local: .gitlab/ci/server-images-builds.yml
   - local: .gitlab/ci/global.yml
