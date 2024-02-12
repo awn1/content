@@ -33,7 +33,7 @@
   tags:
     - gce
   services:
-    - name: ${DOCKER_IO}/library/docker:latest
+    - name: ${DOCKER_IO}/library/docker:dind
       alias: docker
   variables:
     DOCKER_HOST: tcp://docker:2375
