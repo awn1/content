@@ -45,7 +45,7 @@
         "x-xdr-auth-id": 1,
         "base_url": "https://api-xsoarng-content-5.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
-        "enabled": false,
+        "enabled": true,
         "xsoar_ng_version": "ga",
         "flow_type": "build"
     },
@@ -65,7 +65,7 @@
         "x-xdr-auth-id": 1,
         "base_url": "https://api-xsoarng-content-7.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
-        "enabled": false,
+        "enabled": true,
         "xsoar_ng_version": "ga",
         "flow_type": "build"
     },
@@ -85,7 +85,7 @@
         "x-xdr-auth-id": 1,
         "base_url": "https://api-xsoarng-content-9.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
-        "enabled": false,
+        "enabled": true,
         "xsoar_ng_version": "ga",
         "flow_type": "build"
     },
