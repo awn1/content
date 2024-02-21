@@ -2,7 +2,8 @@
   - echo "building $DOCKER_BUILD_DIR"
   - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   - cp -r .gitlab/ci/ci_resources "$DOCKER_BUILD_DIR/ci_resources"
-  - docker build $DOCKER_BUILD_DIR -t "test/$DOCKER_BUILD_DIR"
+  - gcloud auth configure-docker ${DOCKER_IO_DOMAIN}
+  - docker build $DOCKER_BUILD_DIR -t "test/$DOCKER_BUILD_DIR" --build-arg=DOCKER_IO=${DOCKER_IO}
 
 .create_image: &create-image
   - |
@@ -101,7 +102,7 @@ Build-Server-6.9-Image-job:
   stage: build-server-images
   needs: []
   extends:
-    - .build-server-ga-images-schedule-rule # put in comment for testing
+#    - .build-server-ga-images-schedule-rule # put in comment for testing
     - .docker-job
   script:
     - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
