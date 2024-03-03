@@ -6,7 +6,7 @@
         "base_url": "https://api-xsoarng-content-1.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "enabled": true,
-        "xsoar_ng_version": "ga",
+        "xsoar_ng_version": "8.5.0",
         "flow_type": "build"
     },
     "qa2-test-9995508489161": {
@@ -16,7 +16,7 @@
         "base_url": "https://api-xsoarng-content-2.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "enabled": true,
-        "xsoar_ng_version": "ga",
+        "xsoar_ng_version": "8.4.0",
         "flow_type": "build"
     },
     "qa2-test-9998679163014": {
@@ -46,7 +46,7 @@
         "base_url": "https://api-viso-bkv2d5mha9up3sagarax44.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "enabled": true,
-        "xsoar_ng_version": "ga",
+        "xsoar_ng_version": "8.5.0",
         "flow_type": "build"
     },
     "qa2-test-9996426554176": {
@@ -56,7 +56,7 @@
         "base_url": "https://api-xsoarng-content-5.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "enabled": true,
-        "xsoar_ng_version": "ga",
+        "xsoar_ng_version": "8.5.0",
         "flow_type": "build"
     },
     "qa2-test-9997946768215": {
@@ -66,7 +66,7 @@
         "base_url": "https://api-xsoarng-content-6.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "enabled": true,
-        "xsoar_ng_version": "ga",
+        "xsoar_ng_version": "8.4.0",
         "flow_type": "build"
     },
     "qa2-test-9998207863610": {
@@ -76,7 +76,7 @@
         "base_url": "https://api-xsoarng-content-7.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "enabled": true,
-        "xsoar_ng_version": "ga",
+        "xsoar_ng_version": "8.5.0",
         "flow_type": "build"
     },
     "qa2-test-9993622359115": {
@@ -86,7 +86,7 @@
         "base_url": "https://api-xsoarng-content-8.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "enabled": true,
-        "xsoar_ng_version": "ga",
+        "xsoar_ng_version": "8.3.0",
         "flow_type": "build"
     },
     "qa2-test-9996578141583": {
@@ -106,7 +106,7 @@
         "base_url": "https://api-xsoarng-content-10.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "enabled": true,
-        "xsoar_ng_version": "ga",
+        "xsoar_ng_version": "8.4.0",
         "flow_type": "build"
     },
     "qa2-test-9997255932842": {
@@ -116,7 +116,7 @@
         "base_url": "https://api-xsoarng-content-11.crtx-qa2-uat.us.paloaltonetworks.com/",
         "demisto_version": "99.99.98",
         "enabled": true,
-        "xsoar_ng_version": "8.5",
+        "xsoar_ng_version": "8.5.0",
         "flow_type": "build"
     },
     "qa2-test-9999868314444": {
@@ -126,7 +126,7 @@
         "base_url": "https://api-xsoarng-content-12.crtx-qa2-uat.us.paloaltonetworks.com/",
         "demisto_version": "99.99.98",
         "enabled": false,
-        "xsoar_ng_version": "8.5",
+        "xsoar_ng_version": "8.5.0",
         "flow_type": "build"
     },
     "qa2-test-9998290877308": {
@@ -135,6 +135,7 @@
         "x-xdr-auth-id": 1,
         "base_url": "https://api-xsoarng-content-13.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
+        "xsoar_ng_version": "8.5.0",
         "enabled": true,
         "flow_type": "build"
     },
@@ -144,6 +145,7 @@
         "x-xdr-auth-id": 1,
         "base_url": "https://api-xsoarng-content-14.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
+        "xsoar_ng_version": "8.5.0",
         "enabled": true,
         "flow_type": "build"
     }
