@@ -36,6 +36,8 @@
   services:
     - name: ${DOCKER_IO}/library/docker:dind
       alias: docker
+  before_script:
+    - until docker info &> /dev/null; do sleep 1; done
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
