@@ -2,7 +2,8 @@
   - echo "building $DOCKER_BUILD_DIR"
   - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   - cp -r .gitlab/ci/ci_resources "$DOCKER_BUILD_DIR/ci_resources"
-  - docker build $DOCKER_BUILD_DIR -t "test/$DOCKER_BUILD_DIR"
+  - gcloud auth configure-docker ${DOCKER_IO_DOMAIN}
+  - docker build $DOCKER_BUILD_DIR -t "test/$DOCKER_BUILD_DIR" --build-arg=DOCKER_IO=${DOCKER_IO}
 
 .create_image: &create-image
   - |
@@ -35,6 +36,8 @@
   services:
     - name: ${DOCKER_IO}/library/docker:dind
       alias: docker
+  before_script:
+    - until docker info &> /dev/null; do sleep 1; done
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
