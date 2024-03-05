@@ -65,7 +65,7 @@ Build-Server-6.12-Image-job:
   stage: build-server-images
   needs: []
   extends:
-    - .build-server-ga-images-schedule-rule # put in comment for testing
+    # - .build-server-ga-images-schedule-rule # put in comment for testing
     - .docker-job
   script:
     - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
@@ -78,7 +78,7 @@ Build-Server-6.11-Image-job:
   stage: build-server-images
   needs: []
   extends:
-    - .build-server-ga-images-schedule-rule # put in comment for testing
+    # - .build-server-ga-images-schedule-rule # put in comment for testing
     - .docker-job
   script:
     - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
@@ -91,7 +91,7 @@ Build-Server-6.10-Image-job:
   stage: build-server-images
   needs: []
   extends:
-    - .build-server-ga-images-schedule-rule # put in comment for testing
+    # - .build-server-ga-images-schedule-rule # put in comment for testing
     - .docker-job
   script:
     - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
