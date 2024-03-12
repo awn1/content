@@ -1,8 +1,8 @@
 {
     "names": {
         "_comment": "This is a name mapping between github user name and email prefix. As GitHub users may possess either an account name or a username, and given that we receive a commit author with an account name and a reviewer with a username, we must establish a mapping for both to a unified email username.",
-        "RosenbergYehuda": "yosenberg",
-        "Yehuda Rosenberg": "yosenberg",
+        "RosenbergYehuda": "yrosenberg",
+        "Yehuda Rosenberg": "yrosenberg",
         "kobymeir": "kmeir",
         "Koby Meir": "kmeir",
         "yasta5": "yasta",
@@ -116,7 +116,17 @@
         "Andrew Shamah": "ashamah",
         "amshamah419": "ashamah",
         "Adi Bamberger Edri": "aedri",
-        "BEAdi": "aedri"
+        "BEAdi": "aedri",
+        "OBavly": "obavly",
+        "ellopez777": "ellopez",
+        "Tal Zichlinsky": "tzichlinsky",
+        "talzich": "tzichlinsky",
+        "Tal Carmeli" : "tcarmeli",
+        "tcarmeli1" : "tcarmeli",
+        "barryyosi-panw": "byosilevich",
+        "yedidyacohenpalo": "yecohen",
+        "aaron1535": "azonenfeld",
+        "YairGlik": "yglik"
     },
     "docker_images":
     {
