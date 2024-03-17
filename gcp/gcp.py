@@ -84,7 +84,7 @@ class Instance:
             service_accounts=[
                 compute_v1.ServiceAccount(
                     email=self.instance_sa,
-                    scopes=['https://www.googleapis.com/auth/compute']
+                    scopes=['https://www.googleapis.com/auth/compute', 'https://www.googleapis.com/auth/source.read_write'] # read_write is required for mocking mechanism 
                 )
             ],
             disks=[compute_v1.AttachedDisk(
