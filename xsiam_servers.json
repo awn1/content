@@ -136,7 +136,7 @@
         "base_url": "https://api-xsoar-content-12.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
-        "enabled": true,
+        "enabled": false,
         "flow_type": "build"
     }
 }
