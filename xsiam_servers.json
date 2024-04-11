@@ -108,5 +108,15 @@
         "demisto_version": "8.5.0",
         "enabled": true,
         "flow_type": "upload"
+    },
+        "qa2-test-9991875434329": {
+        "ui_url": "https://viso-jlzduffkwkaysafzwhcrqm.xdr-qa2-uat.us.paloaltonetworks.com/",
+        "instance_name": "qa2-test-9991875434329",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-viso-jlzduffkwkaysafzwhcrqm.xdr-qa2-uat.us.paloaltonetworks.com",
+        "xsiam_version": "ga",
+        "demisto_version": "8.6.0",
+        "enabled": true,
+        "flow_type": "nightly"
     }
 }
