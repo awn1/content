@@ -106,7 +106,7 @@
         "base_url": "https://api-viso-jlzduffkwkaysafzwhcrqm.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.6.0",
-        "enabled": true,
+        "enabled": false,
         "flow_type": "nightly"
     }
 }
