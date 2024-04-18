@@ -118,5 +118,25 @@
         "demisto_version": "8.5.0",
         "enabled": true,
         "flow_type": "nightly"
+    },
+        "qa2-test-9992795397390": {
+        "ui_url": "https://viso-con8nevhjnon3e2v4ttaek.xdr-qa2-uat.us.paloaltonetworks.com/",
+        "instance_name": "qa2-test-9992795397390",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-viso-con8nevhjnon3e2v4ttaek.xdr-qa2-uat.us.paloaltonetworks.com",
+        "xsiam_version": "ga",
+        "demisto_version": "8.6.0",
+        "enabled": true,
+        "flow_type": "build"
+    },
+        "qa2-test-9993266973787": {
+        "ui_url": "https://viso-uicx4jlwgxlba8eopcfpwk.xdr-qa2-uat.us.paloaltonetworks.com/",
+        "instance_name": "qa2-test-9993266973787",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-viso-uicx4jlwgxlba8eopcfpwk.xdr-qa2-uat.us.paloaltonetworks.com",
+        "xsiam_version": "ga",
+        "demisto_version": "8.6.0",
+        "enabled": true,
+        "flow_type": "build"
     }
 }
