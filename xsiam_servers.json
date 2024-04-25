@@ -46,7 +46,7 @@
         "base_url": "https://api-viso-d3ghke8jycrs6hudklh7vq.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
-        "enabled": false,
+        "enabled": true,
         "flow_type": "nightly"
     },
     "qa2-test-9991088303796": {
@@ -106,7 +106,7 @@
         "base_url": "https://api-viso-jytyppbr3lhp4atmczrvyj.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
-        "enabled": false,
+        "enabled": true,
         "flow_type": "nightly"
     },
         "qa2-test-9992795397390": {
