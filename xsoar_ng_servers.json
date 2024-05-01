@@ -138,9 +138,25 @@
         "xsoar_ng_version": "8.5.0",
         "enabled": true,
         "flow_type": "build"
+    },
+    "qa2-test-9994026732011": {
+        "ui_url": "https://viso-8tzzjknk3azmghvmpu3g7e.crtx-qa2-uat.us.paloaltonetworks.com/",
+        "instance_name": "qa2-test-9994026732011",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-viso-8tzzjknk3azmghvmpu3g7e.crtx-qa2-uat.us.paloaltonetworks.com",
+        "demisto_version": "99.99.98",
+        "xsoar_ng_version": "8.6.0",
+        "enabled": true,
+        "flow_type": "build"
+    },
+        "qa2-test-9999663522630": {
+        "ui_url": "https://viso-3ye7dexuai8tbp8r7hehq5.crtx-qa2-uat.us.paloaltonetworks.com/",
+        "instance_name": "qa2-test-9999663522630",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-viso-3ye7dexuai8tbp8r7hehq5.crtx-qa2-uat.us.paloaltonetworks.com",
+        "demisto_version": "99.99.98",
+        "xsoar_ng_version": "8.6.0",
+        "enabled": true,
+        "flow_type": "build"
     }
-
-
-
-
 }
