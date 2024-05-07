@@ -106,7 +106,7 @@
         "base_url": "https://api-viso-ceag9cymtvgfbugxgcyfcv.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.5.0",
-        "enabled": true,
+        "enabled": false,
         "flow_type": "build"
     },
     "qa2-test-9994927487250": {
