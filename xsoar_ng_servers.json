@@ -176,7 +176,7 @@
         "base_url": "https://api-viso-jgmtalpckkkc3bcybqdtnr.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
-        "enabled": false,
+        "enabled": true,
         "flow_type": "build"
     },
         "qa2-test-9997104527436": {
@@ -186,7 +186,7 @@
         "base_url": "https://api-viso-moxukdggj5dtdbrkthui2s.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
-        "enabled": false,
+        "enabled": true,
         "flow_type": "build"
     },
         "qa2-test-9991285088857": {
@@ -196,7 +196,7 @@
         "base_url": "https://api-viso-zzqnppnedhefsqcaac6wn8.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
-        "enabled": false,
+        "enabled": true,
         "flow_type": "build"
     },
         "qa2-test-9997232637349": {
@@ -206,7 +206,7 @@
         "base_url": "https://api-viso-vuhkhhrmef5djkepp3feme.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
-        "enabled": false,
+        "enabled": true,
         "flow_type": "build"
     },
         "qa2-test-9998837963440": {
@@ -216,7 +216,7 @@
         "base_url": "https://api-viso-fej88mszmtkmshxhedxa5q.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
-        "enabled": false,
+        "enabled": true,
         "flow_type": "build"
     },
         "qa2-test-9994103131996": {
@@ -226,7 +226,7 @@
         "base_url": "https://api-viso-bmbswh52hxklg5vqjaluth.crtx-qa2-uat.us.paloaltonetworks.com",
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
-        "enabled": false,
+        "enabled": true,
         "flow_type": "build"
     }
 }
