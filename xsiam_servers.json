@@ -156,7 +156,7 @@
         "base_url": "https://api-viso-zbttqpczeztcf7glrfmdij.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
-        "enabled": false,
+        "enabled": true,
         "flow_type": "build"
     },
         "qa2-test-9991468494293": {
@@ -166,7 +166,7 @@
         "base_url": "https://api-viso-6yjwobcupr7m4dpduqqjnz.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
-        "enabled": false,
+        "enabled": true,
         "flow_type": "build"
     },
         "qa2-test-9996711205886": {
@@ -176,7 +176,7 @@
         "base_url": "https://api-viso-gkkocszpnchxr2abboxla7.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
-        "enabled": false,
+        "enabled": true,
         "flow_type": "build"
     },
         "qa2-test-9993132144986": {
@@ -186,7 +186,7 @@
         "base_url": "https://api-viso-hyrjuy6ezo7jing3qmab3k.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
-        "enabled": false,
+        "enabled": true,
         "flow_type": "build"
     }
 }
