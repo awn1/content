@@ -1,4 +1,4 @@
-from gcp import Images, creds
+from gcp import Images
 import argparse
 
 
@@ -23,7 +23,7 @@ def options_handler():
 
 def main():
     options = options_handler()
-    Images(options.creds).delete(
+    Images(options.creds).delete(  # type: ignore
         options.server_version, options.images_to_reserve)
 
 

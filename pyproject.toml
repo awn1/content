@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "infra"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+requests = "^2.22.0"
+gitpython = "^3.1.43"
+python-gitlab = "^3.0.0"
+ruamel-yaml = ">=0.17.21,<0.18.0"
+demisto-sdk = "1.29.2"
+coloredlogs = "^15.0.1"
+pre-commit = "^3.7.0"
+mock-open = "^1.4.0"
+pandas = "^2.2.2"
+google = "^3.0.0"
+google-cloud-bigquery = "^3.22.0"
+pytest-mock = "^3.14.0"
+jira = "^3.8.0"
+timeout-decorator = "^0.5.0"
+requests-mock = "^1.12.1"
+github = "^1.2.7"
+
+[tool.ruff]
+ignore = [
+    "F403", # undefined-local-with-import-star
+    "F405", # undefined-local-with-import-star-usage
+]
+line-length = 130
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

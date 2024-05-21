@@ -1,0 +1,23 @@
+.pre-commit-rule:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+.before-script-pre-commit:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.poetry-install]
+    - !reference [.granting_execute_permissions_on_files]
+
+
+pre-commit:
+  stage: content-build
+  extends:
+  - .pre-commit-rule
+  - .before-script-pre-commit
+  script:
+    - PRE_COMMIT_SUCCESS=0
+    - poetry run pre-commit run -a || PRE_COMMIT_SUCCESS=1
+    - echo "PRE_COMMIT_SUCCESS=$PRE_COMMIT_SUCCESS"
+    - echo "job-done"
+    - exit $PRE_COMMIT_SUCCESS

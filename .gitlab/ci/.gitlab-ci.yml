@@ -1,13 +1,35 @@
 default:
-  image: ${DOCKER_IO}/devdemisto/gitlab-content-ci:1.0.0.27109
+  image: ${DOCKER_IO}/devdemisto/gitlab-content-ci:1.0.0.64455
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - ${CI_PROJECT_DIR}/artifacts/*
+      - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
+    when: always
 
 stages:
   - build-server-images
   - delete-server-images
+  - content-build
+  - create-release-branch
+  - trigger-nightlies
+  - wait-for-build-to-finish
+  - release-flow
+  - cleanup
+  - fan-in
 
 variables:
   DOCKER_IO: "docker.io" # defined in the project level CI/CD variables
+  POETRY_VERSION: "1.8.2"
+  INSTALL_POETRY: "true"
+  PYTHONPATH: "${CI_PROJECT_DIR}"
+  ARTIFACTORY_ENABLED: "true"
+  PIPELINE_JOBS_FOLDER: "${CI_PROJECT_DIR}/pipeline_jobs_folder"
 
 include:
   - local: .gitlab/ci/server-images-builds.yml
   - local: .gitlab/ci/global.yml
+  # - local: .gitlab/ci/trigger-content-build/.gitlab-ci.trigger-content-build.yml
+  - local: .gitlab/ci/pre-commit/.gitlab-ci.pre-commit.yml
+  - local: .gitlab/ci/sdk-release-ci/.gitlab-ci.sdk-release.yml
+  - local: .gitlab/ci/build-machines-cleanup/.gitlab-ci.build-machines-cleanup.yml

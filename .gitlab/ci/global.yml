@@ -6,3 +6,43 @@
       - local: .gitlab/ci/slack-notify.yml
 
 
+.setup-network-certs:
+  - section_start "Setup network certs" --collapsed
+  - echo "Configuring certificates..."
+  - echo "Copying Internal CA $$CERTIFICATE_INTERNAL_CA to /usr/local/share/ca-certificates/internal-ca.crt"
+  - cp .gitlab/ci/ci_resources/crt_files/internal-ca.crt /usr/local/share/ca-certificates/internal-ca.crt
+  - echo "Copying Domain CA $$CERTIFICATE_DOMAIN_CA to /usr/local/share/ca-certificates/domain-ca.crt"
+  - cp .gitlab/ci/ci_resources/crt_files/domain-ca.crt /usr/local/share/ca-certificates/domain-ca.crt
+  - echo "Exporting NODE_EXTRA_CA_CERTS to $$CERTIFICATE_INTERNAL_CA"
+  - export NODE_EXTRA_CA_CERTS=$$CERTIFICATE_INTERNAL_CA
+  - echo "Running update-ca-certificates"
+  - update-ca-certificates > /dev/null
+  - echo "Exporting REQUESTS_CA_BUNDLE to /etc/ssl/certs/ca-certificates.crt"
+  - export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+  - echo "Done configuring certificates"
+  # - chmod 700 ${CERTIFICATE_SETUP_SCRIPT}
+  # - source ${CERTIFICATE_SETUP_SCRIPT}
+  - section_end "Setup network certs"
+
+
+.poetry-install:
+  - section_start "poetry-install" --collapsed
+  # Install Poetry
+  - curl -sSL https://install.python-poetry.org | python3 - --version "${POETRY_VERSION}"
+  - poetry install
+  - section_end "poetry-install"
+
+
+.setup-artifactory:
+  - section_start "Setup Artifactory" --collapsed
+  - chmod 700 ${ARTIFACTORY_SETUP_SCRIPT}
+  - source ${ARTIFACTORY_SETUP_SCRIPT}
+  - section_end "Setup Artifactory"
+
+
+.granting_execute_permissions_on_files:
+  - section_start "Granting execute permissions on files" --collapsed
+  - chmod +x ./Tests/scripts/*
+  - chmod +x ./Tests/Marketplace/*
+  - section_end "Granting execute permissions on files"
+

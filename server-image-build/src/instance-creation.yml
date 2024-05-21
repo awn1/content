@@ -3,7 +3,7 @@
   connection: local
   become: false
   gather_facts: no
-  vars: 
+  vars:
     xsoar_content_build_creds: /server-image-build/secrets/xsoar_content_build_creds
     gcp_cred_kind: "serviceaccount"
     gcp_project: "xsoar-content-build"
