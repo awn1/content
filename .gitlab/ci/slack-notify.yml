@@ -5,7 +5,7 @@ default:
   - chmod 700 $NETWORK_SETUP
   - source $NETWORK_SETUP
 
-stages: 
+stages:
   - notify
 
 slack-notify:
@@ -15,6 +15,6 @@ slack-notify:
   before_script:
     - *setup-network-certs
   script:
-    - python3 -u ./gitlab_slack_notifier.py -p "$PIPELINE_ID" -s "$SLACK_TOKEN" -c "$GITLAB_STATUS_TOKEN" -ch "$SLACK_CHANNEL" -tw "$WORKFLOW" -ofo "$ON_FAILED_ONLY"
+    - python3 -u ./gitlab_slack_notifier.py -p "$CI_PIPELINE_ID" -s "$SLACK_TOKEN" -c "$GITLAB_STATUS_TOKEN" -ch "$SLACK_CHANNEL" -tw "$WORKFLOW" -ofo "$ON_FAILED_ONLY"
   retry:
     max: 2

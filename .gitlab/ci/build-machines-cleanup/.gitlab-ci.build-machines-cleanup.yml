@@ -1,0 +1,154 @@
+.build-machines-cleanup-rule:
+  rules:
+    - if: '$BUILD_MACHINES_CLEANUP == "true"'
+
+.build-machines-cleanup-rule-always:
+  rules:
+    - if: '$BUILD_MACHINES_CLEANUP == "true"'
+      when: always
+
+.create_artifacts_and_server_type_instance_folders: &create_artifacts_and_server_type_instance_folders
+  - section_start "Create Artifacts, Server Instance, Server Type folders" --collapsed
+  - |
+    if [[ -n "${ARTIFACTS_FOLDER}" ]] && [[ ! -d "${ARTIFACTS_FOLDER}/logs" ]]; then
+      echo "Creating Artifacts folder: ${ARTIFACTS_FOLDER} and it's log folder"
+      mkdir -p -m 777 "${ARTIFACTS_FOLDER}/logs" # using the -p to create the logs folder as well.
+    fi
+  - |
+    if [[ -n "${ARTIFACTS_FOLDER_INSTANCE}" ]] && [[ ! -d "${ARTIFACTS_FOLDER_INSTANCE}/logs" ]]; then
+      echo "Creating Artifacts instance folder: ${ARTIFACTS_FOLDER_INSTANCE} and it's log folder"
+      mkdir -p -m 777 "${ARTIFACTS_FOLDER_INSTANCE}/logs" # using the -p to create the logs folder as well.
+      echo "${INSTANCE_ROLE}" > "${ARTIFACTS_FOLDER_INSTANCE}/instance_role.txt"
+    fi
+  - |
+    if [[ -n "${ARTIFACTS_FOLDER_SERVER_TYPE}" ]] && [[ ! -d "${ARTIFACTS_FOLDER_SERVER_TYPE}/logs" ]]; then
+      echo "Creating Artifacts Server type folder: ${ARTIFACTS_FOLDER_SERVER_TYPE} and it's log folder"
+      mkdir -p -m 777 "${ARTIFACTS_FOLDER_SERVER_TYPE}/logs" # using the -p to create the logs folder as well.
+      echo "${SERVER_TYPE}" > "${ARTIFACTS_FOLDER_SERVER_TYPE}/server_type.txt"
+    fi
+  - section_end "Create Artifacts, Server Instance, Server Type folders"
+
+.before-script-build-machines-cleanup:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.poetry-install]
+    - !reference [.granting_execute_permissions_on_files]
+    - !reference [.setup-artifactory]
+    - *create_artifacts_and_server_type_instance_folders
+
+.lock-machine:
+  - section_start "Lock Machine" --collapsed
+  - echo "Authenticating GCP"
+  - gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
+  - echo "Auth done successfully"
+  - ./Tests/scripts/wait_in_line_for_cloud_env.sh "$CLOUD_MACHINES_TYPE"
+  - source CloudEnvVariables
+  - echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}" | tee "${ARTIFACTS_FOLDER}/logs/lock_file.txt"
+  - section_end "Lock Machine"
+
+.uninstall-packs-and-reset-bucket-cloud:
+  - section_start "Uninstall Packs and Reset Bucket Cloud" --collapsed
+  - ./Tests/scripts/uninstall_packs_and_reset_bucket_cloud.sh || EXIT_CODE=$?
+  - section_end "Uninstall Packs and Reset Bucket Cloud"
+
+.cloud-machine-information:
+  - section_start "Cloud Machine information"
+  - ./Tests/scripts/print_cloud_machine_details.sh
+  - section_end "Cloud Machine information"
+
+.unlock-machine:
+  - section_start "Unlock Machine" --collapsed
+  - |
+    if [[ -f "CloudEnvVariables" ]]; then
+      source CloudEnvVariables
+
+      if [[ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]]; then
+        if [[ -e "${ARTIFACTS_FOLDER}/logs/lock_file.txt" ]]; then
+          echo "Job finished, removing lock file for machine ids:${CLOUD_CHOSEN_MACHINE_IDS}"
+          gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
+          gsutil rm "gs://xsoar-ci-artifacts/$GCS_LOCKS_PATH/machines_locks/*-lock-$CI_JOB_ID"
+          echo "Finished removing lock file(s)"
+        else
+          echo "No lock file found, skipping unlocking"
+        fi
+      else
+        echo "No machine ids were chosen, skipping unlocking"
+      fi
+    else
+      echo "No CloudEnvVariables file found, skipping unlocking"
+    fi
+  - section_end "Unlock Machine"
+
+stages:
+  - security
+
+build-machines-cleanup:
+  stage: cleanup
+  extends:
+    - .build-machines-cleanup-rule
+    - .before-script-build-machines-cleanup
+  script:
+    - EXIT_CODE=0
+    - |
+      XSIAM_SERVERS_PATH="./xsiam_servers.json"
+      echo ${XSIAM_SERVERS_PATH} > xsiam_servers_path
+    - !reference [.lock-machine]
+    - !reference [.uninstall-packs-and-reset-bucket-cloud]
+    - !reference [.cloud-machine-information]
+    - job-done
+    - exit "${EXIT_CODE}"
+  after_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [ .unlock-machine ]
+  timeout: 4 hours
+  variables:
+    CLOUD_MACHINES_TYPE: "nightly"
+    CLOUD_MACHINES_COUNT: "all"
+    GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-nightly"
+    INSTANCE_ROLE: "XSIAM"
+    PRODUCT_TYPE: "XSIAM"
+    SERVER_TYPE: "XSIAM"
+    GCS_QUEUE_FILE: "queue-ga"
+    CLOUD_SERVERS_FILE: "xsiam_servers_path"
+    CLOUD_API_KEYS: $XSIAM_API_KEYS
+    CLOUD_API_TOKENS: $XSIAM_TOKENS
+    ARTIFACTS_FOLDER_MPV2: "${CI_PROJECT_DIR}/artifacts/marketplacev2"
+    ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_MPV2}"
+    ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER_MPV2}/instance_${INSTANCE_ROLE}"
+    ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_MPV2}/server_type_${SERVER_TYPE}"
+    ENV_RESULTS_PATH: "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json"
+    GCS_MARKET_BUCKET: "${GCS_MARKET_V2_BUCKET}"
+    GCS_SOURCE_BUCKET: "marketplace-v2-dist"
+    GCS_MACHINES_BUCKET: "marketplace-v2-dist-dev/upload-flow/builds-xsiam"
+    MARKETPLACE_NAME: "marketplacev2"
+    NON_REMOVABLE_PACKS: "Base"
+    RESET_CORE_PACK_VERSION: "false"
+
+fan-in-build-machines-cleanup:
+  tags:
+    - gke
+  stage: fan-in
+  extends:
+    - .build-machines-cleanup-rule-always
+  script:
+    - echo "fan in"
+
+slack-notify-build-machines-cleanup:
+  extends:
+    - .trigger-slack-notification
+    - .build-machines-cleanup-rule-always
+  variables:  # Passes the environment variable from the parent pipeline to the child which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    WORKFLOW: 'Build Machines Cleanup'
+    JOB_NAME: 'fan-in-build-machines-cleanup'
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_JOB: 'true'
+    SLACK_ALLOW_FAILURE: 'false'
+    CI_PROJECT_ID: $CI_PROJECT_ID
+    CI_SERVER_URL: $CI_SERVER_URL
+    JIRA_SERVER_URL: $JIRA_SERVER_URL
+    JIRA_VERIFY_SSL: $JIRA_VERIFY_SSL
+    JIRA_API_KEY: $JIRA_API_KEY
+    JIRA_PROJECT_ID: $JIRA_PROJECT_ID
+    JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME: $JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME

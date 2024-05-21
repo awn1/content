@@ -137,5 +137,3 @@ slack-notify-build-delete-server-images:
     SLACK_JOB: 'true'
   extends:
     - .trigger-slack-notification
-  
-  

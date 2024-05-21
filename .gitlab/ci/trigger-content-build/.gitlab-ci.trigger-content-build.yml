@@ -1,0 +1,37 @@
+.trigger_content_build_rule:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        paths:
+          - Tests/**/*
+          - Utils/**/*
+          - Content-CI/**/*
+        compare_to: master
+
+.create_artifacts_folder: &create_artifacts_folder
+  - section_start "Create Artifacts" --collapsed
+  - |
+    if [[ -n "${ARTIFACTS_FOLDER}" ]] && [[ ! -d "${ARTIFACTS_FOLDER}/logs" ]]; then
+      echo "Creating Artifacts folder: ${ARTIFACTS_FOLDER} and it's log folder"
+      mkdir -p -m 777 "${ARTIFACTS_FOLDER}/logs" # using the -p to create the logs folder as well.
+    fi
+  - section_end "Create Artifacts"
+
+
+.before-script-trigger-content-build:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.poetry-install]
+    - !reference [.granting_execute_permissions_on_files]
+    - !reference [.setup-artifactory]
+    - *create_artifacts_folder
+
+
+trigger-content-build:
+  stage: content-build
+  extends:
+    - .trigger_content_build_rule
+    - .before-script-trigger-content-build
+  script:
+    - poetry run python3 -u ./Content-CI/scripts/trigger_content_build.py -pn "${CI_PROJECT_NAMESPACE}/content" -gt "$GITLAB_API_TOKEN_CONTENT" -bn "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" -gtt "$GITLAB_SVC_USER_TOKEN" -gct "$GITLAB_CONTENT_CANCEL_TOKEN"
