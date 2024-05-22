@@ -1,0 +1,226 @@
+import argparse
+import json5
+import requests
+from google.api_core.exceptions import NotFound
+from Tests.scripts.google_secret_manager_handler import (
+    GoogleSecreteManagerModule,
+    FilterLabels,
+    FilterOperators,
+)
+import logging
+
+CONTENT_REPO_URL = "https://api.github.com/repos/demisto/content"
+# The max limit for the PRs API is 100, we use this variable to get more if it's 5 for example will get the last 500 PRs
+GET_PRS_ITERATIONS = 3
+
+
+def get_latest_merged() -> list[str]:
+    """
+    Get the latest merged PRs
+    :return: A list of the latest PRs from Github
+    """
+    latest_prs = []
+    url = f"{CONTENT_REPO_URL}/pulls"
+    # page starts at 1 for Github API
+    for i in range(1, GET_PRS_ITERATIONS + 1):
+        params = {
+            "sort": "updated",
+            "direction": "desc",
+            "per_page": 100,
+            "page": i,
+            "state": "closed",
+        }
+        try:
+            response = requests.request("GET", url, params=params, verify=False)  # type: ignore
+            response.raise_for_status()
+        except Exception as exc:
+            raise Exception(f"Could not get merged PRs from Git API, error: {exc}")
+        latest_prs.extend(response.json())
+
+    latest_prs_names = [p.get("head").get("ref") for p in latest_prs]
+    return latest_prs_names
+
+
+def merge_dev_secrets(
+    dev_secrets_to_merge: list[dict],
+    options: argparse.Namespace,
+    secret_conf: GoogleSecreteManagerModule,
+) -> list[str]:
+    """
+    Merges dev secrets to the main store
+    :param dev_secrets_to_merge: A list of dev secrets to add to the main store
+    :param options: The parsed script arguments
+    :param secret_conf: The GSM object to handle GSM API operations
+    :return: A list of names of secrets that were merged
+    """
+    merged_dev_secrets_names = []
+    for dev_secret in dev_secrets_to_merge:
+        dev_secret_name = dev_secret.pop("secret_name")
+        dev_secret_labels = dev_secret.pop("labels")
+
+        merged_dev_secrets_names.append(dev_secret_name)
+        main_secret_name = dev_secret_name.split("__", 1)[1]
+        labels_to_remove = ["dev", "branch"]
+        main_secret_labels = {
+            key: value
+            for key, value in dev_secret_labels.items()
+            if key not in labels_to_remove
+        }
+        try:
+            # Checks if the main secret exist in our store
+            secret_conf.get_secret(options.gsm_project_id_prod, main_secret_name)
+        except NotFound:
+            # Adding new secret to main store
+            secret_conf.create_secret(
+                options.gsm_project_id_prod, main_secret_name, main_secret_labels
+            )
+            logging.debug(f'Adding a new secret to prod: "{main_secret_name}"')
+
+        # Add a new version to master secret
+        secret_conf.add_secret_version(
+            options.gsm_project_id_prod,
+            main_secret_name,
+            json5.dumps(dev_secret, quote_keys=True),
+        )
+        logging.info(
+            f'dev secret "{dev_secret_name}" was merged to "{main_secret_name}" on prod'
+        )
+        # # Update the labels for the secret
+        # secret_conf.update_secret(options.gsm_project_id_prod, main_secret_name, main_secret_labels)
+    return merged_dev_secrets_names
+
+
+def get_dev_secrets_to_merge(
+    latest_pr_merges: list[str], dev_secrets: list[dict]
+) -> list[dict]:
+    """
+    Returns the dev secret that should be merged to the main store
+    :param latest_pr_merges: A list of the recent PRs that had been merged
+    :param dev_secrets: A list of dev secrets from our dev store
+    :return: A list of secrets from our dev store that should be merged to the main store
+    """
+    secrets_to_update = []
+    merged_branches = [
+        GoogleSecreteManagerModule.convert_to_gsm_format(p) for p in latest_pr_merges
+    ]
+    for secret in dev_secrets:
+        if secret.get("labels", {}).get(
+            "branch"
+        ) in merged_branches and validate_secret(
+            secret, ("name", "params")  # type: ignore
+        ):
+            secrets_to_update.append(secret)
+            logging.info(
+                f'Collected the secret "{secret.get("secret_name")}" from dev in order to merge it to prod'
+            )
+    return secrets_to_update
+
+
+def delete_dev_secrets(
+    secrets_to_delete: list[str],
+    secret_conf: GoogleSecreteManagerModule,
+    project_id: str,
+):
+    """
+    Deletes the merged dev secret from our dev store
+    :param secrets_to_delete: A list of secret names that need to be deleted
+    :param secret_conf: The GSM object to handle GSM API operations
+    :param project_id: The GCP project ID
+    """
+    for secret_name in secrets_to_delete:
+        logging.info(f"Deleting the following dev secret: {secret_name}")
+        secret_conf.delete_secret(project_id, secret_name)
+
+
+def validate_secret(secret: dict, attr_validation: ()) -> bool:  # type: ignore
+    """
+    Validate that the secret comply to our format
+    :param secret: The secret json as a string
+    :param attr_validation: A list of properties we expect the secret to have
+    :return: A boolean value if the secret is valid or not
+    """
+
+    # Validate file exist and json 5 format
+    try:
+        json5.dumps(secret)
+    except Exception as e:
+        logging.error(
+            f'Could not convert the secret "{secret.get("secret_name")}" to json5,'  # type: ignore
+            f"got the following error: {str(e)}"  # type: ignore
+        )
+        return False
+    # Validate mandatory properties in the secret
+    missing_attrs = [attr for attr in attr_validation if attr not in secret]
+    if missing_attrs:
+        logging.error(
+            f'Missing mandatory properties: {",".join(missing_attrs)}'  # type: ignore
+            f' for the secret "{secret.get("secret_name")}"'  # type: ignore
+        )
+        return False
+    return True
+
+
+def run(options: argparse.Namespace):
+    try:
+        secret_conf = GoogleSecreteManagerModule(options.service_account)
+        latest_pr_merges = get_latest_merged()
+        logging.info(f"The latest closed branches are: {latest_pr_merges}")
+        secrets_filter = {
+            FilterLabels.SECRET_ID: FilterOperators.NOT_NONE,
+            FilterLabels.IGNORE_SECRET: FilterOperators.NONE,
+            FilterLabels.SECRET_MERGE_TIME: FilterOperators.NONE,
+            FilterLabels.IS_DEV_BRANCH: FilterOperators.NOT_NONE,
+        }
+        dev_secrets = secret_conf.list_secrets(
+            options.gsm_project_id_dev, secrets_filter, with_secrets=True
+        )
+        dev_secrets_to_merge = get_dev_secrets_to_merge(latest_pr_merges, dev_secrets)
+        if len(dev_secrets_to_merge) == 0:
+            logging.info("No secrets to merge for this master build")
+        secrets_to_delete = merge_dev_secrets(
+            dev_secrets_to_merge, options, secret_conf
+        )
+        delete_dev_secrets(secrets_to_delete, secret_conf, options.gsm_project_id_dev)  # type: ignore
+    except Exception as e:
+        logging.error(f"Could not merge secrets, got the error: {e}")
+        raise e
+
+
+def options_handler(args=None) -> argparse.Namespace:
+    """
+    Parse the passed parameters for the script
+    :param args: A list of arguments to add
+    :return: The parsed arguments that were passed to the script
+    """
+    parser = argparse.ArgumentParser(
+        description="Utility for Importing secrets from Google Secret Manager."
+    )
+    parser.add_argument(
+        "-gpidd", "--gsm_project_id_dev", help="The project id for the GSM dev."
+    )
+    parser.add_argument(
+        "-gpidp", "--gsm_project_id_prod", help="The project id for the GSM prod."
+    )
+    # disable-secrets-detection-start
+    parser.add_argument(
+        "-sa",
+        "--service_account",
+        help=(
+            "Path to gcloud service account, for circleCI usage. "
+            "For local development use your personal account and "
+            "authenticate using Google Cloud SDK by running: "
+            "`gcloud auth application-default login` and leave this parameter blank. "
+            "For more information see: "
+            "https://googleapis.dev/python/google-api-core/latest/auth.html"
+        ),
+        required=False,
+    )
+    # disable-secrets-detection-end
+    options = parser.parse_args(args)
+
+    return options
+
+
+if __name__ == "__main__":
+    options = options_handler()
+    run(options)
