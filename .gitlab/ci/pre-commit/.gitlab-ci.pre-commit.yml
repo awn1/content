@@ -21,3 +21,10 @@ pre-commit:
     - echo "PRE_COMMIT_SUCCESS=$PRE_COMMIT_SUCCESS"
     - echo "job-done"
     - exit $PRE_COMMIT_SUCCESS
+  variables:
+    PRE_COMMIT_HOME: $CI_PROJECT_DIR/.cache/pre-commit
+  cache:
+    key: pre-commit
+    policy: pull-push
+    paths:
+      - $CI_PROJECT_DIR/.cache
