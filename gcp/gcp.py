@@ -145,18 +145,6 @@ class InstanceService:
                 instance_client=self.instance_client,
                 config_dict=instance_conf,
             )
-            insert_extended_operations.append(
-                (
-                    self.instance_client.insert(
-                        request=compute_v1.InsertInstanceRequest(
-                            project=self.project_id,
-                            zone=self.zone,
-                            source_instance_template=instance_obj.source_instance_template,
-                            instance_resource=instance_obj.instance_request(),
-                        )
-                    )
-                )
-            )
             insert_extended_operations.append((
                 self.instance_client.insert(
                     request=compute_v1.InsertInstanceRequest(
