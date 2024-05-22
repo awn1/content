@@ -1170,10 +1170,8 @@ class BranchTestCollector(TestCollector):
         The method extracts the files based on the diff between the two commits.
         Args:
             upload_delta_from_last_upload: For branch collector,
-             it is also necessary to upload the difference between master and bucket, In order to prevent failures caused
+             it is also necessary to upload the difference between branch and bucket, In order to prevent failures caused
               by higher versions in master compared to versions in bucket.
-
-        Returns:
 
         """
         repo = PATHS.content_repo
@@ -1187,9 +1185,8 @@ class BranchTestCollector(TestCollector):
         logger.debug(f'Getting changed files for {self.branch_name=}')
 
         if upload_delta_from_last_upload:
-            logger.info('Diff between master to last upload commit: getting last commit from index')
+            logger.info('upload_delta_from_last_upload: getting last commit from index')
             previous_commit = get_last_commit_from_index(self.service_account, self.marketplace)
-            current_commit = 'origin/master'
 
         elif os.getenv('IFRA_ENV_TYPE') == 'Bucket-Upload':
             logger.info('bucket upload: getting last commit from index')
