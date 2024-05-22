@@ -1,0 +1,33 @@
+.build-machines-report-schedule-rule:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_MACHINES_REPORT == "true"'
+
+build-machines-report-job:
+  extends:
+    - .build-machines-report-schedule-rule
+
+  stage: build-machines-report
+  artifacts:
+      expire_in: 30 days
+      paths:
+        - ${ARTIFACTS_FOLDER}/*
+      when: always
+
+  variables:
+    ARTIFACTS_FOLDER: artifacts/build_machines_report
+    ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    CI_PIPELINE_URL: $CI_PIPELINE_URL
+    GITLAB_ARTIFACTS_URL: https://xdr.docs-prod.xdr.pan.local/-/cortex-content/infra/-/jobs
+    GCP_SERVICE_ACCOUNT: $GSM_SERVICE_ACCOUNT
+
+  script:
+    - EXIT_CODE=0
+    - pip install -r ./BuildMachines/requirements.txt -r ./SlackNotifier/requirements.txt
+    - mkdir -p ${ARTIFACT_PATH}/logs || echo "Artifact Folder already exist."
+    - gcloud auth activate-service-account --key-file="${GCS_ARTIFACTS_KEY}" >> "${ARTIFACT_PATH}/logs/gcloud_auth.log" 2>&1
+    - export PYTHONPATH="${PYTHONPATH}:${CI_PROJECT_DIR}"
+    - output_path="Report_$(date '+%Y-%m-%d').html"
+    - python3 "${CI_PROJECT_DIR}/BuildMachines/report.py" --xsiam-json "${CI_PROJECT_DIR}/xsiam_servers.json" --xsoar-ng-json "${CI_PROJECT_DIR}/xsoar_ng_servers.json" -o "${ARTIFACT_PATH}/${output_path}" 2>&1 | tee -a "${ARTIFACTS_FOLDER}/logs/build_machines_report_log.log" || EXIT_CODE=$?
+    - python3 ./SlackNotifier/gitlab_basic_slack_notifier.py -s "${SLACK_TOKEN}" -t "Build machines report was created and can be found <$GITLAB_ARTIFACTS_URL/${CI_JOB_ID}/artifacts/$ARTIFACTS_FOLDER/${output_path}|here>" --allow-failure true -ch "${SLACK_CHANNEL}" 2>&1 | tee -a "${ARTIFACTS_FOLDER}/logs/slack_notifier.log"
+    - exit $EXIT_CODE
