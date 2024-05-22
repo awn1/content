@@ -101,13 +101,17 @@
       mode: cleanup
     when: tunnel_job is defined and tunnel_job.ansible_job_id is defined
 
-  - name: Stop inctanse
+  - name: Stop instance
     shell: "gcloud compute instances stop {{ base_instance_name }} --project={{ gcp_project }} --zone={{ instance_zone }} --quiet"
-  - name: Pause for 1 minutes
+  - name: Pause for 1 minutes for instance stop
+    pause:
+      minutes: 1
+  - name: Delete image
+    shell: "gcloud compute images delete {{ server_img_name }} --project={{ gcp_project }} --quiet || echo 'image not found'"
+  - name: Pause for 1 minutes for image deletion
     pause:
       minutes: 1
   - name: Create image
     shell: "gcloud compute images create {{ server_img_name }} --project={{ gcp_project }} --family=xsoar-{{ server_version }} --source-disk={{ base_instance_name }} --source-disk-zone={{ instance_zone }} --storage-location={{ inctance_region }} --quiet"
   - name: Delete disk
     shell: "gcloud compute disks delete {{ base_instance_name }} --project={{ gcp_project }} --zone={{ instance_zone }} --quiet"
-

@@ -1,0 +1,70 @@
+.update-marketplace-bucket-logs-schedule-rule:
+  rules:
+    - if: '$UPDATE_BIG_QUERY_LOGS == "true"'
+
+.update-marketplace-bucket-logs-schedule-rule-always:
+  rules:
+    - if: '$UPDATE_BIG_QUERY_LOGS == "true"'
+      when: always
+
+from-marketplace-dist-logs:
+  extends:
+    - .update-marketplace-bucket-logs-schedule-rule
+    - .default-job-settings
+  stage: bucket-logs
+  variables:
+    BUCKET_NAME: marketplace-dist
+    LOG_TABLE: marketplace_logs.usage
+  before_script:
+    - gcloud auth activate-service-account --key-file $GCLOUD_SERVICE_KEY
+  script:
+    - ./BucketLogs/process-logs.sh
+
+from-marketplace-v2-dist-logs:
+  extends:
+    - .update-marketplace-bucket-logs-schedule-rule
+    - .default-job-settings
+  stage: bucket-logs
+  variables:
+    BUCKET_NAME: marketplace-v2-dist
+    LOG_TABLE: marketplace_v2_logs.usage
+  before_script:
+    - gcloud auth activate-service-account --key-file $GCLOUD_SERVICE_KEY
+  script:
+    - ./BucketLogs/process-logs.sh
+
+from-marketplace-dist-private-logs:
+  extends:
+    - .update-marketplace-bucket-logs-schedule-rule
+    - .default-job-settings
+  stage: bucket-logs
+  variables:
+    BUCKET_NAME: marketplace-dist-private
+    LOG_TABLE: bucket_logs.marketplace-dist-private_usage
+  before_script:
+    - gcloud auth activate-service-account --key-file $GCLOUD_SERVICE_KEY
+  script:
+    - ./BucketLogs/process-logs.sh
+
+from-xsoar-registry-logs:
+  extends:
+    - .update-marketplace-bucket-logs-schedule-rule
+    - .default-job-settings
+  stage: bucket-logs
+  variables:
+    BUCKET_NAME: artifacts.xsoar-registry.appspot.com
+    LOG_TABLE: bucket_logs.xsoar_registry_usage
+  before_script:
+    - gcloud auth activate-service-account --key-file $GCLOUD_SERVICE_KEY
+  script:
+    - ./BucketLogs/process-logs.sh
+
+slack-notify-content-logs-processing:
+  variables:
+    PIPELINE_ID: "$CI_PIPELINE_ID"
+    WORKFLOW: "content logs processing"
+    SLACK_CHANNEL: '#content-logs-processing'
+    SLACK_JOB: 'true'
+  extends:
+    - .trigger-slack-notification
+    - .update-marketplace-bucket-logs-schedule-rule-always
