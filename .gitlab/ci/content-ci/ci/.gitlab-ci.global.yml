@@ -171,6 +171,12 @@
     XSOAR_NG_SERVERS_PATH="./xsoar_ng_servers.json"
     echo ${XSOAR_NG_SERVERS_PATH} > xsoar_ng_servers_path
 
+    DEMISTO_LIC_PATH="./demisto.lic"
+    echo ${DEMISTO_LIC_PATH} > demisto_lic_path
+
+    DEMISTO_PACK_SIGNATURE_UTIL_PATH="./signDirectory"
+    echo ${DEMISTO_PACK_SIGNATURE_UTIL_PATH} > demisto_pack_sig_util_path
+
     CI_SERVER_HOST=${CI_SERVER_HOST:-gitlab.xdr.pan.local} # disable-secrets-detection
 
     clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "${CI_PROJECT_NAMESPACE}/content-test-conf" "${SEARCHED_BRANCH_NAME}" 3 10 "master"
@@ -205,11 +211,6 @@
     mv ./infra/gcp ./gcp
     rm -rf ./infra
 
-    DEMISTO_LIC_PATH="./demisto.lic"
-    echo ${DEMISTO_LIC_PATH} > demisto_lic_path
-
-    DEMISTO_PACK_SIGNATURE_UTIL_PATH="./signDirectory"
-    echo ${DEMISTO_PACK_SIGNATURE_UTIL_PATH} > demisto_pack_sig_util_path
 
     # In xsiam_server_ga step, removing ./content-test-conf executed in extract_content_test_conf step
     if [[ "${CI_JOB_NAME}" != "xsiam_server_ga" ]]; then
