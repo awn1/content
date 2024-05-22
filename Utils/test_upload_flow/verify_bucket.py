@@ -264,8 +264,22 @@ class BucketVerifier:
         if not pack_exists:
             return False, pack_id
 
-        return ((default_data_source == self.gcp.get_pack_metadata(pack_id).get('defaultDataSource', {})
-                 and default_data_source == self.gcp.get_pack_metadata_from_pack_folder(pack_id).get('defaultDataSource', {})),
+        index_pack_metadata = self.gcp.get_pack_metadata(pack_id)
+        first_index_content_items_integration = index_pack_metadata.get('contentItems', {}).get('integration', [])[0] or {}
+        first_index_integration = index_pack_metadata.get('integrations', [])[0] or {}
+
+        pack_metadata = self.gcp.get_pack_metadata_from_pack_folder(pack_id)
+        first_pack_content_items_integration = index_pack_metadata.get('contentItems', {}).get('integration', [])[0] or {}
+        first_pack_integration = index_pack_metadata.get('integrations', [])[0] or {}
+
+        return ((default_data_source == index_pack_metadata.get('defaultDataSource', {})
+                 and first_index_content_items_integration.get("id") == default_data_source.get("id")
+                 and first_index_integration.get("name") == default_data_source.get("name")
+
+                 and default_data_source == pack_metadata.get('defaultDataSource', {})
+                 and first_pack_content_items_integration.get("id") == default_data_source.get("id")
+                 and first_pack_integration.get("name") == default_data_source.get("name")
+                 ),
                 pack_id,
                 VerifyMessages.DEFAULT_DATA_SOURCE
                 )
