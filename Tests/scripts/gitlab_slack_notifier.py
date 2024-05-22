@@ -683,7 +683,7 @@ def main():
     for channel in channels_to_send_msg(computed_slack_channel):
         try:
             response = slack_client.chat_postMessage(
-                channel=channel, attachments=slack_msg_data, username=SLACK_USERNAME, link_names=True, text=""
+                channel=channel, attachments=json.dumps(slack_msg_data), username=SLACK_USERNAME, link_names=True, text=""
             )
 
             if threaded_messages:
@@ -692,7 +692,7 @@ def main():
                 for slack_msg in threaded_messages:
                     slack_msg = [slack_msg] if not isinstance(slack_msg, list) else slack_msg
                     slack_client.chat_postMessage(
-                        channel=channel, attachments=slack_msg, username=SLACK_USERNAME,
+                        channel=channel, attachments=json.dumps(slack_msg), username=SLACK_USERNAME,
                         thread_ts=thread_ts, text=""
                     )
 
