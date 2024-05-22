@@ -1205,7 +1205,7 @@ class BranchTestCollector(TestCollector):
             logger.info('contribution branch found, contrib-diff:\n' + '\n'.join(contrib_diff))
             changed_files.extend(contrib_diff)
 
-        diff = repo.git.diff(f'{previous_commit}...{current_commit}', '--name-status')
+        diff = repo.git.diff(f'{previous_commit}...{current_commit}', '--name-status', '--', PACK_MANAGER.packs_path)
         logger.debug(f'raw changed files string:\n{diff}')
 
         # diff is formatted as `M  foo.json\n A  bar.py\n ...`, turning it into ('foo.json', 'bar.py', ...).
@@ -1511,8 +1511,7 @@ def output(result: CollectionResult | None):
     tests = sorted(result.tests, key=lambda x: x.lower()) if result else ()
     packs_to_install = sorted(result.packs_to_install, key=lambda x: x.lower()) if result else ()
     packs_to_upload = sorted(result.packs_to_upload, key=lambda x: x.lower()) if result else []
-    packs_to_update_metadata = sorted(result.packs_to_update_metadata, key=lambda x: x.lower()
-                                      ) if result else []
+    packs_to_update_metadata = sorted(result.packs_to_update_metadata, key=lambda x: x.lower()) if result else []
     modeling_rules_to_test = sorted(
         result.modeling_rules_to_test, key=lambda x: x.casefold() if isinstance(x, str) else x.as_posix().casefold()
     ) if result else ()
