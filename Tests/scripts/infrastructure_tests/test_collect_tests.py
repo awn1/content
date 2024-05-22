@@ -10,7 +10,7 @@ from Tests.scripts.collect_tests import collect_tests
 # importing Machine,FileType from collect_tests (rather than utils) to compare class member values
 from Tests.scripts.collect_tests.collect_tests import (
     BranchTestCollector, FileType, Machine, XSIAMNightlyTestCollector,
-    XSOARNightlyTestCollector, UploadAllCollector, sort_packs_to_upload)
+    XSOARNightlyTestCollector, UploadAllCollector)
 from Tests.scripts.collect_tests.constants import (
     ALWAYS_INSTALLED_PACKS_MARKETPLACE_V2, MODELING_RULE_COMPONENT_FILES,
     XSOAR_SANITY_TEST_NAMES, ONLY_INSTALL_PACK_FILE_TYPES, XSIAM_COMPONENT_FILES)
