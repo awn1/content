@@ -3,7 +3,9 @@ import logging
 import os
 from typing import Tuple
 import gitlab
-from slack import WebClient as SlackClient
+from slack_sdk import WebClient
+from slack_sdk.web import SlackResponse
+import requests
 
 logging.basicConfig(level=logging.INFO)
 
@@ -13,6 +15,7 @@ GITLAB_PROJECT_ID = os.getenv("CI_PROJECT_ID", 1701)
 # disable-secrets-detection
 GITLAB_SERVER_URL = os.getenv("CI_SERVER_URL", "https://gitlab.xdr.pan.local")
 SLACK_USERNAME = "Content GitlabCI"
+SLACK_WORKSPACE_NAME = os.getenv('SLACK_WORKSPACE_NAME', '')
 
 
 def construct_slack_msg(
@@ -25,7 +28,7 @@ def construct_slack_msg(
         - pipeline_failed_jobs (list): List of failed Gitlab::Job objects
 
     Returns:
-        - A list of slack message dictionaries
+        - A list of Slack message dictionaries and the title of the message.
     """
     title = triggering_workflow
     if pipeline_failed_jobs:
@@ -47,16 +50,14 @@ def construct_slack_msg(
             }
         )
 
-    slack_msg = [
-        {
-            "fallback": title,
-            "color": color,
-            "title": title,
-            "title_link": pipeline_url,
-            "fields": content_fields,
-        }
-    ]
-    return slack_msg
+    slack_msg = [{
+        'fallback': title,
+        'color': color,
+        'title': title,
+        'title_link': pipeline_url,
+        'fields': content_fields
+    }]
+    return slack_msg, title
 
 
 def collect_pipeline_data(gitlab_client, project_id, pipeline_id) -> Tuple[str, list]:
@@ -67,7 +68,7 @@ def collect_pipeline_data(gitlab_client, project_id, pipeline_id) -> Tuple[str, 
         - pipeline_id (str): ID of Gitlab pipeline
 
     Returns:
-        - The web url of the pipline to acces from slack.
+        - The web url of the pipline to access from slack.
         - The failed_jobs script.
     """
     logging.info(f"collect_pipeline_data {project_id=}, {pipeline_id=}")
@@ -135,6 +136,16 @@ def options_handler():
     return options
 
 
+def build_link_to_message(response: SlackResponse) -> str:
+    logging.info("Building link to message")
+    if SLACK_WORKSPACE_NAME and response.status_code == requests.codes.ok:
+        data: dict = response.data  # type: ignore[assignment]
+        channel_id: str = data['channel']
+        message_ts: str = data['ts'].replace('.', '')
+        return f"https://{SLACK_WORKSPACE_NAME}.slack.com/archives/{channel_id}/p{message_ts}"
+    return ""
+
+
 def main():
     options = options_handler()
     server_url = options.url
@@ -150,19 +161,19 @@ def main():
         gitlab_client, project_id, pipeline_id
     )
     if not options.on_fail_only or pipeline_failed_jobs:
-        slack_msg_data = construct_slack_msg(
-            triggering_workflow, pipeline_url, pipeline_failed_jobs
-        )
+        slack_msg_data, text = construct_slack_msg(
+            triggering_workflow, pipeline_url, pipeline_failed_jobs)
 
-        slack_client = SlackClient(slack_token)
-        slack_client.api_call(
-            "chat.postMessage",
-            json={
-                "channel": slack_channel,
-                "username": SLACK_USERNAME,
-                "attachments": slack_msg_data,
-            },
+        slack_client = WebClient(slack_token)
+        response = slack_client.chat_postMessage(
+            attachments=slack_msg_data,
+            channel=slack_channel, text=text, username=SLACK_USERNAME, link_names=True
         )
+        link = build_link_to_message(response)
+        logging.info(f'Pipeline {pipeline_id} failed, Successfully sent Slack message to channel {slack_channel} link: {link}')
+    else:
+        logging.info(
+            f'Pipeline {pipeline_id} was successful, no slack message sent.')
 
 
 if __name__ == "__main__":

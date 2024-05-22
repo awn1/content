@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Build machines report {{ current_date }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        h1 {
+            font-size: 32px;
+            color: #1877f2;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            margin-top: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-size: 16px;
+        }
+
+        .expandable-row:hover {
+            background-color: #e8e8e8;
+        }
+
+        .filter-enabled {
+            color: green;
+            font-weight: bold;
+        }
+
+        .filter-disabled {
+            color: red;
+            font-weight: bold;
+        }
+
+        .expanded-row {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .expanded-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .expanded-table th,
+        .expanded-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .expanded-table th {
+            background-color: #f2f2f2;
+            font-size: 14px;
+        }
+
+        .expanded-table td {
+            font-size: 14px;
+        }
+
+        .total-row {
+            font-size: 14px;
+            text-align: left;
+            color: #555;
+        }
+
+        .filter-options {
+            margin-bottom: 10px;
+        }
+
+        .filter-options select,
+        .filter-options input[type="text"] {
+            width: calc(100% - 40px);
+            padding: 8px;
+            margin-top: 5px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+            font-size: 14px;
+        }
+
+        .filter-options select:focus,
+        .filter-options input[type="text"]:focus {
+            outline: none;
+            border-color: #1877f2;
+        }
+
+        .filter-label {
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Build machines report - {{ current_date }}</h1>
+        <div class="filter-options" id="filter-host" style="display: initial;">
+            <label for="filter-input-host" class="filter-label">Filter by Host:</label>
+            <input type="text" id="filter-input-host" onkeyup="applyFilters()">
+        </div>
+        <div class="filter-options" id="filter-machine_name" style="display: initial;">
+            <label for="filter-input-machine-name" class="filter-label">Filter by Machine Name:</label>
+            <input type="text" id="filter-input-machine-name" onkeyup="applyFilters()">
+        </div>
+        <div class="filter-options" id="filter-enabled" style="display: initial;">
+            <label for="filter-input-enabled" class="filter-label">Filter by Enabled:</label>
+            <select id="filter-input-enabled" onchange="applyFilters()">
+                <option value="">All</option>
+                <option value="filter-enabled">Enabled</option>
+                <option value="filter-disabled">Disabled</option>
+            </select>
+        </div>
+        <table id="secret-table">
+            <thead>
+                <tr>
+                    <th onclick="showFilterOptions('filter-host')">Host</th>
+                    <th onclick="showFilterOptions('filter-machine_name')">Machine Name</th>
+                    <th onclick="showFilterOptions('filter-enabled')">Enabled</th>
+                    <th onclick="showFilterOptions('filter-flow_type')">Flow Type</th>
+                    <th onclick="showFilterOptions('filter-platform_type')">Platform Type</th>
+                    <th onclick="showFilterOptions('filter-versions')">Server Version</th>
+                    <th onclick="showFilterOptions('filter-lcaas_id')">LCAAS ID</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr class="expandable-row" data-expanded="false"
+                    style="background-color:{% if record.enabled %}white{% else %}#ffe6e6{% endif %};">
+                    <td class="filter-host">
+                        <a href="{{ record.ui_url }}" target="_blank" title="Open in new tab">{{ record.host }}</a>
+                    <td class="filter-machine_name">{{ record.machine_name }}</td>
+                    <td class="{{ 'filter-enabled' if record.enabled else 'filter-disabled' }}">{{ record.enabled }}</td>
+                    <td class="filter-flow_type">{{ record.flow_type }}</td>
+                    <td class="filter-platform_type">{{ record.platform_type }}</td>
+                    <td class="filter-version">{{ record.version }}</td>
+                    <td class="filter-lcaas_id">{{ record.lcaas_id }}</td>
+                </tr>
+                <tr class="expanded-row" style="display: none;">
+                    <td colspan="5">
+                        <table class="expanded-table">
+                            {% for key, value in record.items() %}
+                            <tr>
+                                <th>{{ key }}</th>
+                                <td>{{ value }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row" id="total-row">
+                    <td colspan="5">Total number of machines: <span id="total-count">{{ records|length }}</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+    <script>
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const expandableRows = document.querySelectorAll('.expandable-row');
+            expandableRows.forEach(row => {
+                row.addEventListener('click', function () {
+                    const expandedRow = this.nextElementSibling;
+                    const isExpanded = this.getAttribute('data-expanded') === 'true';
+
+                    // Toggle the expanded row visibility
+                    if (isExpanded) {
+                        expandedRow.style.display = 'none';
+                        this.setAttribute('data-expanded', 'false');
+                    } else {
+                        expandedRow.style.display = 'table-row';
+                        this.setAttribute('data-expanded', 'true');
+                    }
+                });
+            });
+        });
+
+        function updateTotalCount() {
+            const visibleRows = document.querySelectorAll('.expandable-row:not([style*="display: none"])');
+            document.getElementById('total-count').textContent = visibleRows.length;
+        }
+
+        function applyFilters() {
+            const enabledFilter = document.getElementById('filter-input-enabled').value;
+            const hostFilter = document.getElementById('filter-input-host').value.toUpperCase();
+            const machineNameFilter = document.getElementById('filter-input-machine-name').value.toUpperCase();
+
+            const rows = document.querySelectorAll('.expandable-row');
+
+            rows.forEach(row => {
+                const enabledCell = row.querySelector('.filter-enabled') || row.querySelector('.filter-disabled');
+                const hostCell = row.querySelector('.filter-host').textContent.toUpperCase();
+                const machineNameCell = row.querySelector('.filter-machine_name').textContent.toUpperCase();
+
+                // Check filters
+                const enabledMatch = enabledFilter === '' || (enabledCell && enabledCell.classList.contains(enabledFilter));
+                const hostMatch = hostCell.includes(hostFilter);
+                const machineNameMatch = machineNameCell.includes(machineNameFilter);
+
+                if ( enabledMatch && hostMatch && machineNameMatch) {
+                    row.style.display = '';
+
+                    if (row.getAttribute('data-expanded') === 'true') {
+                        row.nextElementSibling.style.display = 'table-row';
+                    }
+                } else {
+                    row.style.display = 'none';
+                    if (row.nextElementSibling) {
+                        row.nextElementSibling.style.display = 'none';
+                    }
+                }
+            });
+
+            updateTotalCount();
+        }
+
+        function showFilterOptions(filterId) {
+            const filterOptions = document.querySelectorAll('.filter-options');
+            filterOptions.forEach(option => {
+                option.style.display = 'none';
+            });
+            document.getElementById(filterId).style.display = 'block';
+        }
+
+    </script>
+
+</body>
+
+</html>

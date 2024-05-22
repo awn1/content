@@ -1,0 +1,9 @@
+{
+	"customer": "Demisto - Demisto Internal - Not For External Use",
+	"validTil": "2022 Oct 06",
+	"permittedUsers": 20,
+	"sig": "RgIWap10DxYF7gBEnmBcRTV1XhLtiWlSCMiZrtb68X1QOUAEomLms2IYQVhRNwP5cfeNvC3OlWZuo4JqrwTA1TRXjkBBAp9fgvCD9npYblBISrZXyj0DONKBC07Fc7LpfXoyvd0VagMbdceXSr1ENgj+pfXfeKCIRJ2b/zgN4DI=",
+	"sigv2": "cT9QPT6AVCB9ex8uZEyjlbjQ6OkqDQZveiGVM+ugmbAEVm7/YRQM6BeBrvoxGWZgm08HV94MQp8S35UF3J7DdZqiIM6ycT8XIAcYWV23ZIZCTdNpwTxK+BV4LEVGfA2k/QSHbY1/VG6bEf3K9HtCk8uG7Nns1pB/NRt4x38xYhU=",
+	"type": "enterprise",
+	"id": "CUIDbbdce21463b4dfbe3535acd7d81a5bf66f121add9b02515cd3d9b87185184232CUID"
+}
