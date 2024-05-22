@@ -405,7 +405,8 @@ class TestParsingInternalFunctions:
           {'imagePath': 'content/packs/DummyPack/DummyIntegration_image.png', 'name': 'DummyIntegration'},
           {'imagePath': 'content/packs/DummyPack2/DummyIntegration_image.png',  'name': 'DummyIntegration2'}])
     ])
-    def test_get_all_pack_images(self, mocker, pack_integration_images, display_dependencies_images, default_data_source, expected):
+    def test_get_all_pack_images(self, mocker, pack_integration_images, display_dependencies_images, default_data_source,
+                                 expected):
         """
            Tests that all the pack's images are being collected without duplication, according to the pack dependencies,
            and without the contribution details suffix if exists.
