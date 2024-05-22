@@ -2,11 +2,13 @@
   - echo "building $DOCKER_BUILD_DIR"
   - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   - cp -r .gitlab/ci/ci_resources "$DOCKER_BUILD_DIR/ci_resources"
-  - gcloud auth configure-docker ${DOCKER_IO_DOMAIN}
+  - gcloud auth configure-docker --quiet ${DOCKER_IO_DOMAIN}
   - docker build $DOCKER_BUILD_DIR -t "test/$DOCKER_BUILD_DIR" --build-arg=DOCKER_IO=${DOCKER_IO}
 
 .create_image: &create-image
   - |
+    echo "Pipeline source:$CI_PIPELINE_SOURCE"
+    echo "Build type:$BUILD_TYPE"
     export BUILD_NUMBER=$(echo "$INSTALLER_URL" | grep -o -E "\-[0-9]+/" | grep -o -E "[0-9]+")
     echo "BUILD_NUMBER: ${BUILD_NUMBER}"
     export SERVER_IMG_NAME="server-image-$VERSION-$BUILD_NUMBER-$(date -u +"%Y-%m-%d")"
@@ -29,6 +31,21 @@
 .delete-server-images-schedule-rule:
   rules:
     - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "DELETE_SERVER_IMAGES"'
+
+.build-server-dev-images-schedule-rule-always:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "BUILD_SERVER_DEV_IMAGE"'
+      when: always
+
+.build-server-ga-images-schedule-rule-always:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "BUILD_SERVER_GA_IMAGE"'
+      when: always
+
+.delete-server-images-schedule-rule-always:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "DELETE_SERVER_IMAGES"'
+      when: always
 
 .docker-job:
   tags:
@@ -128,12 +145,32 @@ Delete-Server-Images:
     - python3 ./delete_old_images.py --server-version "ga-6-10" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
     - python3 ./delete_old_images.py --server-version "ga-6-9" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
 
-slack-notify-build-delete-server-images:
-  when: always
+slack-notify-build-images-delete:
   variables:
     PIPELINE_ID: "$CI_PIPELINE_ID"
     WORKFLOW: "$BUILD_TYPE"
-    SLACK_CHANNEL: 'content-infra-images'
+    SLACK_CHANNEL: '#content-infra-images'
     SLACK_JOB: 'true'
   extends:
     - .trigger-slack-notification
+    - .delete-server-images-schedule-rule-always
+
+slack-notify-build-images-dev:
+  variables:
+    PIPELINE_ID: "$CI_PIPELINE_ID"
+    WORKFLOW: "$BUILD_TYPE"
+    SLACK_CHANNEL: '#content-infra-images'
+    SLACK_JOB: 'true'
+  extends:
+    - .trigger-slack-notification
+    - .build-server-dev-images-schedule-rule-always
+
+slack-notify-build-images-ga:
+  variables:
+    PIPELINE_ID: "$CI_PIPELINE_ID"
+    WORKFLOW: "$BUILD_TYPE"
+    SLACK_CHANNEL: '#content-infra-images'
+    SLACK_JOB: 'true'
+  extends:
+    - .trigger-slack-notification
+    - .build-server-ga-images-schedule-rule-always

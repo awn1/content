@@ -1,0 +1,28 @@
+category: Analytics & SIEM
+commonfields:
+  id: Grafana
+  version: -1
+configuration:
+- defaultvalue: https://www.example.com
+  display: Server URL
+  name: url
+  required: true
+  type: 0
+- display: Username
+  name: credentials
+  required: true
+  type: 9
+- display: Use system proxy settings
+  name: proxy
+  required: false
+  type: 8
+- display: Trust any certificate (not secure)
+  name: insecure
+  required: false
+  type: 8
+description: Grafana alerting service.
+display: Grafana
+name: Grafana
+defaultmapperin: Grafana Alert Mapper
+defaultclassifier: Grafana Alert
+fromversion: 6.0.0

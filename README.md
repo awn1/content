@@ -1,1 +1,1 @@
-# this is a POC of the demisto infra project
+# Content infra project

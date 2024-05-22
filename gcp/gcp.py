@@ -1,4 +1,4 @@
-from typing import Dict, Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional, Union
 from google.oauth2.service_account import Credentials
 from google.cloud import compute_v1
 from google.api_core.extended_operation import ExtendedOperation
@@ -10,12 +10,9 @@ IMAGE_LINK = "projects/{project_id}/global/images/{image_name}"
 
 
 class Images:
-    def __init__(self, creds: str | Credentials, zone: str):
-        credentials = (
-            creds
-            if isinstance(creds, Credentials)
-            else Credentials.from_service_account_file(creds)
-        )
+    def __init__(self, creds: Union[str, Credentials]):
+        credentials = creds if isinstance(
+            creds, Credentials) else Credentials.from_service_account_file(creds)
         self.project_id = credentials.project_id
         self.images_client = compute_v1.ImagesClient(credentials=credentials)
 
@@ -127,20 +124,17 @@ class Instance:
 
 class InstanceService:
 
-    def __init__(self, creds: str | Credentials, zone: str):
-        credentials = (
-            creds
-            if isinstance(creds, Credentials)
-            else Credentials.from_service_account_file(creds)
-        )
+    def __init__(self, creds: Union[str, Credentials], zone: str):
+        credentials = creds if isinstance(
+            creds, Credentials) else Credentials.from_service_account_file(creds)
 
         self.zone = zone
         self.project_id = credentials.project_id
         self.instance_client = compute_v1.InstancesClient(credentials=credentials)
 
     def create_instances(self, instances: List[Dict]):
-        insert_extended_operations: ExtendedOperation = []  # type: ignore
-        redeay_instances = []
+        insert_extended_operations: list[ExtendedOperation] = []
+        ready_instances = []
         for instance_conf in instances:
             logging.info(f"Creating instance: \n{json.dumps(instance_conf, indent=4)}")
 
@@ -163,9 +157,17 @@ class InstanceService:
                     )
                 )
             )
-            redeay_instances.append(instance_obj)
+            insert_extended_operations.append((
+                self.instance_client.insert(
+                    request=compute_v1.InsertInstanceRequest(
+                        project=self.project_id,
+                        zone=self.zone,
+                        source_instance_template=instance_obj.source_instance_template,
+                        instance_resource=instance_obj.instance_request())
+                )))
+            ready_instances.append(instance_obj)
 
         while insert_extended_operations:
             insert_extended_operations.pop().result()
 
-        return [instance.to_dict() for instance in redeay_instances]
+        return [instance.to_dict() for instance in ready_instances]
