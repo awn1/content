@@ -34,4 +34,4 @@ trigger-content-build:
     - .trigger_content_build_rule
     - .before-script-trigger-content-build
   script:
-    - poetry run python3 -u ./Content-CI/scripts/trigger_content_build.py -pn "${CI_PROJECT_NAMESPACE}/content" -gt "$GITLAB_API_TOKEN_CONTENT" -bn "$CI_COMMIT_BRANCH" -gtt "$GITLAB_SVC_USER_TOKEN" -gct "$GITLAB_CONTENT_CANCEL_TOKEN"
+    - poetry run python3 -u ./Content-CI/scripts/trigger_content_build.py -pn "${CI_PROJECT_NAMESPACE}/content" -gt "$GITLAB_API_TOKEN_CONTENT" -bn "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" -gtt "$GITLAB_SVC_USER_TOKEN" -gct "$GITLAB_CONTENT_CANCEL_TOKEN"

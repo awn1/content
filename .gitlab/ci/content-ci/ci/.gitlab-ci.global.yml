@@ -182,7 +182,7 @@
     clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "${CI_PROJECT_NAMESPACE}/content-test-conf" "${SEARCHED_BRANCH_NAME}" 3 10 "master"
 
     # We skip copying the PrivatePacks in run-validations because they currently don't pass validations - ()
-    if [[ "${CI_JOB_NAME}" == "run-validations" && "${NIGHTLY}" == "true" ]]; then
+    if [[ "${CI_JOB_NAME}" == "run-validations" ]]; then
       echo "skipping Cloning PrivatePacks for run-validations in Nightly"
     elif [[ "${CI_JOB_NAME}" == "run-validations-upload-flow" ]]; then
       echo "skipping Cloning PrivatePacks for run-validations-upload-flow"
