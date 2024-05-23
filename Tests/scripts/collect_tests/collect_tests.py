@@ -804,7 +804,6 @@ class BranchTestCollector(TestCollector):
             packs_to_update_metadata: set of packs to update
              (soft upload - changed only to packmetadata file without RN and version bump)
         """
-        logger.info(f"michal {self.added_files=}, {self.changed_files=}")
         for pack_id in result.packs_to_upload:
             current_version = PACK_MANAGER.get_current_version(pack_id) or ""
             rn_path = f"Packs/{pack_id}/ReleaseNotes/{current_version.replace('.', '_')}.md"
