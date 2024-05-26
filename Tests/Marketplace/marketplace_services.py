@@ -485,9 +485,9 @@ class Pack:
         Args:
              pack_integration_images (list): list of uploaded to gcs integration images and it paths in gcs.
              display_dependencies_images (list): list of pack names of additional dependencies images to display.
-             dependencies_metadata (dict): all level dependencies data.
              pack_dependencies_by_download_count (list): list of pack names that are dependencies of the given pack
-            sorted by download count.
+                    sorted by download count.
+             default_data_source (dict): the default data source integration for XSIAM data onboarding.
 
         Returns:
             list: collection of integration display name and it's path in gcs.
@@ -1751,7 +1751,7 @@ class Pack:
             self.display_name = pack_metadata.get(Metadata.NAME, '')  # type: ignore[misc]
             self._pack_metadata = pack_metadata
             self._content_items = pack_metadata.get(Metadata.CONTENT_ITEMS, {})
-            self._default_data_source = pack_metadata.get(Metadata.DEFAULT_DATA_SOURCE, {})
+            self._default_data_source = pack_metadata.get(Metadata.DEFAULT_DATA_SOURCE) or {}
             self._eula_link = pack_metadata.get(Metadata.EULA_LINK, Metadata.EULA_URL)
             self._marketplaces = pack_metadata.get(Metadata.MARKETPLACES, ['xsoar', 'marketplacev2'])
             self._modules = pack_metadata.get(Metadata.MODULES, [])
