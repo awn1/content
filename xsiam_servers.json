@@ -6,7 +6,7 @@
         "base_url": "https://api-xsoar-content-1.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
-        "enabled": true,
+        "enabled": false,
         "flow_type": "build"
     },
     "qa2-test-9995321362587": {
@@ -16,7 +16,7 @@
         "base_url": "https://api-xsoar-content-2.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
-        "enabled": true,
+        "enabled": false,
         "flow_type": "build"
     },
     "qa2-test-9996865346602": {
@@ -26,7 +26,7 @@
         "base_url": "https://api-xsoar-content-3.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
-        "enabled": true,
+        "enabled": false,
         "flow_type": "build"
     },
     "qa2-test-9995609001072": {
