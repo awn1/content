@@ -689,7 +689,7 @@ def get_all_content_packs_dependencies(client: DemistoClient) -> dict[str, dict]
     all_packs_dependencies = {}
     for i in itertools.count():
         response = get_one_page_of_packs_dependencies(client, i)
-        packs = response["packs"]
+        packs = response["packs"] or []
         logging.debug(f"Fetched dependencies of page {i} with {len(packs)} packs")
         for pack in packs:
             all_packs_dependencies[pack["id"]] = {
