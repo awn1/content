@@ -20,32 +20,6 @@ from-marketplace-dist-logs:
   script:
     - ./BucketLogs/process-logs.sh
 
-from-marketplace-v2-dist-logs:
-  extends:
-    - .update-marketplace-bucket-logs-schedule-rule
-    - .default-job-settings
-  stage: bucket-logs
-  variables:
-    BUCKET_NAME: marketplace-v2-dist
-    LOG_TABLE: marketplace_v2_logs.usage
-  before_script:
-    - gcloud auth activate-service-account --key-file $GCLOUD_SERVICE_KEY
-  script:
-    - ./BucketLogs/process-logs.sh
-
-from-marketplace-dist-private-logs:
-  extends:
-    - .update-marketplace-bucket-logs-schedule-rule
-    - .default-job-settings
-  stage: bucket-logs
-  variables:
-    BUCKET_NAME: marketplace-dist-private
-    LOG_TABLE: bucket_logs.marketplace-dist-private_usage
-  before_script:
-    - gcloud auth activate-service-account --key-file $GCLOUD_SERVICE_KEY
-  script:
-    - ./BucketLogs/process-logs.sh
-
 from-xsoar-registry-logs:
   extends:
     - .update-marketplace-bucket-logs-schedule-rule
