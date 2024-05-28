@@ -27,6 +27,6 @@ build-machines-report-job:
     - mkdir -p ${ARTIFACT_PATH}/logs || echo "Artifact Folder already exist."
     - gcloud auth activate-service-account --key-file="${GCS_ARTIFACTS_KEY}" >> "${ARTIFACT_PATH}/logs/gcloud_auth.log" 2>&1
     - export PYTHONPATH="${PYTHONPATH}:${CI_PROJECT_DIR}"
-    - python3 "${CI_PROJECT_DIR}/BuildMachines/report.py" --xsiam-json "${CI_PROJECT_DIR}/xsiam_servers.json" --xsoar-ng-json "${CI_PROJECT_DIR}/xsoar_ng_servers.json" -o "${ARTIFACT_PATH}" 2>&1 | tee -a "${ARTIFACTS_FOLDER}/logs/build_machines_report_log.log" || EXIT_CODE=$?
+    - python3 "${CI_PROJECT_DIR}/BuildMachines/report.py" --xsiam-json "${CI_PROJECT_DIR}/xsiam_servers.json" --xsoar-ng-json "${CI_PROJECT_DIR}/xsoar_ng_servers.json" -o "${ARTIFACT_PATH}" --name-mapping_path "${CI_PROJECT_DIR}/.gitlab/ci/name_mapping.json" 2>&1 | tee -a "${ARTIFACTS_FOLDER}/logs/build_machines_report_log.log" || EXIT_CODE=$?
     - python3 ./SlackNotifier/gitlab_basic_slack_notifier.py -s "${SLACK_TOKEN}" --file "${ARTIFACT_PATH}/slack_msg.txt" --allow-failure true -ch "${SLACK_CHANNEL}" 2>&1 | tee -a "${ARTIFACTS_FOLDER}/logs/slack_notifier.log"
     - exit $EXIT_CODE
