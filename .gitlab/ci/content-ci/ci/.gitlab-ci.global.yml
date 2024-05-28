@@ -667,7 +667,7 @@
 generate-config:
   stage: setup
   script:
-    - python3 test.py
+    - python3 ./test.py
   artifacts:
     paths:
       - generated-gitlab-ci.yml
