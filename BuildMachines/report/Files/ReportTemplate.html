@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <link href="https://cdn.datatables.net/2.0.7/css/dataTables.dataTables.css" rel="stylesheet">
-    <script src="https://cdn.datatables.net/2.0.7/js/dataTables.js" type="text/javascript"></script>
+    <link href="https://cdn.datatables.net/v/dt/jszip-3.10.1/dt-2.0.7/b-3.0.2/b-colvis-3.0.2/b-html5-3.0.2/b-print-3.0.2/kt-2.12.0/r-3.0.2/sl-2.0.1/datatables.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/v/dt/jszip-3.10.1/dt-2.0.7/b-3.0.2/b-colvis-3.0.2/b-html5-3.0.2/b-print-3.0.2/kt-2.12.0/r-3.0.2/sl-2.0.1/datatables.min.js"></script>
+    <link href="data:image/png;base64,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" rel="icon" type="image/x-icon">
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Build machines report {{ current_date }}</title>
@@ -59,12 +63,12 @@
             font-size: 16px;
         }
 
-        .filter-enabled-True {
+        .class-enabled-True {
             color: green;
             font-weight: bold;
         }
 
-        .filter-enabled-False {
+        .class-enabled-False {
             color: red;
             font-weight: bold;
         }
@@ -84,8 +88,131 @@
             obj += '</table>';
             return obj;
         }
+        let buttonsPre = [];
+        let managers = {{ managers }};
+        managers.forEach(function(manager) {
+            buttonsPre.push({
+                text: "request from:" + manager,
+                action: function (e, dt, button, config) {
+                    // get selected rows
+                    var selectedRows = dt.rows({ selected: true }).data();
+                    var filteredRows = [];
+                    if(selectedRows.length === 0) {
+                        alert('No rows selected');
+                        return;
+                    } else if(selectedRows.length > 1) {
+                        alert('Please select only one row');
+                        return;
+                    }
+                    // Filter visible rows based on the age condition
+                    selectedRows.each(function(row) {
+                        if (row['LCAAS ID'] !== "N/A") {
+                            filteredRows.push(row);
+                        }
+                    });
+                    if(filteredRows.length === 0) {
+                        alert('No LCAAS ID found');
+                        return;
+                    }
+
+                    var permission = "";
+                    filteredRows.forEach(function(row, index) {
+                        permission += "permissions role=editor, project=" + row['LCAAS ID'] + ", approver=" + manager + ", reason=on-call\n";
+                    });
+                    navigator.clipboard.writeText(permission).then(function() {
+                        alert('Copied permission request to clipboard!');
+                    }).catch(function(err) {
+                        console.error('Could not copy text: ', err);
+                    });
+                }
+            });
+        });
         window.addEventListener('DOMContentLoaded', () => {
             let table = new DataTable('#build-machines-report', {
+                buttons: [
+                    {
+                        extend: 'copy',
+                        footer: false,
+                    },
+                    {
+                        extend: 'csv',
+                        footer: false,
+                    },
+                    {
+                        extend: 'excel',
+                        footer: false,
+                    },
+                    {
+                        extend: 'pdf',
+                        footer: false,
+                        orientation: 'landscape'
+                    },
+                    {
+                        extend: 'print',
+                        footer: false,
+                        orientation: 'landscape'
+                    },
+                    {
+                        text: 'Copy LCAAS IDs',
+                        action: function (e, dt, button, config) {
+
+                            var selectedRows = dt.rows({ selected: true }).data();
+                            var visibleRows = dt.rows({ filter: 'applied' }).data();
+                            var filteredRows = [];
+                            if (selectedRows.length > 0) {
+                                visibleRows = selectedRows;
+                            }
+
+                            // Filter visible rows based on the age condition
+                            visibleRows.each(function(row) {
+                                if (row['LCAAS ID'] !== "N/A") {
+                                    filteredRows.push(row);
+                                }
+                            });
+                            if (filteredRows.length === 0) {
+                                alert('No LCAAS ID found');
+                                return;
+                            }
+
+                            // Extract data from the specified column and format it as CSV
+                            var csv = '';
+                            filteredRows.forEach(function(row, index) {
+                                csv += row['LCAAS ID'];
+                                if (index < filteredRows.length - 1) {
+                                    csv += '|';
+                                }
+                            });
+
+                            // Copy the CSV data to the clipboard using the Clipboard API
+                            navigator.clipboard.writeText(csv).then(function() {
+                                alert('Copied LCAAS IDs to clipboard!');
+                            }).catch(function(err) {
+                                console.error('Could not copy text: ', err);
+                            });
+                        },
+                    },
+                    {
+                        extend: 'spacer',
+                        style: 'bar',
+                        text: 'Permissions:'
+                    },
+                    {
+                        text: 'Slack Channel',
+                        action: function ( e, dt, button, config ) {
+                            window.open("{{ permissions_channel }}", "_blank");
+                        }
+                    },
+                    {
+                        extend: 'collection',
+                        text: 'Request',
+                        autoClose: true,
+                        buttons: buttonsPre,
+                    },
+                ],
+                layout: {
+                    topStart: 'buttons'
+                },
+                select: true,
                 bAutoWidth: false,
                 lengthMenu: [
                     [-1, 100, 50, 25, 10],
@@ -119,22 +246,21 @@
                                     );
                                 });
                         });
+                    // Add event listener for opening and closing details
+                    this.on('click', 'td.dt-control', function (e) {
+                        let tr = e.target.closest('tr');
+                        let row = table.row(tr);
+
+                        if (row.child.isShown()) {
+                            // This row is already open - close it
+                            row.child.hide();
+                        } else {
+                            // Open this row
+                            row.child(format(row.data())).show();
+                        }
+                    });
                 }
              });
-
-            // Add event listener for opening and closing details
-            table.on('click', 'td.dt-control', function (e) {
-                let tr = e.target.closest('tr');
-                let row = table.row(tr);
-
-                if (row.child.isShown()) {
-                    // This row is already open - close it
-                    row.child.hide();
-                } else {
-                    // Open this row
-                    row.child(format(row.data())).show();
-                }
-            });
         });
 
 
@@ -149,6 +275,8 @@
                     {% for column in columns %}
                         {% if column.visible %}
                             <th>{{ column.data }}</th>
+                        {% else %}
+                            <th style="display: none;">{{ column.data }}</th>
                         {% endif %}
                     {% endfor %}
                 </tr>
@@ -158,8 +286,8 @@
                 <tr class="expandable-row" data-expanded="false"
                     style="background-color:{% if record.enabled %}white{% else %}#ffe6e6{% endif %};">
                     {% for column in columns %}
-                        {% if column.filterable %}
-                            <td class="filter-{{ column.key }}-{{ record[column.key] }}">{{ record[column.key] }}</td>
+                        {% if column.add_class %}
+                            <td class="class-{{ column.key }}-{{ record[column.key] | replace("/", "_") }}">{{ record[column.key] }}</td>
                          {% else %}
                             <td>{{ record[column.key] }}</td>
                         {% endif %}
@@ -172,6 +300,8 @@
                 {% for column in columns %}
                     {% if column.visible %}
                         <th>{{ column.data }}</th>
+                    {% else %}
+                        <th style="display: none;">{{ column.data }}</th>
                     {% endif %}
                 {% endfor %}
             </tr>

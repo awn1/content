@@ -138,5 +138,11 @@
     {
         "_comment": "This is the reviewer of Docker image upgrade Pull requests",
         "owner": "ipolishuk"
-    }
+    },
+    "managers": [
+        "sbenyakir",
+        "ybenshalom",
+        "darbel",
+        "aazadaliyev"
+    ]
 }

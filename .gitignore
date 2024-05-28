@@ -106,3 +106,6 @@ conf.json
 
 # Debugging configuration
 .vscode
+/records.json
+/Report_*.html
+/slack_msg.txt
