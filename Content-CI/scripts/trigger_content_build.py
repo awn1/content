@@ -8,6 +8,11 @@ import git
 import requests
 import sys
 import json
+import urllib3
+
+from urllib3.exceptions import InsecureRequestWarning
+
+urllib3.disable_warnings(InsecureRequestWarning)
 
 yaml = YAML()
 
@@ -209,7 +214,7 @@ class PipelineManager:
         try:
             res = requests.post(url=self.trigger_url, files=files, verify=False).json()
             # When it fails and an exception is not raised
-            if 'web_url' not in res:
+            if "web_url" not in res:
                 print(f"Error: {str(res)}")
                 sys.exit(ExitCode.FAILED)
             print(f"Successful triggered test content build - see {res['web_url']}")

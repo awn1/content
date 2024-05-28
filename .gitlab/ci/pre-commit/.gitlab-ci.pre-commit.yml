@@ -17,7 +17,7 @@ pre-commit:
   - .before-script-pre-commit
   script:
     - PRE_COMMIT_SUCCESS=0
-    - poetry run pre-commit run -a || PRE_COMMIT_SUCCESS=1
+    - poetry run pre-commit run -a --color always || PRE_COMMIT_SUCCESS=1
     - echo "PRE_COMMIT_SUCCESS=$PRE_COMMIT_SUCCESS"
     - echo "job-done"
     - exit $PRE_COMMIT_SUCCESS
