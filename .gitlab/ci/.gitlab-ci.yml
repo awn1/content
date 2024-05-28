@@ -37,7 +37,7 @@ include:
   - local: .gitlab/ci/bucket-logs.yml
   - local: .gitlab/ci/secret-expiration-report.yml
   - local: .gitlab/ci/build-machines-report.yml
-  # - local: .gitlab/ci/trigger-content-build/.gitlab-ci.trigger-content-build.yml
+  - local: .gitlab/ci/trigger-content-build/.gitlab-ci.trigger-content-build.yml
   - local: .gitlab/ci/pre-commit/.gitlab-ci.pre-commit.yml
   - local: .gitlab/ci/sdk-release-ci/.gitlab-ci.sdk-release.yml
   - local: .gitlab/ci/build-machines-cleanup/.gitlab-ci.build-machines-cleanup.yml
