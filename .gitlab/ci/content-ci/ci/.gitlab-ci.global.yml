@@ -666,8 +666,10 @@
 
 generate-config:
   stage: setup
+  extends:
+    - .default-job-settings
   script:
-    - python3 ./test.py
+    - python3 ./Tests/scripts/test.py
   artifacts:
     paths:
       - generated-gitlab-ci.yml
@@ -675,6 +677,8 @@ generate-config:
 # Job to trigger the child pipeline using the generated configuration
 trigger-child-pipeline:
   stage: setup
+  extends:
+    - .default-job-settings
   needs: ["generate-config"]
   trigger:
     include: generated-gitlab-ci.yml
