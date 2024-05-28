@@ -18,7 +18,7 @@ COLUMNS = [
     {'data': '', 'visible': True, 'add_class': False, 'filterable': False, 'className': 'dt-control',
      'orderable': 'false', 'key': '', 'defaultContent': ''},
     {'data': 'Host', 'visible': True, 'add_class': False, 'filterable': False, 'key': 'host'},
-    {'data': 'Machine Mame', 'visible': True, 'add_class': False, 'filterable': False, 'key': 'machine_name'},
+    {'data': 'Machine Name', 'visible': True, 'add_class': False, 'filterable': False, 'key': 'machine_name'},
     {'data': 'Enabled', 'visible': True, 'add_class': True, 'filterable': True, 'key': 'enabled'},
     {'data': 'Flow Type', 'visible': True, 'add_class': True, 'filterable': True, 'key': 'flow_type'},
     {'data': 'Platform Type', 'visible': True, 'add_class': True, 'filterable': True, 'key': 'platform_type'},
