@@ -679,7 +679,9 @@ trigger-child-pipeline:
   stage: setup
   needs: ["generate-config"]
   trigger:
-    include: generated-gitlab-ci.yml
+    include:
+      - artifact: generated-gitlab-ci.yml
+        job: generate-config
     strategy: depend
 
 
