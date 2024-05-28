@@ -181,6 +181,12 @@
 
     clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "${CI_PROJECT_NAMESPACE}/content-test-conf" "${SEARCHED_BRANCH_NAME}" 3 10 "master"
 
+    cp ./content-test-conf/SecretActions/google_secret_manager_handler.py ./Tests/scripts
+    cp ./content-test-conf/SecretActions/SecretsBuild/add_secrets_file_to_build.py ./Tests/scripts
+    cp ./content-test-conf/SecretActions/SecretsBuild/merge_and_delete_dev_secrets.py ./Tests/scripts
+    cp -r ./content-test-conf/demisto.lic ${DEMISTO_LIC_PATH}
+    cp -r ./content-test-conf/signDirectory ${DEMISTO_PACK_SIGNATURE_UTIL_PATH}
+
     # We skip copying the PrivatePacks in run-validations because they currently don't pass validations - ()
     if [[ "${CI_JOB_NAME}" == "run-validations" && "${NIGHTLY}" == "true" ]]; then
       echo "skipping Cloning PrivatePacks for run-validations in Nightly"
@@ -200,17 +206,10 @@
     cp -r ./infra/xsoar_ng_servers.json $XSOAR_NG_SERVERS_PATH
     cp -r ./infra/.gitlab/ci/name_mapping.json "${CI_PROJECT_DIR}/name_mapping.json"
 
-    cp ./infra/SecretActions/google_secret_manager_handler.py ./Tests/scripts
-    cp ./infra/SecretActions/SecretsBuild/add_secrets_file_to_build.py ./Tests/scripts
-    cp ./infra/SecretActions/SecretsBuild/merge_and_delete_dev_secrets.py ./Tests/scripts
-    cp -r ./infra/demisto.lic ${DEMISTO_LIC_PATH}
-    cp -r ./infra/signDirectory ${DEMISTO_PACK_SIGNATURE_UTIL_PATH}
-
     cp -rf ./infra/Tests/* ./Tests && rm -R ./infra/Tests/*
     cp -rf ./infra/Utils/* ./Utils && rm -R ./infra/Utils/*
     mv ./infra/gcp ./gcp
     rm -rf ./infra
-
 
     # In xsiam_server_ga step, removing ./content-test-conf executed in extract_content_test_conf step
     if [[ "${CI_JOB_NAME}" != "xsiam_server_ga" ]]; then
@@ -663,27 +662,6 @@
     - echo "PRE_COMMIT_SUCCESS=$PRE_COMMIT_SUCCESS"
     - job-done
     - exit $PRE_COMMIT_SUCCESS
-
-generate-config:
-  stage: setup
-  extends:
-    - .default-job-settings
-  script:
-    - python3 ./Tests/scripts/test.py
-  artifacts:
-    paths:
-      - generated-gitlab-ci.yml
-
-# Job to trigger the child pipeline using the generated configuration
-trigger-child-pipeline:
-  stage: setup
-  needs: ["generate-config"]
-  trigger:
-    include:
-      - artifact: generated-gitlab-ci.yml
-        job: generate-config
-    strategy: depend
-
 
 .run-validations:
   stage: unittests-and-validations
