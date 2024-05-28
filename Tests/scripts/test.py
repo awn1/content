@@ -30,7 +30,7 @@ def generate_gitlab_ci():
         }
         gitlab_ci['test']['parallel']['matrix'].append(job)
 
-    with open('../../.gitlab/ci/content-ci/ci/.gitlab-ci.yml', 'w') as file:
+    with open('.gitlab/ci/content-ci/ci/generated-gitlab-ci.yml', 'w') as file:
         yaml.dump(gitlab_ci, file, default_flow_style=False)
 
 
