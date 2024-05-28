@@ -117,7 +117,7 @@
 
                     var permission = "";
                     filteredRows.forEach(function(row, index) {
-                        permission += "permissions role=editor, project=" + row['LCAAS ID'] + ", approver=" + manager + ", reason=on-call\n";
+                        permission += "permissions role=editor, project=" + row['Machine Name'] + ", approver=" + manager + ", reason=on-call\n";
                     });
                     navigator.clipboard.writeText(permission).then(function() {
                         alert('Copied permission request to clipboard!');
