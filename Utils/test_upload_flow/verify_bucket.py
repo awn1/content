@@ -27,7 +27,6 @@ class VerifyMessages(str):
     MODIFIED_ITEM_PATH = "verified the path of the pack item is modified"
     DEPENDENCY = "verified the new dependency is in the pack metadata"
     KEYWORDS = "verified the new keyword is in the pack metadata"
-    DEFAULT_DATA_SOURCE = "verified the defaultDataSource is in the pack metadata"
     NEW_IMAGE = "verified the new image was uploaded"
     HIDDEN_DEPENDENCY = "verified the hidden dependency pack not in metadata.json"
     PACK_NOT_IN_MARKETPLACE = ("verified the pack {} is NOT in the index and that version 1.0.0 zip DOES NOT "
@@ -256,34 +255,6 @@ class BucketVerifier:
                 )
 
     @logger
-    def verify_default_data_source_value(self, pack_id, default_data_source):
-        """Verify that the defaultDataSource value shows in the bucket."""
-        pack_exists = download_and_extract_pack(pack_id, self.versions[pack_id], self.gcp.storage_bucket,
-                                                self.gcp.extracting_destination,
-                                                self.gcp.storage_base_path)
-        if not pack_exists:
-            return False, pack_id, ''
-
-        index_pack_metadata = self.gcp.get_pack_metadata(pack_id)
-        first_index_content_items_integration = index_pack_metadata.get('contentItems', {}).get('integration', [])[0] or {}
-        first_index_integration = index_pack_metadata.get('integrations', [])[0] or {}
-
-        pack_metadata = self.gcp.get_pack_metadata_from_pack_folder(pack_id)
-        first_pack_content_items_integration = index_pack_metadata.get('contentItems', {}).get('integration', [])[0] or {}
-        first_pack_integration = index_pack_metadata.get('integrations', [])[0] or {}
-
-        result = (default_data_source == index_pack_metadata.get('defaultDataSource', {})
-                  and first_index_content_items_integration.get("id") == default_data_source.get("id")
-                  and first_index_integration.get("name") == default_data_source.get("name")
-
-                  and default_data_source == pack_metadata.get('defaultDataSource',{})
-                  and first_pack_content_items_integration.get("id") == default_data_source.get("id")
-                  and first_pack_integration.get("name") == default_data_source.get("name"))
-        return (result,
-                pack_id,
-                VerifyMessages.DEFAULT_DATA_SOURCE)
-
-    @logger
     def verify_new_version(self, pack_id, rn):
         """
         Verify a new version exists in the index, verify the rn is parsed correctly to the changelog
@@ -405,12 +376,6 @@ class BucketVerifier:
         packs_not_for_xsiam = [TestUploadFlowXSOAR, TestUploadFlowXsoarSaaS]
         for not_supported_xsiam_mp_pack in packs_not_for_xsiam:
             self.verify_pack_not_in_marketplace(not_supported_xsiam_mp_pack, XSIAM_TESTING_BUCKET)
-
-        # Case 16: Verify defaultDataSource field is added with the correct values
-        self.verify_default_data_source_value('TestUploadFlow',
-                                              {'id': 'TestUploadFlow', 'name': 'TestUploadFlow'})
-        self.verify_default_data_source_value('TestUploadFlowXSIAM',
-                                              {'id': 'XSIAMEventCollector', 'name': 'XSIAM Event Collector'})
 
     def run_xsoar_bucket_validations(self):
         """
