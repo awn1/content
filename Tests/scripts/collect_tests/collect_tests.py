@@ -935,10 +935,10 @@ class BranchTestCollector(TestCollector):
             case FileType.TEST_PLAYBOOK:
                 if yml.id_ in self.conf.test_id_to_test:
                     tests = yml.id_,
+                    only_to_install = True
                 else:
                     logger.warning(f'test playbook with id {yml.id_} is missing from conf.json tests section')
                     tests = ()
-                only_to_install = True
                 reason = CollectionReason.TEST_PLAYBOOK_CHANGED
 
             case FileType.INTEGRATION:
