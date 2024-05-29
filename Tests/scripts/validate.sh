@@ -22,6 +22,8 @@ elif [[ $CI_COMMIT_BRANCH =~ pull/[0-9]+ ]]; then
     python3 -m demisto_sdk validate -g --post-commit --graph --skip-pack-dependencies --run-old-validate --skip-new-validate
 elif [[ $CI_COMMIT_BRANCH = demisto/python3 ]]; then
     python3 -m demisto_sdk validate -g --post-commit --no-conf-json --allow-skipped --graph --skip-pack-dependencies --run-old-validate --skip-new-validate
+elif [[ -n $CONTRIB_BRANCH ]]; then
+    python3 -m demisto_sdk validate -g  --include-untracked --graph --skip-pack-dependencies --run-old-validate --skip-new-validate
 else
     python3 -m demisto_sdk validate -g --post-commit --graph --skip-pack-dependencies --run-old-validate --skip-new-validate
 fi

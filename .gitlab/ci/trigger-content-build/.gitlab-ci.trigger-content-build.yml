@@ -5,7 +5,15 @@
         paths:
           - Tests/**/*
           - Utils/**/*
+          - gcp/**/*
+          - SecretActions/**/*
+          - gcp_automations/**/*
+          - BuildMachines/**/*
           - Content-CI/**/*
+          - .gitlab/ci/content-ci/ci/**/*
+          - .gitlab/ci/sdk-release-ci/**/*
+          - .gitlab/ci/pre-commit/**/*
+          - .gitlab/ci/trigger-content-build/.gitlab-ci.trigger-content-build.yml
         compare_to: master
 
 .create_artifacts_folder: &create_artifacts_folder
@@ -17,6 +25,25 @@
     fi
   - section_end "Create Artifacts"
 
+
+.check-is-force-merged-allowed:
+  - section_start "Check is force merged allowed" --collapsed
+  - |
+    if echo "${CI_MERGE_REQUEST_LABELS}" | grep -q "Force Merge"; then
+      RESULT=$(poetry run python3 -u ./Content-CI/scripts/check_is_force_merge_allowed.py -pid "$CI_PIPELINE_ID" -gt "$GITLAB_STATUS_TOKEN" -jn "$CI_JOB_NAME" --allowed-users-force "$ALLOWED_USERS_FORCE")
+      ALLOWED_FORCE=$(echo $RESULT | cut -d ',' -f1)
+      if [[ "$ALLOWED_FORCE" == "true"  ]]; then
+        FORCE_MERGE_BY=$(echo $RESULT | cut -d ',' -f2)
+        echo "This MR is a force merge by ${FORCE_MERGE_BY}"
+        job-done
+        exit 0
+      else
+        echo "The pipeline was not triggered by one of the managers"
+      fi
+    else
+      echo "The MR is not a force merge"
+    fi
+  - section_end "Check is force merged allowed"
 
 .before-script-trigger-content-build:
   before_script:
@@ -34,4 +61,5 @@ trigger-content-build:
     - .trigger_content_build_rule
     - .before-script-trigger-content-build
   script:
-    - poetry run python3 -u ./Content-CI/scripts/trigger_content_build.py -pn "${CI_PROJECT_NAMESPACE}/content" -gt "$GITLAB_API_TOKEN_CONTENT" -bn "$CI_COMMIT_BRANCH" -gtt "$GITLAB_SVC_USER_TOKEN" -gct "$GITLAB_CONTENT_CANCEL_TOKEN"
+    - !reference [.check-is-force-merged-allowed]
+    - poetry run python3 -u ./Content-CI/scripts/trigger_content_build.py -pn "${CI_PROJECT_NAMESPACE}/content" -gt "$GITLAB_API_TOKEN_CONTENT" -bn "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" -gtt "$GITLAB_SVC_USER_TOKEN" -gct "$GITLAB_CONTENT_CANCEL_TOKEN"
