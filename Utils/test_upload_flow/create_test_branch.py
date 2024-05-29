@@ -363,7 +363,8 @@ def do_changes_on_branch(packs_path: Path):
     modify_pack_metadata(packs_path / 'Zoom')
 
     # case 16: Verify defaultDataSource field is added with the correct values
-    modify_pack_default_data_source(packs_path / 'HelloWorld', 'HelloWorldEventCollector')
+    new_xsiam_pack_path, _, _ = create_new_pack(pack_id='TestUploadFlowXSIAM')
+    modify_pack_default_data_source(new_xsiam_pack_path, 'XSIAMEventCollector')
 
     logging.info("Finished making test changes on the branch")
 

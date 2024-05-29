@@ -262,7 +262,7 @@ class BucketVerifier:
                                                 self.gcp.extracting_destination,
                                                 self.gcp.storage_base_path)
         if not pack_exists:
-            return False, pack_id
+            return False, pack_id, ''
 
         index_pack_metadata = self.gcp.get_pack_metadata(pack_id)
         first_index_content_items_integration = index_pack_metadata.get('contentItems', {}).get('integration', [])[0] or {}
@@ -272,17 +272,16 @@ class BucketVerifier:
         first_pack_content_items_integration = index_pack_metadata.get('contentItems', {}).get('integration', [])[0] or {}
         first_pack_integration = index_pack_metadata.get('integrations', [])[0] or {}
 
-        return ((default_data_source == index_pack_metadata.get('defaultDataSource', {})
-                 and first_index_content_items_integration.get("id") == default_data_source.get("id")
-                 and first_index_integration.get("name") == default_data_source.get("name")
+        result = (default_data_source == index_pack_metadata.get('defaultDataSource', {})
+                  and first_index_content_items_integration.get("id") == default_data_source.get("id")
+                  and first_index_integration.get("name") == default_data_source.get("name")
 
-                 and default_data_source == pack_metadata.get('defaultDataSource', {})
-                 and first_pack_content_items_integration.get("id") == default_data_source.get("id")
-                 and first_pack_integration.get("name") == default_data_source.get("name")
-                 ),
+                  and default_data_source == pack_metadata.get('defaultDataSource',{})
+                  and first_pack_content_items_integration.get("id") == default_data_source.get("id")
+                  and first_pack_integration.get("name") == default_data_source.get("name"))
+        return (result,
                 pack_id,
-                VerifyMessages.DEFAULT_DATA_SOURCE
-                )
+                VerifyMessages.DEFAULT_DATA_SOURCE)
 
     @logger
     def verify_new_version(self, pack_id, rn):
@@ -410,8 +409,8 @@ class BucketVerifier:
         # Case 16: Verify defaultDataSource field is added with the correct values
         self.verify_default_data_source_value('TestUploadFlow',
                                               {'id': 'TestUploadFlow', 'name': 'TestUploadFlow'})
-        self.verify_default_data_source_value('HelloWorld',
-                                              {'id': 'HelloWorldEventCollector', 'name': 'HelloWorld Event Collector'})
+        self.verify_default_data_source_value('TestUploadFlowXSIAM',
+                                              {'id': 'XSIAMEventCollector', 'name': 'XSIAM Event Collector'})
 
     def run_xsoar_bucket_validations(self):
         """
