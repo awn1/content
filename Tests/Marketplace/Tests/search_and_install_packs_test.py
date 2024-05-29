@@ -671,6 +671,52 @@ def test_get_all_content_packs_dependencies_empty(mocker: MockFixture):
     assert result == {}
 
 
+def test_get_all_content_packs_dependencies_null(mocker: MockFixture):
+    """
+    Given:
+        A demisto client instance
+    When:
+        The search API returns a `null` value for `packs`
+    Then:
+        Pack dependencies are extracted correctly across pages
+    """
+    # Mock client and responses
+    client = mocker.Mock()
+    mock_request = [
+        {
+            "total": 2,
+            "packs": [
+                {
+                    "id": "Pack1",
+                    "dependencies": {},
+                    "currentVersion": "",
+                    "deprecated": "",
+                },
+                {
+                    "id": "Pack2",
+                    "dependencies": {},
+                    "currentVersion": "",
+                    "deprecated": "",
+                },
+            ]
+        },
+        {
+            "total": 2,
+            "packs": None
+        },
+    ]
+    mocker.patch.object(
+        script, "get_one_page_of_packs_dependencies", side_effect=mock_request
+    )
+    script.PAGE_SIZE_DEFAULT = 2
+
+    # Call function and test
+    result = script.get_all_content_packs_dependencies(client)
+
+    assert len(result) == 2
+    assert all(pack in result for pack in ("Pack1", "Pack2"))
+
+
 def test_get_one_page_of_packs_dependencies_success(mocker: MockFixture):
     """
     Given:

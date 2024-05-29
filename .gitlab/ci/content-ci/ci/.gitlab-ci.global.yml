@@ -149,18 +149,19 @@
       fi
     }
 
-    TEST_UPLOAD_BRANCH_SUFFIX="-upload_test_branch-"
-    # Search for the branch name without the suffix of '-upload_test_branch-' in case it exists.
-    if [[ "${CURRENT_BRANCH_NAME}" == *"${TEST_UPLOAD_BRANCH_SUFFIX}"* ]]; then
+    # Search for the branch name with the suffix of '-upload_test_branch-' in case it exists using CI_COMMIT_REF_NAME to clone content-test-conf.
+    if [[ "${CI_COMMIT_REF_NAME}" == *"${TEST_UPLOAD_BRANCH_SUFFIX}"* ]]; then
       # Using bash string pattern matching to search only the last occurrence of the suffix, that's why we use a single '%'.
-      SEARCHED_BRANCH_NAME="${CURRENT_BRANCH_NAME%"${TEST_UPLOAD_BRANCH_SUFFIX}"*}"
-      echo "Found branch with suffix ${TEST_UPLOAD_BRANCH_SUFFIX} in branch name, using the branch ${SEARCHED_BRANCH_NAME} to clone content-test-conf and infra repositories"
+      SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF="${CI_COMMIT_REF_NAME%"${TEST_UPLOAD_BRANCH_SUFFIX}"*}"
+      echo "Found branch with suffix ${TEST_UPLOAD_BRANCH_SUFFIX} in branch name, using the branch ${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF} to clone content-test-conf repository"
     else
-      # default to CURRENT_BRANCH_NAME when the suffix is not found.
-      echo "Didn't find a branch with suffix ${TEST_UPLOAD_BRANCH_SUFFIX} in branch name, using the branch ${CURRENT_BRANCH_NAME} to clone content-test-conf and infra repositories, with fallback to master"
-      SEARCHED_BRANCH_NAME="${CURRENT_BRANCH_NAME}"
+      # default to CI_COMMIT_REF_NAME when the suffix is not found.
+      echo "Didn't find a branch with suffix ${TEST_UPLOAD_BRANCH_SUFFIX} in branch name, using the branch ${CI_COMMIT_REF_NAME} to clone content-test-conf repository, with fallback to master"
+      SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF="${CI_COMMIT_REF_NAME}"
     fi
-    echo "Getting content-test-conf and infra repositories with branch:${SEARCHED_BRANCH_NAME}, with fallback to master"
+
+    echo "Getting infra with branch:${CURRENT_BRANCH_NAME}, with fallback to master"
+    echo "Getting content-test-conf with branch${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF}, with fallback to master"
 
     SECRET_CONF_PATH="./conf_secret.json"
     echo ${SECRET_CONF_PATH} > secret_conf_path
@@ -179,10 +180,10 @@
 
     CI_SERVER_HOST=${CI_SERVER_HOST:-gitlab.xdr.pan.local} # disable-secrets-detection
 
-    clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "${CI_PROJECT_NAMESPACE}/content-test-conf" "${SEARCHED_BRANCH_NAME}" 3 10 "master"
+    clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "${CI_PROJECT_NAMESPACE}/content-test-conf" "${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF}" 3 10 "master"
 
     # We skip copying the PrivatePacks in run-validations because they currently don't pass validations - ()
-    if [[ "${CI_JOB_NAME}" == "run-validations" && "${NIGHTLY}" == "true" ]]; then
+    if [[ "${CI_JOB_NAME}" == "run-validations" ]]; then
       echo "skipping Cloning PrivatePacks for run-validations in Nightly"
     elif [[ "${CI_JOB_NAME}" == "run-validations-upload-flow" ]]; then
       echo "skipping Cloning PrivatePacks for run-validations-upload-flow"
@@ -194,7 +195,7 @@
       echo "Cloned PrivatePacks"
     fi
 
-    clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "${CI_PROJECT_NAMESPACE}/infra" "${SEARCHED_BRANCH_NAME}" 3 10 "master"
+    clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "${CI_PROJECT_NAMESPACE}/infra" "${CURRENT_BRANCH_NAME}" 3 10 "master"
 
     cp -r ./infra/xsiam_servers.json $XSIAM_SERVERS_PATH
     cp -r ./infra/xsoar_ng_servers.json $XSOAR_NG_SERVERS_PATH
@@ -376,7 +377,7 @@
 .build_parameters: &build_parameters
   - section_start "Build Parameters" --collapsed
   - echo "Environment Variables:"
-  - set | grep -E "^ARTIFACTS_FOLDER.*=|^JIRA_.*=|^NIGHTLY=|^INSTANCE_TESTS=|^SERVER_BRANCH_NAME=|^ARTIFACT_BUILD_NUM=|^DEMISTO_SDK_NIGHTLY=|^TIME_TO_LIVE=|^CONTRIB_BRANCH=|^FORCE_PACK_UPLOAD=|^PACKS_TO_UPLOAD=|^BUCKET_UPLOAD=|^STORAGE_BASE_PATH=|^OVERRIDE_ALL_PACKS=|^GCS_MARKET_BUCKET=|^GCS_MARKET_V2_BUCKET=|^GCS_MARKET_XPANSE_BUCKET=|^SLACK_.*=|^NVM_DIR=|^NODE_VERSION=|^PATH=|^ARTIFACTS_FOLDER=|^ARTIFACTS_FOLDER_INSTANCE=|^ARTIFACTS_FOLDER_SERVER_TYPE=|^ENV_RESULTS_PATH=|^LAST_UPLOAD_COMMIT=|^DEMISTO_SDK_LOG_FILE_SIZE=|^DEMISTO_SDK_LOG_FILE_COUNT=|^DEMISTO_SDK_LOG_FILE_PATH=|^DEMISTO_SDK_LOG_NO_COLORS=|^DEMISTO_SDK_LOG_NOTIFY_PATH=|^POETRY_VIRTUALENVS_OPTIONS_ALWAYS_COPY=|^DEMISTO_SDK_NIGHTLY=|^OVERRIDE_SDK_REF=|^SDK_REF=" | sort
+  - set | grep -E "^ARTIFACTS_FOLDER.*=|^JIRA_.*=|^NIGHTLY=|^INSTANCE_TESTS=|^SERVER_BRANCH_NAME=|^ARTIFACT_BUILD_NUM=|^DEMISTO_SDK_NIGHTLY=|^TIME_TO_LIVE=|^CONTRIB_BRANCH=|^FORCE_PACK_UPLOAD=|^PACKS_TO_UPLOAD=|^BUCKET_UPLOAD=|^STORAGE_BASE_PATH=|^OVERRIDE_ALL_PACKS=|^GCS_MARKET_BUCKET=|^GCS_MARKET_V2_BUCKET=|^GCS_MARKET_XPANSE_BUCKET=|^SLACK_.*=|^NVM_DIR=|^NODE_VERSION=|^PATH=|^ARTIFACTS_FOLDER=|^ARTIFACTS_FOLDER_INSTANCE=|^ARTIFACTS_FOLDER_SERVER_TYPE=|^ENV_RESULTS_PATH=|^LAST_UPLOAD_COMMIT=|^DEMISTO_SDK_LOG_FILE_SIZE=|^DEMISTO_SDK_LOG_FILE_COUNT=|^DEMISTO_SDK_LOG_FILE_PATH=|^DEMISTO_SDK_LOG_NO_COLORS=|^DEMISTO_SDK_LOG_NOTIFY_PATH=|^POETRY_VIRTUALENVS_OPTIONS_ALWAYS_COPY=|^DEMISTO_SDK_NIGHTLY=|^OVERRIDE_SDK_REF=|^SDK_REF=|^CURRENT_BRANCH_NAME=" | sort
   - echo "Versions Installed:"
   - python --version
   - python3 --version

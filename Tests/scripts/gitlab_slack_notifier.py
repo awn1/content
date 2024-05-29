@@ -415,7 +415,7 @@ def construct_slack_msg(
     pipeline_failed_jobs: list[ProjectPipelineJob],
     pull_request: GithubPullRequest | None,
     shame_message: tuple[str, str, str, str] | None,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]] | list[list[dict[str, Any]]]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]] | list[list[dict[str, Any]]], str]:
     # report failing jobs
     content_fields = []
 
@@ -508,7 +508,7 @@ def construct_slack_msg(
         'title': title,
         'title_link': pipeline_url,
         'fields': content_fields
-    }] + slack_msg_append, threaded_messages
+    }] + slack_msg_append, threaded_messages, title
 
 
 def missing_content_packs_test_conf(artifact_folder: Path) -> list[dict[str, Any]]:
@@ -668,11 +668,11 @@ def main():
                                                              options.name_mapping_path)
                         computed_slack_channel = "test_slack_notifier_when_master_is_broken"
 
-    slack_msg_data, threaded_messages = construct_slack_msg(triggering_workflow,
-                                                            pipeline_url,
-                                                            pipeline_failed_jobs,
-                                                            pull_request,
-                                                            shame_message)
+    slack_msg_data, threaded_messages, title = construct_slack_msg(triggering_workflow,
+                                                                   pipeline_url,
+                                                                   pipeline_failed_jobs,
+                                                                   pull_request,
+                                                                   shame_message)
 
     with contextlib.suppress(Exception):
         output_file = ROOT_ARTIFACTS_FOLDER / 'slack_msg.json'
@@ -683,7 +683,7 @@ def main():
     for channel in channels_to_send_msg(computed_slack_channel):
         try:
             response = slack_client.chat_postMessage(
-                channel=channel, attachments=json.dumps(slack_msg_data), username=SLACK_USERNAME, link_names=True, text=""
+                channel=channel, attachments=slack_msg_data, username=SLACK_USERNAME, link_names=True, text=title
             )
 
             if threaded_messages:
@@ -692,8 +692,8 @@ def main():
                 for slack_msg in threaded_messages:
                     slack_msg = [slack_msg] if not isinstance(slack_msg, list) else slack_msg
                     slack_client.chat_postMessage(
-                        channel=channel, attachments=json.dumps(slack_msg), username=SLACK_USERNAME,
-                        thread_ts=thread_ts, text=""
+                        channel=channel, attachments=slack_msg, username=SLACK_USERNAME,
+                        thread_ts=thread_ts, text=title
                     )
 
             link = build_link_to_message(response)
