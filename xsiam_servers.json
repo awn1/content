@@ -66,7 +66,7 @@
         "base_url": "https://api-xsoar-content-7.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
-        "enabled": true,
+        "enabled": false,
         "flow_type": "upload"
     },
     "qa2-test-9998789689851": {
@@ -76,6 +76,26 @@
         "base_url": "https://api-xsoar-content-8.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
+        "enabled": false,
+        "flow_type": "upload"
+    },
+        "qa2-test-9993177785808": {
+        "ui_url": "https://viso-85js3rxvjdn5zs3yupschy.xdr-qa2-uat.us.paloaltonetworks.com/",
+        "instance_name": "qa2-test-9993177785808",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-viso-85js3rxvjdn5zs3yupschy.xdr-qa2-uat.us.paloaltonetworks.com",
+        "xsiam_version": "ga",
+        "demisto_version": "8.6.0",
+        "enabled": true,
+        "flow_type": "upload"
+    },
+        "qa2-test-9996320206113": {
+        "ui_url": "https://viso-4ynaadywbhmzhyjrbff947.xdr-qa2-uat.us.paloaltonetworks.com/",
+        "instance_name": "qa2-test-9996320206113",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-viso-4ynaadywbhmzhyjrbff947.xdr-qa2-uat.us.paloaltonetworks.com",
+        "xsiam_version": "ga",
+        "demisto_version": "8.6.0",
         "enabled": true,
         "flow_type": "upload"
     },
@@ -86,7 +106,7 @@
         "base_url": "https://api-viso-jlzduffkwkaysafzwhcrqm.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.6.0",
-        "enabled": true,
+        "enabled": false,
         "flow_type": "build"
     },
         "qa2-test-9993866263357": {
@@ -96,7 +116,7 @@
         "base_url": "https://api-viso-ssrdfdg7udc4lpc9jptiut.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
-        "enabled": true,
+        "enabled": false,
         "flow_type": "nightly"
     },
         "qa2-test-9996967742988": {
@@ -126,7 +146,7 @@
         "base_url": "https://api-viso-uicx4jlwgxlba8eopcfpwk.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.6.0",
-        "enabled": true,
+        "enabled": false,
         "flow_type": "build"
     },
         "qa2-test-9997392693186": {
@@ -188,5 +208,55 @@
         "demisto_version": "8.5.0",
         "enabled": true,
         "flow_type": "build"
+    },
+    "qa2-test-9997329157930": {
+        "ui_url": "https://viso-dpxvh3tgnoacz4uyssxikq.xdr-qa2-uat.us.paloaltonetworks.com/",
+        "instance_name": "qa2-test-9997329157930",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-viso-dpxvh3tgnoacz4uyssxikq.xdr-qa2-uat.us.paloaltonetworks.com",
+        "xsiam_version": "ga",
+        "demisto_version": "8.6.0",
+        "enabled": true,
+        "flow_type": "nightly"
+    },
+    "qa2-test-9993706639803": {
+        "ui_url": "https://viso-ectsgk5phkr5ipbbtgo7eb.xdr-qa2-uat.us.paloaltonetworks.com/",
+        "instance_name": "qa2-test-9993706639803",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-viso-ectsgk5phkr5ipbbtgo7eb.xdr-qa2-uat.us.paloaltonetworks.com",
+        "xsiam_version": "ga",
+        "demisto_version": "8.6.0",
+        "enabled": true,
+        "flow_type": "nightly"
+    },
+    "qa2-test-9992635266738": {
+        "ui_url": "https://viso-eeqlk6y598ce5epvtbuqug.xdr-qa2-uat.us.paloaltonetworks.com/",
+        "instance_name": "qa2-test-9992635266738",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-viso-eeqlk6y598ce5epvtbuqug.xdr-qa2-uat.us.paloaltonetworks.com",
+        "xsiam_version": "ga",
+        "demisto_version": "8.6.0",
+        "enabled": true,
+        "flow_type": "shahaf"
+    },
+    "qa2-test-9995513430036": {
+        "ui_url": "https://viso-qfbpaizdvpbtfpc62xc2q5.xdr-qa2-uat.us.paloaltonetworks.com/",
+        "instance_name": "qa2-test-9995513430036",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-viso-qfbpaizdvpbtfpc62xc2q5.xdr-qa2-uat.us.paloaltonetworks.com",
+        "xsiam_version": "ga",
+        "demisto_version": "8.6.0",
+        "enabled": true,
+        "flow_type": "yuval"
+    },
+    "qa2-test-9994475362668": {
+        "ui_url": "https://viso-brqzmaff5j7h3acybzsatz.crtx-qa2-uat.us.paloaltonetworks.com/",
+        "instance_name": "qa2-test-9994475362668",
+        "x-xdr-auth-id": 1,
+        "base_url": "https://api-viso-brqzmaff5j7h3acybzsatz.crtx-qa2-uat.us.paloaltonetworks.com",
+        "xsiam_version": "ga",
+        "demisto_version": "8.6.0",
+        "enabled": true,
+        "flow_type": "dean"
     }
 }
