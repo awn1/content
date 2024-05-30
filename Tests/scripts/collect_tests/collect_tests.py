@@ -376,7 +376,6 @@ class TestCollector(ABC):
                 logger.warning('Nothing was collected, and no sanity-test-triggering files were changed')
                 return None
 
-        self._validate_tests_in_id_set(result.tests)  # type: ignore[union-attr]
         if result.packs_to_install:
             result += self._always_installed_packs  # type: ignore[operator]
         result += self._collect_test_dependencies(result.tests if result else ())  # type: ignore[union-attr]
@@ -768,11 +767,6 @@ class TestCollector(ABC):
                     raise IncompatibleMarketplaceException(content_item_path, content_item_marketplaces, self.marketplace)
             case _:
                 raise RuntimeError(f'Unexpected self.marketplace value {self.marketplace}')
-
-    def _validate_tests_in_id_set(self, tests: Iterable[str]):
-        if not_found := set(tests).difference(self.id_set.id_to_test_playbook.keys()):
-            not_found_string = ', '.join(sorted(not_found))
-            logger.warning(f'{len(not_found)} tests were not found in id-set: \n{not_found_string}')
 
 
 class BranchTestCollector(TestCollector):
