@@ -232,6 +232,7 @@ class Metadata:
     MARKETPLACES = 'marketplaces'
     DISABLE_MONTHLY = 'disableMonthly'
     MODULES = 'modules'
+    DEFAULT_DATA_SOURCE = 'defaultDataSource'
 
 
 class PackFolders(enum.Enum):
