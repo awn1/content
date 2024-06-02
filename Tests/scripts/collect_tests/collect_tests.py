@@ -359,8 +359,7 @@ class TestCollector(ABC):
         """
         Collects all relevant tests and packs.
         Every subclass implements its own methodology here.
-        :return: A CollectedTests object with only the pack_name_to_pack_metadata to install and tests to run,
-                with machines=None.
+        :return: A CollectionResult object containing the packs to upload/update metadata/install
         """
 
     def collect(self) -> CollectionResult | None:
