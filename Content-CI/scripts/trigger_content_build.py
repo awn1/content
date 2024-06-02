@@ -40,9 +40,10 @@ class ExitCode:
 
 
 class TestBranch:
-    def __init__(self, url: str, branch_name: str) -> None:
+    def __init__(self, url: str, branch_name: str, github_token: str) -> None:
         self.url = url
         self.branch_name = branch_name
+        self.github_token = github_token
         self.delete_branch: bool = False
         self.repo: git.Repo = self.clone(self.url)
         self.repo.config_writer().set_value("user", "name", "bot-content").release()
@@ -65,6 +66,48 @@ class TestBranch:
         time.sleep(5.0)
         return repo
 
+    def sync_and_delete_old_branch(self) -> bool:
+        """
+        checks if a specific branch exists on GitHub and not on GitLab, if so,
+        deletes the corresponding branch from the GitLab
+        """
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {self.github_token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        params = {
+            "state": "open",
+            "base": "master",
+            "head": f"demisto:{self.branch_name}",
+        }
+        res = requests.get(
+            "https://api.github.com/repos/demisto/content/pulls",
+            params=params,
+            headers=headers,
+            verify=False,
+        )
+
+        if not res.json() and self.is_branch_exists():
+            try:
+                # Removing remote branch
+                print(f"Start deleting old branch: '{self.branch_name}' in remote")
+                self.repo.git.push("--set-upstream", self.url, f":{self.branch_name}")
+                print("Successfully deleted old branch.")
+            except git.GitCommandError as e:
+                print(e)
+                sys.exit(ExitCode.FAILED)
+            try:
+                # Removing local branch
+                self.repo.git.checkout("master")
+                self.repo.git.branch("-D", self.branch_name)
+                self.repo.git.fetch("origin", "--prune")
+            except Exception as e:
+                print(e)
+                sys.exit(ExitCode.FAILED)
+            print("Sleep 5 seconds after deleting old branch")
+            time.sleep(5.0)
+
     def is_branch_exists(self) -> bool:
         """
         Checks if the specified branch exists in the Content repo.
@@ -75,21 +118,18 @@ class TestBranch:
         does_exist = True
         try:
             self.repo.git.checkout(self.branch_name)
-            self.repo.git.pull("--rebase")
-        except git.exc.GitCommandError as e:
-            print(str(e))
+        except git.exc.GitCommandError:
+            print(f"The branch {self.branch_name} does not exist")
             does_exist = False
         except Exception as e:
             print(str(e))
             does_exist = False
-
         return does_exist
 
     def create_branch(self):
         """
         Creates a new branch in the Content repo by the self.branch_name.
         """
-
         self.repo.git.checkout("-b", self.branch_name)
         self.delete_branch = True
         print("Created new branch")
@@ -118,8 +158,8 @@ class TestBranch:
         Creates or updates a test branch in the Content repo and pushes the changes to the remote.
 
         """
+        self.sync_and_delete_old_branch()
         if not self.is_branch_exists():
-            print("branch does not exists in Content repo")
             self.create_branch()
 
         self.update_gitlab_ci_file()
@@ -136,19 +176,6 @@ class TestBranch:
 
         print("Sleeping after pushing 10 seconds")
         time.sleep(10.0)
-
-    def delete_test_branch(self):
-        if self.delete_branch:
-            try:
-                print(f"Start deleting branch: '{self.branch_name}'")
-                self.repo.git.push("--set-upstream", self.url, f":{self.branch_name}")
-
-                print("Successfully deleted branch.")
-            except git.GitCommandError as e:
-                print(e)
-                sys.exit(ExitCode.FAILED)
-            return
-        print("The branch existed, no need to delete it")
 
 
 # Trigger the test build in Content
@@ -294,6 +321,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument("-pn", "--project-name", help="A project name")
     parser.add_argument("-bn", "--branch-name", help="Current branch name")
+    parser.add_argument("-ght", "--github-token", help="GitHub token")
     return parser.parse_args()
 
 
@@ -308,11 +336,12 @@ def main():
     token_info = args.gitlab_token
     token_trigger = args.gitlab_token_trigger
     token_cancel = args.gitlab_cancel_token
+    github_token = args.github_token
     url = f"https://{username}:{token_info}@{server_host}/{project_name}.git"
     branch_name = args.branch_name
 
     # Managing the creation and update of the test branch
-    test_branch = TestBranch(url, branch_name)
+    test_branch = TestBranch(url, branch_name, github_token)
     test_branch.create_or_update_test_branch()
 
     # Managing and triggering the pipeline
@@ -325,9 +354,6 @@ def main():
     )
     pipeline_manager.initiate_pipeline()
     exit_code = pipeline_manager.wait_for_pipeline_completion()
-
-    # Deleting the test branch if necessary
-    test_branch.delete_test_branch()
 
     sys.exit(exit_code)
 
