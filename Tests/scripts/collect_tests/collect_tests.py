@@ -795,8 +795,7 @@ class BranchTestCollector(TestCollector):
         :param: result contains packs_to_upload: The resultant list of packs to upload
         the function sorts the packs_to_upload into 2 sets: packs_to_upload, packs_to_update_metadata sets:
             packs_to_upload: set of packs to upload (hard upload - changed files with RN and version bump)
-            packs_to_update_metadata: set of packs to update
-             (soft upload - changed only to packmetadata file without RN and version bump)
+            packs_to_update_metadata: set of packs to update (soft upload - changed only to packmetadata file without RN and version bump)
         """
         for pack_id in result.packs_to_upload:
             current_version = PACK_MANAGER.get_current_version(pack_id) or ""
