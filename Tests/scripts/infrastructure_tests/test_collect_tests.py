@@ -823,6 +823,11 @@ def test_sort_packs_to_upload(
     expected_packs_to_upload: tuple[str, ...] | None,
     expected_packs_to_update_metadata: tuple[str, ...] | None,
 ):
+    """
+    given: Mocked changed and added files
+    when:  Collecting for the Branch flow.
+    then:  Ensure packs_to_upload, packs_to_update_metadata contain the expected packs
+    """
     monkeypatch.chdir(MockerCases.RN_CONFIG.path_manager.content_path)
     mocker.patch.object(BranchTestCollector, '_get_git_diff',
                         return_value=FilesToCollect(mocked_changed_files, ()))
