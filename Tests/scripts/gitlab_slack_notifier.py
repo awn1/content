@@ -22,7 +22,7 @@ from Tests.Marketplace.marketplace_constants import BucketUploadFlow
 from Tests.Marketplace.marketplace_services import get_upload_data
 from Tests.scripts.common import CONTENT_NIGHTLY, CONTENT_PR, WORKFLOW_TYPES, get_instance_directories, \
     get_properties_for_test_suite, BUCKET_UPLOAD, BUCKET_UPLOAD_BRANCH_SUFFIX, TEST_MODELING_RULES_REPORT_FILE_NAME, \
-    get_test_results_files, CONTENT_MERGE, UNIT_TESTS_WORKFLOW_SUBSTRINGS, TEST_PLAYBOOKS_REPORT_FILE_NAME, \
+    get_test_results_files, CONTENT_MERGE, TEST_PLAYBOOKS_REPORT_FILE_NAME, \
     replace_escape_characters
 from Tests.scripts.github_client import GithubPullRequest
 from Tests.scripts.common import get_pipelines_and_commits, is_pivot, get_commit_by_sha, get_pipeline_by_commit, \
@@ -347,18 +347,6 @@ def test_playbooks_results(artifact_folder: Path, pipeline_url: str, title: str)
     return test_playbook_slack_msg, has_failed_tests
 
 
-def unit_tests_results() -> list[dict[str, Any]]:
-    if failing_tests_list := split_results_file(get_artifact_data(ROOT_ARTIFACTS_FOLDER, 'failed_lint_report.txt')):
-        return [
-            {
-                "title": f'Failed Unit Tests - ({len(failing_tests_list)})',
-                "value": ', '.join(failing_tests_list),
-                "short": False,
-            }
-        ]
-    return []
-
-
 def bucket_upload_results(bucket_artifact_folder: Path,
                           marketplace_name: str,
                           should_include_private_packs: bool) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -437,13 +425,6 @@ def construct_slack_msg(
 
     # report failing unit-tests
     triggering_workflow_lower = triggering_workflow.lower()
-    failed_jobs_or_workflow_title = {job_name.lower() for job_name in failed_jobs_names}
-    failed_jobs_or_workflow_title.add(triggering_workflow_lower)
-
-    if any(substr in means_include_unittests_results
-           for substr in UNIT_TESTS_WORKFLOW_SUBSTRINGS
-           for means_include_unittests_results in failed_jobs_or_workflow_title):
-        content_fields += unit_tests_results()
 
     # report pack updates
     threaded_messages = []

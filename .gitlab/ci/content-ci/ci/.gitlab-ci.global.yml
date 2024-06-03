@@ -406,7 +406,6 @@
       echo "copying production Packs folder from ${CI_PROJECT_DIR}/artifacts/production_packs to ./Packs"
       cp -r ${CI_PROJECT_DIR}/artifacts/production_packs ./Packs
       git config core.fileMode false  # used to tell git not to identify permission changes on files as changes
-      chmod -R 777 ./Packs  # required for the lint, we use the permissions of the file when running pytest within the containers
       echo "the Packs changes between upload commit ${LAST_UPLOAD_COMMIT} to master commit ${CI_COMMIT_SHA} is:"
       git status -- Packs  # show the differences between the upload commit to the master branch for the Packs folder
       echo "The Packs folder is in the state of commit $LAST_UPLOAD_COMMIT"
@@ -631,7 +630,7 @@
     - gcloud auth configure-docker ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
     - section_end "Revoking GCP Auth and Configure Docker"
     # temp solution not to spam the build
-    - SHOULD_LINT_ALL=$(./Tests/scripts/should_lint_all.sh)
+    - SHOULD_PRE_COMMIT_ALL=$(./Tests/scripts/should_pre_commit_all.sh)
     - PRE_COMMIT_SUCCESS=0
     - |
       if [[ -n $BUCKET_UPLOAD && $TEST_UPLOAD == "true" ]]; then
@@ -640,7 +639,7 @@
         if [[ -n $BUCKET_UPLOAD ]]; then
           demisto-sdk pre-commit -g --prev-version $LAST_UPLOAD_COMMIT --mode=nightly || PRE_COMMIT_SUCCESS=1
         else
-          if [[ -n "${SHOULD_LINT_ALL}" ]]; then
+          if [[ -n "${SHOULD_PRE_COMMIT_ALL}" ]]; then
             echo "Pre Commit all files"
             # if we need to pre-commit all anyway we need the graph, and it's better (resource-wise) to create it here.
             demisto-sdk graph update
@@ -690,7 +689,7 @@
       if [[ "$CI_COMMIT_BRANCH" =~ ^AUD-demisto/.* ]]; then
         echo "In auto update docker flow, skipping validate and linter execution."
       else
-        ./Tests/scripts/linters_runner.sh
+        ./Tests/scripts/analyze_non_packs_files.sh
         ./Tests/scripts/validate.sh
       fi
     - section_end "Validate Files and Yaml"
@@ -734,8 +733,8 @@
       if [[ "$CI_COMMIT_BRANCH" =~ ^AUD-demisto/.* ]]; then
         echo "In auto update docker flow, skipping validate and linter execution."
       else
-        ./Tests/scripts/linters_runner.sh
-      ./Tests/scripts/new_validate.sh
+        ./Tests/scripts/analyze_non_packs_files.sh
+        ./Tests/scripts/new_validate.sh
       fi
     - section_end "Validate Files and Yaml"
     - !reference [ .validate_content_test_conf_branch_merged ]  # This section should be the last one in the script, do not move it.
