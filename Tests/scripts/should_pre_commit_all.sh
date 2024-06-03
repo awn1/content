@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Simple script to check if build should run all lint. Will return empty result if no need or a string explaining why yes.
+# Simple script to check if build should run all pre-commit. Will return empty result if no need or a string explaining why yes.
 
 if [ -n "$NIGHTLY" ]; then
     echo "NIGHTLY env var is set: $NIGHTLY"
@@ -32,7 +32,7 @@ else
     DIFF_COMPARE=origin/master...${CI_COMMIT_BRANCH}
 fi
 
-# test if any of the lint libraries has been updated
+# test if any of the pre-commit libraries has been updated
 
 DIFF_RES=$(git diff  "$DIFF_COMPARE" -- poetry.lock)
 

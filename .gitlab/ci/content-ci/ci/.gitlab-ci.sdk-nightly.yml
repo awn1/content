@@ -268,9 +268,6 @@ demisto-sdk-nightly:run-end-to-end-tests-general:
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule-always
-  services: # needed for running lint
-    - name: ${DOCKER_IO}/library/docker:20.10.12-dind
-      alias: docker
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
