@@ -67,7 +67,7 @@ class CollectionReason(str, Enum):
     README_FILE_CHANGED = 'readme file was changed'
     PACK_CHOSEN_TO_UPLOAD = 'pack chosen to upload'
     PACK_TEST_E2E = "pack was chosen to be tested in e2e tests"
-    PACK_MASTER_BUCKET_DISCREPANCY = "pack version on master is ahead of bucket"
+    PACK_MASTER_BUCKET_DISCREPANCY = "pack version on master is ahead of bucket, collected to upload"
 
 
 REASONS_ALLOWING_NO_ID_SET_OR_CONF = {
@@ -817,28 +817,34 @@ class BranchTestCollector(TestCollector):
         result = CollectionResult.union([
             self._collect_from_changed_files(collect_from.changed_files),
             self._collect_packs_from_which_files_were_removed(collect_from.pack_ids_files_were_removed_from),
-            self._collect_packs_diff_master_bucket()
         ])
+        if self.branch_name != 'master':
+            result = CollectionResult.union([result, self._collect_packs_diff_master_bucket()])
+
         if result and result.packs_to_upload:
             self._sort_packs_to_upload(result)
         return result
 
     def _collect_packs_diff_master_bucket(self) -> CollectionResult | None:
         """
-        For cases where master is ahead of bucket, this method extracts the difference between master and bucket.
+        For cases where master is ahead of bucket, this method extracts the difference between branch and bucket.
         It is important to upload the diff to prevent failures when there are dependencies in a higher version.
         Returns:
                 CollectionResult - if the diff to collect and upload.
         """
+        logger.debug('Collect to upload the difference between branch and bucket')
 
         collected_packs: list[CollectionResult | None] = []
-
-        # diff between master and the last upload
         collect_from = self._get_git_diff(upload_delta_from_last_upload=True)
 
         for file_path in collect_from.changed_files:
-
             full_path = PATHS.content_path / file_path
+
+            file_type = find_type(str(full_path))
+            if file_type == FileType.TEST_PLAYBOOK:
+                logger.debug(f'Skipping pack collection for testplaybook file: {file_path},'
+                             f' testplaybook changes are collected only to install')
+                continue
 
             try:
                 self._validate_path(path=full_path)
@@ -846,7 +852,6 @@ class BranchTestCollector(TestCollector):
                     pack_id=find_pack_folder(full_path).name,
                     reason=CollectionReason.PACK_MASTER_BUCKET_DISCREPANCY,
                     reason_description=file_path,
-                    only_to_install=False
                 ))
             except NothingToCollectException as e:
                 logger.info(e.message)
@@ -857,7 +862,10 @@ class BranchTestCollector(TestCollector):
         # union with collected_packs since changed_files and since files were removed from master
         collect_packs_where_files_were_removed =\
             [self._collect_packs_from_which_files_were_removed(collect_from.pack_ids_files_were_removed_from)]
-        return CollectionResult.union(tuple(itertools.chain(collected_packs, collect_packs_where_files_were_removed)))
+        result = CollectionResult.union(tuple(itertools.chain(collected_packs, collect_packs_where_files_were_removed)))
+        if result:
+            result.packs_to_install = set()
+        return result
 
     def _collect_from_changed_files(self, changed_files: tuple[str, ...]) -> CollectionResult | None:
         """NOTE: this should only be used from _collect"""
@@ -1175,14 +1183,10 @@ class BranchTestCollector(TestCollector):
         previous_commit = 'origin/master'
         current_commit = os.getenv("CI_COMMIT_SHA", "")
 
-        logger.debug(f'Getting changed files for {self.branch_name=}')
+        logger.info(f'Getting changed files for {self.branch_name=}')
 
-        if upload_delta_from_last_upload:
-            logger.info('upload_delta_from_last_upload: getting last commit from index')
-            previous_commit = get_last_commit_from_index(self.service_account, self.marketplace)
-
-        elif os.getenv('IFRA_ENV_TYPE') == 'Bucket-Upload':
-            logger.info('bucket upload: getting last commit from index')
+        if os.getenv('IFRA_ENV_TYPE') == 'Bucket-Upload' or upload_delta_from_last_upload:
+            logger.info('Getting last commit from index for previous_commit')
             previous_commit = get_last_commit_from_index(self.service_account, self.marketplace)
 
         elif self.branch_name == 'master':
