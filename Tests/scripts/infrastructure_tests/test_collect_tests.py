@@ -309,6 +309,7 @@ def test_nightly(mocker, monkeypatch, case_mocker: CollectTestsMocker, collector
 
 
 XSOAR_BRANCH_ARGS = ('master', MarketplaceVersions.XSOAR, None)
+XSOAR_BRANCH_ARGS_NON_MASTER = ('test-branch', MarketplaceVersions.XSOAR, None)
 XSIAM_BRANCH_ARGS = ('master', MarketplaceVersions.MarketplaceV2, None)
 XSOAR_SAAS_BRANCH_ARGS = ('master', MarketplaceVersions.XSOAR_SAAS, None)
 
@@ -537,12 +538,17 @@ XSOAR_SAAS_BRANCH_ARGS = ('master', MarketplaceVersions.XSOAR_SAAS, None)
          (), True),
 
         # (44) master and bucket are equal, no need to collect for upload nothing
-        (MockerCases.K, (), (), None, None, XSOAR_BRANCH_ARGS, (), (), ('myPack',), False),
+        (MockerCases.K, (), (), None, None, XSOAR_BRANCH_ARGS_NON_MASTER, (), (), ('myPack',), False),
 
 
         # (45) master ahead of bucket, need to collect for upload the diff (pack should be collected, test should not.)
-        (MockerCases.A_xsoar, None, ('myXSOAROnlyPack',), None, None, XSOAR_BRANCH_ARGS,
+        (MockerCases.A_xsoar, None, ('myXSOAROnlyPack',), None, None, XSOAR_BRANCH_ARGS_NON_MASTER,
          ('Packs/myXSOAROnlyPack/Integrations/myIntegration/myIntegration.yml',), (), ('myXSOAROnlyPack',), False),
+
+
+        # (46) master ahead of bucket, need to collect for upload the diff (only TPB changed, pack should not be collected.)
+        (MockerCases.A_xsoar, None, ('myXSOAROnlyPack',), None, None, XSOAR_BRANCH_ARGS_NON_MASTER,
+         ('Packs/myXSOAROnlyPack/TestPlaybooks/myOtherTestPlaybook.yml',), (), (), False),
     )
 )
 def test_branch(
