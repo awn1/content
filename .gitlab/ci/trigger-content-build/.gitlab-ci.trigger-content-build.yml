@@ -8,7 +8,6 @@
           - gcp/**/*
           - SecretActions/**/*
           - gcp_automations/**/*
-          - BuildMachines/**/*
           - Content-CI/**/*
           - .gitlab/ci/content-ci/ci/**/*
           - .gitlab/ci/sdk-release-ci/**/*
