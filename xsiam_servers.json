@@ -39,7 +39,9 @@
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "agent_host_name": "DC1ENV8APC-Win10-24",
+        "agent_host_ip": "172.16.8.65"
     },
         "qa2-test-9997392693186": {
         "ui_url": "https://viso-8txxhjpgaxumfeaggpfpd9.xdr-qa2-uat.us.paloaltonetworks.com/",
@@ -49,7 +51,9 @@
         "xsiam_version": "ga",
         "demisto_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "agent_host_name": "DC1ENV8APC-Win10-25",
+        "agent_host_ip": "172.16.8.66"
     },
         "qa2-test-9995080931197": {
         "ui_url": "https://viso-u45j9goxpbjezebpa9utvf.xdr-qa2-uat.us.paloaltonetworks.com/",
@@ -59,7 +63,9 @@
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "agent_host_name": "DC1ENV8APC-Win10-30",
+        "agent_host_ip": "172.16.8.140"
     },
         "qa2-test-9992242832835": {
         "ui_url": "https://viso-zbttqpczeztcf7glrfmdij.xdr-qa2-uat.us.paloaltonetworks.com/",
@@ -69,7 +75,9 @@
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "agent_host_name": "DC1ENV8APC-Win10-26",
+        "agent_host_ip": "172.16.8.67"
     },
         "qa2-test-9991468494293": {
         "ui_url": "https://viso-6yjwobcupr7m4dpduqqjnz.xdr-qa2-uat.us.paloaltonetworks.com/",
@@ -79,7 +87,9 @@
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "agent_host_name": "DC1ENV8APC-Win10-27",
+        "agent_host_ip": "172.16.8.137"
     },
         "qa2-test-9996711205886": {
         "ui_url": "https://viso-gkkocszpnchxr2abboxla7.xdr-qa2-uat.us.paloaltonetworks.com/",
@@ -89,7 +99,9 @@
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "agent_host_name": "DC1ENV8APC-Win10-28",
+        "agent_host_ip": "172.16.8.68"
     },
         "qa2-test-9993132144986": {
         "ui_url": "https://viso-hyrjuy6ezo7jing3qmab3k.xdr-qa2-uat.us.paloaltonetworks.com/",
@@ -99,7 +111,9 @@
         "xsiam_version": "ga",
         "demisto_version": "8.5.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "agent_host_name": "DC1ENV8APC-Win10-29",
+        "agent_host_ip": "172.16.8.138"
     },
     "qa2-test-9997329157930": {
         "ui_url": "https://viso-dpxvh3tgnoacz4uyssxikq.xdr-qa2-uat.us.paloaltonetworks.com/",
