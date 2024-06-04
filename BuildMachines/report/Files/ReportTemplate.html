@@ -1,16 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link href="data:image/png;base64,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" rel="icon" type="image/x-icon">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <link href="https://cdn.datatables.net/v/dt/jszip-3.10.1/dt-2.0.7/b-3.0.2/b-colvis-3.0.2/b-html5-3.0.2/b-print-3.0.2/kt-2.12.0/r-3.0.2/sl-2.0.1/datatables.min.css" rel="stylesheet">
+    <!-- DataTables -->
+    <link href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/autofill/2.7.0/css/autoFill.dataTables.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/buttons/3.0.2/css/buttons.dataTables.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/colreorder/2.0.3/css/colReorder.dataTables.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/datetime/1.5.2/css/dataTables.dateTime.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/fixedheader/4.0.1/css/fixedHeader.dataTables.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/keytable/2.12.1/css/keyTable.dataTables.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/responsive/3.0.2/css/responsive.dataTables.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/select/2.0.3/css/select.dataTables.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/staterestore/1.4.1/css/stateRestore.dataTables.min.css" rel="stylesheet">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/v/dt/jszip-3.10.1/dt-2.0.7/b-3.0.2/b-colvis-3.0.2/b-html5-3.0.2/b-print-3.0.2/kt-2.12.0/r-3.0.2/sl-2.0.1/datatables.min.js"></script>
-    <link href="data:image/png;base64,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" rel="icon" type="image/x-icon">
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/autofill/2.7.0/js/dataTables.autoFill.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.2/js/buttons.colVis.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/colreorder/2.0.3/js/dataTables.colReorder.min.js"></script>
+    <script src="https://cdn.datatables.net/datetime/1.5.2/js/dataTables.dateTime.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/4.0.1/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.datatables.net/keytable/2.12.1/js/dataTables.keyTable.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/3.0.2/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/select/2.0.3/js/dataTables.select.min.js"></script>
+    <script src="https://cdn.datatables.net/staterestore/1.4.1/js/dataTables.stateRestore.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Build machines report {{ current_date }}</title>
+    <title>{{ report_title }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -25,6 +49,10 @@
             padding: 20px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             border-radius: 10px;
+        }
+
+        .filter-select {
+            margin-top: 5px;
         }
 
         h1 {
@@ -78,6 +106,9 @@
         function format(d) {
             let obj = '<table>';
             Object.keys(d).forEach(function(key) {
+                if (key === '') {
+                    return;
+                }
                 obj += '<tr>' +
                     '<th>' + key + '</th>' +
                     '<td>' + d[key] + '</td>' +
@@ -88,10 +119,11 @@
             obj += '</table>';
             return obj;
         }
-        let buttonsPre = [];
+        let buttonsRequestPermission = [];
+        let filteredColumns = {{ columns_filterable }};
         let managers = {{ managers }};
         managers.forEach(function(manager) {
-            buttonsPre.push({
+            buttonsRequestPermission.push({
                 text: "request from:" + manager,
                 action: function (e, dt, button, config) {
                     // get selected rows
@@ -117,7 +149,7 @@
 
                     var permission = "";
                     filteredRows.forEach(function(row, index) {
-                        permission += "permissions role=editor, project=" + row['Machine Name'] + ", approver=" + manager + ", reason=on-call\n";
+                        permission += "permissions role={{ permission_role }}, project=" + row['Machine Name'] + ", approver=" + manager + ", reason=on-call\n";
                     });
                     navigator.clipboard.writeText(permission).then(function() {
                         alert('Copied permission request to clipboard!');
@@ -129,28 +161,52 @@
         });
         window.addEventListener('DOMContentLoaded', () => {
             let table = new DataTable('#build-machines-report', {
+                fixedHeader: true,
                 buttons: [
                     {
-                        extend: 'copy',
-                        footer: false,
+                        extend: 'colvis',
+                        columns: ['.exportable'],
                     },
                     {
-                        extend: 'csv',
+                        extend: 'copyHtml5',
                         footer: false,
+                        exportOptions: {
+                            columns: [':visible']
+                        }
                     },
                     {
-                        extend: 'excel',
+                        extend: 'csvHtml5',
                         footer: false,
+                        exportOptions: {
+                            columns: [':visible']
+                        }
                     },
                     {
-                        extend: 'pdf',
+                        extend: 'excelHtml5',
                         footer: false,
-                        orientation: 'landscape'
+                        header: true,
+                        title: null,
+                        autoFilter: true,
+                        sheetName: '{{ report_title }}',
+                        exportOptions: {
+                            columns: [':visible'],
+                        },
+                    },
+                    {
+                        extend: 'pdfHtml5',
+                        footer: false,
+                        orientation: 'landscape',
+                        exportOptions: {
+                            columns: [':visible']
+                        }
                     },
                     {
                         extend: 'print',
                         footer: false,
-                        orientation: 'landscape'
+                        orientation: 'landscape',
+                        exportOptions: {
+                            columns: [':visible']
+                        }
                     },
                     {
                         text: 'Copy LCAAS IDs',
@@ -197,38 +253,53 @@
                         text: 'Permissions:'
                     },
                     {
-                        text: 'Slack Channel',
-                        action: function ( e, dt, button, config ) {
-                            window.open("{{ permissions_channel }}", "_blank");
-                        }
-                    },
-                    {
                         extend: 'collection',
                         text: 'Request',
                         autoClose: true,
-                        buttons: buttonsPre,
+                        buttons: buttonsRequestPermission,
+                    },
+                    {
+                        text: '#xdr-permissions-dev',
+                        action: function ( e, dt, button, config ) {
+                            window.open("{{ xdr_permissions_dev }}", "_blank");
+                        }
+                    },
+                    {
+                        text: '#xdr-upgrade-channel-dev',
+                        action: function ( e, dt, button, config ) {
+                            window.open("{{ xdr_upgrade_channel_dev }}", "_blank");
+                        }
                     },
                 ],
                 layout: {
-                    topStart: 'buttons'
+                    topStart: 'buttons',
                 },
+                lengthMenu: [{text:"All", value: -1}, 5, 10, 25, 50],
                 select: true,
                 bAutoWidth: false,
-                lengthMenu: [
-                    [-1, 100, 50, 25, 10],
-                    ["All", 100, 50, 25, 10]
-                ],
                 columns: {{ columns_json }},
                 order: [[1, 'asc']],
                 initComplete: function () {
                     this.api()
-                        .columns({{ columns_filterable }})
+                        .columns()
                         .every(function () {
                             var column = this;
+                            if (filteredColumns.indexOf(column.index()) === -1) {
+                                $('<div></div>')
+                                    .appendTo( $(column.header()))
+                                    .on( 'click' , function (evt){
+                                        evt.stopPropagation();
+                                    })
+                                return;
+                            }
+                            $('<br/>').appendTo( $(column.header()));
 
                             // Create select element and listener
-                            var select = $('<select><option value="">All</option></select>')
-                                .appendTo($(column.footer()).empty())
+                            var select = $('<select class="filter-select"><option value="">All</option></select>')
+                                .appendTo( $(column.header()))
+                                    .on( 'click' , function (evt){
+                                    evt.stopPropagation();
+                                })
                                 .on('change', function () {
                                     column
                                         .search($(this).val(), {exact: true})
@@ -268,16 +339,12 @@
 </head>
 <body>
     <div class="container">
-        <h1>Build machines report - {{ current_date }}</h1>
+        <h1>{{ report_title }}</h1>
         <table id="build-machines-report">
             <thead>
                 <tr>
                     {% for column in columns %}
-                        {% if column.visible %}
-                            <th>{{ column.data }}</th>
-                        {% else %}
-                            <th style="display: none;">{{ column.data }}</th>
-                        {% endif %}
+                        <th class="{% if column.visible %}visible-column{% else %}not-visible-column{% endif %} {% if column.exportable %}exportable{% endif %}">{{ column.data }}</th>
                     {% endfor %}
                 </tr>
             </thead>
@@ -286,11 +353,27 @@
                 <tr class="expandable-row" data-expanded="false"
                     style="background-color:{% if record.enabled %}white{% else %}#ffe6e6{% endif %};">
                     {% for column in columns %}
-                        {% if column.add_class %}
-                            <td class="class-{{ column.key }}-{{ record[column.key] | replace("/", "_") }}">{{ record[column.key] }}</td>
-                         {% else %}
-                            <td>{{ record[column.key] }}</td>
+                        {% if column.key != '' %}
+                            {% if 'display' in record[column.key] %}
+                                {% set display_value = record[column.key]['display'] %}
+                            {% else %}
+                                {%  set display_value = 'N/A' %}
+                            {% endif %}
+
+                            {% if 'sort' in record[column.key] %}
+                                {% set data_order = record[column.key]['sort'] %}
+                            {% else %}
+                                {% set data_order = -1 %}
+                            {% endif %}
+                        {% else %}
+                            {% set display_value = '' %}
+                            {% set data_order = -1 %}
                         {% endif %}
+                        <td {% if data_order is not none %}data-order="{{ data_order }}"{% endif %}
+                            {% if 'sort' in record[column.key] %}data-sort="{{ record[column.key]['sort'] }}"{% endif %}
+                            {% if column.add_class %}class="class-{{ column.key }}-{{ display_value | replace("/", "_") }}"{% endif %}>
+                                {{ display_value }}
+                        </td>
                     {% endfor %}
                 </tr>
                 {% endfor %}
@@ -298,11 +381,7 @@
             <tfoot>
             <tr>
                 {% for column in columns %}
-                    {% if column.visible %}
-                        <th>{{ column.data }}</th>
-                    {% else %}
-                        <th style="display: none;">{{ column.data }}</th>
-                    {% endif %}
+                    <th class="{% if column.visible %}visible-column{% else %}not-visible-column{% endif %} {% if column.exportable %}exportable{% endif %}">{{ column.data }}</th>
                 {% endfor %}
             </tr>
             </tfoot>
