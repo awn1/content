@@ -844,3 +844,26 @@ def test_sort_packs_to_upload(
         collected = collector.collect()
     assert collected.packs_to_upload == expected_packs_to_upload
     assert collected.packs_to_update_metadata == expected_packs_to_update_metadata
+
+
+def test_get_tpb_dependencies_packs(
+    monkeypatch,
+    mocker
+):
+    """
+    given: Mocked BranchTestCollector._get_git_diff with a specific file
+    when:  Collecting data using BranchTestCollector.collect()
+    then:  Ensure tpb_dependencies_packs contains the expected dependencies
+    """
+    monkeypatch.chdir(MockerCases.R.path_manager.content_path)
+    mocker.patch.object(BranchTestCollector, '_get_git_diff',
+                        return_value=
+                        FilesToCollect(('Packs/bothMarketplacesPackOnlyXSIAMIntegration/Integrations'
+                                        '/onlyXSIAMIntegration/onlyXSIAMIntegration.yml',), ()))
+
+    with MockerCases.R:
+        collector = BranchTestCollector(*XSIAM_BRANCH_ARGS)
+        collected = collector.collect()
+    assert collected.tpb_dependencies_packs == {'myXSIAMOnlyTestPlaybook': {'dependencies':
+                                                                                ['bothMarketplacesPackOnlyXSIAMIntegration'],
+                                                                            'pack': 'myXSIAMOnlyPack'}}
