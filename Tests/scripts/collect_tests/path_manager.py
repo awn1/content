@@ -54,6 +54,7 @@ class PathManager:
         self.output_packs_to_upload_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / 'content_packs_to_upload.json'
         self.output_machines_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / 'filter_envs.json'
         self.output_packs_to_reinstall_test_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / 'packs_reinstall_to_test.txt'
+        self.output_tpb_dependencies_packs = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / 'tpb_dependencies_packs.json'
 
     def _glob_single(self, relative_path: str) -> set[Path]:
         """
