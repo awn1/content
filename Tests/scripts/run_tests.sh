@@ -57,7 +57,7 @@ if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; 
         -a "$CIRCLECI_TOKEN" -b "${CI_PIPELINE_ID}" -g "$CI_COMMIT_BRANCH" -m "${MEM_CHECK}" --is-ami "${IS_AMI_RUN}" -d "${INSTANCE_ROLE}" \
         --xsiam-machine "${CLOUD_CHOSEN_MACHINE_ID}" --xsiam-servers-path "$CLOUD_SERVERS_PATH" --server-type "${SERVER_TYPE}" \
         --use-retries --xsiam-servers-api-keys-path "cloud_api_keys.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" \
-        --product-type="${PRODUCT_TYPE}" --service_account $GCS_ARTIFACTS_KEY
+        --product-type="${PRODUCT_TYPE}" --service_account $GCS_ARTIFACTS_KEY --artifacts_bucket "xsoar-ci-artifacts"
       command_exit_code=$?
       if [ "${command_exit_code}" -ne 0 ]; then
         exit_code=1
@@ -73,7 +73,8 @@ elif [[ "${SERVER_TYPE}" == "XSOAR" ]]; then
     demisto-sdk test-content -k "$DEMISTO_API_KEY" -c "$CONF_PATH" -e "$SECRET_CONF_PATH" -n "${IS_NIGHTLY}" -t "$SLACK_TOKEN" \
       -a "$CIRCLECI_TOKEN" -b "${CI_PIPELINE_ID}" -g "$CI_COMMIT_BRANCH" -m "${MEM_CHECK}" --is-ami "${IS_AMI_RUN}" -d "${INSTANCE_ROLE}" \
       --xsiam-machine "${CLOUD_CHOSEN_MACHINE_ID}" --xsiam-servers-path "$CLOUD_SERVERS_PATH" --server-type "${SERVER_TYPE}" \
-      --use-retries --xsiam-servers-api-keys-path "cloud_api_keys.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" --product-type="${PRODUCT_TYPE}"
+      --use-retries --xsiam-servers-api-keys-path "cloud_api_keys.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" --product-type="${PRODUCT_TYPE}" \
+      --service_account $GCS_ARTIFACTS_KEY --artifacts_bucket "xsoar-ci-artifacts"
     exit_code=$?
     echo "Failed to run test content with exit code:${exit_code}"
 else
