@@ -631,6 +631,8 @@
     - section_end "Revoking GCP Auth and Configure Docker"
     # temp solution not to spam the build
     - SHOULD_PRE_COMMIT_ALL=$(./Tests/scripts/should_pre_commit_all.sh)
+    # SHOULD_PRE_COMMIT_ALL is a string and therefore might come back empty from should_pre_commit_all.sh
+    - echo "in .run-pre-commit, SHOULD_PRE_COMMIT_ALL = $SHOULD_PRE_COMMIT_ALL"
     - PRE_COMMIT_SUCCESS=0
     - |
       if [[ -n $BUCKET_UPLOAD && $TEST_UPLOAD == "true" ]]; then
