@@ -237,6 +237,7 @@ class PipelineManager:
             "token": (None, self.trigger_token),
             "ref": (None, self.branch_name),
             "variables[TRIGGER_TEST_BRANCH]": (None, "true"),
+            "variables[CURRENT_BRANCH_NAME]": (None, self.branch_name),
         }
         try:
             res = requests.post(url=self.trigger_url, files=files, verify=False).json()

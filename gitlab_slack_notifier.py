@@ -1,15 +1,16 @@
 import argparse
 import logging
 import os
-from typing import Tuple
+from typing import Tuple, Any
+
 import gitlab
+import requests
 from slack_sdk import WebClient
 from slack_sdk.web import SlackResponse
-import requests
 
 logging.basicConfig(level=logging.INFO)
 
-BUILD_CHANNEL = "content-infra-images"  # defualt value for the slack channel.
+BUILD_CHANNEL = "content-infra-images"  # default value for the Slack channel.
 # the default is the id of infra repo in xdr.pan.local
 GITLAB_PROJECT_ID = os.getenv("CI_PROJECT_ID", 1701)
 # disable-secrets-detection
@@ -20,7 +21,7 @@ SLACK_WORKSPACE_NAME = os.getenv('SLACK_WORKSPACE_NAME', '')
 
 def construct_slack_msg(
     triggering_workflow, pipeline_url, pipeline_failed_jobs
-) -> list:
+) -> tuple[list[dict[str, str | list[dict[str, str | bool]] | Any]], Any]:
     """
     Args:
         - triggering_workflow (str): Name of triggering workflow
