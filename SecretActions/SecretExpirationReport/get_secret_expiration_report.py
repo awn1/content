@@ -2,7 +2,6 @@ import logging
 import argparse
 from datetime import datetime
 from pathlib import Path
-import dateparser
 from jinja2 import Environment, FileSystemLoader
 
 from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule, ExpirationData  # noqa: E402
@@ -78,29 +77,11 @@ def get_soon_to_expire_secrets(gsm_client: GoogleSecreteManagerModule, expiratio
     return extracted_data
 
 
-def calculate_expiration_date(expiration_date: str) -> str:
-    """Getting a date string and validates it to allow multiple formats.
-
-    Args:
-        expiration_date (str): A date representation.
-
-    Returns:
-        str: A date representation.
-    """
-    if not expiration_date:
-        expiration_date = "in 1 month"
-    d = dateparser.parse(expiration_date)
-
-    logging.info("Successfully validated expiration date: str({d})")
-
-    return datetime.strftime(d, DATE_FORMAT)
-
-
 def run(options: argparse.Namespace):
     project_id = options.gsm_project_id if options.gsm_project_id else DEV_PROJECT_ID
     gsm_client = GoogleSecreteManagerModule(
         options.service_account) if options.service_account else GoogleSecreteManagerModule()
-    expiration_date = calculate_expiration_date(options.expiration)
+    expiration_date = GoogleSecreteManagerModule.GoogleSecretTools.calculate_expiration_date(options.expiration)
     secrets = get_soon_to_expire_secrets(
         gsm_client, expiration_date, project_id)
     report = create_report(expiration_date, secrets)
