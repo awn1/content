@@ -1,7 +1,5 @@
 import argparse
 import logging
-import dateparser
-from datetime import datetime
 from google.auth.exceptions import DefaultCredentialsError
 
 from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule, ExpirationData  # noqa: E402
@@ -39,21 +37,6 @@ class GoogleSecreteExpirationManagerModule(GoogleSecreteManagerModule):
         logging.debug("Successfully updated secret's metadata")
 
 
-def calculate_expiration_date(expiration_date: str) -> str:
-    """Calculating expiration date based on input.
-
-    Args:
-        expiration_date (str): a date representing string, such "in 1 day", "3 days", "2024-05-01", etc
-
-    Returns:
-        str: a standardized string for the date requested.
-    """
-    logging.debug(f"Parsing expiration date from: {expiration_date}")
-    d = dateparser.parse(expiration_date)
-    logging.debug("Parsed successfully.")
-
-    return datetime.strftime(d, DATE_FORMAT)
-
 def get_labels_to_update(args: argparse.Namespace) -> list[dict]:
     if args.deactivate:
             labels_to_add = {ExpirationData.Status.STATUS_LABEL_NAME: ExpirationData.Status.INACTIVE_STATUS,
@@ -62,10 +45,10 @@ def get_labels_to_update(args: argparse.Namespace) -> list[dict]:
     else:
         labels_to_add = {ExpirationData.Status.STATUS_LABEL_NAME: ExpirationData.Status.ACTIVE_STATUS}
         if args.credential_expiration:
-            cred_exp_date = calculate_expiration_date(args.credential_expiration)
+            cred_exp_date =  GoogleSecreteManagerModule.GoogleSecretTools.calculate_expiration_date(args.credential_expiration)
             labels_to_add[ExpirationData.CREDS_EXPIRATION_LABEL_NAME] = cred_exp_date
         if args.license_expiration:
-            license_exp_date = calculate_expiration_date(args.license_expiration)
+            license_exp_date = GoogleSecreteManagerModule.GoogleSecretTools.calculate_expiration_date(args.license_expiration)
             labels_to_add[ExpirationData.LICENSE_EXPIRATION_LABEL_NAME] = license_exp_date
         if not args.license_expiration and not args.credential_expiration:
             raise ValueError("Please provide license or credential expiration date.")
@@ -76,6 +59,8 @@ def get_labels_to_update(args: argparse.Namespace) -> list[dict]:
         labels_to_add[ExpirationData.SKIP_REASON_LABEL_NAME] = args.skip_reason
     if args.jira_link:
         labels_to_add[ExpirationData.JIRA_LINK_LABEL_NAME] = args.jira_link
+
+    labels_to_add[ExpirationData.SECRET_OWNER] = args.owner if args.owner else 'lab'
 
     logging.debug("successfully created label's data.")
 
@@ -121,6 +106,9 @@ def options_handler(args=None):
                         help='The link of the secret updating request.')
     parser.add_argument('--skip_reason', required=False,
                         help='A skipping reason to add.')
+    parser.add_argument('--owner', choices=['tpm', 'partner', 'lab'], default='lab',
+                    help='The secret owner, responsible for any issues or changes.')
+
 
     options = parser.parse_args(args)
 
