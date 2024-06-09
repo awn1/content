@@ -49,9 +49,9 @@ class ExpirationData:
 
 
 class GoogleSecreteManagerModule:
-
     class GoogleSecretTools:
-        def calculate_expiration_date(expiration_date: str) -> str:
+        @staticmethod
+        def calculate_expiration_date(expiration_date: str) -> str | None:
             """Calculating expiration date based on input.
 
             Args:
@@ -64,7 +64,7 @@ class GoogleSecreteManagerModule:
             d = dateparser.parse(expiration_date)
             logging.debug("Parsed successfully.")
 
-            return datetime.strftime(d, DATE_FORMAT)
+            return datetime.strftime(d, DATE_FORMAT) if d else None
 
 
     def __init__(self, service_account_file: str = None, project_id=DEV_PROJECT_ID):
