@@ -13,7 +13,6 @@ _SANITY_FILES_FOR_GLOB = (
     'Tests/tools.py',
     'Tests/update_content_data.py',
     'Tests/Marketplace',
-    'Tests/private_build',
     'Tests/scripts'
 )
 
