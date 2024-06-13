@@ -67,6 +67,7 @@
 
     RED='\033[0;31m'
     GREEN='\033[0;32m'
+    BLUE='\033[0;34m'
     NC='\033[0m'
 
     clone_repository() {
@@ -160,7 +161,13 @@
       SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF="${CI_COMMIT_REF_NAME}"
     fi
 
-    echo "Getting infra with branch:${CURRENT_BRANCH_NAME}, with fallback to master"
+    if [[ "${CURRENT_BRANCH_NAME}" == "master" ]]; then
+      echo "Getting infra with branch:${CURRENT_BRANCH_NAME}"
+      echo -e "${BLUE}NOTE: If you want to run the build on a specific branch in Infra,\nyou need to replace the environment variable INFRA_BRANCH in the .gitlab-ci.yml file\nwith the name of the branch that exists in Infra.${NC}"
+    else
+      echo "Getting infra with branch:${CURRENT_BRANCH_NAME}, with fallback to master"
+    fi
+
     echo "Getting content-test-conf with branch${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF}, with fallback to master"
 
     SECRET_CONF_PATH="./conf_secret.json"
