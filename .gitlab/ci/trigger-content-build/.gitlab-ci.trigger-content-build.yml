@@ -8,7 +8,6 @@
           - gcp/**/*
           - SecretActions/**/*
           - gcp_automations/**/*
-          - BuildMachines/**/*
           - Content-CI/**/*
           - .gitlab/ci/content-ci/ci/**/*
           - .gitlab/ci/sdk-release-ci/**/*
@@ -62,4 +61,4 @@ trigger-content-build:
     - .before-script-trigger-content-build
   script:
     - !reference [.check-is-force-merged-allowed]
-    - poetry run python3 -u ./Content-CI/scripts/trigger_content_build.py -pn "${CI_PROJECT_NAMESPACE}/content" -gt "$GITLAB_API_TOKEN_CONTENT" -bn "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" -gtt "$GITLAB_SVC_USER_TOKEN" -gct "$GITLAB_CONTENT_CANCEL_TOKEN"
+    - poetry run python3 -u ./Content-CI/scripts/trigger_content_build.py -pn "${CI_PROJECT_NAMESPACE}/content" -gt "$GITLAB_API_TOKEN_CONTENT" -bn "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" -gtt "$GITLAB_SVC_USER_TOKEN" -gct "$GITLAB_CONTENT_CANCEL_TOKEN" -ght "$GITHUB_TOKEN"

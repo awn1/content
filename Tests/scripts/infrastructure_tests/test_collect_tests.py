@@ -10,7 +10,7 @@ from Tests.scripts.collect_tests import collect_tests
 # importing Machine,FileType from collect_tests (rather than utils) to compare class member values
 from Tests.scripts.collect_tests.collect_tests import (
     BranchTestCollector, FileType, Machine, XSIAMNightlyTestCollector,
-    XSOARNightlyTestCollector, UploadAllCollector, sort_packs_to_upload)
+    XSOARNightlyTestCollector, UploadAllCollector)
 from Tests.scripts.collect_tests.constants import (
     ALWAYS_INSTALLED_PACKS_MARKETPLACE_V2, MODELING_RULE_COMPONENT_FILES,
     XSOAR_SANITY_TEST_NAMES, ONLY_INSTALL_PACK_FILE_TYPES, XSIAM_COMPONENT_FILES)
@@ -137,7 +137,8 @@ def _test(mocker, monkeypatch, case_mocker: CollectTestsMocker, collector_class:
     :param case_mocker: with which to run the test
     :param collector_class: the collector class to test.
     :param expected_tests: the expected test names. (pass None to not check)
-    :param expected_packs: the expected pack names. (pass None to not check)
+    :param expected_packs: the expected pack names to install. (pass None to not check)
+    :param expected_packs_to_upload: the expected pack names to upload. (pass None to not check)
     :param expected_machines: the expected machines. (pass None to not check)
     :param expected_modeling_rules_to_test: the expected modeling rules directory names. (pass None to not check)
     :param collector_class_args: with which to instantiate the collector class.
@@ -308,6 +309,7 @@ def test_nightly(mocker, monkeypatch, case_mocker: CollectTestsMocker, collector
 
 
 XSOAR_BRANCH_ARGS = ('master', MarketplaceVersions.XSOAR, None)
+XSOAR_BRANCH_ARGS_NON_MASTER = ('test-branch', MarketplaceVersions.XSOAR, None)
 XSIAM_BRANCH_ARGS = ('master', MarketplaceVersions.MarketplaceV2, None)
 XSOAR_SAAS_BRANCH_ARGS = ('master', MarketplaceVersions.XSOAR_SAAS, None)
 
@@ -342,23 +344,23 @@ XSOAR_SAAS_BRANCH_ARGS = ('master', MarketplaceVersions.XSOAR_SAAS, None)
          XSIAM_BRANCH_ARGS, ('Packs/myXSIAMOnlyPack/Integrations/myIntegration/myIntegration.py',), (),
          ('myXSIAMOnlyPack',), True),
 
-        # (6) Case B: test playbook changes, expect it to be collected
+        # (6) Case B: test playbook changes, expect it to be collected only to install
         (MockerCases.B_xsoar, ('myOtherTestPlaybook',), ('myXSOAROnlyPack',), None, None, XSOAR_BRANCH_ARGS,
-         ('Packs/myXSOAROnlyPack/TestPlaybooks/myOtherTestPlaybook.yml',), (), ('myXSOAROnlyPack',), True),
+         ('Packs/myXSOAROnlyPack/TestPlaybooks/myOtherTestPlaybook.yml',), (), (), True),
 
-        # (7) Case B: two test playbook change, expect both to be collected
+        # (7) Case B: two test playbook change, expect both to be collected only to install
         (MockerCases.B_xsoar, ('myOtherTestPlaybook', 'myTestPlaybook'), ('myXSOAROnlyPack',), None, None,
          XSOAR_BRANCH_ARGS, ('Packs/myXSOAROnlyPack/TestPlaybooks/myTestPlaybook.yml',
                              'Packs/myXSOAROnlyPack/TestPlaybooks/myOtherTestPlaybook.yml',), (),
-         ('myXSOAROnlyPack',), True),
+         (), True),
 
-        # (8) Case D: playbook changes, expect it and its pack to be collected
+        # (8) Case D: playbook changes, expect it and its pack to be collected only to install
         (MockerCases.D, ('myTestPlaybook',), ('myPack',), (Machine.V6_9, Machine.MASTER,), None, XSOAR_BRANCH_ARGS,
-         ('Packs/myPack/TestPlaybooks/myTestPlaybook.yml',), (), ('myPack',), True),
+         ('Packs/myPack/TestPlaybooks/myTestPlaybook.yml',), (), (), True),
 
-        # (9) Case D: playbook changes, expect it and its pack to be collected
+        # (9) Case D: playbook changes, expect it and its pack to be collected only to install
         (MockerCases.E, ('myOtherTestPlaybook',), ('myPack',), None, None, XSOAR_BRANCH_ARGS,
-         ('Packs/myPack/TestPlaybooks/myOtherTestPlaybook.yml',), (), ('myPack',), True),
+         ('Packs/myPack/TestPlaybooks/myOtherTestPlaybook.yml',), (), (), True),
 
         # (10) Playbook changes, expect its test playbook to be collected
         (MockerCases.E, ('myOtherTestPlaybook',), ('myPack',), None, None, XSOAR_BRANCH_ARGS,
@@ -371,7 +373,7 @@ XSOAR_SAAS_BRANCH_ARGS = ('master', MarketplaceVersions.XSOAR_SAAS, None)
         # (12) Two test playbooks change, but myOtherTestPlaybook is ignored, so it should not be collected
         (MockerCases.I_xsoar, ('myTestPlaybook',), ('myXSOAROnlyPack',), None, None, XSOAR_BRANCH_ARGS,
          ('Packs/myXSOAROnlyPack/TestPlaybooks/myOtherTestPlaybook.yml',
-          'Packs/myXSOAROnlyPack/TestPlaybooks/myTestPlaybook.yml'), (), ('myXSOAROnlyPack',), True),
+          'Packs/myXSOAROnlyPack/TestPlaybooks/myTestPlaybook.yml'), (), (), True),
 
         # (13) Skipped integration changes - should not be collected
         (MockerCases.J, (), (), None, None, XSOAR_BRANCH_ARGS,
@@ -412,7 +414,7 @@ XSOAR_SAAS_BRANCH_ARGS = ('master', MarketplaceVersions.XSOAR_SAAS, None)
 
         # (22) Test Playbook using skipped integration - should not be collected.
         (MockerCases.P, None, ('myPack',), None, None, XSOAR_BRANCH_ARGS,
-         ('Packs/myPack/TestPlaybooks/myTestPlaybook.yml',), (), ('myPack',), True),
+         ('Packs/myPack/TestPlaybooks/myTestPlaybook.yml',), (), (), True),
 
         # (23) Old-formatted script changes, expecting its test playbook to be collected
         (MockerCases.F, ('myTestPlaybook',), ('myPack',), None, None, XSOAR_BRANCH_ARGS,
@@ -512,34 +514,41 @@ XSOAR_SAAS_BRANCH_ARGS = ('master', MarketplaceVersions.XSOAR_SAAS, None)
          ('OnlyXsoarOnPrem', 'BothXsoar',), True),
 
         # (42) Checks that tests are collected according to the marketplace entry they hold - xsoar_saas
+        # TPBs changes are considered only to install
         (MockerCases.conf_marketplaces_entry,
          ('myTestPlaybook_both', 'myTestPlaybook_both2', 'myTestPlaybook_saas', 'myTestPlaybook_two_entries'),
          ('myPack',), None, None, XSOAR_SAAS_BRANCH_ARGS,
-            ('Packs/myPack/TestPlaybooks/myTestPlaybook_both.yml',
-             'Packs/myPack/TestPlaybooks/myTestPlaybook_both2.yml',
-             'Packs/myPack/TestPlaybooks/myTestPlaybook_on_prem.yml',
-             'Packs/myPack/TestPlaybooks/myTestPlaybook_saas.yml',
-             'Packs/myPack/TestPlaybooks/myTestPlaybook_two_entries.yml'), (),
-         ('myPack',), True),
+         ('Packs/myPack/TestPlaybooks/myTestPlaybook_both.yml',
+          'Packs/myPack/TestPlaybooks/myTestPlaybook_both2.yml',
+          'Packs/myPack/TestPlaybooks/myTestPlaybook_on_prem.yml',
+          'Packs/myPack/TestPlaybooks/myTestPlaybook_saas.yml',
+          'Packs/myPack/TestPlaybooks/myTestPlaybook_two_entries.yml'), (),
+         (), True),
 
         # (43) Checks that tests are collected according to the marketplace entry they hold - xsoar_on_prem
+        # TPBs changes are considered only to install
         (MockerCases.conf_marketplaces_entry,
          ('myTestPlaybook_both', 'myTestPlaybook_both2', 'myTestPlaybook_on_prem', 'myTestPlaybook_two_entries'),
          ('myPack',), None, None, XSOAR_BRANCH_ARGS,
-            ('Packs/myPack/TestPlaybooks/myTestPlaybook_both.yml',
-             'Packs/myPack/TestPlaybooks/myTestPlaybook_both2.yml',
-             'Packs/myPack/TestPlaybooks/myTestPlaybook_on_prem.yml',
-             'Packs/myPack/TestPlaybooks/myTestPlaybook_saas.yml',
-             'Packs/myPack/TestPlaybooks/myTestPlaybook_two_entries.yml'), (),
-         ('myPack',), True),
+         ('Packs/myPack/TestPlaybooks/myTestPlaybook_both.yml',
+          'Packs/myPack/TestPlaybooks/myTestPlaybook_both2.yml',
+          'Packs/myPack/TestPlaybooks/myTestPlaybook_on_prem.yml',
+          'Packs/myPack/TestPlaybooks/myTestPlaybook_saas.yml',
+          'Packs/myPack/TestPlaybooks/myTestPlaybook_two_entries.yml'), (),
+         (), True),
 
         # (44) master and bucket are equal, no need to collect for upload nothing
-        (MockerCases.K, (), (), None, None, XSOAR_BRANCH_ARGS, (), (), ('myPack',), False),
+        (MockerCases.K, (), (), None, None, XSOAR_BRANCH_ARGS_NON_MASTER, (), (), ('myPack',), False),
 
 
         # (45) master ahead of bucket, need to collect for upload the diff (pack should be collected, test should not.)
-        (MockerCases.A_xsoar, None, ('myXSOAROnlyPack',), None, None, XSOAR_BRANCH_ARGS,
+        (MockerCases.A_xsoar, None, ('myXSOAROnlyPack',), None, None, XSOAR_BRANCH_ARGS_NON_MASTER,
          ('Packs/myXSOAROnlyPack/Integrations/myIntegration/myIntegration.yml',), (), ('myXSOAROnlyPack',), False),
+
+
+        # (46) master ahead of bucket, need to collect for upload the diff (only TPB changed, pack should not be collected.)
+        (MockerCases.A_xsoar, None, ('myXSOAROnlyPack',), None, None, XSOAR_BRANCH_ARGS_NON_MASTER,
+         ('Packs/myXSOAROnlyPack/TestPlaybooks/myOtherTestPlaybook.yml',), (), (), False),
     )
 )
 def test_branch(
@@ -796,44 +805,65 @@ def test_handle_xsoar_marketplces_none():
     assert dict_based_obj.marketplaces is None
 
 
-def test_sort_packs_to_upload(mocker):
+@pytest.mark.parametrize(
+    'mocked_changed_files, mocked_added_files, expected_packs_to_upload, '
+    'expected_packs_to_update_metadata',
+    (
+        # (1) Ensure packs_to_upload contains "myPack" and packs_to_update_metadata contains "HelloWorld"
+        (
+         ('Packs/myPack/ReleaseNotes/2_1_3.md', 'Packs/myPack/pack_metadata.json', 'Packs/HelloWorld/pack_metadata.json',),
+         (), {'myPack'}, {'HelloWorld'}),
+
+
+        # (2) Ensure packs_to_upload contains the new pack - HelloWorld
+        # and that the changes to the pack_metadata file are not considered as metadata changes
+        (('Packs/HelloWorld/pack_metadata.json',),
+         ('Packs/HelloWorld/pack_metadata.json',), {'HelloWorld'}, set()),
+    )
+)
+def test_sort_packs_to_upload(
+    monkeypatch,
+    mocker,
+    mocked_changed_files: tuple[str, ...],
+    mocked_added_files: tuple[str, ...],
+    expected_packs_to_upload: tuple[str, ...] | None,
+    expected_packs_to_update_metadata: tuple[str, ...] | None,
+):
     """
-    given: Mocked GitUtil with simulated changed files
-    when:  Calling sort_packs_to_upload function
-    then:  Ensure packs_to_upload contains "myPack2" and packs_to_update_metadata contains "myPack"
+    given: Mocked changed and added files
+    when:  Collecting for the Branch flow.
+    then:  Ensure packs_to_upload, packs_to_update_metadata contain the expected packs
     """
-    from demisto_sdk.commands.common.git_util import GitUtil
-    from Tests.scripts.collect_tests.collect_tests import PACK_MANAGER
-
-    input_files = {Path("Packs/myPack/pack_metadata.json"),
-                   Path("Packs/myPack2/ReleaseNotes/1_0_1.md"),
-                   Path("Packs/myPack2/pack_metadata.json")}
-
-    mocker.patch.object(GitUtil, "_get_all_changed_files", return_value=input_files)
-    mocker.patch.object(GitUtil, "added_files", return_value={})
-    mocker.patch.object(PACK_MANAGER, "get_current_version", return_value="1.0.1")
-    packs_to_upload, packs_to_update_metadata = sort_packs_to_upload({"myPack", "myPack2"})
-
-    assert packs_to_upload == ["myPack2"], "myPack should be marked for hard upload"
-    assert packs_to_update_metadata == ["myPack"], "myPack should be marked for metadata update"
+    monkeypatch.chdir(MockerCases.RN_CONFIG.path_manager.content_path)
+    mocker.patch.object(BranchTestCollector, '_get_git_diff',
+                        return_value=FilesToCollect(mocked_changed_files, ()))
+    with MockerCases.RN_CONFIG:
+        collector = BranchTestCollector(*XSOAR_BRANCH_ARGS)
+        collector.changed_files = mocked_changed_files
+        collector.added_files = mocked_added_files
+        collected = collector.collect()
+    assert collected.packs_to_upload == expected_packs_to_upload
+    assert collected.packs_to_update_metadata == expected_packs_to_update_metadata
 
 
-def test_sort_packs_to_upload_new_pack(mocker):
+def test_get_tpb_dependencies_packs(
+    monkeypatch,
+    mocker
+):
     """
-    given: Mocked GitUtil with simulated changed files
-    when:  Calling sort_packs_to_upload function
-    then:  Ensure packs_to_upload contains the new pack
+    given: Mocked BranchTestCollector._get_git_diff with a specific file
+    when:  Collecting data using BranchTestCollector.collect()
+    then:  Ensure tpb_dependencies_packs contains the expected dependencies
     """
-    from demisto_sdk.commands.common.git_util import GitUtil
-    from Tests.scripts.collect_tests.collect_tests import PACK_MANAGER
+    monkeypatch.chdir(MockerCases.R.path_manager.content_path)
+    mocker.patch.object(BranchTestCollector, '_get_git_diff',
+                        return_value=
+                        FilesToCollect(('Packs/bothMarketplacesPackOnlyXSIAMIntegration/Integrations'
+                                        '/onlyXSIAMIntegration/onlyXSIAMIntegration.yml',), ()))
 
-    input_files = {Path("Packs/myPack/pack_metadata.json")}
-    added_files = {Path("Packs/myPack/pack_metadata.json")}
-
-    mocker.patch.object(GitUtil, "_get_all_changed_files", return_value=input_files)
-    mocker.patch.object(GitUtil, "added_files", return_value=added_files)
-    mocker.patch.object(PACK_MANAGER, "get_current_version", return_value="1.0.0")
-    packs_to_upload, packs_to_update_metadata = sort_packs_to_upload({"myPack"})
-
-    assert packs_to_upload == ["myPack"], "myPack should be marked for hard upload"
-    assert packs_to_update_metadata == [], "myPack should not be marked for metadata update"
+    with MockerCases.R:
+        collector = BranchTestCollector(*XSIAM_BRANCH_ARGS)
+        collected = collector.collect()
+    assert collected.tpb_dependencies_packs == {'myXSIAMOnlyTestPlaybook': {'dependencies':
+                                                                                ['bothMarketplacesPackOnlyXSIAMIntegration'],
+                                                                            'pack': 'myXSIAMOnlyPack'}}

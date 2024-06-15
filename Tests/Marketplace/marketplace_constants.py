@@ -1,6 +1,7 @@
 import os
 import json
 import enum
+from pathlib import Path
 
 IGNORED_FILES = ['__init__.py', 'ApiModules', 'NonSupported', 'index']  # files to ignore inside Packs folder
 CONTENT_ROOT_PATH = os.path.abspath(os.path.join(__file__, '../../..'))  # full path to content root repo
@@ -108,27 +109,33 @@ class GCPConfig:
     COREPACKS_OVERRIDE_FILE = 'corepacks_override.json'
     BUILD_BUCKET_PACKS_ROOT_PATH = 'content/builds/{branch}/{build}/{marketplace}/content/packs'
 
-    with open(os.path.join(os.path.dirname(__file__), 'core_packs_list.json')) as core_packs_xsoar_list_file:
-        packs_list = json.load(core_packs_xsoar_list_file)
-        CORE_PACKS_LIST = packs_list.get('core_packs_list')
-        CORE_PACKS_LIST_TO_UPDATE = packs_list.get('update_core_packs_list')
+    @staticmethod
+    def get_core_pack_files(file_name: str) -> tuple[list, list]:
+        path = Path(__file__).resolve().parent / file_name
+        if not path.exists():
+            return [], []
+        packs_list = json.load(path.open())
+        return packs_list.get("core_packs_list"), packs_list.get(
+            "update_core_packs_list"
+        )
 
-    with open(os.path.join(os.path.dirname(__file__), 'core_packs_mpv2_list.json')) as core_packs_xsiam_list_file:
-        packs_list_xsiam = json.load(core_packs_xsiam_list_file)
-        CORE_PACKS_MPV2_LIST = packs_list_xsiam.get('core_packs_list')
-        CORE_PACKS_MPV2_LIST_TO_UPDATE = packs_list_xsiam.get('update_core_packs_list')
+    CORE_PACKS_LIST, CORE_PACKS_LIST_TO_UPDATE = get_core_pack_files("core_packs_list.json")
+    CORE_PACKS_MPV2_LIST, CORE_PACKS_MPV2_LIST_TO_UPDATE = get_core_pack_files("core_packs_mpv2_list.json")
+    CORE_PACKS_XPANSE_LIST, CORE_PACKS_XPANSE_LIST_TO_UPDATE = get_core_pack_files("core_packs_xpanse_list.json")
 
-    with open(os.path.join(os.path.dirname(__file__), 'core_packs_xpanse_list.json')) as core_packs_xpanse_list_file:
-        packs_list_xpanse = json.load(core_packs_xpanse_list_file)
-        CORE_PACKS_XPANSE_LIST = packs_list_xpanse.get('core_packs_list')
-        CORE_PACKS_XPANSE_LIST_TO_UPDATE = packs_list_xpanse.get('update_core_packs_list')
+    server_versions_metadata = Path(__file__).resolve().parent / VERSIONS_METADATA_FILE
+    corepacks_override_file = Path(__file__).resolve().parent / COREPACKS_OVERRIDE_FILE
 
-    with open(os.path.join(os.path.dirname(__file__), VERSIONS_METADATA_FILE)) as server_versions_metadata:
-        versions_metadata_contents = json.load(server_versions_metadata)
+    if server_versions_metadata.exists():
+        versions_metadata_contents = json.load(server_versions_metadata.open())
         core_packs_file_versions = versions_metadata_contents.get('version_map')
+    else:
+        core_packs_file_versions = {}
 
-    with open(os.path.join(os.path.dirname(__file__), COREPACKS_OVERRIDE_FILE)) as corepacks_override_file:
-        corepacks_override_contents = json.load(corepacks_override_file)
+    if corepacks_override_file.exists():
+        corepacks_override_contents = json.load(corepacks_override_file.open())
+    else:
+        corepacks_override_contents = {}
 
     @classmethod
     def get_core_packs(cls, marketplace):

@@ -1,4 +1,6 @@
+from datetime import datetime
 from enum import Enum
+import dateparser
 import json5
 from google.auth import default
 from google.cloud import secretmanager
@@ -7,6 +9,7 @@ import logging
 SPECIAL_CHARS = [" ", "(", "(", ")", ".", "", "+", "="]
 GSM_MAXIMUM_LABEL_CHARS = 63
 DEV_PROJECT_ID = "269994096945"
+DATE_FORMAT = '%Y-%m-%d'
 
 
 class FilterLabels(Enum):
@@ -32,11 +35,12 @@ class FilterOperators(Enum):
 
 class ExpirationData:
     DATE_FORMAT = "%Y-%m-%d"
-    CREDS_EXPIRATION_LABEL_NAME = "credentials_expiration"
+    CREDS_EXPIRATION_LABEL_NAME = "credential_expiration"
     LICENSE_EXPIRATION_LABEL_NAME = "license_expiration"
     CENTRIFY_LABEL_NAME = "centrify"
     SKIP_REASON_LABEL_NAME = "skip_reason"
     JIRA_LINK_LABEL_NAME = "jira_link"
+    SECRET_OWNER = 'owner'
 
     class Status:
         STATUS_LABEL_NAME = "status"
@@ -45,6 +49,23 @@ class ExpirationData:
 
 
 class GoogleSecreteManagerModule:
+    class GoogleSecretTools:
+        @staticmethod
+        def calculate_expiration_date(expiration_date: str) -> str | None:
+            """Calculating expiration date based on input.
+
+            Args:
+                expiration_date (str): a date representing string, such "in 1 day", "3 days", "2024-05-01", etc
+
+            Returns:
+                str: a standardized string for the date requested.
+            """
+            logging.debug(f"Parsing expiration date from: {expiration_date}")
+            d = dateparser.parse(expiration_date)
+            logging.debug("Parsed successfully.")
+
+            return datetime.strftime(d, DATE_FORMAT) if d else None
+
 
     def __init__(self, service_account_file: str = None, project_id=DEV_PROJECT_ID):
         self.client = self.create_secret_manager_client(

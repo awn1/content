@@ -15,21 +15,26 @@ from infra.xsoar_api import XsoarClient, XsiamClient
 urllib3.disable_warnings(InsecureRequestWarning)
 
 COLUMNS = [
-    {'data': '', 'visible': True, 'add_class': False, 'filterable': False, 'className': 'dt-control',
+    {'data': '', 'exportable': False, 'visible': True, 'add_class': False, 'filterable': False, 'className': 'dt-control',
      'orderable': 'false', 'key': '', 'defaultContent': ''},
-    {'data': 'Host', 'visible': True, 'add_class': False, 'filterable': False, 'key': 'host'},
-    {'data': 'Machine Name', 'visible': True, 'add_class': False, 'filterable': False, 'key': 'machine_name'},
-    {'data': 'Enabled', 'visible': True, 'add_class': True, 'filterable': True, 'key': 'enabled'},
-    {'data': 'Flow Type', 'visible': True, 'add_class': True, 'filterable': True, 'key': 'flow_type'},
-    {'data': 'Platform Type', 'visible': True, 'add_class': True, 'filterable': True, 'key': 'platform_type'},
-    {'data': 'Server Version', 'visible': True, 'add_class': True, 'filterable': True, 'key': 'version'},
-    {'data': 'LCAAS ID', 'visible': True, 'add_class': True, 'filterable': False, 'key': 'lcaas_id'},
+    {'data': 'Host', 'exportable': True, 'visible': True, 'add_class': False, 'filterable': False, 'key': 'host'},
+    {'data': 'Machine Name', 'exportable': True, 'visible': True, 'add_class': False, 'filterable': False, 'key': 'machine_name'},
+    {'data': 'Enabled', 'exportable': True, 'visible': True, 'add_class': True, 'filterable': True, 'key': 'enabled'},
+    {'data': 'Flow Type', 'exportable': True, 'visible': True, 'add_class': True, 'filterable': True, 'key': 'flow_type'},
+    {'data': 'Platform Type', 'exportable': True, 'visible': True, 'add_class': True, 'filterable': True, 'key': 'platform_type'},
+    {'data': 'Server Version', 'exportable': True, 'visible': True, 'add_class': True, 'filterable': True, 'key': 'version'},
+    {'data': 'LCAAS ID', 'exportable': True, 'visible': True, 'add_class': True, 'filterable': False, 'key': 'lcaas_id'},
+    {'data': 'Agent Host Name', 'exportable': True, 'visible': False, 'add_class': True, 'filterable': False,
+     'key': 'agent_host_name'},
+    {'data': 'Agent IP', 'exportable': True, 'visible': False, 'add_class': True, 'filterable': False, 'key': 'agent_host_ip'},
 ]
 
 ARTIFACTS_FOLDER = os.environ["ARTIFACTS_FOLDER"]
 GITLAB_ARTIFACTS_URL = os.environ["GITLAB_ARTIFACTS_URL"]
 CI_JOB_ID = os.environ["CI_JOB_ID"]
-PERMISSIONS_CHANNEL = os.environ["PERMISSIONS_CHANNEL"]
+XDR_PERMISSIONS_DEV = os.environ["XDR_PERMISSIONS_DEV"]
+XDR_UPGRADE_CHANNEL_DEV = os.environ["XDR_UPGRADE_CHANNEL_DEV"]
+PERMISSION_ROLE = os.environ.get("PERMISSION_ROLE", "cortex-operator-data-access")
 
 
 def create_report(current_date: str, records: list[dict], columns, columns_filterable, managers) -> str:
@@ -38,10 +43,13 @@ def create_report(current_date: str, records: list[dict], columns, columns_filte
     env = Environment(loader=FileSystemLoader(template_path))
     template = env.get_template("ReportTemplate.html")
     logging.info("Successfully loaded template.")
-    content = template.render(records=records, current_date=current_date,
+    report_title = f"Build Machines Report - {current_date}"
+    content = template.render(records=records, report_title=report_title,
                               columns_json=json.dumps(columns), columns=columns,
                               columns_filterable=columns_filterable, managers=managers,
-                              permissions_channel=PERMISSIONS_CHANNEL)
+                              xdr_permissions_dev=XDR_PERMISSIONS_DEV,
+                              xdr_upgrade_channel_dev=XDR_UPGRADE_CHANNEL_DEV,
+                              permission_role=PERMISSION_ROLE)
     logging.info("Successfully rendered report.")
     return content
 
@@ -53,8 +61,7 @@ def options_handler(args=None) -> argparse.Namespace:
     parser.add_argument('--xsoar-ng-json', type=str, action="store", required=True, help='Tenant files for xsoar-ng tenants')
     parser.add_argument('-o', '--output-path', required=True, help='The path to save the report to.')
     parser.add_argument('-n', '--name-mapping_path', help='Path to name mapping file.', required=False)
-    parser.add_argument('-t', '--test-data', help="Use test data and don't connect to the servers.",
-                        default=False, action='store_true', required=False)
+    parser.add_argument('-t', '--test-data', help="Use test data and don't connect to the servers.", required=False)
     options = parser.parse_args(args)
 
     return options
@@ -64,20 +71,29 @@ def generate_html_link(text, url):
     return f'<a href="{url}" target="_blank">{text}</a>'
 
 
+def generate_cell(display, sort=None):
+    return {
+        "display": display,
+        "sort": sort if sort is not None else display,
+    }
+
+
 def generate_records(xsoar_ng_json, xsoar_admin_user: XSOARAdminUser, client_type: type[XsoarClient]):
     records = []
     for key, value in xsoar_ng_json.items():
         # ui_url is in the format of https://<host>/ we need just the host.
         host = value.get("ui_url").replace("https://", "").replace("/", "")
         record = {
-            "host": generate_html_link(host, value.get("ui_url")),
-            "ui_url": value.get("ui_url"),
-            "machine_name": key,
-            "enabled": value.get("enabled"),
-            "flow_type": value.get("flow_type"),
-            "platform_type": client_type.PLATFORM_TYPE,
-            "lcaas_id": "N/A",
-            "version": "N/A",
+            "host": generate_cell(generate_html_link(host, value.get("ui_url")), value.get("ui_url")),
+            "ui_url": generate_cell(value.get("ui_url")),
+            "machine_name": generate_cell(key),
+            "enabled": generate_cell(value.get("enabled")),
+            "flow_type": generate_cell(value.get("flow_type")),
+            "platform_type": generate_cell(client_type.PLATFORM_TYPE),
+            "lcaas_id": generate_cell("N/A", ""),
+            "version": generate_cell("N/A", ""),
+            "agent_host_name": generate_cell(value.get("agent_host_name", "N/A"), value.get("agent_host_name", "")),
+            "agent_host_ip": generate_cell(value.get("agent_host_ip", "N/A"), value.get("agent_host_ip", "")),
         }
         try:
             client = client_type(xsoar_host=host,
@@ -86,55 +102,18 @@ def generate_records(xsoar_ng_json, xsoar_admin_user: XSOARAdminUser, client_typ
                                  tenant_name=key)
             client.login_auth(force_login=True)
             versions = client.get_version_info()
-            record |= versions
+            record |= {key: generate_cell(value) for key, value in versions.items()}
         except Exception as e:
             logging.error(f"Failed to get data for {key}: {e}")
         records.append(record)
     return records
 
 
-def generate_test_data():
-    return [
-        {
-            "ui_url": "https://www.google.com/",
-            "host": generate_html_link("123", "https://www.google.com/"),
-            "machine_name": "meir",
-            "enabled": True,
-            "flow_type": "upload",
-            "platform_type": "xsiam",
-            "lcaas_id": "9995321362587",
-            "version": "test",
-            "demisto_version": "6.0.0",
-        },
-        {
-            "ui_url": "https://www.yahoo.com/",
-            "host": generate_html_link("1588", "https://www.yahoo.com/"),
-            "machine_name": "Test",
-            "enabled": True,
-            "flow_type": "nightly",
-            "platform_type": "xsiam",
-            "lcaas_id": "9995321362555",
-            "version": "6.12",
-            "demisto_version": "6.12",
-        },
-        {
-            "ui_url": "https://www.facebook.com/",
-            "host": generate_html_link("345", "https://www.facebook.com/"),
-            "machine_name": "koby",
-            "enabled": False,
-            "flow_type": "build",
-            "platform_type": "xsoar",
-            "lcaas_id": "N/A",
-            "version": "N/A",
-            "demisto_version": "8.0",
-        },
-    ]
-
-
 def main():
     args = options_handler()
+    output_path = Path(args.output_path)
     if args.test_data:
-        records = generate_test_data()
+        records = json.loads(Path(args.test_data).read_text())
     else:
         admin_user = Settings.xsoar_admin_user
         xsiam_json = json.loads(Path(args.xsiam_json).read_text())
@@ -150,19 +129,19 @@ def main():
             managers.extend(name_mapping.get("managers", []))
     static_columns = {column["key"] for column in COLUMNS if column["key"]}
     dynamic_columns = list({key for record in records for key in record.keys() if key not in static_columns})
-    COLUMNS.extend([{"data": key, "visible": False, 'filterable': False, "key": key} for key in dynamic_columns])
-    records = sorted(records, key=lambda x: x["enabled"], reverse=True)
+    COLUMNS.extend([
+        {"data": key, 'exportable': False, "visible": False, 'filterable': False, "key": key} for key in dynamic_columns])
     current_date = datetime.now().strftime("%Y-%m-%d")
     logging.info(f"Creating report for {current_date}")
     columns_filterable = [i for i, c in enumerate(COLUMNS) if c["filterable"]]
+    # Save the records to a json file for future use and debugging.
+    with open(output_path / "records.json", "w") as f:
+        json.dump(records, f, indent=4)
+
     report = create_report(current_date, records, COLUMNS, columns_filterable, managers)
-    output_path = Path(args.output_path)
     report_file_name = f"Report_{current_date}.html"
     with open(output_path / report_file_name, 'w') as f:
         f.write(report)
-
-    with open(output_path / "records.json", "w") as f:
-        json.dump(records, f, indent=4)
 
     with open(output_path / "slack_msg.txt", "w") as f:
         f.write(f"Build machines report was created and can be found <{GITLAB_ARTIFACTS_URL}/{CI_JOB_ID}/"
