@@ -216,7 +216,7 @@ def lock_machine(
         job_id(str): the job id that locks.
     """
     blob = storage_bucket.blob(
-        f"{lock_repository_name}/{MACHINES_LOCKS_REPO}/{GITLAB_PROJECT_ID}-project_id-{machine_name}-lock-{job_id}"
+        f"{lock_repository_name}/{MACHINES_LOCKS_REPO}/{GITLAB_PROJECT_ID}-lock-{machine_name}-lock-{job_id}"
     )
     blob.upload_from_string("")
 
