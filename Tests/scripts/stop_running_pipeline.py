@@ -119,11 +119,27 @@ def cancel_pipelines_for_branch_name(gitlab_client: Gitlab,
                 # checking if the pipeline was triggered by infra with TRIGGER_TEST_BRANCH, this is only applicable
                 # for the main pipeline run and not for test-upload-flow.
                 if cancel_children:
-                    variables = get_pipeline_variables(pipeline)
-                    if not strtobool(variables.get('TRIGGER_TEST_BRANCH', 'False')):
-                        logging.info(f"Pipeline id:{pipeline.id} for branch:{branch_name} was not "
-                                     "triggered with 'TRIGGER_TEST_BRANCH' variable, skipping...")
+                    if pipeline.source != os.environ["CI_PIPELINE_SOURCE"]:
+                        logging.info(
+                                f"Pipeline id:{pipeline.id} for branch:{branch_name} and "
+                                "current pipeline are not same sources, skipping..."
+                            )
                         continue
+                    elif pipeline.source == "trigger":
+                        variables = get_pipeline_variables(pipeline)
+                        trigger_test_branch = variables.get("TRIGGER_TEST_BRANCH")
+                        if trigger_test_branch is None:
+                            logging.info(
+                                f"Pipeline id:{pipeline.id} for branch:{branch_name} was not "
+                                "triggered with 'TRIGGER_TEST_BRANCH' variable, skipping..."
+                            )
+                            continue
+                        elif strtobool(trigger_test_branch) != strtobool(os.getenv("TRIGGER_TEST_BRANCH", "False")):
+                            logging.info(
+                                f"Pipeline id:{pipeline.id} for branch:{branch_name} was different "
+                                "triggered and 'TRIGGER_TEST_BRANCH' variables are not equal, skipping..."
+                            )
+                            continue
                 logging.info(f"Canceling pipeline id:{pipeline.id} for branch:{branch_name}")
                 if pipeline.status in GITLAB_STATUSES_TO_CANCEL:
                     pipeline.cancel()
