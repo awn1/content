@@ -1180,6 +1180,23 @@ pandas = ["db-dtypes (>=0.3.0,<2.0.0dev)", "importlib-metadata (>=1.0.0)", "pand
 tqdm = ["tqdm (>=4.7.4,<5.0.0dev)"]
 
 [[package]]
+name = "google-cloud-compute"
+version = "1.19.0"
+description = "Google Cloud Compute API client library"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "google-cloud-compute-1.19.0.tar.gz", hash = "sha256:a07b3408b3f77786dcb196669ff3767bc51080718a7c2d3fd779defc8d817b4d"},
+    {file = "google_cloud_compute-1.19.0-py2.py3-none-any.whl", hash = "sha256:48d5582dd257fc817113556ab40990ec7a50fb6b2e341bc8a55ef90e2e66501d"},
+]
+
+[package.dependencies]
+google-api-core = {version = ">=1.34.1,<2.0.dev0 || >=2.11.dev0,<3.0.0dev", extras = ["grpc"]}
+google-auth = ">=2.14.1,<2.24.0 || >2.24.0,<2.25.0 || >2.25.0,<3.0.0dev"
+proto-plus = ">=1.22.3,<2.0.0dev"
+protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<5.0.0dev"
+
+[[package]]
 name = "google-cloud-core"
 version = "2.4.1"
 description = "Google Cloud API client core library"
@@ -4283,4 +4300,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.11"
-content-hash = "4b33a92b6c44579e7dbceec5da984f7bde9715759a3b9826202de589c879bd72"
+content-hash = "a2c327ed55d8fb2c820cafe4596fb1e2dd8d34a69a73960631963722e82a2bd3"
