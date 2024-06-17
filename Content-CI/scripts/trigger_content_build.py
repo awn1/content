@@ -66,7 +66,7 @@ class TestBranch:
         time.sleep(5.0)
         return repo
 
-    def sync_and_delete_old_branch(self) -> bool:
+    def sync_and_delete_old_branch(self):
         """
         checks if a specific branch exists on GitHub and not on GitLab, if so,
         deletes the corresponding branch from the GitLab
@@ -134,25 +134,6 @@ class TestBranch:
         self.delete_branch = True
         print("Created new branch")
 
-    def update_gitlab_ci_file(self):
-        """
-        Updates the 'ref' and 'CURRENT_BRANCH_NAME' variables
-        in the GitLab CI file with the current branch name.
-        """
-
-        # Load GitLab CI file
-        gitlab_ci_content = yaml.load(GITLAB_CI_PATH.read_text())
-
-        # Update 'ref' for the include
-        if gitlab_ci_content["include"][0]["ref"] != self.branch_name:
-            gitlab_ci_content["include"][0]["ref"] = self.branch_name
-
-        # Update 'CURRENT_BRANCH_NAME' variable
-        if gitlab_ci_content["variables"]["CURRENT_BRANCH_NAME"] != self.branch_name:
-            gitlab_ci_content["variables"]["CURRENT_BRANCH_NAME"] = self.branch_name
-
-        yaml.dump(gitlab_ci_content, open(GITLAB_CI_PATH, "w"))
-
     def create_or_update_test_branch(self):
         """
         Creates or updates a test branch in the Content repo and pushes the changes to the remote.
@@ -162,21 +143,21 @@ class TestBranch:
         if not self.is_branch_exists():
             self.create_branch()
 
-        self.update_gitlab_ci_file()
 
-        self.repo.git.add(".")
-        self.repo.git.commit(
-            "--allow-empty", "-m", "Test build for infra files", no_verify=True
-        )
+            self.repo.git.add(".")
+            self.repo.git.commit(
+                "--allow-empty", "-m", "Test build for infra files", no_verify=True
+            )
 
-        # Push changes to the remote repository, skipping CI pipelines
-        self.repo.git.push(
-            "--set-upstream", self.url, self.branch_name, push_option="ci.skip"
-        )
+            # Push changes to the remote repository, skipping CI pipelines
+            self.repo.git.push(
+                "--set-upstream", self.url, self.branch_name, push_option="ci.skip"
+            )
 
-        print("Sleeping after pushing 10 seconds")
-        time.sleep(10.0)
-
+            print("Sleeping after pushing 10 seconds")
+            time.sleep(10.0)
+        else:
+            print("The branch exist on content")
 
 # Trigger the test build in Content
 
@@ -237,7 +218,7 @@ class PipelineManager:
             "token": (None, self.trigger_token),
             "ref": (None, self.branch_name),
             "variables[TRIGGER_TEST_BRANCH]": (None, "true"),
-            "variables[CURRENT_BRANCH_NAME]": (None, self.branch_name),
+            "variables[INFRA_BRANCH]": (None, self.branch_name),
         }
         try:
             res = requests.post(url=self.trigger_url, files=files, verify=False).json()
