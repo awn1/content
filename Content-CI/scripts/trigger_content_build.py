@@ -26,6 +26,9 @@ GITLAB_CONTENT_TRIGGER_URL = (
 GITLAB_CONTENT_PIPELINES_BASE_URL = (
     f"{GITLAB_SERVER_URL}/api/v4/projects/{GITLAB_CONTENT_PROJECT_ID}/pipelines/"
 )
+GITLAB_CONTENT_REPO_URL = (
+    f"{GITLAB_SERVER_URL}/api/v4/projects/{GITLAB_CONTENT_PROJECT_ID}/repository/branches/"
+)
 TIMEOUT = 60 * 60 * 6  # 6 hours
 
 GITLAB_CI_PATH = Path("./content/.gitlab/ci/.gitlab-ci.yml")
@@ -40,23 +43,20 @@ class ExitCode:
 
 
 class TestBranch:
-    def __init__(self, url: str, branch_name: str, github_token: str) -> None:
+    def __init__(self, url: str, branch_name: str, github_token: str, gitlab_token: str) -> None:
         self.url = url
         self.branch_name = branch_name
         self.github_token = github_token
-        self.delete_branch: bool = False
-        self.repo: git.Repo = self.clone(self.url)
-        self.repo.config_writer().set_value("user", "name", "bot-content").release()
-        self.repo.config_writer().set_value("user", "email", "bot@dummy.com").release()
+        self.gitlab_token = gitlab_token
 
-    def clone(self, url: str) -> git.Repo:
+    def clone(self, url: str):
         """
         Clones the Content repo from the specified URL.
         If cloning fails the program exits with a status code of 1.
         """
         try:
             print("Cloning Content repo ...")
-            repo = git.Repo.clone_from(url=url, to_path="./content")
+            repo = git.Repo.clone_from(url=url, to_path="./content", depth=1)
             print("Cloned Content repo")
         except Exception as e:
             print(f"Cloning Content repo failed, Error: {str(e)}")
@@ -64,9 +64,12 @@ class TestBranch:
 
         print("Sleeping 5 seconds")
         time.sleep(5.0)
-        return repo
 
-    def sync_and_delete_old_branch(self):
+        self.repo = repo
+        self.repo.config_writer().set_value("user", "name", "bot-content").release()
+        self.repo.config_writer().set_value("user", "email", "bot@dummy.com").release()
+
+    def is_there_pr_in_github(self):
         """
         checks if a specific branch exists on GitHub and not on GitLab, if so,
         deletes the corresponding branch from the GitLab
@@ -87,77 +90,78 @@ class TestBranch:
             headers=headers,
             verify=False,
         )
+        return bool(res.json())
 
-        if not res.json() and self.is_branch_exists():
-            try:
-                # Removing remote branch
-                print(f"Start deleting old branch: '{self.branch_name}' in remote")
-                self.repo.git.push("--set-upstream", self.url, f":{self.branch_name}")
-                print("Successfully deleted old branch.")
-            except git.GitCommandError as e:
-                print(e)
-                sys.exit(ExitCode.FAILED)
-            try:
-                # Removing local branch
-                self.repo.git.checkout("master")
-                self.repo.git.branch("-D", self.branch_name)
-                self.repo.git.fetch("origin", "--prune")
-            except Exception as e:
-                print(e)
-                sys.exit(ExitCode.FAILED)
-            print("Sleep 5 seconds after deleting old branch")
-            time.sleep(5.0)
+    def delete_old_branch(self):
+        try:
+            # Removing remote branch
+            print(f"Start deleting old branch: '{self.branch_name}' in remote")
+            self.repo.git.push("--set-upstream", self.url, f":{self.branch_name}")
+            print("Successfully deleted old branch.")
+        except git.GitCommandError as e:
+            print(e)
+            sys.exit(ExitCode.FAILED)
+        print("Sleep 5 seconds after deleting old branch")
+        time.sleep(5.0)
 
-    def is_branch_exists(self) -> bool:
+    def is_branch_exists_in_gitlab(self) -> bool:
         """
-        Checks if the specified branch exists in the Content repo.
+        Checks if the specified branch exists in the GitLab Content repo.
 
         Returns:
             bool: True if the branch exists, False otherwise.
         """
-        does_exist = True
-        try:
-            self.repo.git.checkout(self.branch_name)
-        except git.exc.GitCommandError:
-            print(f"The branch {self.branch_name} does not exist")
-            does_exist = False
-        except Exception as e:
-            print(str(e))
-            does_exist = False
-        return does_exist
+        headers = {
+            "Content-Type": "application/json",
+            "PRIVATE-TOKEN": self.gitlab_token,
+        }
+        res = requests.get(
+            url=GITLAB_CONTENT_REPO_URL + self.branch_name,
+            headers=headers,
+        )
+        return res.status_code == 200
 
     def create_branch(self):
         """
         Creates a new branch in the Content repo by the self.branch_name.
         """
         self.repo.git.checkout("-b", self.branch_name)
-        self.delete_branch = True
         print("Created new branch")
 
-    def create_or_update_test_branch(self):
+    def create_test_branch(self):
         """
-        Creates or updates a test branch in the Content repo and pushes the changes to the remote.
+        Checks if a test branch needs to be created,
+        if so it is created in the Content repo and pushed to the remote.
 
         """
-        self.sync_and_delete_old_branch()
-        if not self.is_branch_exists():
-            self.create_branch()
-
-
-            self.repo.git.add(".")
-            self.repo.git.commit(
-                "--allow-empty", "-m", "Test build for infra files", no_verify=True
+        if self.is_there_pr_in_github():
+            print(
+                "There is a PR in GitHub that belong to "
+                f"the {self.branch_name} branch, no need to create a new branch"
             )
+            return
 
-            # Push changes to the remote repository, skipping CI pipelines
-            self.repo.git.push(
-                "--set-upstream", self.url, self.branch_name, push_option="ci.skip"
+        self.clone(self.url)
+        if self.is_branch_exists_in_gitlab():
+            print(
+                "Founded old branch with the same name in Gitlab Content repo, we will to delete it, "
+                "don't worry we are recreating it"
             )
+            self.delete_old_branch()
+        self.create_branch()
 
-            print("Sleeping after pushing 10 seconds")
-            time.sleep(10.0)
-        else:
-            print("The branch exist on content")
+        self.repo.git.add(".")
+        self.repo.git.commit(
+            "--allow-empty", "-m", "Test build for infra files", no_verify=True
+        )
+
+        # Push changes to the remote repository, skipping CI pipelines
+        self.repo.git.push(
+            "--set-upstream", self.url, self.branch_name, push_option="ci.skip"
+        )
+
+        print("Sleeping after pushing 10 seconds")
+        time.sleep(10.0)
 
 # Trigger the test build in Content
 
@@ -323,8 +327,8 @@ def main():
     branch_name = args.branch_name
 
     # Managing the creation and update of the test branch
-    test_branch = TestBranch(url, branch_name, github_token)
-    test_branch.create_or_update_test_branch()
+    test_branch = TestBranch(url, branch_name, github_token, token_cancel)
+    test_branch.create_test_branch()
 
     # Managing and triggering the pipeline
     pipeline_manager = PipelineManager(
