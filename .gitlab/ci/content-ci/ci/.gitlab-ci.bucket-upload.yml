@@ -247,6 +247,7 @@ install-packs-in-server-master:
       variables:
         CLOUD_MACHINES_TYPE: "build"
         GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga"
+        CLEAN_MACHINE_NEEDED: "false"
     - if: '$BUCKET_UPLOAD == "true" && $FORCE_BUCKET_UPLOAD == "false"'
   variables:
     PRODUCT_TYPE: "XSIAM"
@@ -260,6 +261,7 @@ install-packs-in-server-master:
     GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-upload"
     CLOUD_MACHINES_TYPE: "upload"
     CLOUD_MACHINES_COUNT: 1
+    CLEAN_MACHINE_NEEDED: "true"
   extends:
     - .default-job-settings
   script:
@@ -298,6 +300,7 @@ install-packs-in-server-master:
     - exit "$EXIT_CODE"
   after_script:
     - source .gitlab/helper_functions.sh
+    - !reference [.clean-machine]
     - !reference [ .unlock-machine ]
 
 install-packs-in-xsiam-ga:
