@@ -18,6 +18,7 @@ LOCKS_BUCKET = "xsoar-ci-artifacts"
 QUEUE_REPO = "queue"
 MACHINES_LOCKS_REPO = "machines_locks"
 JOB_STATUS_URL = "{}/api/v4/projects/{}/jobs/{}"  # disable-secrets-detection
+PIPELINE_STATUS_URL = '{}/api/v4/projects/{}/pipelines/{}'  # disable-secrets-detection
 GITLAB_PROJECT_ID = get_env_var("CI_PROJECT_ID", "1061")  # default is Content
 
 
@@ -47,6 +48,7 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument("--service_account", help="Path to gcloud service account.")
     parser.add_argument("--gcs_locks_path", help="Path to lock repo.")
     parser.add_argument("--ci_job_id", help="the job id.")
+    parser.add_argument('--ci_pipeline_id', help='the pipeline id.')
     parser.add_argument(
         "--test_machines",
         help="comma separated string contains all available machines.",
@@ -161,14 +163,19 @@ def check_job_status(
     Returns: the status of the job.
 
     """
-    user_endpoint = JOB_STATUS_URL.format(GITLAB_SERVER_URL, project_id, job_id)
+    logging.info(f"test job_id= {job_id}")
+    if "_" in job_id:
+        job_id = job_id.split('_')[1]
+        user_endpoint = JOB_STATUS_URL.format(GITLAB_SERVER_URL, project_id, job_id)
+    else:
+        user_endpoint = PIPELINE_STATUS_URL.format(GITLAB_SERVER_URL, project_id, job_id)
     headers = {"PRIVATE-TOKEN": token}
 
     for attempt_num in range(1, num_of_retries + 1):
         try:
             logging.debug(
-                f"Try to get the status of job ID {job_id} from project id {project_id} in attempt number {attempt_num}"
-            )
+                f'Try to get the status of job ID {job_id} from project id {project_id} in attempt number'
+                f'{attempt_num},user_endpoint: {user_endpoint}')
             response = requests.get(user_endpoint, headers=headers)
             response_as_json = response.json()
             logging.debug(
@@ -399,14 +406,15 @@ def get_and_lock_all_needed_machines(
     """
 
     logging.debug("getting all machines lock files")
-    machines_locks = get_machines_locks_details(
-        storage_client, LOCKS_BUCKET, gcs_locks_path, MACHINES_LOCKS_REPO
-    )
 
     locked_machine_list = []
     while number_machines_to_lock > 0:
         busy_machines = []
         for machine in list_machines:
+            machines_locks = get_machines_locks_details(storage_client,
+                                                        LOCKS_BUCKET,
+                                                        gcs_locks_path,
+                                                        MACHINES_LOCKS_REPO)
             lock_machine_name = try_to_lock_machine(
                 storage_bucket,
                 machine,
@@ -523,11 +531,19 @@ def main():
     install_logging("lock_cloud_machines.log", logger=logging)
     logging.info("Starting to search for a CLOUD machine/s to lock")
     options = options_handler()
-    storage_client = storage.Client.from_service_account_json(options.service_account)
+    storage_client = storage.Client.from_service_account_json(
+        options.service_account)
     storage_bucket = storage_client.bucket(LOCKS_BUCKET)
 
-    logging.info(f"Adding job_id: {options.ci_job_id} to the queue")
-    adding_build_to_the_queue(storage_bucket, options.gcs_locks_path, options.ci_job_id)
+    logging.info(f"job_id={options.ci_job_id}"
+                 f"pipeline_id= {options.ci_pipeline_id}")
+    if options.ci_job_id:
+        options.ci_job_id = f"{options.ci_pipeline_id}_{options.ci_job_id}"
+    else:
+        options.ci_job_id = options.pipeline_id
+    logging.info(f'Adding job_id/pipeline_id:{options.ci_job_id} to the queue')
+    adding_build_to_the_queue(storage_bucket, options.gcs_locks_path,
+                              options.ci_job_id)
 
     # running until the build is the first in queue
     wait_for_build_to_be_first_in_queue(

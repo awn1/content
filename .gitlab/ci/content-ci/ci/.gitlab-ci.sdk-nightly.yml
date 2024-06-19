@@ -389,6 +389,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsiam:
       CLOUD_MACHINES_TYPE: "build"
       CLOUD_MACHINES_COUNT: 1
       INSTANCE_ROLE: "xsiam"
+      CLEAN_MACHINE_NEEDED: "true"
       GCS_QUEUE_FILE: "queue-ga"
       GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga"
       CLOUD_SERVERS_FILE: "xsiam_servers_path"
@@ -437,7 +438,9 @@ demisto-sdk-nightly:run-end-to-end-tests-xsiam:
 
   after_script:
     - source .gitlab/helper_functions.sh
+    - !reference [.clean-machine]
     - !reference [.unlock-machine]
+
 
 demisto-sdk-nightly:run-end-to-end-tests-xsoar-saas:
   rules:
@@ -454,6 +457,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar-saas:
     CLOUD_MACHINES_TYPE: "build"
     CLOUD_MACHINES_COUNT: 1
     INSTANCE_ROLE: "xsoar_saas"
+    CLEAN_MACHINE_NEEDED: "true"
     SERVER_TYPE: "XSOAR SAAS"
     GCS_QUEUE_FILE: "queue-ga"
     GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng"
@@ -501,6 +505,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar-saas:
   after_script:
     - source .gitlab/helper_functions.sh
     - !reference [.unlock-machine]
+    - !reference [.clean-machine]
 
 demisto-sdk-nightly:fan-in:
   tags:

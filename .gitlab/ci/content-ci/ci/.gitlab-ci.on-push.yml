@@ -642,6 +642,7 @@ slack-notify-on-merge:
     - exit $EXIT_CODE
   after_script:
     - source .gitlab/helper_functions.sh
+    - !reference [.clean-machine]
     - !reference [.unlock-machine]
 
 
@@ -656,11 +657,13 @@ xsiam_server_ga:
       when: always
       variables:
         CLOUD_MACHINES_TYPE: "nightly"
+        CLEAN_MACHINE_NEEDED: "true"
         CLOUD_MACHINES_COUNT: 1
         GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-nightly"
   timeout: 12 hours
   variables:
     CLOUD_MACHINES_TYPE: "build"
+    CLEAN_MACHINE_NEEDED: "false"
     CLOUD_MACHINES_COUNT: 1
     INSTANCE_ROLE: "XSIAM"
     SERVER_TYPE: "XSIAM"
@@ -705,6 +708,7 @@ xsoar_ng_server_ga:
     - if: '$NIGHTLY'
       when: never
   variables:
+    CLEAN_MACHINE_NEEDED: "false"
     CLOUD_MACHINES_TYPE: "build"
     CLOUD_MACHINES_COUNT: 1
     INSTANCE_ROLE: "XSOAR SAAS"
