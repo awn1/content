@@ -50,7 +50,7 @@
         "base_url": "https://api-viso-8txxhjpgaxumfeaggpfpd9.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "ga",
         "demisto_version": "8.6.0",
-        "enabled": true,
+        "enabled": false,
         "flow_type": "build",
         "agent_host_name": "DC1ENV8APC-Win10-25",
         "agent_host_ip": "172.16.8.66"
