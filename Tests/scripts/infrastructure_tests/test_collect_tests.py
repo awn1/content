@@ -634,6 +634,9 @@ ONLY_COLLECT_PACK_TYPES = {
     FileType.ASSETS_MODELING_RULE,
     FileType.ASSETS_MODELING_RULE_SCHEMA,
     FileType.ASSETS_MODELING_RULE_XIF,
+    FileType.CASE_FIELD,
+    FileType.CASE_LAYOUT_RULE,
+    FileType.CASE_LAYOUT,
 }
 
 
@@ -744,7 +747,7 @@ def test_number_of_file_types():
 
         - Removed type:    Decrease the number here.
     """
-    assert len(FileType) == 80
+    assert len(FileType) == 83
 
 
 @pytest.mark.parametrize(
