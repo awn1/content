@@ -163,7 +163,6 @@ def check_job_status(
     Returns: the status of the job.
 
     """
-    logging.info(f"test job_id= {job_id}")
     if "_" in job_id:
         job_id = job_id.split('_')[1]
         user_endpoint = JOB_STATUS_URL.format(GITLAB_SERVER_URL, project_id, job_id)
@@ -535,8 +534,8 @@ def main():
         options.service_account)
     storage_bucket = storage_client.bucket(LOCKS_BUCKET)
 
-    logging.info(f"job_id={options.ci_job_id}"
-                 f"pipeline_id= {options.ci_pipeline_id}")
+    logging.info(f"job_id={options.ci_job_id} "
+                 f"pipeline_id={options.ci_pipeline_id}")
     if options.ci_job_id:
         options.ci_job_id = f"{options.ci_pipeline_id}_{options.ci_job_id}"
     else:

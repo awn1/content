@@ -26,7 +26,7 @@ if [ "$#" -lt "1" ]; then
 fi
 
 _branch="$(git branch  --show-current)"
-_slack_channel="dmst-build-test"
+_slack_channel="dmst-build-machines-cleanup"
 _machine_type="nightly"
 _machine=""
 _machine_count="all"
