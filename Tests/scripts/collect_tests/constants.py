@@ -158,3 +158,7 @@ XSIAM_COMPONENT_FILES: set[FileType] = {
 }
 
 TEST_DATA_PATTERN = '*_testdata.json'
+XSOAR_SAAS = "server_type_XSOAR SAAS"
+XSOAR_ON_PREM = "server_type_XSOAR"
+CONF_FILE = "conf.json"
+TPB_DEPENDENCIES_FILE = "tpb_dependencies_packs.json"
