@@ -7,7 +7,8 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "build_machine" : true
     },
         "qa2-test-9999663522630": {
         "ui_url": "https://viso-3ye7dexuai8tbp8r7hehq5.crtx-qa2-uat.us.paloaltonetworks.com/",
@@ -17,8 +18,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
-    },
+        "flow_type": "build",
+        "build_machine" : true
+        },
         "qa2-test-9993056930520": {
         "ui_url": "https://viso-fmem7whxsixdaemwhfoeqa.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9993056930520",
@@ -27,8 +29,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
-    },
+        "flow_type": "build",
+        "build_machine" : true
+        },
         "qa2-test-9998801675528": {
         "ui_url": "https://viso-jgmtalpckkkc3bcybqdtnr.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9998801675528",
@@ -37,8 +40,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
-    },
+        "flow_type": "build",
+        "build_machine" : true
+        },
         "qa2-test-9997104527436": {
         "ui_url": "https://viso-moxukdggj5dtdbrkthui2s.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9997104527436",
@@ -47,8 +51,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
-    },
+        "flow_type": "build",
+        "build_machine" : true
+        },
         "qa2-test-9991285088857": {
         "ui_url": "https://viso-zzqnppnedhefsqcaac6wn8.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9991285088857",
@@ -57,8 +62,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
-    },
+        "flow_type": "build",
+        "build_machine" : true
+        },
         "qa2-test-9997232637349": {
         "ui_url": "https://viso-vuhkhhrmef5djkepp3feme.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9997232637349",
@@ -67,8 +73,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
-    },
+        "flow_type": "build",
+        "build_machine" : true
+        },
         "qa2-test-9998837963440": {
         "ui_url": "https://viso-fej88mszmtkmshxhedxa5q.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9998837963440",
@@ -77,8 +84,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
-    },
+        "flow_type": "build",
+        "build_machine" : true
+        },
         "qa2-test-9994103131996": {
         "ui_url": "https://viso-bmbswh52hxklg5vqjaluth.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9994103131996",
@@ -87,8 +95,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
-    },
+        "flow_type": "build",
+        "build_machine" : true
+        },
     "qa2-test-9994488073644": {
         "ui_url": "https://viso-knutdqdtecbp6wzgh5vase.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9994488073644",
@@ -97,7 +106,8 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "build_machine" : true
     },
     "qa2-test-9995715392691": {
         "ui_url": "https://viso-n33bk3ddayxeukgz2ob55k.crtx-qa2-uat.us.paloaltonetworks.com/",
@@ -107,7 +117,8 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "build_machine" : true
     },
     "qa2-test-9991937529250": {
         "ui_url": "https://viso-kmp9ufssgzbutxjrcyjqbd.crtx-qa2-uat.us.paloaltonetworks.com/",
@@ -117,7 +128,8 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "build_machine" : true
     },
     "qa2-test-9992610282225": {
         "ui_url": "https://viso-lfkivkhzk5bsnpy774x2sx.crtx-qa2-uat.us.paloaltonetworks.com/",
@@ -127,7 +139,8 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "build_machine" : true
     },
     "qa2-test-9993937937051": {
         "ui_url": "https://viso-gdxscpgne2vqiydkgnccxy.crtx-qa2-uat.us.paloaltonetworks.com/",
@@ -137,7 +150,8 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build"
+        "flow_type": "build",
+        "build_machine" : true
     },
         "qa2-test-9995196448038": {
         "ui_url": "https://viso-lwfpp5orv6s6pmwyyvweqc.crtx-qa2-uat.us.paloaltonetworks.com/",
@@ -177,8 +191,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build-effort"
-    },
+        "flow_type": "build-effort",
+        "build_machine" : true
+        },
         "qa2-test-9994495725548": {
         "ui_url": "https://viso-vv6jovqbcjtfsmbmfyerba.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9994495725548",
@@ -187,8 +202,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build-effort"
-    },
+        "flow_type": "build-effort",
+        "build_machine" : true
+        },
         "qa2-test-9997163401519": {
         "ui_url": "https://viso-wpvyq9waupe3fvdodqaj54.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9997163401519",
@@ -197,8 +213,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build-effort"
-    },
+        "flow_type": "build-effort",
+        "build_machine" : true
+        },
         "qa2-test-9995060718782": {
         "ui_url": "https://viso-hnjbrzdqq9jz7ssen7kd43.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9995060718782",
@@ -207,8 +224,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build-effort"
-    },
+        "flow_type": "build-effort",
+        "build_machine" : true
+        },
         "qa2-test-9993129354023": {
         "ui_url": "https://viso-eipyqe9ny42ywkyckmkvil.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9993129354023",
@@ -217,8 +235,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build-effort"
-    },
+        "flow_type": "build-effort",
+        "build_machine" : true
+        },
         "qa2-test-9993111802063": {
         "ui_url": "https://viso-hmahzpc7jawvmugypep8wr.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9993111802063",
@@ -227,8 +246,9 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build-effort"
-    },
+        "flow_type": "build-effort",
+        "build_machine" : true
+        },
         "qa2-test-9998411521079": {
         "ui_url": "https://viso-n46fyzf3hcswvdgvw9ympz.crtx-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-9998411521079",
@@ -237,6 +257,7 @@
         "demisto_version": "99.99.98",
         "xsoar_ng_version": "8.6.0",
         "enabled": true,
-        "flow_type": "build-effort"
-    }
+        "flow_type": "build-effort",
+        "build_machine" : true
+        }
 }
