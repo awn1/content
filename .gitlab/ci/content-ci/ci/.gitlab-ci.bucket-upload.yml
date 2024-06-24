@@ -247,7 +247,6 @@ install-packs-in-server-master:
       variables:
         CLOUD_MACHINES_TYPE: "build"
         GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga"
-        CLEAN_MACHINE_NEEDED: "false"
     - if: '$BUCKET_UPLOAD == "true" && $FORCE_BUCKET_UPLOAD == "false"'
   variables:
     PRODUCT_TYPE: "XSIAM"
