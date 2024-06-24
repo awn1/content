@@ -62,38 +62,44 @@ def check_if_pack_still_installed(client: demisto_client,
                                         )
 
 
-def get_all_installed_packs(client: demisto_client, non_removable_packs: list):
+def get_all_installed_packs(client: demisto_client, non_removable_packs: list, attempts_count: int = 3,
+                            request_timeout: int = 300, ):
     """
 
     Args:
         non_removable_packs: list of packs that can't be uninstalled.
         client (demisto_client): The client to connect to.
+        attempts_count (int): The number of attempts to install the packs.
+        request_timeout (int): The timeout per call to the server.
 
     Returns:
         list of id's of the installed packs
     """
+
+    def success_handler(response_data):
+        installed_packs = ast.literal_eval(response_data)
+        installed_packs_ids = [pack.get('id') for pack in installed_packs]
+        logging.success('Successfully fetched all installed packs.')
+        installed_packs_ids_str = ', '.join(installed_packs_ids)
+        logging.debug(
+            f'The following packs are currently installed from a previous build run:\n{installed_packs_ids_str}')
+        return True, installed_packs_ids
     try:
         logging.info("Attempting to fetch all installed packs.")
-        response_data, status_code, _ = demisto_client.generic_request_func(client,
-                                                                            path='/contentpacks/metadata/installed',
-                                                                            method='GET',
-                                                                            accept='application/json',
-                                                                            _request_timeout=None)
-        if 200 <= status_code < 300:
-            installed_packs = ast.literal_eval(response_data)
-            installed_packs_ids = [pack.get('id') for pack in installed_packs]
-            logging.success('Successfully fetched all installed packs.')
-            installed_packs_ids_str = ', '.join(installed_packs_ids)
-            logging.debug(
-                f'The following packs are currently installed from a previous build run:\n{installed_packs_ids_str}')
-            for pack in non_removable_packs:
-                if pack in installed_packs_ids:
-                    installed_packs_ids.remove(pack)
-            return installed_packs_ids
-        else:
-            result_object = ast.literal_eval(response_data)
-            message = result_object.get('message', '')
-            raise Exception(f'Failed to fetch installed packs - with status code {status_code}\n{message}')
+        _, installed_packs_ids = generic_request_with_retries(client=client,
+                                                                           retries_message="Failed to get all installed packs.",
+                                                                           exception_message="Failed to get installed packs.",
+                                                                           prior_message="Getting all installed packs",
+                                                                           path='/contentpacks/metadata/installed',
+                                                                           method='GET',
+                                                                           attempts_count=attempts_count,
+                                                                           request_timeout=request_timeout,
+                                                                           success_handler=success_handler
+                                                                           )
+        for pack in non_removable_packs:
+            if pack in installed_packs_ids:
+                installed_packs_ids.remove(pack)
+        return installed_packs_ids
     except Exception as e:
         logging.exception(f'The request to fetch installed packs has failed. Additional info: {str(e)}')
         return None
@@ -110,12 +116,12 @@ def uninstall_all_packs_one_by_one(client: demisto_client, hostname, non_removab
         A flag that indicates if the operation succeeded or not.
     """
     packs_to_uninstall = get_all_installed_packs(client, non_removable_packs)
-    logging.info(f'Starting to search and uninstall packs in server: {hostname}, packs count to '
-                 f'uninstall: {len(packs_to_uninstall)}')
     uninstalled_count = 0
     failed_to_uninstall = []
     start_time = datetime.utcnow()
     if packs_to_uninstall:
+        logging.info(f'Starting to search and uninstall packs in server: {hostname}, packs count to '
+                     f'uninstall: {len(packs_to_uninstall)}')
         for i, pack_to_uninstall in enumerate(packs_to_uninstall, 1):
             logging.info(f"{i}/{len(packs_to_uninstall)} - Attempting to uninstall a pack: {pack_to_uninstall}")
             successful_uninstall, _ = uninstall_pack(client, pack_to_uninstall)
