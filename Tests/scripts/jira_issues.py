@@ -14,13 +14,13 @@ from Tests.scripts.utils import logging_wrapper as logging
 GITLAB_PROJECT_ID = os.getenv('CI_PROJECT_ID')
 GITLAB_SERVER_URL = os.getenv('CI_SERVER_URL')
 CI_PIPELINE_URL = os.getenv('CI_PIPELINE_URL', '')
-JIRA_SERVER_URL = os.environ["JIRA_SERVER_URL"]
+JIRA_SERVER_URL = os.getenv("JIRA_SERVER_URL")
 JIRA_VERIFY_SSL = bool(strtobool(os.environ.get("JIRA_VERIFY_SSL", "true")))
-JIRA_API_KEY = os.environ["JIRA_API_KEY"]
-JIRA_PROJECT_ID = os.environ["JIRA_PROJECT_ID"]
-JIRA_ISSUE_TYPE = os.environ.get("JIRA_ISSUE_TYPE", "")  # Default to empty string if not set
-JIRA_COMPONENT = os.environ.get("JIRA_COMPONENT", "")  # Default to empty string if not set
-JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME = os.environ["JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME"]
+JIRA_API_KEY = os.getenv("JIRA_API_KEY")
+JIRA_PROJECT_ID = os.getenv("JIRA_PROJECT_ID")
+JIRA_ISSUE_TYPE = os.getenv("JIRA_ISSUE_TYPE", "")  # Default to empty string if not set
+JIRA_COMPONENT = os.getenv("JIRA_COMPONENT", "")  # Default to empty string if not set
+JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME = os.getenv("JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME")
 JIRA_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z"
 # Jira additional fields are a json string that will be parsed into a dictionary containing the name of the field
 # as the key and the value as a dictionary containing the value of the field.

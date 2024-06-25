@@ -49,10 +49,18 @@ class TestZipPacks:
             Create a dict which has one dictionary of the found pack
         """
         from Tests.Marketplace import zip_packs
+
+        class DirEntry:
+            """Class mock for os.scandir method"""
+            def __init__(self, name):
+                self.name = name
+
+        mock_packs = [DirEntry(name) for name in ("Slack", "ApiModules", "Base")]
         list_dir_result = ['Slack', 'ApiModules', 'python_file.py']
         pack_files = TestZipPacks.BLOB_NAMES
         mocker.patch.object(zip_packs, 'get_files_in_dir', return_value=pack_files)
         mocker.patch('os.listdir', return_value=list_dir_result)
+        mocker.patch('os.scandir', return_value=mock_packs)
         mocker.patch('os.path.isdir', return_value=True)
         zipped_packs = get_zipped_packs_names('content')
 

@@ -2138,7 +2138,7 @@ class TestSetDependencies:
 
         return pack_metadata
 
-    def test_set_dependencies_core_pack_new_mandatory_dependency(self):
+    def test_set_dependencies_core_pack_new_mandatory_dependency(self, mocker):
         """
             Given:
                 - Core pack with new dependencies
@@ -2173,6 +2173,11 @@ class TestSetDependencies:
             }
         }
 
+        mocker.patch.object(GCPConfig, "get_core_packs", return_value=[
+            "CommonPlaybooks",
+            "DemistoRESTAPI",
+            "HelloWorld",
+        ])
         metadata['dependencies'] = {}
         p = Pack('HelloWorld', 'dummy_path')
         p._pack_metadata = metadata
