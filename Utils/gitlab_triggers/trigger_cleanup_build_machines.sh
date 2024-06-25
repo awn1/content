@@ -20,6 +20,8 @@ if [ "$#" -lt "1" ]; then
   [-mt --machine-type]   The machine type, default nightly
   [-mc --machine-count]  The number of machines to lock, default all
   [-p --lock-path]       The gcp lock path, default content-locks/locks-xsiam-ga-nightly
+  [-csf --cloud_servers_file] The cloud servers file default ./xsiam_servers.json
+  [-op --old_pipeline] The pipeline that triggred the cleanup pipeline
   "
   echo "Get the trigger token from here https://vault.paloaltonetworks.local/home#R2VuZXJpY1NlY3JldERldGFpbHM6RGF0YVZhdWx0OmIyMzJiNDU0LWEzOWMtNGY5YS1hMTY1LTQ4YjRlYzM1OTUxMzpSZWNvcmRJbmRleDowOklzVHJ1bmNhdGVk" # disable-secrets-detection  TODO
   exit 1
@@ -31,7 +33,8 @@ _machine_type="nightly"
 _machine=""
 _machine_count="all"
 _lock_path="content-locks/locks-xsiam-ga-nightly"
-
+_cloud_servers_file="xsiam_servers_path"
+_old_pipeline=""
 # Parsing the user inputs.
 
 while [[ "$#" -gt 0 ]]; do
@@ -60,6 +63,12 @@ while [[ "$#" -gt 0 ]]; do
   -p|--lock-path) _lock_path="$2"
     shift
     shift;;
+  -csf|--cloud_servers_file) _cloud_servers_file="$2"
+    shift
+    shift;;
+  -op|--old_pipeline) _old_pipeline="$2"
+    shift
+    shift;;
 
   *)    # unknown option.
     shift;;
@@ -82,4 +91,6 @@ curl "$BUILD_TRIGGER_URL" --form "ref=${_branch}" --form "token=${_ci_token}" \
     --form "variables[CLOUD_MACHINES_TYPE]=${_machine_type}" \
     --form "variables[CLOUD_MACHINES_COUNT]=${_machine_count}" \
     --form "variables[GCS_LOCKS_PATH]=${_lock_path}" \
-    --form "variables[BRANCH]=${_branch}" | jq
+    --form "variables[CLOUD_SERVERS_FILE]=${_cloud_servers_file}"\
+    --form "variables[BRANCH]=${_branch}"\
+    --form "variables[OLD_PIPELINE]=${_old_pipeline}" | jq
