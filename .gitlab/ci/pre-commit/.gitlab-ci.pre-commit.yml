@@ -11,11 +11,12 @@
 
 
 pre-commit:
-  stage: content-build
+  stage: unittests-and-validations
   extends:
   - .pre-commit-rule
   - .before-script-pre-commit
   script:
+    - !reference [.check-is-force-merged-allowed]
     - PRE_COMMIT_SUCCESS=0
     - poetry run pre-commit run -a --color always || PRE_COMMIT_SUCCESS=1
     - echo "PRE_COMMIT_SUCCESS=$PRE_COMMIT_SUCCESS"

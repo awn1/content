@@ -3,8 +3,6 @@ from Utils.old_content_branch import should_keep_json_file, should_keep_yml_file
 import json
 import shutil
 TEST_VERSION = "5.1.9"
-JSON_SHOULD_STAY = 'Packs/CommonReports/Reports/report-MTTRbyIncidentType2Quar.json'
-YML_SHOULD_STAY = 'Packs/ThinkstCanary/Integrations/ThinkstCanary/ThinkstCanary.yml'
 JSON_SHOULD_DELETE = 'Utils/tests/test_data_old_content/json_should_delete.json'
 YML_SHOULD_DELETE = 'Utils/tests/test_data_old_content/yml_should_delete.yml'
 TEST_TPB = 'Utils/tests/test_data_old_content/temp_test_playbook.yml'
@@ -13,7 +11,7 @@ TEST_TPB = 'Utils/tests/test_data_old_content/temp_test_playbook.yml'
 def test_handle_json__should_stay():
     """
     Given
-    - A path to a json file that should stay - lower fromVersion.
+    - A json that simulates a json file in the content that should stay - lower fromVersion.
 
     When
     - Running should_keep_json_file on it.
@@ -21,9 +19,7 @@ def test_handle_json__should_stay():
     Then
     - function returns True (file should be updated).
     """
-    with open(JSON_SHOULD_STAY, 'r') as json_file:
-
-        json_content = json.loads(json_file.read())
+    json_content = {"fromVersion": "5.0.0"}
     assert should_keep_json_file(json_content, TEST_VERSION) is True
 
 
@@ -46,7 +42,7 @@ def test_handle_json__should_delete():
 def test_handle_yml__should_stay():
     """
     Given
-    - A path to a yml file that should stay - no fromversion.
+    - A json that simulates a yml file in the content that should stay - lower fromversion.
 
     When
     - Running should_keep_yml_file on it.
@@ -54,9 +50,7 @@ def test_handle_yml__should_stay():
     Then
     - function returns True (file should be updated)
     """
-    with open(YML_SHOULD_STAY, 'r') as yml_file:
-
-        yml_content = ryaml.load(yml_file)
+    yml_content = {"fromversion": "5.0.0"}
     assert should_keep_yml_file(yml_content, TEST_VERSION) is True
 
 

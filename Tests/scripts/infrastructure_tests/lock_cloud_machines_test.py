@@ -108,6 +108,7 @@ def test_get_my_place_in_the_queue(mocker):
     """
     storage = MockResponse()
     mocker.patch.dict(os.environ, {"SLACK_TOKEN": "myslacktoken"})
+    mocker.patch("Tests.scripts.lock_cloud_machines.GITLAB_PROJECT_ID", "1061")
     mocker.patch('Tests.scripts.lock_cloud_machines.send_slack_notification')
     mocker.patch.object(storage, 'list_blobs', return_value=[MockResponse('test/queue/1061-queue-1234', '08/04/2000'),
                                                              MockResponse('test/queue/1061-queue-1235', '05/04/2000'),

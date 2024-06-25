@@ -4,10 +4,10 @@ import pytest
 
 
 @pytest.mark.parametrize('pack_path, potential_secret, expected_result',
-                         [("./test_data/Pack1", "test", True),
-                          ("./test_data/Pack1", "test\"", True),
-                          ("./test_data/Pack1", "\"test", True),
-                          ("./test_data/Pack2", "test", False)])
+                         [("./BlacklistValidation/test_data/Pack1", "test", True),
+                          ("./BlacklistValidation/test_data/Pack1", "test\"", True),
+                          ("./BlacklistValidation/test_data/Pack1", "\"test", True),
+                          ("./BlacklistValidation/test_data/Pack2", "test", False)])
 def test_is_secret_in_secret_ignore(pack_path, potential_secret, expected_result):
     """
 
@@ -36,7 +36,7 @@ def test_get_path_parts_to_ignore_substring_secrets():
         - Ensure that all file names were returned for all files in the pack
     """
     from get_blacklist import get_path_parts_to_ignore_substring_secrets
-    pack_path = os.path.abspath('test_data/Packs/Grafana')
+    pack_path = os.path.abspath('BlacklistValidation/test_data/Packs/Grafana')
     assert get_path_parts_to_ignore_substring_secrets(pack_path) \
            == {'Grafana', 'incidenttype-Grafana_Alert', 'keys_to_lowercase', 'command_examples', 'Grafana_description',
                'Grafana_image', 'Grafana_test', 'README', 'pack_metadata'}

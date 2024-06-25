@@ -115,8 +115,8 @@ def destroy_server(artifacts_dir: str, readable_role: str, role: str, server_ip:
     success = True
     with SSHClient() as ssh:
         try:
-            ssh.set_missing_host_key_policy(LogMissingHostKeyPolicy())
-            ssh.connect(server_ip, username=SSH_USER)
+            ssh.set_missing_host_key_policy(LogMissingHostKeyPolicy())  # type: ignore[attr-defined]
+            ssh.connect(server_ip, username=SSH_USER)  # type: ignore[attr-defined]
             success &= chmod_logs(ssh, server_ip)
             success &= download_logs(ssh, server_ip, artifacts_dir, readable_role, role)
 

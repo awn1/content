@@ -97,6 +97,8 @@ class TestGenerateReleaseNotesSummary:
             - FakePack3 with version 1.0.0
             - FakePack4 with version 1.0.0
         """
+        self.setup()
+
         new_packs_rn = {
             'FakePack3': get_pack_entities(os.path.join(TEST_DATA_PATH, 'FakePack3')),
             'FakePack4': get_pack_entities(os.path.join(TEST_DATA_PATH, 'FakePack4')),
@@ -105,6 +107,7 @@ class TestGenerateReleaseNotesSummary:
             'FakePack3': {},
             'FakePack4': {}
         }
+
 
         rn_summary = generate_release_notes_summary(
             new_packs_rn, {}, packs_metadta_dict, self._version, self._asset_id, 'temp.md')
@@ -128,6 +131,9 @@ class TestGenerateReleaseNotesSummary:
             - FakePack3 with version 1.0.0 and has the string "(Partner Supported)" after the version
             - FakePack4 with version 1.0.0 dose not have the string "(Partner Supported)" after the version
         """
+
+        self.setup()
+
         new_packs_rn = {
             'FakePack3': get_pack_entities(os.path.join(TEST_DATA_PATH, 'FakePack3')),
             'FakePack4': get_pack_entities(os.path.join(TEST_DATA_PATH, 'FakePack4')),
@@ -160,6 +166,8 @@ class TestGenerateReleaseNotesSummary:
             - FakePack3 with version 1.0.0 and has the string "(Community Contributed)" after the version
             - FakePack4 with version 1.0.0 dose not have the string "(Community Contributed)" after the version
         """
+
+        self.setup()
         new_packs_rn = {
             'FakePack3': get_pack_entities(os.path.join(TEST_DATA_PATH, 'FakePack3')),
             'FakePack4': get_pack_entities(os.path.join(TEST_DATA_PATH, 'FakePack4')),
@@ -193,6 +201,8 @@ class TestGenerateReleaseNotesSummary:
             - FakePack1 with versions 1.1.0 and 2.0.0
             - FakePack2 with versions 1.1.0
         """
+
+        self.setup()
         release_notes_files = [
             os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '1_1_0.md'),
             os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '2_0_0.md'),
@@ -239,6 +249,9 @@ class TestGenerateReleaseNotesSummary:
             - FakePack1 with version 2.0.0 and has the string "(Partner Supported)" after the version
             - FakePack2 with version 1.1.0 dose not have the string "(Partner Supported)" after the version
         """
+
+        self.setup()
+
         release_notes_files = [
             os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '1_1_0.md'),
             os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '2_0_0.md'),
@@ -280,6 +293,9 @@ class TestGenerateReleaseNotesSummary:
             - FakePack1 with version 2.0.0 and has the string "(Community Supported)" after the version
             - FakePack2 with version 1.1.0 DOES NOT have the string "(Community Supported)" after the version
         """
+
+        self.setup()
+
         release_notes_files = [
             os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '1_1_0.md'),
             os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '2_0_0.md'),
@@ -317,6 +333,9 @@ class TestGenerateReleaseNotesSummary:
           - the output of get_release_notes_dict() is a dict of (pack_name, dict(pack_version, release_note)).
           - empty lines (with dashes) are removed from the release notes summary.
         """
+
+        self.setup()
+
         release_notes_files = [
             os.path.join(TEST_DATA_PATH, 'FakePack3', 'ReleaseNotes', '1_0_1.md')
         ]
@@ -351,6 +370,9 @@ class TestGenerateReleaseNotesSummary:
             - FakePack4 version 1.1.0
           - the summary does not contain release notes 1.0.1, because it is ignored.
         """
+
+        self.setup()
+
         release_notes_files = [
             os.path.join(TEST_DATA_PATH, 'FakePack4', 'ReleaseNotes', '1_0_1.md'),
             os.path.join(TEST_DATA_PATH, 'FakePack4', 'ReleaseNotes', '1_1_0.md'),

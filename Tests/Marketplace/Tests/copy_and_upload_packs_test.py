@@ -1,7 +1,7 @@
 import pytest
 import os
 
-from Tests.Marketplace.marketplace_constants import CONTENT_ROOT_PATH, PACKS_FOLDER, IGNORED_FILES, GCPConfig
+from Tests.Marketplace.marketplace_constants import IGNORED_FILES, GCPConfig
 
 
 # disable-secrets-detection-start
@@ -24,20 +24,28 @@ class TestGetPackNames:
 
         assert modified_packs == expected_result
 
-    def test_get_pack_names_all(self):
+    def test_get_pack_names_all(self, mocker):
         """
-           Given:
-               - content repo path, packs folder path, ignored files list
-           When:
-               - Trying to get the pack names of all packs in content repo
-           Then:
-               - Verify that we got all packs in content repo
-       """
+        Given:
+            -  The path of the packs that are intended for tests (../collect_tests/*)
+        When:
+            - Trying to get the pack names of all packs in ../collect_tests folder
+        Then:
+            - Verify that we got all packs in ../collect_tests folder
+        """
         from Tests.Marketplace.copy_and_upload_packs import get_pack_names
-        packs_full_path = os.path.join(CONTENT_ROOT_PATH, PACKS_FOLDER)  # full path to Packs folder in content repo
-        expected_pack_names = {p for p in os.listdir(packs_full_path) if p not in IGNORED_FILES}
-        assert get_pack_names('all') == expected_pack_names
 
+        packs_full_path = os.path.join(
+            "Tests/scripts/infrastructure_tests/tests_data/", "collect_tests"
+        )  # full path to Packs folder in tests_data
+        mocker.patch(
+            "Tests.Marketplace.copy_and_upload_packs.PACKS_FULL_PATH",
+            "Tests/scripts/infrastructure_tests/tests_data/collect_tests",
+        )  # Mock the global env PACKS_FULL_PATH
+        expected_pack_names = {
+            p for p in os.listdir(packs_full_path) if p not in IGNORED_FILES
+        }
+        assert get_pack_names("all") == expected_pack_names
 
 class TestRegex:
     BUILD_BASE_PATH = f"{GCPConfig.GCS_PUBLIC_URL}/{GCPConfig.CI_BUILD_BUCKET}/content/builds"
