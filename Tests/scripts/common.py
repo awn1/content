@@ -159,6 +159,8 @@ def calculate_results_table(jira_tickets_for_result: dict[str, Issue],
     total_errors = 0
     server_mapping_dict: dict = {}
     if product_type and fail_only_nightly_tests and product_type == "XSOAR" and artifacts_path:
+        server_mapping_dict[XSOAR_ON_PREM] = {}
+        server_mapping_dict[XSOAR_SAAS] = {}
         server_mapping_dict[XSOAR_ON_PREM]["config"] = TestConf(artifacts_path / XSOAR_ON_PREM / CONF_FILE,
                                                                 MarketplaceVersions.XSOAR)
         server_mapping_dict[XSOAR_SAAS]["config"] = TestConf(artifacts_path / XSOAR_SAAS / CONF_FILE,
