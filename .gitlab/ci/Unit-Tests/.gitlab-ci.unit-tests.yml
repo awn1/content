@@ -3,6 +3,8 @@
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         paths:
+          - pyproject.toml
+          - poetry.lock
           - Tests/**/*
           - Utils/**/*
           - gcp/**/*
@@ -10,6 +12,7 @@
           - gcp_automations/**/*
           - Content-CI/**/*
           - .gitlab/ci/content-ci/ci/**/*
+          - .gitlab/ci/Unit-Tests/**/*
           - .gitlab/ci/sdk-release-ci/**/*
           - .gitlab/ci/pre-commit/**/*
           - .gitlab/ci/trigger-content-build/.gitlab-ci.trigger-content-build.yml
@@ -31,13 +34,17 @@ unit-tests:
     - .before-script-unit-test
   script:
     - !reference [.check-is-force-merged-allowed]
+
     - section_start "Run mypy and ruff"
     - ./Tests/scripts/analyze_non_packs_files.sh
     - section_end "Run mypy and ruff"
+
     - section_start "Test Infrastructure" --collapsed
+    - poetry install --with testing
     - poetry run pytest --cov="." --cov-report=xml --cov-report=term
     - poetry run coverage html
     - section_end "Test Infrastructure"
+
   artifacts:
     when: always
     paths:
