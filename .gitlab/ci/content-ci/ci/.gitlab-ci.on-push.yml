@@ -612,6 +612,7 @@ slack-notify-on-merge:
     - cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" "./artifacts/filter_file.txt"
     - section_end "Are there tests to run?"
 
+    - !reference [.update-content-graph]
     - !reference [.lock-machine]
     - !reference [.uninstall-packs-and-reset-bucket-cloud]
 

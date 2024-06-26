@@ -279,6 +279,8 @@ install-packs-in-server-master:
     - echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}" | tee "${ARTIFACTS_FOLDER}/logs/lock_file.txt"
     - section_end "Lock Machine"
 
+    - !reference [.update-content-graph]
+
     - CLOUD_SERVERS_PATH=$(cat $CLOUD_SERVERS_FILE)
     - cat "${CLOUD_API_KEYS}" > "cloud_api_keys.json"
     - !reference [.uninstall-packs-and-reset-bucket-cloud]
@@ -314,6 +316,7 @@ install-packs-in-xsiam-ga:
     CLOUD_API_KEYS: $XSIAM_API_KEYS
     CLOUD_API_TOKENS: $XSIAM_TOKENS
     NON_REMOVABLE_PACKS: "Base"
+    MARKETPLACE_NAME: "marketplacev2"
 
 
 upload-packs-to-marketplace:
