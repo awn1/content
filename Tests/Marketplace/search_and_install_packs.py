@@ -16,7 +16,8 @@ from networkx import DiGraph
 from demisto_client.demisto_api.api.default_api import DefaultApi as DemistoClient
 from demisto_sdk.commands.common import tools
 from demisto_sdk.commands.common.logger import logger
-from demisto_sdk.commands.content_graph.common import PACK_METADATA_FILENAME
+from demisto_sdk.commands.content_graph.common import PACK_METADATA_FILENAME, ContentType
+from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
 from google.cloud.storage import Bucket  # noqa
 from packaging.version import Version
 from requests import Session
@@ -705,6 +706,23 @@ def get_all_content_packs_dependencies(client: DemistoClient) -> dict[str, dict]
                     f"Marketplace API returned less than the total packs. Collected: {all_packs_len}, Total: {total}"
                 )
             break
+
+    hybrid_packs = []
+    with Neo4jContentGraphInterface() as interface:
+        hybrid_packs = interface.search(content_type=ContentType.PACK, hybrid=True)
+
+    hybrid_packs = [pack.object_id for pack in hybrid_packs]
+    logging.info(f"found {len(hybrid_packs)} hybrid packs: {','.join(hybrid_packs)}")
+
+    for pack in hybrid_packs:
+        pack_response = get_hybrid_pack_dependencies(client, pack)
+        if pack_response:
+            all_packs_dependencies[pack] = {
+                "currentVersion": pack_response["currentVersion"],
+                "dependencies": pack_response["dependencies"],
+                "deprecated": pack_response["deprecated"],
+            }
+
     return all_packs_dependencies
 
 
@@ -757,6 +775,54 @@ def get_one_page_of_packs_dependencies(
         method="POST",
         response_type="object",
         body=body,
+        request_timeout=request_timeout,
+        attempts_count=attempts_count,
+        sleep_interval=sleep_interval,
+        success_handler=success_handler,
+    )
+    return data
+
+
+def get_hybrid_pack_dependencies(
+    client: DemistoClient,
+    pack: str,
+    attempts_count: int = 5,
+    sleep_interval: int = 60,
+    request_timeout: int = 900,
+):
+    """
+    Fetches hybrid pack dependencies from the Marketplace API.
+
+    Args:
+        client: The Demisto API client object
+        pack: The hybrid pack id
+        attempts_count: Number of retries upon failure
+        sleep_interval: Time to sleep between retries
+        request_timeout: Request timeout period
+
+    Returns:
+        The JSON response containing the pack's dependencies for the given hybrid pack
+    """
+    api_endpoint = f"/contentpacks/marketplace/{pack}"
+
+    def success_handler(response):
+        logging.success(f"Succeeded to fetch dependencies of hybrid pack {pack}")
+        return True, response
+
+    failure_massage = f"Failed to fetch dependencies of hybrid pack: {pack}"
+    retries_message = f"Retrying to fetch dependencies of hybrid pack: {pack}"
+    prior_message = (
+        f"Fetching dependencies information of hybrid pack {pack} using Marketplace API"
+    )
+
+    _, data = generic_request_with_retries(
+        client=client,
+        retries_message=retries_message,
+        exception_message=failure_massage,
+        prior_message=prior_message,
+        path=api_endpoint,
+        method="GET",
+        response_type="object",
         request_timeout=request_timeout,
         attempts_count=attempts_count,
         sleep_interval=sleep_interval,

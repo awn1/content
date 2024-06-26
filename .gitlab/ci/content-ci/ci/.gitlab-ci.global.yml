@@ -599,6 +599,12 @@
   - ./Tests/scripts/uninstall_packs_and_reset_bucket_cloud.sh || EXIT_CODE=$?
   - section_end "Uninstall Packs and Reset Bucket Cloud"
 
+.update-content-graph:
+  - section_start "Update content graph" --collapsed
+  - echo "Updating the content graph"
+  - demisto-sdk graph update -g --marketplace "${MARKETPLACE_NAME}" -i "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_graph/${MARKETPLACE_NAME}.zip"
+  - echo "Successfully updated content graph"
+  - section_end "Update content graph"
 
 .validate_content_test_conf_branch_merged:
   - section_start "Validate content-test-conf Branch Merged"
