@@ -32,6 +32,7 @@ _slack_channel="dmst-bucket-upload"
 _storage_base_path=""
 _sdk_ref="${SDK_REF:-master}"
 _override_sdk_ref="${DEMISTO_SDK_NIGHTLY:-}"
+_infra_branch="${INFRA_BRANCH:-master}"
 # Parsing the user inputs.
 
 while [[ "$#" -gt 0 ]]; do
@@ -170,4 +171,5 @@ curl --request POST \
   --form "variables[CREATE_DEPENDENCIES_ZIP]=${_create_dependencies_zip}" \
   --form "variables[SDK_REF]=${_sdk_ref}" \
   --form "variables[OVERRIDE_SDK_REF]=${_override_sdk_ref}" \
+  --form "variables[INFRA_BRANCH]=${_infra_branch}" \
   "$BUILD_TRIGGER_URL"

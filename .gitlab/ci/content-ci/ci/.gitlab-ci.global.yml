@@ -150,6 +150,7 @@
       fi
     }
 
+    TEST_UPLOAD_BRANCH_SUFFIX="-upload_test_branch-"
     # Search for the branch name with the suffix of '-upload_test_branch-' in case it exists using CI_COMMIT_REF_NAME to clone content-test-conf.
     if [[ "${CI_COMMIT_REF_NAME}" == *"${TEST_UPLOAD_BRANCH_SUFFIX}"* ]]; then
       # Using bash string pattern matching to search only the last occurrence of the suffix, that's why we use a single '%'.
@@ -506,7 +507,7 @@
   trigger:
     include:
       - file: .gitlab/ci/content-ci/ci/.gitlab-ci.slack-notify.yml
-        ref: master
+        ref: $INFRA_BRANCH
         project: "${CI_PROJECT_NAMESPACE}/infra"
   inherit: # see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27775
     variables: false
