@@ -36,9 +36,6 @@ from Tests.scripts.collect_tests.utils import (ContentItem, Machine,
                                                FilesToCollect)
 from Tests.scripts.collect_tests.version_range import VersionRange
 
-PATHS = PathManager(Path(__file__).absolute().parents[3])
-PACK_MANAGER = PackManager(PATHS)
-
 
 class CollectionReason(str, Enum):
     ID_SET_MARKETPLACE_VERSION = 'id_set marketplace version'
@@ -1579,6 +1576,8 @@ class XPANSENightlyTestCollector(NightlyTestCollector):
 
 if __name__ == '__main__':
     logger.info('TestCollector v20241101')
+    PATHS = PathManager(Path(__file__).absolute().parents[3])
+    PACK_MANAGER = PackManager(PATHS)
     sys.path.append(str(PATHS.content_path))
     parser = ArgumentParser()
     parser.add_argument('-n', '--nightly', type=str2bool, help='Is nightly')
