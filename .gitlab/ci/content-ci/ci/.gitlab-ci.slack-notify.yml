@@ -12,10 +12,10 @@ stages:
 
 include:
   - file: .gitlab/ci/content-ci/ci/.gitlab-ci.variables.yml
-    ref: master
+    ref: $INFRA_BRANCH
     project: "${CI_PROJECT_NAMESPACE}/infra"
   - file: .gitlab/ci/content-ci/ci/.gitlab-ci.global.yml
-    ref: master
+    ref: $INFRA_BRANCH
     project: "${CI_PROJECT_NAMESPACE}/infra"
 
 slack-notify:
