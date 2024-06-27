@@ -99,7 +99,6 @@ addopts = """
     --color=yes
     -v
     --ignore='Tests/test_integration.py'
-    --ignore='Tests/scripts/infrastructure_tests/test_collect_tests.py'
     --ignore='Tests/tests_e2e'
     --ignore='BlacklistValidation/test_data/Packs/Grafana/Integrations/Grafana/Grafana_test.py'
     --junitxml=report.xml
@@ -108,7 +107,7 @@ python_files = "test_*.py *_test.py"
 
 [tool.coverage.run]
 relative_files = true
-omit = ["*/test_data/*", "*_test.py", "conftest.py", "**/conftest.py", "**/collect_tests.py"]
+omit = ["*/test_data/*", "*_test.py", "conftest.py", "**/conftest.py"]
 
 [build-system]
 requires = ["poetry-core"]

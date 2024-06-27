@@ -65,12 +65,10 @@ class CollectTestsMocker:
         self.previous_path_manager: PathManager | None = None
 
     def __enter__(self):
-        self.previous_path_manager = collect_tests.PATHS
         self._mock(self.path_manager)
 
     def __exit__(self, *args):
-        self._mock(self.previous_path_manager)
-        self.previous_path_manager = None
+        ...
 
     @staticmethod
     def _mock(path_manager: PathManager):
