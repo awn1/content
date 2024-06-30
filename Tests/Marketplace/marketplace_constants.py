@@ -108,6 +108,7 @@ class GCPConfig:
     VERSIONS_METADATA_FILE = 'versions-metadata.json'
     COREPACKS_OVERRIDE_FILE = 'corepacks_override.json'
     BUILD_BUCKET_PACKS_ROOT_PATH = 'content/builds/{branch}/{build}/{marketplace}/content/packs'
+    CONTENT_STATUS = 'content_status'
 
     @staticmethod
     def get_core_pack_files(file_name: str) -> tuple[list, list]:
