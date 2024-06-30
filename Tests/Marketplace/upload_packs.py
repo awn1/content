@@ -64,10 +64,10 @@ def get_packs_ids_to_upload_and_update(packs_to_upload: str) -> tuple[set, set]:
             packs_to_update_metadata = packs_json.get('packs_to_update_metadata', [])
 
             packs_upload = {p.strip() for p in packs_to_upload if p not in IGNORED_FILES}
-            logging.info(f"Collected {len(packs_upload)} content packs to upload: {list(packs_upload)}")
+            logging.debug(f"Collected {len(packs_upload)} content packs to upload: {list(packs_upload)}")
 
             packs_metadata_update = {p.strip() for p in packs_to_update_metadata if p not in IGNORED_FILES}
-            logging.info(f"Collected {len(packs_metadata_update)} content packs to update metadata: "
+            logging.debug(f"Collected {len(packs_metadata_update)} content packs to update metadata: "
                          f"{list(packs_metadata_update)}")
 
             return packs_upload, packs_metadata_update
@@ -76,7 +76,7 @@ def get_packs_ids_to_upload_and_update(packs_to_upload: str) -> tuple[set, set]:
             logging.critical(f"Invalid JSON format. Please check the content of the JSON file, error:\n{e}")
             sys.exit(1)
     else:
-        logging.critical("Not correct usage of flag -p. Please check help section of upload packs script.")
+        logging.critical("Not correct usage of flag -pn. Please check help section of upload packs script.")
         sys.exit(1)
 
 

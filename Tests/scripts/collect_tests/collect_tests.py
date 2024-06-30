@@ -12,7 +12,7 @@ from collections.abc import Iterable, Sequence
 from demisto_sdk.commands.common.constants import FileType, MarketplaceVersions, CONTENT_ENTITIES_DIRS
 from demisto_sdk.commands.common.tools import find_type, str2bool, get_yaml
 
-from Tests.Marketplace.marketplace_services import get_last_commit_from_index
+from Tests.Marketplace.marketplace_services import get_last_commit_from_index, get_failed_packs_from_previous_upload
 from Tests.scripts.collect_tests.constants import (
     DEFAULT_MARKETPLACES_WHEN_MISSING, IGNORED_FILE_TYPES, NON_CONTENT_FOLDERS,
     ONLY_INSTALL_PACK_FILE_TYPES, SANITY_TEST_TO_PACK, ONLY_UPLOAD_PACK_FILE_TYPES,
@@ -288,16 +288,18 @@ class CollectionResult:
         return result
 
     @staticmethod
-    def union(collected_tests: Sequence[Optional['CollectionResult']] | None) -> Optional['CollectionResult']:
+    def union(collected_tests: Sequence[Optional['CollectionResult']] | None) -> 'CollectionResult':
         non_none = filter(None, collected_tests or (None,))
         return sum(non_none, start=CollectionResult.__empty_result())
 
     def __repr__(self):
-        return f'{len(self.packs_to_install)} packs, {len(self.packs_to_upload)} packs to upload, {len(self.tests)} tests, ' \
-               f'{self.version_range=}'
+        return (f'{len(self.packs_to_install)} packs, '
+                f'{len(self.packs_to_upload)} packs to upload, '
+                f'{len(self.packs_to_update_metadata)} packs to update metadata, '
+                f'{len(self.tests)} tests, {self.version_range=}, ')
 
     def __bool__(self):
-        return bool(self.tests or self.packs_to_install or self.packs_to_upload)
+        return bool(self.tests or self.packs_to_install or self.packs_to_upload or self.packs_to_update_metadata)
 
 
 class TestCollector(ABC):
@@ -797,7 +799,7 @@ class BranchTestCollector(TestCollector):
             self,
             branch_name: str,
             marketplace: MarketplaceVersions,
-            service_account: str | None,
+            service_account: str,
             graph: bool = False,
     ):
         """
@@ -836,6 +838,36 @@ class BranchTestCollector(TestCollector):
         result.packs_to_upload -= result.packs_to_update_metadata
 
 
+    def _collect_failed_packs_from_prev_upload(self, result: CollectionResult):
+        """
+        Updates the result with failed packs from a previous upload.
+
+        Args:
+            result (CollectionResult)
+
+        Side Effects:
+            - Adds failed packs to `result.packs_to_upload` and `result.packs_to_update_metadata`.
+            - Removes duplicates from `packs_to_update_metadata`.
+        """
+        re_upload_packs = get_failed_packs_from_previous_upload(self.service_account, self.marketplace)
+        if not re_upload_packs:
+            return
+
+        packs_to_re_update_metadata, packs_to_re_upload = set(), set()
+        for key in ["failed_to_install", "failed_to_upload"]:
+            packs_to_re_update_metadata |= set(re_upload_packs.get(key, {}).get("packs_to_update_metadata", []))
+            packs_to_re_upload |= set(re_upload_packs.get(key, {}).get("packs_to_upload", []))
+
+        logger.info(f'Collected failed packs from previous upload to upload: '
+                    f'packs_to_re_update_metadata:= {packs_to_re_update_metadata},'
+                    f'packs_to_re_upload:= {packs_to_re_upload}')
+
+        result.packs_to_upload |= packs_to_re_upload
+        result.packs_to_update_metadata |= packs_to_re_update_metadata
+
+        result.packs_to_update_metadata -= result.packs_to_upload
+
+
     def _collect(self) -> CollectionResult | None:
         collect_from = self._get_git_diff()
         result = CollectionResult.union([
@@ -847,6 +879,7 @@ class BranchTestCollector(TestCollector):
 
         if result and result.packs_to_upload:
             self._sort_packs_to_upload(result)
+        self._collect_failed_packs_from_prev_upload(result)
         return result
 
     def _collect_packs_diff_master_bucket(self) -> CollectionResult | None:
@@ -1296,6 +1329,7 @@ class UploadBranchCollector(BranchTestCollector):
     def _collect(self) -> CollectionResult | None:
         # same as BranchTestCollector, but without tests.
         if result := super()._collect():
+            result.packs_to_install |= result.packs_to_upload | result.packs_to_update_metadata
             logger.info('UploadCollector drops collected tests, as they are not required')
             result.tests = set()
         return result
