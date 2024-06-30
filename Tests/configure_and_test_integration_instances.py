@@ -29,6 +29,7 @@ from demisto_sdk.commands.validate.old_validate_manager import OldValidateManage
 from packaging.version import Version
 from ruamel import yaml
 
+from Tests.Marketplace.common import fetch_pack_ids_to_install
 from Tests.Marketplace.marketplace_constants import Metadata
 from Tests.Marketplace.search_and_install_packs import search_and_install_packs_and_their_dependencies, \
     upload_zipped_packs, install_all_content_packs_for_nightly
@@ -234,7 +235,7 @@ class Build(ABC):
         self.test_pack_path = options.test_pack_path if options.test_pack_path else None
         self.tests_to_run = self.fetch_tests_list(options.tests_to_run)
         self.content_root = options.content_root
-        self.pack_ids_to_install = self.fetch_pack_ids_to_install(options.pack_ids_to_install)
+        self.pack_ids_to_install = fetch_pack_ids_to_install(options.pack_ids_to_install)
         self.service_account = options.service_account
         self.marketplace_tag_name = None
         self.artifacts_folder = None
@@ -255,22 +256,6 @@ class Build(ABC):
         """
         tests_to_run = []
         with open(tests_to_run_path) as filter_file:
-            tests_from_file = filter_file.readlines()
-            for test_from_file in tests_from_file:
-                test_clean = test_from_file.rstrip()
-                tests_to_run.append(test_clean)
-        return tests_to_run
-
-    @staticmethod
-    def fetch_pack_ids_to_install(packs_to_install_path: str):
-        """
-        Fetches the test list from the filter.
-
-        :param packs_to_install_path: Path to location of pack IDs to install file.
-        :return: List of Pack IDs if there are any, otherwise empty list.
-        """
-        tests_to_run = []
-        with open(packs_to_install_path) as filter_file:
             tests_from_file = filter_file.readlines()
             for test_from_file in tests_from_file:
                 test_clean = test_from_file.rstrip()
