@@ -47,7 +47,7 @@ def create_build_object_with_mock(mocker, server_type):
                  return_value=json_data)
     mocker.patch('Tests.configure_and_test_integration_instances.Build.fetch_tests_list',
                  return_value=[])
-    mocker.patch('Tests.configure_and_test_integration_instances.Build.fetch_pack_ids_to_install',
+    mocker.patch('Tests.configure_and_test_integration_instances.fetch_pack_ids_to_install',
                  return_value=[])
     mocker.patch('Tests.configure_and_test_integration_instances.options_handler',
                  return_value=options)
