@@ -220,7 +220,6 @@ validate-content-conf:
     - |
       if [[ ${MARKETPLACE_VERSION} = "xsoar" ]]; then
         echo "Creating Instances, only for XSOAR."
-        [ -n "${TIME_TO_LIVE}" ] && TTL=${TIME_TO_LIVE} || TTL=300
         if [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]]; then
           echo "Creating Xsoar Instances for SDK nightly- changing the filter_envs json."
           jq '.' <<< '{"Server 6.9": false, "Server 6.10": false, "Server 6.11": false, "Server 6.12": false, "Server Master": true}' > "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json"
@@ -539,7 +538,7 @@ slack-notify-nightly-build:
     JIRA_API_KEY: $JIRA_API_KEY
     JIRA_PROJECT_ID: $JIRA_PROJECT_ID
     JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME: $JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME
-    CURRENT_BRANCH_NAME: $CURRENT_BRANCH_NAME
+    CURRENT_BRANCH_NAME: $INFRA_BRANCH
 
 slack-notify-on-push:
   rules:
@@ -565,7 +564,7 @@ slack-notify-on-push:
     JIRA_API_KEY: $JIRA_API_KEY
     JIRA_PROJECT_ID: $JIRA_PROJECT_ID
     JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME: $JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME
-    CURRENT_BRANCH_NAME: $CURRENT_BRANCH_NAME
+    CURRENT_BRANCH_NAME: $INFRA_BRANCH
 
 slack-notify-on-merge:
   rules:
@@ -582,7 +581,7 @@ slack-notify-on-merge:
     SLACK_CHANNEL: "#dmst-build-test"
     SLACK_JOB: 'true'
     SLACK_ALLOW_FAILURE: 'false'
-    CURRENT_BRANCH_NAME: $CURRENT_BRANCH_NAME
+    CURRENT_BRANCH_NAME: $INFRA_BRANCH
 
 .test_content_on_cloud_server_instances_base:
   tags:
@@ -612,6 +611,7 @@ slack-notify-on-merge:
     - cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" "./artifacts/filter_file.txt"
     - section_end "Are there tests to run?"
 
+    - !reference [.update-content-graph]
     - !reference [.lock-machine]
     - !reference [.uninstall-packs-and-reset-bucket-cloud]
 
@@ -642,6 +642,7 @@ slack-notify-on-merge:
     - exit $EXIT_CODE
   after_script:
     - source .gitlab/helper_functions.sh
+    - !reference [.clean-machine]
     - !reference [.unlock-machine]
 
 
@@ -656,11 +657,13 @@ xsiam_server_ga:
       when: always
       variables:
         CLOUD_MACHINES_TYPE: "nightly"
+        CLEAN_MACHINE_NEEDED: "true"
         CLOUD_MACHINES_COUNT: 1
         GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-nightly"
   timeout: 12 hours
   variables:
     CLOUD_MACHINES_TYPE: "build"
+    CLEAN_MACHINE_NEEDED: "true"
     CLOUD_MACHINES_COUNT: 1
     INSTANCE_ROLE: "XSIAM"
     SERVER_TYPE: "XSIAM"
@@ -705,6 +708,7 @@ xsoar_ng_server_ga:
     - if: '$NIGHTLY'
       when: never
   variables:
+    CLEAN_MACHINE_NEEDED: "true"
     CLOUD_MACHINES_TYPE: "build"
     CLOUD_MACHINES_COUNT: 1
     INSTANCE_ROLE: "XSOAR SAAS"

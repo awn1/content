@@ -31,23 +31,39 @@
   - section_end "Check User Permissions to Upload Packs"
 
 .upload_content_graph: &upload_content_graph
-    - |
-      if [[ $TEST_UPLOAD == "false" ]]; then
-        section_start "Upload content graph GraphML to GCP" --collapsed
-        gsutil cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_graph/${MARKETPLACE_VERSION}.zip" "gs://$GCS_MARKET_BUCKET_DEV/content_graph/$MARKETPLACE_VERSION.zip"
-        # copy the packs.json file to the bucket, used in contribution management
-        gsutil cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs.json" "gs://${GCS_MARKET_BUCKET_DEV}/content_graph/${MARKETPLACE_VERSION}_packs.json"
-        section_end "Upload content graph GraphML to GCP"
-      fi
+  - section_start "Upload content graph GraphML to GCP" --collapsed
+  - |
+    if [[ "${TEST_UPLOAD}" == "false" ]]; then
+      gsutil cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_graph/${MARKETPLACE_VERSION}.zip" "gs://${GCS_MARKET_BUCKET_DEV}/content_graph/${MARKETPLACE_VERSION}.zip"
+      # copy the packs.json file to the bucket, used in contribution management
+      gsutil cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs.json" "gs://${GCS_MARKET_BUCKET_DEV}/content_graph/${MARKETPLACE_VERSION}_packs.json"
+    else
+      echo "TEST_UPLOAD is set to true. Skipping upload_content_graph section."
+    fi
+  - section_end "Upload content graph GraphML to GCP"
 
 .upload_dependencies_file: &upload_dependencies_file
-    - |
-      if [[ $TEST_UPLOAD == "false" ]]; then
-        section_start "Upload packs_dependencies.json to GCP" --collapsed
-        gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-        gsutil cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json" "gs://xsoar-ci-artifacts/content-cache-docs/$MARKETPLACE_VERSION/packs_dependencies.json"
-        section_end "Upload packs_dependencies.json to GCP"
-      fi
+  - section_start "Upload packs_dependencies.json to GCP" --collapsed
+  - |
+    if [[ "${TEST_UPLOAD}" == "false" ]]; then
+      gcloud auth activate-service-account --key-file="${GCS_ARTIFACTS_KEY}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
+      gsutil cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json" "gs://xsoar-ci-artifacts/content-cache-docs/${MARKETPLACE_VERSION}/packs_dependencies.json"
+    else
+      echo "TEST_UPLOAD is set to true. Skipping upload_dependencies_file section."
+    fi
+  - section_end "Upload packs_dependencies.json to GCP"
+
+.upload_failed_to_upload_packs: &upload_failed_to_upload_packs
+  - section_start "Upload failed_to_upload Packs" --collapsed # saves the failed-to-upload packs in content_status.json
+  - |
+    if [[ "${TEST_UPLOAD}" == "false" ]]; then
+      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
+      CONTENT_PACKS_TO_UPLOAD_JSON=$(cat "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_upload.json")
+      python3 ./Tests/Marketplace/extract_and_upload_failed_packs.py -pru "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_results_upload.json" -s "${GCS_MARKET_KEY}" -mp "${MARKETPLACE_TYPE}" -pu "${CONTENT_PACKS_TO_UPLOAD_JSON}"
+    else
+      echo "TEST_UPLOAD is set to true. Skipping upload_failed_to_upload_packs section."
+    fi
+  - section_end "Upload failed_to_upload Packs"
 
 run-validations-upload-flow:
   variables:
@@ -154,7 +170,7 @@ xpanse-prepare-testing-bucket-upload-flow:
     ENV_RESULTS_PATH: "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json"
     INSTANCE_CREATED: "true"
     SSH_TUNNEL_TIMEOUT: 10
-    TIME_TO_LIVE: ""
+    TIME_TO_LIVE: ""  # set to no TTL, shutdown immediately
   extends:
     - .bucket-upload-rule
     - .default-job-settings
@@ -188,6 +204,19 @@ xpanse-prepare-testing-bucket-upload-flow:
     - section_start "Install Packs"
     - ./Tests/Marketplace/install_packs.sh || EXIT_CODE=$?
     - section_end "Install Packs"
+    - section_start "Create Build_Pass file"
+    - |
+      if [ "${EXIT_CODE}" -eq 0 ]; then
+        role="$(echo -e "${INSTANCE_ROLE}" | tr -d '[:space:]')"
+        is_build_passed_filepath="${ARTIFACTS_FOLDER}/is_build_passed_${role}.txt"
+        is_post_update_passed_filepath="${ARTIFACTS_FOLDER}/is_post_update_passed_${role}.txt"
+        echo "Build passed for instance role: ${INSTANCE_ROLE}, server type:${SERVER_TYPE} writing it passed to artifacts folder in is_build_passed:${is_build_passed_filepath} is_post_update_passed:${is_post_update_passed_filepath}"
+        touch "${is_build_passed_filepath}"
+        touch "${is_post_update_passed_filepath}"
+      else
+        echo "Build failed for instance role: ${INSTANCE_ROLE}, server type:${SERVER_TYPE} with exit code: ${EXIT_CODE}"
+      fi
+    - section_end "Create Build_Pass file"
     - section_start "Get instance ssh-command"
     - echo "INSTANCE_ROLE -> ${INSTANCE_ROLE}"
     - INSTANCE_NAME=$(jq -r --arg role "$INSTANCE_ROLE" '.[] | select(.Role == $role) | .InstanceName' $ENV_RESULTS_PATH)
@@ -247,6 +276,7 @@ install-packs-in-server-master:
       variables:
         CLOUD_MACHINES_TYPE: "build"
         GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga"
+        CLEAN_MACHINE_NEEDED: "true"
     - if: '$BUCKET_UPLOAD == "true" && $FORCE_BUCKET_UPLOAD == "false"'
   variables:
     PRODUCT_TYPE: "XSIAM"
@@ -256,10 +286,11 @@ install-packs-in-server-master:
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_MPV2}/server_type_${SERVER_TYPE}"
     ENV_RESULTS_PATH: "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json"
     INSTANCE_CREATED: "true"
-    TIME_TO_LIVE: ""
+    TIME_TO_LIVE: ""  # set to no TTL, shutdown immediately
     GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-upload"
     CLOUD_MACHINES_TYPE: "upload"
     CLOUD_MACHINES_COUNT: 1
+    CLEAN_MACHINE_NEEDED: "true"
   extends:
     - .default-job-settings
   script:
@@ -274,8 +305,10 @@ install-packs-in-server-master:
     - echo "Auth done successfully"
     - ./Tests/scripts/wait_in_line_for_cloud_env.sh "$CLOUD_MACHINES_TYPE"
     - source CloudEnvVariables
-    - echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}"
+    - echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}" | tee "${ARTIFACTS_FOLDER}/logs/lock_file.txt"
     - section_end "Lock Machine"
+
+    - !reference [.update-content-graph]
 
     - CLOUD_SERVERS_PATH=$(cat $CLOUD_SERVERS_FILE)
     - cat "${CLOUD_API_KEYS}" > "cloud_api_keys.json"
@@ -298,6 +331,7 @@ install-packs-in-server-master:
     - exit "$EXIT_CODE"
   after_script:
     - source .gitlab/helper_functions.sh
+    - !reference [.clean-machine]
     - !reference [ .unlock-machine ]
 
 install-packs-in-xsiam-ga:
@@ -311,6 +345,7 @@ install-packs-in-xsiam-ga:
     CLOUD_API_KEYS: $XSIAM_API_KEYS
     CLOUD_API_TOKENS: $XSIAM_TOKENS
     NON_REMOVABLE_PACKS: "Base"
+    MARKETPLACE_NAME: "marketplacev2"
 
 
 upload-packs-to-marketplace:
@@ -334,7 +369,7 @@ upload-packs-to-marketplace:
     ENV_RESULTS_PATH: "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json"
     INSTANCE_CREATED: "true"
     SSH_TUNNEL_TIMEOUT: 10
-    TIME_TO_LIVE: ""
+    TIME_TO_LIVE: ""  # set to no TTL, shutdown immediately
   extends:
     - .bucket-upload-rule
     - .default-job-settings
@@ -379,7 +414,7 @@ upload-packs-to-marketplace:
         fi
       fi
     - section_end "Upload Packs To Marketplace Storage"
-
+    - *upload_failed_to_upload_packs
     - section_start "Download packs from GCP"
     - |
       if [[ $GCS_MARKET_BUCKET == $GCS_PRODUCTION_BUCKET ]] && [[ -z $STORAGE_BASE_PATH ]]; then
@@ -405,7 +440,6 @@ upload-packs-to-marketplace:
     - section_start "Zip Content Packs From GCS"
     - python3 ./Tests/Marketplace/zip_packs.py -z $ZIP_FOLDER -a $ARTIFACTS_FOLDER -s $GCS_MARKET_KEY
     - section_end "Zip Content Packs From GCS"
-
     - job-done
 
 upload-packs-to-marketplace-v2:
@@ -428,7 +462,7 @@ upload-packs-to-marketplace-v2:
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_MPV2}/server_type_${SERVER_TYPE}"
     INSTANCE_CREATED: "true"
     SSH_TUNNEL_TIMEOUT: 10
-    TIME_TO_LIVE: ""
+    TIME_TO_LIVE: ""  # set to no TTL, shutdown immediately
   extends:
     - .bucket-upload-rule
     - .default-job-settings
@@ -473,7 +507,7 @@ upload-packs-to-marketplace-v2:
         fi
       fi
     - section_end "Upload Packs To Marketplace Storage"
-
+    - *upload_failed_to_upload_packs
     - section_start "Download packs from GCP"
     - |
       if [[ $GCS_MARKET_V2_BUCKET == $GCS_PRODUCTION_V2_BUCKET ]] && [[ -z $STORAGE_BASE_PATH ]]; then
@@ -520,7 +554,7 @@ upload-packs-to-xpanse-marketplace:
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_XPANSE}/server_type_${SERVER_TYPE}"
     INSTANCE_CREATED: "true"
     SSH_TUNNEL_TIMEOUT: 10
-    TIME_TO_LIVE: ""
+    TIME_TO_LIVE: ""  # set to no TTL, shutdown immediately
   extends:
     - .bucket-upload-rule
     - .default-job-settings
@@ -564,7 +598,7 @@ upload-packs-to-xpanse-marketplace:
         fi
       fi
     - section_end "Upload Packs To Marketplace Storage"
-
+    - *upload_failed_to_upload_packs
     - section_start "Download packs from GCP"
     - |
       if [[ $GCS_MARKET_XPANSE_BUCKET == $GCS_PRODUCTION_XPANSE_BUCKET ]] && [[ -z $STORAGE_BASE_PATH ]]; then
@@ -612,7 +646,7 @@ upload-packs-to-xsoar-saas-marketplace:
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_XSOAR}/server_type_${SERVER_TYPE}"
     INSTANCE_CREATED: "true"
     SSH_TUNNEL_TIMEOUT: 10
-    TIME_TO_LIVE: ""
+    TIME_TO_LIVE: ""  # set to no TTL, shutdown immediately
   extends:
     - .bucket-upload-rule
     - .default-job-settings
@@ -655,7 +689,7 @@ upload-packs-to-xsoar-saas-marketplace:
         fi
       fi
     - section_end "Upload Packs To Marketplace Storage"
-
+    - *upload_failed_to_upload_packs
     - section_start "Download packs from GCP"
     - |
       if [[ $GCS_MARKET_XSOAR_SAAS_BUCKET == $GCS_PRODUCTION_XSOAR_SAAS_BUCKET ]] && [[ -z $STORAGE_BASE_PATH ]]; then
@@ -788,7 +822,7 @@ slack-notify-bucket-upload:
     JIRA_API_KEY: $JIRA_API_KEY
     JIRA_PROJECT_ID: $JIRA_PROJECT_ID
     JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME: $JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME
-    CURRENT_BRANCH_NAME: $CURRENT_BRANCH_NAME
+    CURRENT_BRANCH_NAME: $INFRA_BRANCH
 
 upload-id-set-bucket:
   tags:

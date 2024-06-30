@@ -1,0 +1,55 @@
+.unit-tests-rules:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        paths:
+          - pyproject.toml
+          - poetry.lock
+          - Tests/**/*
+          - Utils/**/*
+          - gcp/**/*
+          - SecretActions/**/*
+          - gcp_automations/**/*
+          - Content-CI/**/*
+          - .gitlab/ci/content-ci/ci/**/*
+          - .gitlab/ci/Unit-Tests/**/*
+          - .gitlab/ci/sdk-release-ci/**/*
+          - .gitlab/ci/pre-commit/**/*
+          - .gitlab/ci/trigger-content-build/.gitlab-ci.trigger-content-build.yml
+        compare_to: master
+
+.before-script-unit-test:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.poetry-install]
+    - !reference [.granting_execute_permissions_on_files]
+    - !reference [.setup-artifactory]
+
+
+unit-tests:
+  stage: unittests-and-validations
+  extends:
+    - .unit-tests-rules
+    - .before-script-unit-test
+  script:
+    - !reference [.check-is-force-merged-allowed]
+
+    - section_start "Run mypy and ruff"
+    - ./Tests/scripts/analyze_non_packs_files.sh
+    - section_end "Run mypy and ruff"
+
+    - section_start "Test Infrastructure" --collapsed
+    - poetry install --with testing
+    - poetry run pytest --cov="." --cov-report=xml --cov-report=term
+    - poetry run coverage html
+    - section_end "Test Infrastructure"
+
+  artifacts:
+    when: always
+    paths:
+      - coverage.xml
+      - htmlcov/
+    reports:
+      junit: report.xml
+  coverage: /TOTAL\s+\d+\s+\d+\s+(\d+%)$/

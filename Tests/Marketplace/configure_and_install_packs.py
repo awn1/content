@@ -9,6 +9,7 @@ from Tests.Marketplace.search_and_install_packs import search_and_install_packs_
 from Tests.scripts.utils.log_util import install_logging
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.Marketplace.marketplace_constants import GCPConfig, XSIAM_MP, XSOAR_MP
+from Tests.Marketplace.common import fetch_pack_ids_to_install
 
 
 def options_handler():
@@ -86,7 +87,7 @@ def xsoar_configure_and_install_flow(options, branch_name: str, build_number: st
         raise Exception('Could not find content path')
 
     # Create a list of all packs that should be installed
-    packs_to_install = set(Build.fetch_pack_ids_to_install(options.pack_ids_to_install))
+    packs_to_install = set(fetch_pack_ids_to_install(options.pack_ids_to_install))
     logging.info(f'Packs to install before filtering by minServerVersion: {packs_to_install}')
 
     server_version = servers[0].server_numeric_version
@@ -148,7 +149,7 @@ def xsiam_configure_and_install_flow(options, branch_name: str, build_number: st
     CloudBuild.set_marketplace_url(servers=[server], branch_name=branch_name, ci_build_number=build_number)
 
     # extract pack_ids from the content_packs_to_install.txt
-    pack_ids = Build.fetch_pack_ids_to_install(options.pack_ids_to_install)
+    pack_ids = fetch_pack_ids_to_install(options.pack_ids_to_install)
     # Acquire the server's host and install new uploaded content packs
     install_packs_from_content_packs_to_install_path(servers=[server], pack_ids=pack_ids, hostname=server.name,
                                                      marketplace_tag_name=XSIAM_MP)

@@ -12,6 +12,8 @@ import pytest
 import timeout_decorator
 import Tests.Marketplace.search_and_install_packs as script
 from demisto_client.demisto_api.rest import ApiException
+from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
+
 from Tests.Marketplace.marketplace_constants import GCPConfig
 from google.cloud.storage import Blob
 
@@ -640,16 +642,30 @@ def test_get_all_content_packs_dependencies(mocker: MockFixture):
             ]
         },
     ]
+    mock_hybrid_pack_request = {
+        "id": "HybridPack",
+        "dependencies": {},
+        "currentVersion": "",
+        "deprecated": "",
+    }
     mocker.patch.object(
         script, "get_one_page_of_packs_dependencies", side_effect=mock_request
+    )
+    mocker.patch.object(
+        script, "get_hybrid_pack_dependencies", return_value=mock_hybrid_pack_request
+    )
+    hybrid_pack_mocker = mocker.MagicMock()
+    hybrid_pack_mocker.object_id = "HybridPack"
+    mocker.patch.object(
+        Neo4jContentGraphInterface, "search", return_value=[hybrid_pack_mocker]
     )
     script.PAGE_SIZE_DEFAULT = 2
 
     # Call function and test
     result = script.get_all_content_packs_dependencies(client)
-
-    assert len(result) == 3
-    assert all(pack in result for pack in ("Pack1", "Pack2", "Pack3"))
+    print(result)
+    assert len(result) == 4
+    assert all(pack in result for pack in ("Pack1", "Pack2", "Pack3", "HybridPack"))
 
 
 def test_get_all_content_packs_dependencies_empty(mocker: MockFixture):
@@ -665,7 +681,12 @@ def test_get_all_content_packs_dependencies_empty(mocker: MockFixture):
     mocker.patch.object(
         script, "get_one_page_of_packs_dependencies", return_value={"total": 3, "packs": []}
     )
-
+    mocker.patch.object(
+        script, "get_hybrid_pack_dependencies", return_value={}
+    )
+    mocker.patch.object(
+        Neo4jContentGraphInterface, "search", return_value=[]
+    )
     result = script.get_all_content_packs_dependencies(client)
 
     assert result == {}
@@ -707,6 +728,12 @@ def test_get_all_content_packs_dependencies_null(mocker: MockFixture):
     ]
     mocker.patch.object(
         script, "get_one_page_of_packs_dependencies", side_effect=mock_request
+    )
+    mocker.patch.object(
+        script, "get_hybrid_pack_dependencies", return_value={}
+    )
+    mocker.patch.object(
+        Neo4jContentGraphInterface, "search", return_value=[]
     )
     script.PAGE_SIZE_DEFAULT = 2
 

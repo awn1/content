@@ -11,7 +11,7 @@ for dir in $*; do
   if [[ $dir == "." || $(find $dir -name "*.py" | wc -l) -eq 0 ]]; then
     continue
   fi
-  mypy_out=$(python3 -m mypy $dir 2>&1)
+  mypy_out=$(poetry run mypy $dir 2>&1)
   if [[ $? -ne 0 && $? -ne 2 ]]; then
 
     echo "$mypy_out"

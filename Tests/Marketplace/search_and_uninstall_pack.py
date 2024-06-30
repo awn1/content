@@ -13,7 +13,7 @@ from typing import Any
 import demisto_client
 
 from Tests.Marketplace.common import generic_request_with_retries, wait_until_not_updating, ALREADY_IN_PROGRESS, \
-    send_api_request_with_retries
+    send_api_request_with_retries, fetch_pack_ids_to_install
 from Tests.Marketplace.configure_and_install_packs import search_and_install_packs_and_their_dependencies
 from Tests.configure_and_test_integration_instances import CloudBuild, get_custom_user_agent
 from Tests.scripts.utils import logging_wrapper as logging
@@ -62,56 +62,69 @@ def check_if_pack_still_installed(client: demisto_client,
                                         )
 
 
-def get_all_installed_packs(client: demisto_client, non_removable_packs: list):
+def get_all_installed_packs(client: demisto_client, non_removable_packs: list, attempts_count: int = 3,
+                            request_timeout: int = 300, ):
     """
 
     Args:
         non_removable_packs: list of packs that can't be uninstalled.
         client (demisto_client): The client to connect to.
+        attempts_count (int): The number of attempts to install the packs.
+        request_timeout (int): The timeout per call to the server.
 
     Returns:
         list of id's of the installed packs
     """
+
+    def success_handler(response_data):
+        installed_packs = ast.literal_eval(response_data)
+        installed_packs_ids = [pack.get('id') for pack in installed_packs]
+        logging.success('Successfully fetched all installed packs.')
+        installed_packs_ids_str = ', '.join(installed_packs_ids)
+        logging.debug(
+            f'The following packs are currently installed from a previous build run:\n{installed_packs_ids_str}')
+        return True, installed_packs_ids
     try:
         logging.info("Attempting to fetch all installed packs.")
-        response_data, status_code, _ = demisto_client.generic_request_func(client,
-                                                                            path='/contentpacks/metadata/installed',
-                                                                            method='GET',
-                                                                            accept='application/json',
-                                                                            _request_timeout=None)
-        if 200 <= status_code < 300:
-            installed_packs = ast.literal_eval(response_data)
-            installed_packs_ids = [pack.get('id') for pack in installed_packs]
-            logging.success('Successfully fetched all installed packs.')
-            installed_packs_ids_str = ', '.join(installed_packs_ids)
-            logging.debug(
-                f'The following packs are currently installed from a previous build run:\n{installed_packs_ids_str}')
-            for pack in non_removable_packs:
-                if pack in installed_packs_ids:
-                    installed_packs_ids.remove(pack)
-            return installed_packs_ids
-        else:
-            result_object = ast.literal_eval(response_data)
-            message = result_object.get('message', '')
-            raise Exception(f'Failed to fetch installed packs - with status code {status_code}\n{message}')
+        _, installed_packs_ids = generic_request_with_retries(client=client,
+                                                                           retries_message="Failed to get all installed packs.",
+                                                                           exception_message="Failed to get installed packs.",
+                                                                           prior_message="Getting all installed packs",
+                                                                           path='/contentpacks/metadata/installed',
+                                                                           method='GET',
+                                                                           attempts_count=attempts_count,
+                                                                           request_timeout=request_timeout,
+                                                                           success_handler=success_handler
+                                                                           )
+        for pack in non_removable_packs:
+            if pack in installed_packs_ids:
+                installed_packs_ids.remove(pack)
+        return installed_packs_ids
     except Exception as e:
         logging.exception(f'The request to fetch installed packs has failed. Additional info: {str(e)}')
         return None
 
 
-def uninstall_all_packs_one_by_one(client: demisto_client, hostname, non_removable_packs: list):
+def uninstall_all_packs_one_by_one(client: demisto_client, hostname, non_removable_packs: list,
+                                   packs_to_be_installed: set | None = None) -> bool:
     """ Lists all installed packs and uninstalling them.
     Args:
         client (demisto_client): The client to connect to.
         hostname (str): cloud hostname
         non_removable_packs: list of packs that can't be uninstalled.
+        packs_to_be_installed: set of packs to be installed.
 
     Returns (bool):
         A flag that indicates if the operation succeeded or not.
     """
-    packs_to_uninstall = get_all_installed_packs(client, non_removable_packs)
+    if packs_to_be_installed:
+        logging.info("Removing non removable packs from packs to be installed")
+        packs_to_uninstall = packs_to_be_installed - set(non_removable_packs)
+    else:
+        packs_to_uninstall = get_all_installed_packs(client, non_removable_packs)
+
     logging.info(f'Starting to search and uninstall packs in server: {hostname}, packs count to '
-                 f'uninstall: {len(packs_to_uninstall)}')
+                 f'uninstall: {len(packs_to_uninstall)} and they are: {str(packs_to_uninstall)}')
     uninstalled_count = 0
     failed_to_uninstall = []
     start_time = datetime.utcnow()
@@ -442,6 +455,10 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument('--build-number', help='CI job number where the instances were created', required=True)
     parser.add_argument('--modeling_rules_to_test_files', help='List of modeling rules test data to check.', required=True)
     parser.add_argument('--reset-core-pack-version', help='Reset the core pack version.', type=string_to_bool)
+    parser.add_argument('-pl', '--pack_ids_to_install', help='Path to the packs to install file.',
+                        default='./content_packs_to_install.txt')
+    parser.add_argument('--only_to_be_installed', help='True if should uninstall only going to be installed packs.',
+                        action='store_true')
 
     options = parser.parse_args()
 
@@ -465,9 +482,14 @@ def clean_machine(options: argparse.Namespace, cloud_machine: str) -> bool:
     success = sync_marketplace(client=client)
     non_removable_packs = options.non_removable_packs.split(',')
     if options.reset_core_pack_version:
+        logging.info('Resets core pack version to prod version.')
         success &= reset_core_pack_version(client, non_removable_packs)
     if success:
-        if options.one_by_one:
+        if options.only_to_be_installed:
+            packs_to_install = set(fetch_pack_ids_to_install(options.pack_ids_to_install))
+            logging.info(f'Packs that are going to be installed: {packs_to_install}')
+            success = uninstall_all_packs_one_by_one(client, cloud_machine, non_removable_packs, packs_to_install)
+        elif options.one_by_one:
             success = uninstall_all_packs_one_by_one(client, cloud_machine, non_removable_packs)
         else:
             success = uninstall_all_packs(client, cloud_machine, non_removable_packs) and \

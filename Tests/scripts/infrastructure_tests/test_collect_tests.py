@@ -65,12 +65,10 @@ class CollectTestsMocker:
         self.previous_path_manager: PathManager | None = None
 
     def __enter__(self):
-        self.previous_path_manager = collect_tests.PATHS
         self._mock(self.path_manager)
 
     def __exit__(self, *args):
-        self._mock(self.previous_path_manager)
-        self.previous_path_manager = None
+        ...
 
     @staticmethod
     def _mock(path_manager: PathManager):
@@ -634,6 +632,9 @@ ONLY_COLLECT_PACK_TYPES = {
     FileType.ASSETS_MODELING_RULE,
     FileType.ASSETS_MODELING_RULE_SCHEMA,
     FileType.ASSETS_MODELING_RULE_XIF,
+    FileType.CASE_FIELD,
+    FileType.CASE_LAYOUT_RULE,
+    FileType.CASE_LAYOUT,
 }
 
 
@@ -744,7 +745,7 @@ def test_number_of_file_types():
 
         - Removed type:    Decrease the number here.
     """
-    assert len(FileType) == 80
+    assert len(FileType) == 83
 
 
 @pytest.mark.parametrize(
@@ -867,3 +868,54 @@ def test_get_tpb_dependencies_packs(
     assert collected.tpb_dependencies_packs == {'myXSIAMOnlyTestPlaybook': {'dependencies':
                                                                                 ['bothMarketplacesPackOnlyXSIAMIntegration'],
                                                                             'pack': 'myXSIAMOnlyPack'}}
+
+
+@pytest.mark.parametrize(
+    "mocked_changed_files, mocked_added_files, content_status, expected_packs_to_upload, expected_packs_to_update_metadata",
+    [
+        (("Packs/myPack/pack_metadata.json",), {},
+         {"failed_to_upload": {"packs_to_upload": ["myPack"], "packs_to_update_metadata": []}},
+         {"myPack"}, set()),
+
+        (("Packs/myPack/pack_metadata.json", "Packs/myPack/ReleaseNotes/2_1_3.md"), {Path("Packs/myPack2/ReleaseNotes/2_1_3.md")},
+         {"failed_to_upload": {"packs_to_upload": [], "packs_to_update_metadata": ["myPack"]}}, {"myPack"}, set()),
+
+        (("Packs/myPack/pack_metadata.json",), {},
+         {"failed_to_upload": {"packs_to_upload": [], "packs_to_update_metadata": ["myPack"]}},
+         set(), {"myPack"}),
+
+        ((), {},
+         {"failed_to_upload": {"packs_to_upload": [], "packs_to_update_metadata": ["myPack"]},
+          "failed_to_install": {"packs_to_upload": [], "packs_to_update_metadata": ["myPack2"]}},
+         set(), {"myPack", "myPack2"}),
+
+        ((), {},
+         {"failed_to_upload": {"packs_to_upload": ["myPack"], "packs_to_update_metadata": []}},
+         {"myPack"}, set()),
+    ], ids=('update_upload', 'upload_update', 'update_update', '_update', '_upload')
+)
+def test_nightly_failed_packs_from_prev_upload(mocker, monkeypatch, mocked_changed_files, mocked_added_files, content_status,
+                                               expected_packs_to_upload, expected_packs_to_update_metadata):
+    """
+    given: Mocked GitUtil with simulated changed files
+    when: NightlyTestCollector is called:
+            update_upload - pack today for update, yesterday for upload > expected pack to upload
+            upload_update - pack today for upload, yesterday for update > expected pack to upload
+            update_update - pack today for update, yesterday for update > expected pack to update
+            _update - yesterday for update > expected pack to update
+            _upload - yesterday for upload > expected pack to upload
+    then: Ensure packs_to_upload, packs_to_update_metadata contain the expected packs
+    """
+    monkeypatch.chdir(MockerCases.RN_CONFIG.path_manager.content_path)
+
+    mocker.patch.object(BranchTestCollector, '_get_git_diff',
+                        return_value=FilesToCollect(mocked_changed_files, ()))
+    mocker.patch('Tests.scripts.collect_tests.collect_tests.get_failed_packs_from_previous_upload', return_value=content_status)
+
+    with MockerCases.RN_CONFIG:
+        collector = BranchTestCollector(*XSOAR_SAAS_BRANCH_ARGS)
+        collector.changed_files = mocked_changed_files
+        collector.added_files = mocked_added_files
+        collected = collector.collect()
+    assert collected.packs_to_upload == expected_packs_to_upload
+    assert collected.packs_to_update_metadata == expected_packs_to_update_metadata

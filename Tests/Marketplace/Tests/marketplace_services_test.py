@@ -562,6 +562,46 @@ class TestHelperFunctions:
         assert os.path.isdir('Tests/Marketplace/Tests/test_data/pack_to_test/Integrations')
         shutil.rmtree('Tests/Marketplace/Tests/test_data/pack_to_test')
 
+    def tests_get_failed_packs_from_previous_upload(self, mocker):
+        """
+          Given:
+              - Service account to connect to GCP.
+              - Build bucket path.
+
+          When:
+              - Retrieving failed packs from the previous upload.
+
+          Then:
+              - Ensure the correct storage client is initialized.
+              - Ensure the correct bucket and blob are accessed.
+              - Ensure the content_status.json is downloaded as a string.
+              - Ensure the failed packs are correctly parsed from the JSON string.
+          """
+        from Tests.Marketplace.marketplace_services import get_failed_packs_from_previous_upload
+        mock_init_storage_client = mocker.patch('Tests.Marketplace.marketplace_services.init_storage_client')
+
+        mock_storage_client = mocker.Mock()
+        mock_bucket = mocker.Mock()
+        mock_blob = mocker.Mock()
+        mock_init_storage_client.return_value = mock_storage_client
+        mock_storage_client.bucket.return_value = mock_bucket
+        mock_bucket.blob.return_value = mock_blob
+        mock_blob.download_as_string.return_value = (b'{"failed_to_install": {"packs_to_upload": ["Pack1"], '
+                                                     b'"packs_to_update_metadata": ["Pack2"]}, '
+                                                     b'"failed_to_upload": {"packs_to_upload": ["Pack1"], '
+                                                     b'"packs_to_update_metadata": ["Pack2"]}}')
+        service_account = "service_account"
+        failed_packs = get_failed_packs_from_previous_upload(service_account)
+
+        mock_init_storage_client.assert_called_once_with(service_account)
+        mock_bucket.blob.assert_called_once_with('content/packs/content_status.json')
+        mock_blob.download_as_string.assert_called_once()
+
+        assert failed_packs == {"failed_to_install":  {"packs_to_upload": ["Pack1"],
+                                                       "packs_to_update_metadata": ["Pack2"]},
+                                "failed_to_upload": {"packs_to_upload": ["Pack1"],
+                                                     "packs_to_update_metadata": ["Pack2"]}}
+
 
 class TestVersionSorting:
     """ Class for sorting of changelog.json versions
@@ -2138,7 +2178,7 @@ class TestSetDependencies:
 
         return pack_metadata
 
-    def test_set_dependencies_core_pack_new_mandatory_dependency(self):
+    def test_set_dependencies_core_pack_new_mandatory_dependency(self, mocker):
         """
             Given:
                 - Core pack with new dependencies
@@ -2173,6 +2213,11 @@ class TestSetDependencies:
             }
         }
 
+        mocker.patch.object(GCPConfig, "get_core_packs", return_value=[
+            "CommonPlaybooks",
+            "DemistoRESTAPI",
+            "HelloWorld",
+        ])
         metadata['dependencies'] = {}
         p = Pack('HelloWorld', 'dummy_path')
         p._pack_metadata = metadata

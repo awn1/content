@@ -3356,6 +3356,7 @@ def get_last_commit_from_index(service_account, marketplace=MarketplaceVersions.
     """ Downloading index.json from GCP and extract last upload commit.
 
     Args:
+        marketplace: the marketplace to extract from
         service_account: service account to connect to GCP
 
     Returns: last upload commit.
@@ -3369,6 +3370,33 @@ def get_last_commit_from_index(service_account, marketplace=MarketplaceVersions.
     index_string = index_blob.download_as_string()
     index_json = json.loads(index_string)
     return index_json.get('commit')
+
+
+def get_failed_packs_from_previous_upload(service_account: str, marketplace=MarketplaceVersions.XSOAR) -> dict | None:
+    """ Download content_status.json from GCP and extract the failed packs from the previous upload.
+
+    Args:
+        marketplace: the marketplace to extract from
+        service_account: service account to connect to GCP
+    Returns:
+        dict: The failed packs from the previous upload in the following structure:
+            {
+                "failed_to_install": {"packs_to_upload": [], "packs_to_update_metadata": []},
+                "failed_to_upload": {"packs_to_upload": [], "packs_to_update_metadata": []}
+            }
+        None: If the content_status.json file retrieval fails.
+    """
+    try:
+        production_bucket_name = MarketplaceVersionToMarketplaceName.get(marketplace)
+        storage_client = init_storage_client(service_account)
+        storage_bucket = storage_client.bucket(production_bucket_name)
+        content_status_storage_path = os.path.join('content/packs/', f"{GCPConfig.CONTENT_STATUS}.json")
+        content_status_blob = storage_bucket.blob(content_status_storage_path)
+        content_status_string = content_status_blob.download_as_string()
+        return json.loads(content_status_string)
+    except Exception as e:
+        logging.error(f"Failed getting the content_status.json file from the bucket. Additional Info: {str(e)}")
+        return None
 
 
 def is_content_item_in_graph(display_name: str, content_type, marketplace) -> bool:

@@ -24,6 +24,11 @@ def options_handler() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Utility for printing the test playbooks summary')
     parser.add_argument('--artifacts-path', help='Path to the artifacts directory', required=True)
     parser.add_argument('--without-jira', help='Print the summary without Jira tickets', action='store_true')
+    parser.add_argument('--fail-only-nightly-tests', required=True,
+                        help='Whether to fail only TPBs that runs in nightly flow or fail on any tpb failure.',
+                        const="false",
+                        nargs='?')
+    parser.add_argument('--product-type', help='The type of the product the script was called with.')
     return parser.parse_args()
 
 
@@ -55,7 +60,10 @@ def filter_skipped_playbooks(playbooks_results: dict[str, dict[str, TestSuite]])
     return filtered_playbooks_ids
 
 
-def print_test_playbooks_summary(artifacts_path: Path, without_jira: bool) -> bool:
+def print_test_playbooks_summary(artifacts_path: Path,
+                                 without_jira: bool,
+                                 fail_only_nightly_tests: bool,
+                                 product_type: str) -> bool:
     test_playbooks_report = artifacts_path / TEST_PLAYBOOKS_REPORT_FILE_NAME
 
     # iterate over the artifacts path and find all the test playbook result files
@@ -95,7 +103,10 @@ def print_test_playbooks_summary(artifacts_path: Path, without_jira: bool) -> bo
                                                                              playbooks_results,
                                                                              server_versions,
                                                                              TEST_PLAYBOOKS_BASE_HEADERS,
-                                                                             without_jira=without_jira)
+                                                                             without_jira=without_jira,
+                                                                             fail_only_nightly_tests=fail_only_nightly_tests,
+                                                                             artifacts_path=artifacts_path,
+                                                                             product_type=product_type)
     logging.info(f"Writing test playbook report to {test_playbooks_report}")
     xml.write(test_playbooks_report.as_posix(), pretty=True)
     write_test_playbook_to_jira_mapping(server_url, artifacts_path, jira_tickets_for_playbooks)
@@ -110,9 +121,13 @@ def main():
         install_logging('print_test_playbook_summary.log', logger=logging)
         options = options_handler()
         artifacts_path = Path(options.artifacts_path)
-        logging.info(f"Printing test playbook summary - artifacts path: {artifacts_path}")
+        fail_only_nightly_tests = options.fail_only_nightly_tests == "true"
+        logging.info(f"Printing the value of {fail_only_nightly_tests=}")
 
-        if print_test_playbooks_summary(artifacts_path, options.without_jira):
+        if print_test_playbooks_summary(artifacts_path,
+                                        options.without_jira,
+                                        fail_only_nightly_tests,
+                                        options.product_type):
             logging.critical("Test playbook summary found errors")
             sys.exit(1)
 

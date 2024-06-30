@@ -91,7 +91,8 @@ def generic_request_with_retries(client: DemistoClient,
                 if api_exception_handler:
                     body = api_exception_handler(ex, attempts_left)
                 if not attempts_left:  # exhausted all attempts, understand what happened and exit.
-                    raise Exception(f"Got status {ex.status} from server, message: {ex.body}, headers: {ex.headers}") from ex
+                    raise Exception(
+                        f"Got status {ex.status} from server, message: {ex.body}, headers: {ex.headers}") from ex
                 logging.debug(f"Process failed, got error {ex}")
             except (HTTPError, HTTPWarning) as http_ex:
                 if http_exception_handler:
@@ -113,7 +114,6 @@ def get_updating_status(client: DemistoClient,
                         sleep_interval: int = 60,
                         request_timeout: int = 300,
                         ) -> tuple[bool, bool | None]:
-
     def success_handler(response):
         updating_status = 'true' in str(response).lower()
         logging.info(f"Got updating status: {updating_status}")
@@ -168,24 +168,24 @@ def wait_until_not_updating(client: DemistoClient,
 
 
 def send_api_request_with_retries(
-    base_url: str,
-    retries_message: str,
-    exception_message: str,
-    success_message: str,
-    prior_message: str,
-    endpoint: str,
-    method: str,
-    params: dict | None = None,
-    headers: dict | None = None,
-    request_timeout: int | None = None,
-    accept: str = 'application/json',
-    body: Any | None = None,
-    attempts_count: int = 5,
-    sleep_interval: int = 60,
-    should_try_handler: Callable[[Any], bool] | None = None,
-    success_handler: Callable[[Any], Any] | None = None,
-    api_exception_handler: Callable[[ApiException, int], Any] | None = None,
-    http_exception_handler: Callable[[HTTPError | HTTPWarning], Any] | None = None
+        base_url: str,
+        retries_message: str,
+        exception_message: str,
+        success_message: str,
+        prior_message: str,
+        endpoint: str,
+        method: str,
+        params: dict | None = None,
+        headers: dict | None = None,
+        request_timeout: int | None = None,
+        accept: str = 'application/json',
+        body: Any | None = None,
+        attempts_count: int = 5,
+        sleep_interval: int = 60,
+        should_try_handler: Callable[[Any], bool] | None = None,
+        success_handler: Callable[[Any], Any] | None = None,
+        api_exception_handler: Callable[[ApiException, int], Any] | None = None,
+        http_exception_handler: Callable[[HTTPError | HTTPWarning], Any] | None = None
 ):
     """
     Args:
@@ -252,7 +252,8 @@ def send_api_request_with_retries(
                 if api_exception_handler:
                     api_exception_handler(ex, attempts_left)
                 if not attempts_left:
-                    raise Exception(f"Got status {ex.status} from server, message: {ex.body}, headers: {ex.headers}") from ex
+                    raise Exception(
+                        f"Got status {ex.status} from server, message: {ex.body}, headers: {ex.headers}") from ex
                 logging.debug(f"Process failed, got error {ex}")
             except (HTTPError, HTTPWarning) as http_ex:
                 if http_exception_handler:
@@ -266,3 +267,21 @@ def send_api_request_with_retries(
     except Exception as e:
         logging.exception(f'{exception_message}. Additional info: {str(e)}')
     return False
+
+
+def fetch_pack_ids_to_install(packs_to_install_path: str) -> list[str]:
+    """
+    Reads a file containing pack IDs, one per line, and returns a list of these IDs.
+    Args:
+        packs_to_install_path (str): The file path where the pack IDs to install are stored.
+    Returns:
+        list[str]: A list of pack IDs read from the file.
+    """
+    try:
+        with open(packs_to_install_path) as pack_ids_to_install:
+            packs_to_install = [pack.rstrip() for pack in pack_ids_to_install]
+    except (FileNotFoundError, IOError) as e:
+        logging.exception(f"Error occurred while reading the file {packs_to_install_path}: {e}")
+        return []
+
+    return packs_to_install

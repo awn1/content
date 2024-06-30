@@ -9,7 +9,12 @@ function exit_on_error {
 
 echo "Starting the print test playbook summary script - Server type: ${SERVER_TYPE}, Product type: ${PRODUCT_TYPE}"
 
-python3 ./Tests/Marketplace/print_test_playbook_summary.py --artifacts-path "${ARTIFACTS_FOLDER}"
+fail_only_nightly_tests=false
+if [[ "$CI_COMMIT_BRANCH" =~ ^AUD-demisto/.* ]]; then
+  echo "in Docker auto update branch, setting fail_only_nightly_pack to True."
+  fail_only_nightly_tests=true
+fi
+python3 ./Tests/Marketplace/print_test_playbook_summary.py --artifacts-path "${ARTIFACTS_FOLDER}" --fail-only-nightly-tests "${fail_only_nightly_tests}" --product-type "${PRODUCT_TYPE}"
 summary_exit_code=$?
 
 if [ -n "${NIGHTLY}" ]; then

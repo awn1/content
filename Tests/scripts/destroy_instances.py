@@ -111,12 +111,12 @@ class LogMissingHostKeyPolicy(MissingHostKeyPolicy):
         logging.warning(f"Missing host key for {hostname}, adding it automatically.")
 
 
-def destroy_server(artifacts_dir: str, readable_role: str, role: str, server_ip: str, time_to_live: int) -> bool:
+def destroy_server(artifacts_dir: str, readable_role: str, role: str, server_ip: str, time_to_live: int | None) -> bool:
     success = True
     with SSHClient() as ssh:
         try:
-            ssh.set_missing_host_key_policy(LogMissingHostKeyPolicy())
-            ssh.connect(server_ip, username=SSH_USER)
+            ssh.set_missing_host_key_policy(LogMissingHostKeyPolicy())  # type: ignore[attr-defined]
+            ssh.connect(server_ip, username=SSH_USER)  # type: ignore[attr-defined]
             success &= chmod_logs(ssh, server_ip)
             success &= download_logs(ssh, server_ip, artifacts_dir, readable_role, role)
 
@@ -125,7 +125,8 @@ def destroy_server(artifacts_dir: str, readable_role: str, role: str, server_ip:
                 success &= shutdown(ssh, server_ip)
                 logging.warning(f'Tests passed on {readable_role}, shutting down instance.')
             elif time_to_live:
-                logging.info(f'Time to live was set to {time_to_live} minutes for server {server_ip}')
+                time_to_live_str = "{time_to_live} minutes" if time_to_live else "No TTL"
+                logging.info(f'Time to live:{time_to_live_str} for server {server_ip}')
                 success &= shutdown(ssh, server_ip, time_to_live)
             else:
                 logging.warning(f'Tests for some integration failed on {readable_role}, keeping instance alive, '
@@ -139,9 +140,11 @@ def destroy_server(artifacts_dir: str, readable_role: str, role: str, server_ip:
 def main():
     install_logging('Destroy_instances.log')
     options = options_handler()
-    time_to_live = int(os.getenv('TIME_TO_LIVE') or DEFAULT_TTL)
     start_time = datetime.utcnow()
-    logging.info(f"Starting destroy instances - environment from {options.env_file}, TTL: {time_to_live} minutes, "
+    # if no TTL is set, the default TTL is to shut down the server immediately.
+    time_to_live = None if os.getenv('TIME_TO_LIVE') == '' else int(os.getenv('TIME_TO_LIVE'))  # type: ignore[arg-type]
+    time_to_live_str = f"{time_to_live} minutes" if time_to_live else "No TTL"
+    logging.info(f"Starting destroy instances - environment from {options.env_file}, TTL:{time_to_live_str}, "
                  f"Artifacts dir: {options.artifacts_dir}")
 
     with open(options.env_file) as json_file:

@@ -34,3 +34,4 @@ include:
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.test-native-candidate.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.security-scans.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.trigger-contribution-build.yml
+  - local: .gitlab/ci/content-ci/ci/.gitlab-ci.build-machines-cleanup.yml
