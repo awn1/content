@@ -38,6 +38,7 @@
   - section_start "Granting execute permissions on files" --collapsed
   - chmod +x ./Tests/scripts/*
   - chmod +x ./Tests/Marketplace/*
+  - chmod +x ./SecretActions/SecretsBuild/*
   - section_end "Granting execute permissions on files"
 
 

@@ -8,7 +8,7 @@ import yaml
 
 from Tests.scripts.collect_tests.path_manager import PathManager
 from Tests.scripts.collect_tests.utils import find_pack_folder
-from Tests.scripts.google_secret_manager_handler import GoogleSecreteManagerModule
+from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.common import BUCKET_UPLOAD_BRANCH_SUFFIX
 from pathlib import Path
