@@ -1,4 +1,5 @@
 import argparse
+from typing import Tuple
 import json5
 import requests
 from google.api_core.exceptions import NotFound
@@ -6,6 +7,7 @@ from Tests.scripts.google_secret_manager_handler import (
     GoogleSecreteManagerModule,
     FilterLabels,
     FilterOperators,
+    SYNC_GSM_LABEL
 )
 import logging
 
@@ -14,9 +16,9 @@ CONTENT_REPO_URL = "https://api.github.com/repos/demisto/content"
 GET_PRS_ITERATIONS = 3
 
 
-def get_latest_merged() -> list[str]:
+def get_latest_merged() -> Tuple[list[int], list[int]]:
     """
-    Get the latest merged PRs
+    Get the latest merged PR numbers, divided into 2 lists
     :return: A list of the latest PRs from Github
     """
     latest_prs = []
@@ -31,14 +33,48 @@ def get_latest_merged() -> list[str]:
             "state": "closed",
         }
         try:
-            response = requests.request("GET", url, params=params, verify=False)  # type: ignore
+            response = requests.request(
+                "GET", url, params=params, verify=False)  # type: ignore
             response.raise_for_status()
         except Exception as exc:
-            raise Exception(f"Could not get merged PRs from Git API, error: {exc}")
+            raise Exception(
+                f"Could not get merged PRs from Git API, error: {exc}")
         latest_prs.extend(response.json())
+    pr_numbers_with_label, pr_numbers_without_label = filter_pr_by_label(
+        latest_prs)
+    return pr_numbers_with_label, pr_numbers_without_label
 
-    latest_prs_names = [p.get("head").get("ref") for p in latest_prs]
-    return latest_prs_names
+
+def filter_pr_by_label(latest_prs: list[dict]):
+    """Filter the pr list by a the SYNC_GSM_LABEL label
+
+    Args:
+        latest_prs (list[dict]): A list of the latest PRs
+
+    """
+    pr_numbers_with_label = []
+    pr_numbers_without_label = []
+    for pr in latest_prs:
+        pr_number = pr.get("number")
+        if does_pr_contain_gsm_label(pr):
+            pr_numbers_with_label.append(pr_number)
+        else:
+            pr_numbers_without_label.append(pr_number)
+
+    return pr_numbers_with_label, pr_numbers_without_label
+
+
+def does_pr_contain_gsm_label(pr: dict):
+    """Returns true if pr contains the 'sync-gsm' label, else false
+    Args:
+        pr (dict): pr details
+    """
+    labels = pr.get('labels', [])
+    for label_details in labels:
+        if label_details.get('name') == SYNC_GSM_LABEL:
+            return True
+
+    return False
 
 
 def merge_dev_secrets(
@@ -60,7 +96,7 @@ def merge_dev_secrets(
 
         merged_dev_secrets_names.append(dev_secret_name)
         main_secret_name = dev_secret_name.split("__", 1)[1]
-        labels_to_remove = ["dev", "branch"]
+        labels_to_remove = ["dev", "pr_number"]
         main_secret_labels = {
             key: value
             for key, value in dev_secret_labels.items()
@@ -68,7 +104,8 @@ def merge_dev_secrets(
         }
         try:
             # Checks if the main secret exist in our store
-            secret_conf.get_secret(options.gsm_project_id_prod, main_secret_name)
+            secret_conf.get_secret(
+                options.gsm_project_id_prod, main_secret_name)
         except NotFound:
             # Adding new secret to main store
             secret_conf.create_secret(
@@ -90,30 +127,42 @@ def merge_dev_secrets(
     return merged_dev_secrets_names
 
 
-def get_dev_secrets_to_merge(
-    latest_pr_merges: list[str], dev_secrets: list[dict]
-) -> list[dict]:
-    """
-    Returns the dev secret that should be merged to the main store
-    :param latest_pr_merges: A list of the recent PRs that had been merged
-    :param dev_secrets: A list of dev secrets from our dev store
-    :return: A list of secrets from our dev store that should be merged to the main store
-    """
+def filter_secrets_by_pr_label(dev_secrets: list[dict], merged_pr_numbers_with_label: list[int],
+                               merged_pr_numbers_without_label: list[int]):
+    """Returns two lists of dev secrets that should be merged to prod, and dev secrets that should be deleted"""
+
     secrets_to_update = []
-    merged_branches = [
-        GoogleSecreteManagerModule.convert_to_gsm_format(p) for p in latest_pr_merges
-    ]
+    secrets_to_delete = []
     for secret in dev_secrets:
-        if secret.get("labels", {}).get(
-            "branch"
-        ) in merged_branches and validate_secret(
-            secret, ("name", "params")  # type: ignore
-        ):
-            secrets_to_update.append(secret)
+        try:
+            pr_number = int(secret.get("labels", {}).get("pr_number"))
+            if pr_number in merged_pr_numbers_with_label and validate_secret(secret, ("name", "params")  # type: ignore
+                                                                             ):
+                secrets_to_update.append(secret)
+                logging.info(
+                    f'Collected the secret "{secret.get("secret_name")}" from dev in order to '
+                    'merge it to prod and to delete it from dev'
+                )
+
+            if pr_number in merged_pr_numbers_without_label:
+                secrets_to_delete.append(secret)
+                logging.info(
+                    f'Collected the secret "{secret.get("secret_name")}" from dev in order to delete it from dev'
+                )
+        except TypeError:
             logging.info(
-                f'Collected the secret "{secret.get("secret_name")}" from dev in order to merge it to prod'
+                f'No label of "pr_number" was found, skipping the secret {secret.get("secret_name")}.'
             )
-    return secrets_to_update
+    return secrets_to_update, secrets_to_delete
+
+
+def get_secrets_name(dev_secrets: list[dict]):
+    """Returns a list of the secrets name from a list of secrets"""
+    secrets_name = []
+    for dev_secret in dev_secrets:
+        secrets_name.append(dev_secret.get('secret_name'))
+
+    return secrets_name
 
 
 def delete_dev_secrets(
@@ -145,7 +194,8 @@ def validate_secret(secret: dict, attr_validation: ()) -> bool:  # type: ignore
         json5.dumps(secret)
     except Exception as e:
         logging.error(
-            f'Could not convert the secret "{secret.get("secret_name")}" to json5,'  # type: ignore
+            # type: ignore
+            f'Could not convert the secret "{secret.get("secret_name")}" to json5,'
             f"got the following error: {str(e)}"  # type: ignore
         )
         return False
@@ -153,7 +203,8 @@ def validate_secret(secret: dict, attr_validation: ()) -> bool:  # type: ignore
     missing_attrs = [attr for attr in attr_validation if attr not in secret]
     if missing_attrs:
         logging.error(
-            f'Missing mandatory properties: {",".join(missing_attrs)}'  # type: ignore
+            # type: ignore
+            f'Missing mandatory properties: {",".join(missing_attrs)}'
             f' for the secret "{secret.get("secret_name")}"'  # type: ignore
         )
         return False
@@ -163,8 +214,10 @@ def validate_secret(secret: dict, attr_validation: ()) -> bool:  # type: ignore
 def run(options: argparse.Namespace):
     try:
         secret_conf = GoogleSecreteManagerModule(options.service_account)
-        latest_pr_merges = get_latest_merged()
-        logging.info(f"The latest closed branches are: {latest_pr_merges}")
+
+        pr_numbers_with_label, pr_numbers_without_label = get_latest_merged()
+        logging.info(
+            f"The latest closed PR numbers are: {pr_numbers_with_label + pr_numbers_without_label}")
         secrets_filter = {
             FilterLabels.SECRET_ID: FilterOperators.NOT_NONE,
             FilterLabels.IGNORE_SECRET: FilterOperators.NONE,
@@ -174,13 +227,17 @@ def run(options: argparse.Namespace):
         dev_secrets = secret_conf.list_secrets(
             options.gsm_project_id_dev, secrets_filter, with_secrets=True
         )
-        dev_secrets_to_merge = get_dev_secrets_to_merge(latest_pr_merges, dev_secrets)
+        dev_secrets_to_merge, dev_secrets_to_delete = filter_secrets_by_pr_label(dev_secrets,
+                                                                                 pr_numbers_with_label,
+                                                                                 pr_numbers_without_label)
         if len(dev_secrets_to_merge) == 0:
             logging.info("No secrets to merge for this master build")
         secrets_to_delete = merge_dev_secrets(
             dev_secrets_to_merge, options, secret_conf
         )
-        delete_dev_secrets(secrets_to_delete, secret_conf, options.gsm_project_id_dev)  # type: ignore
+        secrets_to_delete.extend(get_secrets_name(dev_secrets_to_delete))
+        delete_dev_secrets(secrets_to_delete, secret_conf,
+                           options.gsm_project_id_dev)  # type: ignore
     except Exception as e:
         logging.error(f"Could not merge secrets, got the error: {e}")
         raise e
