@@ -1941,6 +1941,58 @@ class TestImagesUpload:
         assert task_status
         assert dummy_pack._uploaded_dynamic_dashboard_images == ['content/images/dark/Integration Id.svg']
 
+    def test_upload_relative_path_markdown_images(self, mocker, dummy_pack: Pack):
+        """
+        Given:
+            - image dict.
+        When:
+            - Calling upload_relative_path_markdown_images.
+        Then:
+            - Ensure the function returned True when all images were extracted.
+        """
+        images = {
+            "TestPack": {
+                "integration_description_images": [
+                    {
+                        "final_dst_image_path": "https://storage.googleapis.com/marketplace-dist/content/packs/NutanixHypervisor/integration_description_images/Alert_Policy.png",
+                        "relative_image_path": "NutanixHypervisor/integration_description_images/Alert_Policy.png",
+                        "image_name": "Alert_Policy.png"
+                    }
+                ]
+            }
+        }
+        dummy_storage_bucket = mocker.MagicMock()
+        mocker.patch.object(dummy_pack, "process_and_upload_image", return_value=True)
+        task_status = dummy_pack.upload_relative_path_markdown_images(images, dummy_storage_bucket)
+
+        assert task_status
+
+    def test_upload_relative_path_markdown_images_failure(self, mocker, dummy_pack: Pack):
+        """
+        Given:
+            - image dict.
+        When:
+            - Calling upload_relative_path_markdown_images.
+        Then:
+            - Ensure the function returned False when upload failed.
+        """
+        images = {
+            "TestPack": {
+                "integration_description_images": [
+                    {
+                        "final_dst_image_path": "https://storage.googleapis.com/marketplace-dist/content/packs/NutanixHypervisor/integration_description_images/Alert_Policy.png",
+                        "relative_image_path": "NutanixHypervisor/integration_description_images/Alert_Policy.png",
+                        "image_name": "Alert_Policy.png"
+                    }
+                ]
+            }
+        }
+        dummy_storage_bucket = mocker.MagicMock()
+        mocker.patch.object(dummy_pack, "process_and_upload_image", side_effect=Exception())
+        task_status = dummy_pack.upload_relative_path_markdown_images(images, dummy_storage_bucket)
+
+        assert not task_status
+
     def test_copy_dynamic_dashboard_images(self, mocker, dummy_pack: Pack):
         """
         Given:

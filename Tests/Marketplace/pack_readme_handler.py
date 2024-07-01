@@ -9,7 +9,7 @@ from Tests.scripts.utils import logging_wrapper as logging
 
 
 def download_markdown_images_from_artifacts(
-    markdown_urls_data_dict_path: Path, storage_bucket, storge_base_path: str
+    markdown_urls_data_dict_path: Path, storage_bucket, storage_base_path: str
 ):
     """
     Iterates over the markdown_url_data_list and calls the download_markdown_image_from_url_and_upload_to_gcs
@@ -17,7 +17,7 @@ def download_markdown_images_from_artifacts(
         markdown_urls_data_dict_path (Path): A path to a json file generate in SDK prepare-content of all markdown images
                                             that need to be uploaded to GCS.
         storage_bucket: The storage bucket to upload the images to.
-        storge_base_path: The path to the Pack dir in the storage.
+        storage_base_path: The path to the Pack dir in the storage.
     """
     with open(markdown_urls_data_dict_path) as f:
         # reading the file generated in the sdk of all the packs readme images data.
@@ -40,7 +40,7 @@ def download_markdown_images_from_artifacts(
                     original_markdown_url,
                     relative_image_path,
                     image_name,
-                    storge_base_path,
+                    storage_base_path,
                     storage_bucket,
                 )
 

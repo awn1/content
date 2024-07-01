@@ -26,7 +26,8 @@ import yaml
 from google.cloud import storage
 
 import Tests.Marketplace.marketplace_statistics as mp_statistics
-from Tests.Marketplace.marketplace_constants import XSOAR_ON_PREM_MP, XSOAR_SAAS_MP, PackFolders, Metadata, GCPConfig, \
+from Tests.Marketplace.marketplace_constants import MARKDOWN_IMAGES_RELATIVE_PATH_IMAGE_KEYS, XSOAR_ON_PREM_MP, \
+    XSOAR_SAAS_MP, PackFolders, Metadata, GCPConfig, \
     BucketUploadFlow, PACKS_FOLDER, PackTags, PackIgnored, Changelog, PackStatus, CONTENT_ROOT_PATH, XSOAR_MP, \
     XSIAM_MP, XPANSE_MP, TAGS_BY_MP, RN_HEADER_TO_ID_SET_KEYS
 from demisto_sdk.commands.common.constants import (MarketplaceVersions, MarketplaceVersionToMarketplaceName,
@@ -2248,6 +2249,56 @@ class Pack:
         finally:
             return task_status
 
+
+    def upload_relative_path_markdown_images(
+        self, markdown_relative_paths_data_dict: dict, storage_bucket
+        ):
+        """
+        Iterates over the markdown_url_data_list and calls the download_markdown_image_from_url_and_upload_to_gcs
+        Args:
+            markdown_relative_paths_data_dict (dict): the dict generated in SDK prepare-content of all markdown images
+                                                that need to be uploaded to GCS.
+            storage_bucket: The storage bucket to upload the images to.
+        """
+        pack_markdown_images = markdown_relative_paths_data_dict.get(self.name)
+        if pack_markdown_images:
+            for key in MARKDOWN_IMAGES_RELATIVE_PATH_IMAGE_KEYS:
+                if current_markdown_file_images := pack_markdown_images.get(key, []):
+                    for image in current_markdown_file_images:
+                        try:
+                            self.process_and_upload_image(image, storage_bucket)
+                        except Exception:
+                            logging.exception(f"Failed uploading {self.name} pack author image.")
+                            return False
+        else:
+            logging.debug(f"No markdown relative path images were found in pack {self.name}")
+        return True
+
+    def process_and_upload_image(self, image: dict, storage_bucket):
+        """
+        Extract all the relevant data from the image dict and upload the image.
+
+        Args:
+            image (dict): The image info.
+            storage_bucket: The storage bucket to upload the images to.
+        """
+        final_dst_image_path = str(image.get("final_dst_image_path"))
+        image_name = str(image.get("image_name"))
+        logging.debug(f"preparing to upload image {image_name} "
+                        "to image_final_storage_des ={final_dst_image_path}")
+        logging.debug(f"Uploading markdown relative path image for pack '{self.name}'")
+        image_path = os.path.join(self.path, "doc_files", f"{image_name}.png")  # disable-secrets-detection
+
+        if os.path.exists(image_path):
+            markdown_image_blob = storage_bucket.blob(final_dst_image_path)
+            with open(image_path, "rb") as image_file:
+                markdown_image_blob.upload_from_file(image_file)
+            logging.debug(f"Uploaded successfully markdown relative path image for pack '{self.name}'")
+
+        else:
+            logging.debug(f"Skipping uploading of {self.name} pack author image. "
+                        f"The pack is defined as {self.support_type} support type")
+
     def copy_author_image(self, production_bucket, build_bucket, images_data, storage_base_path,
                           build_bucket_base_path):
         """ Copies pack's author image from the build bucket to the production bucket
@@ -2297,7 +2348,7 @@ class Pack:
             logging.debug(f"No added/modified author image was detected in {self._pack_name} pack.")
             return True
 
-    def upload_images(self, storage_bucket, storage_base_path, marketplace):
+    def upload_images(self, storage_bucket, storage_base_path, marketplace, markdown_relative_path_data_dict):
         """
         Upload the images related to the pack.
         The image is uploaded in the case it was modified, OR if this is the first time the current pack is being
@@ -2305,6 +2356,7 @@ class Pack:
         Args:
             storage_bucket (google.cloud.storage.bucket.Bucket): gcs bucket where author image will be uploaded.
             storage_base_path (str): the path under the bucket to upload to.
+            markdown_relative_path_data_dict (dict): The dict that contains all the relative paths images sorted from SDK.
         Returns:
             True if the images were successfully uploaded, false otherwise.
 
@@ -2324,6 +2376,12 @@ class Pack:
         task_status = self.upload_preview_images(storage_bucket, storage_base_path)
         if not task_status:
             self._status = PackStatus.FAILED_PREVIEW_IMAGES_UPLOAD.name  # type: ignore[misc]
+            self.cleanup()
+            return False
+
+        task_status = self.upload_relative_path_markdown_images(markdown_relative_path_data_dict, storage_bucket)
+        if not task_status:
+            self._status = PackStatus.FAILED_markdown_IMAGE_UPLOAD.name  # type: ignore[misc]
             self.cleanup()
             return False
 

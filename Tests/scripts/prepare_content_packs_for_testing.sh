@@ -97,6 +97,7 @@ echo "Updating the following content packs (metadata changes): ${CONTENT_PACKS_T
 
 # Workaround for the SDK hard-coded path.
 mv "${ARTIFACTS_FOLDER}/markdown_images.json" "${ARTIFACTS_FOLDER_SERVER_TYPE}/markdown_images.json"
+mv "${ARTIFACTS_FOLDER}/markdown_relatve_path_images.json" "${ARTIFACTS_FOLDER_SERVER_TYPE}/markdown_relatve_path_images.json"
 
 UPLOAD_SPECIFIC_PACKS=false
 if [ -z "${BUCKET_UPLOAD}" ] && [ -z "${FORCE_BUCKET_UPLOAD}" ]; then
