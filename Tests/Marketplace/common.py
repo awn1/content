@@ -281,7 +281,7 @@ def fetch_pack_ids_to_install(packs_to_install_path: str) -> list[str]:
         with open(packs_to_install_path) as pack_ids_to_install:
             packs_to_install = [pack.rstrip() for pack in pack_ids_to_install]
     except (FileNotFoundError, IOError) as e:
-        logging.exception(f"Error occurred while reading the file {packs_to_install_path}: {e}")
+        logging.info(f"Error occurred while reading the file {packs_to_install_path}: {e}")
         return []
 
     return packs_to_install
