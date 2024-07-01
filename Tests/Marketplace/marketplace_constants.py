@@ -380,6 +380,7 @@ class PackStatus(enum.Enum):
     FAILED_PREVIEW_IMAGES_UPLOAD = "Failed to upload pack preview images to gcs"
     FAILED_DYNAMIC_DASHBOARD_IMAGES_UPLOAD = "Failed to upload pack dynamic dashboard images to gcs"
     FAILED_README_IMAGE_UPLOAD = "Failed to upload readme images to gcs"
+    FAILED_markdown_IMAGE_UPLOAD = "Failed to upload markdown images to gcs"
     FAILED_METADATA_PARSING = "Failed to parse and create metadata.json"
     FAILED_COLLECT_ITEMS = "Failed to collect pack content items data"
     FAILED_ZIPPING_PACK_ARTIFACTS = "Failed zipping pack artifacts"
@@ -518,3 +519,5 @@ ITEMS_NAMES_TO_DISPLAY_MAPPING = {
     CONTENT_ITEM_NAME_MAPPING[PackFolders.LAYOUT_RULES.value]: "Layout Rule",
     CONTENT_ITEM_NAME_MAPPING[PackFolders.ASSETS_MODELING_RULES.value]: "Assets Modeling Rule"
 }
+
+MARKDOWN_IMAGES_RELATIVE_PATH_IMAGE_KEYS = ["readme_images", "integration_description_images"]

@@ -918,6 +918,7 @@ def main():
     storage_bucket = storage_client.bucket(storage_bucket_name)
     uploaded_packs_dir = Path(option.artifacts_folder_server_type) / 'uploaded_packs'
     markdown_images_data = Path(option.artifacts_folder_server_type) / BucketUploadFlow.MARKDOWN_IMAGES_ARTIFACT_FILE_NAME
+    markdown_relative_images_data = Path(option.artifacts_folder_server_type) / "markdown_relatve_path_images.json"
     uploaded_packs_dir.mkdir(parents=True, exist_ok=True)
     # Relevant when triggering test upload flow
     if storage_bucket_name:
@@ -958,6 +959,10 @@ def main():
     # initiate the statistics handler for marketplace packs
     statistics_handler = StatisticsHandler(service_account, index_folder_path)
 
+    with open(markdown_relative_images_data) as f:
+        # reading the file generated in the sdk of all the packs readme images data.
+        markdown_relative_path_data_dict = json.load(f)
+
     # iterating over packs that are for the current marketplace
     for pack in packs_objects_list:
         logging.debug(f"Starts iterating over pack '{pack.name}' which is{' not ' if not pack.is_modified else ' '}modified")
@@ -997,7 +1002,7 @@ def main():
                 continue
 
             # upload author integration images and readme images
-            if not pack.upload_images(storage_bucket, storage_base_path, marketplace):
+            if not pack.upload_images(storage_bucket, storage_base_path, marketplace, markdown_relative_path_data_dict):
                 continue
 
             if not pack.sign_and_zip_pack(signature_key, uploaded_packs_dir):
@@ -1071,7 +1076,8 @@ def main():
                                            all_packs_dict)
 
     markdown_images_dict = download_markdown_images_from_artifacts(
-        markdown_images_data, storage_bucket=storage_bucket, storge_base_path=storage_base_path)
+        markdown_images_data, storage_bucket=storage_bucket, storage_base_path=storage_base_path)
+
 
     # get the lists of packs divided by their status
     successful_packs, successful_uploaded_dependencies_zip_packs, skipped_packs, failed_packs = get_packs_summary(
