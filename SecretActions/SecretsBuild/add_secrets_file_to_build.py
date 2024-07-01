@@ -96,15 +96,25 @@ def get_secrets_from_gsm(branch_name: str, options: argparse.Namespace, yml_pack
         f'Finished getting all secrets from prod, got {len(master_secrets)} master secrets')
 
     if branch_name != 'master':
-        github_client = GithubClient(options.github_token)
-        branch_name = normalize_branch_name(branch_name)
-        pr_number = github_client.get_pr_number_from_branch_name(branch_name)
-        logging.info(
-            f'Getting secrets for the {branch_name} branch with pr number: {pr_number}')
-        branch_secrets = secret_conf.get_secrets_from_project(
-            options.gsm_project_id_dev, pr_number, is_dev_branch=True)
-        logging.info(
-            f'Finished getting all branch secrets, got {len(branch_secrets)} branch secrets')
+        pr_number = 0
+        try:
+            github_client = GithubClient(options.github_token)
+            branch_name = normalize_branch_name(branch_name)
+            pr_number = github_client.get_pr_number_from_branch_name(branch_name)
+        except Exception as e:
+            if 'Did not find the PR' in str(e):
+                logging.info(f'Did not find the associated PR with the branch {branch_name}, you may be running from infra.' \
+                             'Will only use the secrets from prod')
+            else:
+                logging.info(f'Got the following error when trying to contact Github: {str(e)}')
+
+        if pr_number:
+            logging.info(
+                f'Getting secrets for the {branch_name} branch with pr number: {pr_number}')
+            branch_secrets = secret_conf.get_secrets_from_project(
+                options.gsm_project_id_dev, pr_number, is_dev_branch=True)
+            logging.info(
+                f'Finished getting all branch secrets, got {len(branch_secrets)} branch secrets')
 
     if branch_secrets:
         for dev_secret in branch_secrets:
