@@ -10,6 +10,7 @@ SPECIAL_CHARS = [" ", "(", "(", ")", ".", "", "+", "="]
 GSM_MAXIMUM_LABEL_CHARS = 63
 DEV_PROJECT_ID = "269994096945"
 DATE_FORMAT = '%Y-%m-%d'
+SYNC_GSM_LABEL = 'sync-gsm'
 
 
 class FilterLabels(Enum):
@@ -18,6 +19,7 @@ class FilterLabels(Enum):
     SECRET_ID = "secret_id"
     IS_DEV_BRANCH = "dev"
     BRANCH_NAME = "branch"
+    PR_NUMBER = "pr_number"
 
     def __str__(self):
         return self.value
@@ -65,7 +67,6 @@ class GoogleSecreteManagerModule:
             logging.debug("Parsed successfully.")
 
             return datetime.strftime(d, DATE_FORMAT) if d else None
-
 
     def __init__(self, service_account_file: str = None, project_id=DEV_PROJECT_ID):
         self.client = self.create_secret_manager_client(
@@ -143,7 +144,8 @@ class GoogleSecreteManagerModule:
                 )
             secret_id = labels.get("secret_id", "no_secret_id").split("__")[0]
             logging.debug(f"Getting the secret: {secret.name}")
-            search_ids = [self.convert_to_gsm_format(s.lower()) for s in name_filter]
+            search_ids = [self.convert_to_gsm_format(
+                s.lower()) for s in name_filter]
             try:
                 # Check if the secret comply to the function filter params
                 filter = [
@@ -280,5 +282,21 @@ class GoogleSecreteManagerModule:
         """
         parent = f"projects/{project_id}"
         return list(
-            self.client.list_secrets(request={"parent": parent, "filter": query})
+            self.client.list_secrets(
+                request={"parent": parent, "filter": query})
         )
+
+    def get_secrets_from_project(self, project_id: str, pr_number: int = None, is_dev_branch: bool = False):
+        """getting the secrets from a given project id. Can also get a secret by stating a pr number
+        """
+        labels_filter = {FilterLabels.SECRET_ID: FilterOperators.NOT_NONE,
+                         FilterLabels.IGNORE_SECRET: FilterOperators.NONE,
+                         FilterLabels.SECRET_MERGE_TIME: FilterOperators.NONE}
+        labels_filter[FilterLabels.IS_DEV_BRANCH] = FilterOperators.NOT_NONE if is_dev_branch else FilterOperators.NONE
+        if pr_number:
+            labels_filter[FilterLabels.PR_NUMBER] = f'{FilterOperators.EQUALS}"{pr_number}"'
+
+        secrets = self.list_secrets(
+            project_id, labels_filter, with_secrets=True)
+
+        return secrets
