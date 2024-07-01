@@ -1,7 +1,7 @@
 import argparse
 import json
 import os
-from demisto_sdk.commands.common.constants import MarketplaceVersionToMarketplaceName
+from demisto_sdk.commands.common.constants import MarketplaceVersionToMarketplaceName, MarketplaceVersions
 from Tests.Marketplace.marketplace_services import init_storage_client, load_json
 from Tests.Marketplace.marketplace_constants import GCPConfig
 from Tests.scripts.utils.log_util import install_logging
@@ -25,13 +25,14 @@ def extract_failed_to_upload(packs_results_upload: dict) -> set[str]:
     return failed_packs
 
 
-def upload_to_bucket(service_account, marketplace, failed_packs_data):
+def upload_to_bucket(service_account: str, failed_packs_data: dict,
+                     marketplace: MarketplaceVersions = MarketplaceVersions.XSOAR):
     """
     Uploads content status data to the bucket name based on the marketplace version.
 
     Args:
         service_account (str): Path to the service account JSON key file.
-        marketplace (str): The marketplace version to determine the bucket name.
+        marketplace (MarketplaceVersions): The marketplace version to determine the bucket name.
         failed_packs_data (dict): The failed_packs_data to be uploaded to the bucket.
 
     Raises:
@@ -66,7 +67,7 @@ def main():
     option = option_handler()
 
     service_account = option.service_account
-    marketplace = option.marketplace
+    marketplace = MarketplaceVersions(option.marketplace)
 
     failed_packs_data = {}
     packs_to_upload, packs_to_update_metadata = get_packs_ids_to_upload_and_update(option.packs_to_upload_file)
@@ -82,7 +83,7 @@ def main():
             "packs_to_update_metadata": list(failed_packs_upload.intersection(packs_to_update_metadata))
         }
 
-    upload_to_bucket(service_account, marketplace, failed_packs_data)
+    upload_to_bucket(service_account, failed_packs_data, marketplace)
 
 
 if __name__ == '__main__':
