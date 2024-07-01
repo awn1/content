@@ -3,7 +3,7 @@ from typing import Tuple
 import json5
 import requests
 from google.api_core.exceptions import NotFound
-from Tests.scripts.google_secret_manager_handler import (
+from SecretActions.google_secret_manager_handler import (
     GoogleSecreteManagerModule,
     FilterLabels,
     FilterOperators,

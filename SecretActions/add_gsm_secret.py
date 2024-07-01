@@ -7,7 +7,7 @@ import logging
 import json5
 from google.api_core.exceptions import NotFound, PermissionDenied, InvalidArgument
 from google.auth.exceptions import DefaultCredentialsError
-# not added to build:
+
 from google_secret_manager_handler import GoogleSecreteManagerModule, DEV_PROJECT_ID, ExpirationData, SYNC_GSM_LABEL
 from Tests.scripts.github_client import GithubPullRequest, GithubClient
 

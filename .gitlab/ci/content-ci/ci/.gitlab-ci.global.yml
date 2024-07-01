@@ -209,14 +209,13 @@
     cp -r ./infra/xsoar_ng_servers.json $XSOAR_NG_SERVERS_PATH
     cp -r ./infra/.gitlab/ci/name_mapping.json "${CI_PROJECT_DIR}/name_mapping.json"
 
-    cp ./infra/SecretActions/google_secret_manager_handler.py ./Tests/scripts
-    cp ./infra/SecretActions/SecretsBuild/add_secrets_file_to_build.py ./Tests/scripts
-    cp ./infra/SecretActions/SecretsBuild/merge_and_delete_dev_secrets.py ./Tests/scripts
     cp -r ./infra/demisto.lic ${DEMISTO_LIC_PATH}
     cp -r ./infra/signDirectory ${DEMISTO_PACK_SIGNATURE_UTIL_PATH}
 
     cp -rf ./infra/Tests/* ./Tests && rm -R ./infra/Tests/*
     cp -rf ./infra/Utils/* ./Utils && rm -R ./infra/Utils/*
+    mkdir -p ./SecretActions
+    cp -rf ./infra/SecretActions/* ./SecretActions && rm -R ./infra/SecretActions/*
     mv ./infra/gcp ./gcp
     rm -rf ./infra
 
@@ -236,7 +235,7 @@
 .secrets-fetch:
   - section_start "Secrets Fetch" --collapsed
   - SECRET_CONF_PATH=$(cat secret_conf_path)
-  - python3 ./Tests/scripts/add_secrets_file_to_build.py -sa "$GSM_SERVICE_ACCOUNT" -sf "$SECRET_CONF_PATH" -u "$DEMISTO_USERNAME" -p "$DEMISTO_PASSWORD" --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN" >> "${ARTIFACTS_FOLDER}/logs/handle_secrets.log"
+  - python3 ./SecretActions/SecretsBuild/add_secrets_file_to_build.py -sa "$GSM_SERVICE_ACCOUNT" -sf "$SECRET_CONF_PATH" -u "$DEMISTO_USERNAME" -p "$DEMISTO_PASSWORD" --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN" >> "${ARTIFACTS_FOLDER}/logs/handle_secrets.log"
   - section_end "Secrets Fetch"
 
 .check_build_files_are_up_to_date: &check_build_files_are_up_to_date
@@ -310,6 +309,7 @@
   - section_start "Granting execute permissions on files" --collapsed
   - chmod +x ./Tests/scripts/*
   - chmod +x ./Tests/Marketplace/*
+  - chmod +x ./SecretActions/SecretsBuild/*
   - section_end "Granting execute permissions on files"
 
 .get_contribution_pack: &get_contribution_pack
