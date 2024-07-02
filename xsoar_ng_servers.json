@@ -1,4 +1,19 @@
 {
+  "__comment__": {
+    "dictionary key" : "mapping to the instance name",
+    "ui_url": "The URL to access the instance in the browser",
+    "instance_name": "The name of the instance",
+    "x-xdr-auth-id": "The authentication ID for the instance",
+    "base_url": "The base URL for the instance",
+    "xsiam_version": "The version of the XSOAR instance",
+    "demisto_version": "The version of the Demisto instance",
+    "enabled": "Whether the instance is enabled",
+    "flow_type": "The flow type of the instance: (nightly, upload, build, etc.)",
+    "agent_host_name": "The name of the agent host",
+    "agent_host_ip": "The IP address of the agent host",
+    "build_machine": "Whether the instance is a build machine",
+    "comment": "Any additional comments"
+  },
   "qa2-test-9994026732011": {
     "ui_url": "https://viso-8tzzjknk3azmghvmpu3g7e.crtx-qa2-uat.us.paloaltonetworks.com/",
     "instance_name": "qa2-test-9994026732011",

@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
+from typing import Optional
 
 import pandas as pd
 import requests
@@ -70,6 +71,34 @@ FAILED_TO_MSG = {
 # This is the github username of the bot (and its reviewer) that pushes contributions and docker updates to the content repo.
 CONTENT_BOT = 'content-bot'
 CONTENT_BOT_REVIEWER = 'github-actions[bot]'
+
+STRING_TO_BOOL_MAP = {
+    "y": True,
+    "1": True,
+    "yes": True,
+    "true": True,
+    "True": True,
+    "n": False,
+    "0": False,
+    "no": False,
+    "false": False,
+    "False": False,
+    "t": True,
+    "f": False,
+}
+
+
+def string_to_bool(
+        input_: Any,
+        default_when_empty: Optional[bool] = None,
+) -> bool:
+    try:
+        return STRING_TO_BOOL_MAP[str(input_).lower()]
+    except (KeyError, TypeError):
+        if input_ in ("", None) and default_when_empty is not None:
+            return default_when_empty
+
+    raise ValueError(f"cannot convert {input_} to bool")
 
 
 def get_instance_directories(artifacts_path: Path) -> dict[str, Path]:
@@ -263,6 +292,7 @@ def is_tpb_part_of_nightly(playbook:str, config: TestConf, tpb_dependencies_pack
     """
     pack = tpb_dependencies_packs.get(playbook, {}).get("pack", "")
     return pack in config.nightly_packs or playbook in config.non_api_tests
+
 
 def get_all_failed_results(results: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
     failed_results = {}

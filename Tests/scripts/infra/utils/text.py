@@ -95,7 +95,7 @@ def convert_dot_notation_to_dict(*args) -> dict:
         convert_dot_notation_to_dict(key, key2, key3)
         >> {'foo': {'bar': {'baz': 'baz_value', 'baq': 'baq_value'}, 'baq': 'name_value'}}
     """
-    res = {}
+    res: dict[Any, Any] = {}
     for k, v in args:
         res_tmp = res
         levels = k.split(".")

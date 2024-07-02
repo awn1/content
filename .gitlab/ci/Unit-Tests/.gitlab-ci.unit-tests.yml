@@ -25,6 +25,7 @@
     - !reference [.poetry-install]
     - !reference [.granting_execute_permissions_on_files]
     - !reference [.setup-artifactory]
+    - !reference [.create_artifacts_folder]
 
 
 unit-tests:

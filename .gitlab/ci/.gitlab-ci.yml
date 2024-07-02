@@ -18,21 +18,16 @@ stages:
   - content-build
   - create-release-branch
   - trigger-nightlies
+  - trigger-dev-nightly-builds
   - wait-for-build-to-finish
   - release-flow
   - cleanup
   - fan-in
 
-variables:
-  DOCKER_IO: "docker.io" # defined in the project level CI/CD variables
-  POETRY_VERSION: "1.8.2"
-  INSTALL_POETRY: "true"
-  PYTHONPATH: "${CI_PROJECT_DIR}"
-  ARTIFACTORY_ENABLED: "true"
-  PIPELINE_JOBS_FOLDER: "${CI_PROJECT_DIR}/pipeline_jobs_folder"
-
 include:
   - local: .gitlab/ci/global.yml
+  - local: .gitlab/ci/workflow.yml
+  - local: .gitlab/ci/variables.yml
   - local: .gitlab/ci/server-images-builds.yml
   - local: .gitlab/ci/blacklist-validation.yml
   - local: .gitlab/ci/bucket-logs.yml
@@ -43,3 +38,4 @@ include:
   - local: .gitlab/ci/sdk-release-ci/.gitlab-ci.sdk-release.yml
   - local: .gitlab/ci/build-machines-cleanup/.gitlab-ci.build-machines-cleanup.yml
   - local: .gitlab/ci/Unit-Tests/.gitlab-ci.unit-tests.yml
+  - local: .gitlab/ci/trigger-dev-nightly-builds/.trigger-dev-nightly-builds.yml

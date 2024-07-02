@@ -91,6 +91,31 @@
             font-size: 16px;
         }
 
+        .class-ttl-ok {
+            color: green;
+            font-weight: bold;
+        }
+
+        .class-ttl-expired {
+            color: red;
+            font-weight: bold;
+        }
+
+        .class-ttl-na {
+            color: grey;
+            font-weight: bold;
+        }
+
+        .class-tenant_status-ok {
+            color: green;
+            font-weight: bold;
+        }
+
+        .class-tenant_status-error {
+            color: red;
+            font-weight: bold;
+        }
+
         .class-enabled-True {
             color: green;
             font-weight: bold;
@@ -365,13 +390,21 @@
                             {% else %}
                                 {% set data_order = -1 %}
                             {% endif %}
+
+                            {% if 'column_class' in record[column.key] %}
+                                {% set column_class = record[column.key]['column_class'] %}
+                            {% else %}
+                                {% set column_class = display_value | replace("/", "_") %}
+                            {% endif %}
+
                         {% else %}
                             {% set display_value = '' %}
                             {% set data_order = -1 %}
+                            {% set column_class = '' %}
                         {% endif %}
                         <td {% if data_order is not none %}data-order="{{ data_order }}"{% endif %}
                             {% if 'sort' in record[column.key] %}data-sort="{{ record[column.key]['sort'] }}"{% endif %}
-                            {% if column.add_class %}class="class-{{ column.key }}-{{ display_value | replace("/", "_") }}"{% endif %}>
+                            {% if column.add_class %}class="class-{{ column.key }}-{{column_class}}"{% endif %}>
                                 {{ display_value }}
                         </td>
                     {% endfor %}

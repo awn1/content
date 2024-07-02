@@ -241,7 +241,7 @@
 .check_build_files_are_up_to_date: &check_build_files_are_up_to_date
   - section_start "Check Build Files Are Up To Date"
   - |
-    if [[ -n "${DEMISTO_SDK_NIGHTLY}" ]] || [[ -n "${NIGHTLY}" ]] || [[ -n "${BUCKET_UPLOAD}" ]] || [[ -n "${SLACK_JOB}" ]] || [[ "${BUILD_MACHINES_CLEANUP}" == "true" ]] || [[ "${DELETE_MISMATCHED_BRANCHES}" == "true" ]] || [[ "${SECURITY_SCANS}" == "true" ]] || [[ "${DEMISTO_TEST_NATIVE_CANDIDATE}" == "true" ]] || [[ "${CI_COMMIT_BRANCH}" == "master" ]] || [[ "${SDK_RELEASE}" == "true" ]] || [[ "${TRIGGER_CONTRIBUTION_BUILD}" == "true" ]]; then
+    if [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]] || [[ "${IS_NIGHTLY}" == "true" ]] || [[ -n "${BUCKET_UPLOAD}" ]] || [[ -n "${SLACK_JOB}" ]] || [[ "${BUILD_MACHINES_CLEANUP}" == "true" ]] || [[ "${DELETE_MISMATCHED_BRANCHES}" == "true" ]] || [[ "${SECURITY_SCANS}" == "true" ]] || [[ "${DEMISTO_TEST_NATIVE_CANDIDATE}" == "true" ]] || [[ "${CI_COMMIT_BRANCH}" == "master" ]] || [[ "${SDK_RELEASE}" == "true" ]] || [[ "${TRIGGER_CONTRIBUTION_BUILD}" == "true" ]]; then
       echo "Running a build which doesn't require build files check validation"
     else
       ./Tests/scripts/is_file_up_to_date.sh .gitlab $CI_COMMIT_BRANCH
@@ -299,7 +299,7 @@
   - source .circleci/content_release_vars.sh
   # DEMISTO_SDK_GRAPH_FORCE_CREATE set to true to create graph from scratch.
   - |
-    if [[ $NIGHTLY ]]; then
+    if [[ "${IS_NIGHTLY}" == "true" ]]; then
       echo "set DEMISTO_SDK_GRAPH_FORCE_CREATE to true to create graph from scratch"
       export DEMISTO_SDK_GRAPH_FORCE_CREATE=true
       echo "DEMISTO_SDK_GRAPH_FORCE_CREATE was set to true to create graph from scratch"
@@ -332,7 +332,7 @@
   - npm ci --cache .npm --prefer-offline | tee --append "${ARTIFACTS_FOLDER}/logs/installations.log"
   - source ./.venv/bin/activate
   - |
-    if [[ -n "${DEMISTO_SDK_NIGHTLY}" || -n "${OVERRIDE_SDK_REF}" ]]; then
+    if [[ "${DEMISTO_SDK_NIGHTLY}" == "true" || -n "${OVERRIDE_SDK_REF}" ]]; then
       echo "Installing SDK from ${SDK_REF}" | tee --append "${ARTIFACTS_FOLDER}/logs/installations.log"
       pip3 uninstall -y demisto-sdk | tee --append "${ARTIFACTS_FOLDER}/logs/installations.log"
       pip3 install "git+https://github.com/demisto/demisto-sdk@${SDK_REF}#egg=demisto-sdk" | tee --append "${ARTIFACTS_FOLDER}/logs/installations.log"
@@ -385,7 +385,7 @@
 .build_parameters: &build_parameters
   - section_start "Build Parameters" --collapsed
   - echo "Environment Variables:"
-  - set | grep -E "^ARTIFACTS_FOLDER.*=|^JIRA_.*=|^NIGHTLY=|^INSTANCE_TESTS=|^SERVER_BRANCH_NAME=|^ARTIFACT_BUILD_NUM=|^DEMISTO_SDK_NIGHTLY=|^TIME_TO_LIVE=|^CONTRIB_BRANCH=|^FORCE_PACK_UPLOAD=|^PACKS_TO_UPLOAD=|^BUCKET_UPLOAD=|^STORAGE_BASE_PATH=|^OVERRIDE_ALL_PACKS=|^GCS_MARKET_BUCKET=|^GCS_MARKET_V2_BUCKET=|^GCS_MARKET_XPANSE_BUCKET=|^SLACK_.*=|^NVM_DIR=|^NODE_VERSION=|^PATH=|^ARTIFACTS_FOLDER=|^ARTIFACTS_FOLDER_INSTANCE=|^ARTIFACTS_FOLDER_SERVER_TYPE=|^ENV_RESULTS_PATH=|^LAST_UPLOAD_COMMIT=|^DEMISTO_SDK_LOG_FILE_SIZE=|^DEMISTO_SDK_LOG_FILE_COUNT=|^DEMISTO_SDK_LOG_FILE_PATH=|^DEMISTO_SDK_LOG_NO_COLORS=|^DEMISTO_SDK_LOG_NOTIFY_PATH=|^POETRY_VIRTUALENVS_OPTIONS_ALWAYS_COPY=|^DEMISTO_SDK_NIGHTLY=|^OVERRIDE_SDK_REF=|^SDK_REF=|^CURRENT_BRANCH_NAME=" | sort
+  - set | grep -E "^ARTIFACTS_FOLDER.*=|^JIRA_.*=|^INSTANCE_TESTS=|^SERVER_BRANCH_NAME=|^ARTIFACT_BUILD_NUM=|^DEMISTO_SDK_NIGHTLY=|^TIME_TO_LIVE=|^CONTRIB_BRANCH=|^FORCE_PACK_UPLOAD=|^PACKS_TO_UPLOAD=|^BUCKET_UPLOAD=|^STORAGE_BASE_PATH=|^OVERRIDE_ALL_PACKS=|^GCS_MARKET_BUCKET=|^GCS_MARKET_V2_BUCKET=|^GCS_MARKET_XPANSE_BUCKET=|^SLACK_.*=|^NVM_DIR=|^NODE_VERSION=|^PATH=|^ARTIFACTS_FOLDER=|^ARTIFACTS_FOLDER_INSTANCE=|^ARTIFACTS_FOLDER_SERVER_TYPE=|^ENV_RESULTS_PATH=|^LAST_UPLOAD_COMMIT=|^DEMISTO_SDK_LOG_FILE_SIZE=|^DEMISTO_SDK_LOG_FILE_COUNT=|^DEMISTO_SDK_LOG_FILE_PATH=|^DEMISTO_SDK_LOG_NO_COLORS=|^DEMISTO_SDK_LOG_NOTIFY_PATH=|^POETRY_VIRTUALENVS_OPTIONS_ALWAYS_COPY=|^DEMISTO_SDK_NIGHTLY=|^OVERRIDE_SDK_REF=|^SDK_REF=|^CURRENT_BRANCH_NAME=" | sort
   - echo "Versions Installed:"
   - python --version
   - python3 --version
@@ -405,7 +405,7 @@
 .checkout-upload-commit-content-nightly: &checkout-upload-commit-content-nightly
   - section_start "Checkout upload commit content nightly" --collapsed
   - |
-    if [[ -n "${NIGHTLY}" && "${CI_COMMIT_BRANCH}" == "master" ]]; then
+    if [[ "${IS_NIGHTLY}" == "true" && "${CI_COMMIT_BRANCH}" == "master" ]]; then
       if [[ ! -d "${CI_PROJECT_DIR}/artifacts/production_packs" ]]; then
         echo "content production packs do not exist in ${CI_PROJECT_DIR}/artifacts"
         exit 1
@@ -427,7 +427,7 @@
   - section_start "extract_content_test_conf" --collapsed
   - |
     if [[ "${CI_JOB_NAME}" == "xsiam_server_ga" ]]; then
-      if [[ "${NIGHTLY}" == "true" || "${EXTRACT_PRIVATE_TESTDATA}" == "true" ]]; then
+      if [[ "${IS_NIGHTLY}" == "true" || "${EXTRACT_PRIVATE_TESTDATA}" == "true" ]]; then
           python ./Tests/scripts/extract_content_test_conf.py --content-path . --content-test-conf-path ./content-test-conf --missing-content-packs-test-conf "${ARTIFACTS_FOLDER_SERVER_TYPE}/missing_content_packs_test_conf.txt"
       fi
       rm -rf ./content-test-conf
@@ -655,7 +655,7 @@
   script:
     - section_start "Test Infrastructure"
     - |
-      if [ -n "${DEMISTO_SDK_NIGHTLY}" ]; then
+      if [ "${DEMISTO_SDK_NIGHTLY}" == "true" ]; then
         ./Tests/scripts/sdk_pylint_check.sh
       fi
     - section_end "Test Infrastructure"
@@ -706,7 +706,7 @@
         cp -r coverage_report artifacts/coverage_report
       fi
     - |
-      if [[ -n "${NIGHTLY}" && "$CI_COMMIT_BRANCH" == "master" ]]; then
+      if [[ "${IS_NIGHTLY}" == "true" && "$CI_COMMIT_BRANCH" == "master" ]]; then
         python3 Utils/upload_code_coverage_report.py --service_account $GCS_MARKET_KEY --source_file_name "${ARTIFACTS_FOLDER}/coverage_report/coverage.json" --minimal_file_name "${ARTIFACTS_FOLDER}/coverage_report/coverage-min.json"
       fi
 
@@ -795,7 +795,7 @@
 cloning-content-repo-last-upload-commit:
   stage: .pre
   rules:
-    - if: '$NIGHTLY'
+    - if: '$IS_NIGHTLY == "true"'
   artifacts:
     expire_in: 30 days
     paths:

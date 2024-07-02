@@ -3,31 +3,31 @@ import contextlib
 import json
 import logging
 import os
-import sys
 import re
+import sys
+import tempfile
+import zipfile
 from datetime import datetime, timedelta
 from distutils.util import strtobool
 from pathlib import Path
 from typing import Any
 
 import requests
-from demisto_sdk.commands.coverage_analyze.tools import get_total_coverage
 from gitlab.client import Gitlab
-from gitlab.v4.objects import ProjectPipelineJob
+from gitlab.v4.objects import ProjectPipelineJob, ProjectPipeline
 from junitparser import JUnitXml, TestSuite
 from slack_sdk import WebClient
-from slack_sdk.web import SlackResponse
 
 from Tests.Marketplace.marketplace_constants import BucketUploadFlow
 from Tests.Marketplace.marketplace_services import get_upload_data
-from Tests.scripts.common import CONTENT_NIGHTLY, CONTENT_PR, WORKFLOW_TYPES, get_instance_directories, \
+from Tests.scripts.common import CONTENT_NIGHTLY, CONTENT_PR, get_instance_directories, \
     get_properties_for_test_suite, BUCKET_UPLOAD, BUCKET_UPLOAD_BRANCH_SUFFIX, TEST_MODELING_RULES_REPORT_FILE_NAME, \
     get_test_results_files, CONTENT_MERGE, TEST_PLAYBOOKS_REPORT_FILE_NAME, \
     replace_escape_characters
-from Tests.scripts.github_client import GithubPullRequest
 from Tests.scripts.common import get_pipelines_and_commits, is_pivot, get_commit_by_sha, get_pipeline_by_commit, \
     create_shame_message, slack_link, was_message_already_sent, get_nearest_newer_commit_with_pipeline, \
     get_nearest_older_commit_with_pipeline
+from Tests.scripts.github_client import GithubPullRequest
 from Tests.scripts.test_modeling_rule_report import calculate_test_modeling_rule_results, \
     read_test_modeling_rule_to_jira_mapping, get_summary_for_test_modeling_rule, TEST_MODELING_RULES_TO_JIRA_TICKETS_CONVERTED
 from Tests.scripts.test_playbooks_report import read_test_playbook_to_jira_mapping, TEST_PLAYBOOKS_TO_JIRA_TICKETS_CONVERTED
@@ -52,6 +52,7 @@ CI_COMMIT_BRANCH = os.getenv('CI_COMMIT_BRANCH', '')
 CI_COMMIT_SHA = os.getenv('CI_COMMIT_SHA', '')
 CI_SERVER_HOST = os.getenv('CI_SERVER_HOST', '')
 DEFAULT_BRANCH = 'master'
+SLACK_NOTIFY = 'slack-notify'
 ALL_FAILURES_WERE_CONVERTED_TO_JIRA_TICKETS = ' (All failures were converted to Jira tickets)'
 LOOK_BACK_HOURS = 48
 UPLOAD_BUCKETS = [
@@ -61,6 +62,14 @@ UPLOAD_BUCKETS = [
     (ARTIFACTS_FOLDER_XPANSE_SERVER_TYPE, "XPANSE"),
 ]
 REGEX_EXTRACT_MACHINE = re.compile(r"qa2-test-\d+")
+TEST_UPLOAD_FLOW_PIPELINE_ID = 'test_upload_flow_pipeline_id.txt'
+# FIXME
+SLACK_MESSAGE = 'slack_message.json'
+SLACK_MESSAGE_THREADS = 'slack_message_threads.json'
+SLACK_MESSAGE_CHANNEL_TO_THREAD = 'slack_message_channel_to_thread.json'
+OLD_SLACK_MESSAGE = 'slack_msg.json'
+OLD_SLACK_MESSAGE_THREADS = 'threaded_messages.json'
+OLD_SLACK_MESSAGE_CHANNEL_TO_THREAD = 'channel_to_thread.json'
 
 
 def options_handler() -> argparse.Namespace:
@@ -75,13 +84,13 @@ def options_handler() -> argparse.Namespace:
     )
     parser.add_argument('-gp', '--gitlab_project_id', help='The gitlab project id', default=GITLAB_PROJECT_ID)
     parser.add_argument(
-        '-tw', '--triggering-workflow', help='The type of ci pipeline workflow the notifier is reporting on',
-        choices=WORKFLOW_TYPES)
+        '-tw', '--triggering-workflow', help='The type of ci pipeline workflow the notifier is reporting on')
     parser.add_argument('-a', '--allow-failure',
                         help="Allow posting message to fail in case the channel doesn't exist", required=True)
     parser.add_argument('--github-token', required=False, help='A GitHub API token', default=GITHUB_TOKEN)
     parser.add_argument('--current-sha', required=False, help='Current branch commit SHA', default=CI_COMMIT_SHA)
     parser.add_argument('--current-branch', required=False, help='Current branch name', default=CI_COMMIT_BRANCH)
+    parser.add_argument('-f', '--file', help='File path with the text to send')
     return parser.parse_args()
 
 
@@ -157,7 +166,7 @@ def machines_saas_and_xsiam(failed_jobs):
         machines.extend(
             get_msg_machines(
                 failed_jobs,
-                {"xsiam_server_ga"},
+                {"xsiam_server_ga", "install-packs-in-xsiam-ga"},
                 {"xsiam-test_playbooks_results", "xsiam-test_modeling_rule_results"},
                 f"XSIAM:\n{','.join(xsiam_machine)}",
             )
@@ -170,6 +179,7 @@ def machines_saas_and_xsiam(failed_jobs):
             {
                 "xsoar_ng_server_ga",
                 "xsiam_server_ga",
+                "install-packs-in-xsiam-ga"
             },
             {
                 "xsoar-test_playbooks_results",
@@ -405,12 +415,10 @@ def bucket_upload_results(bucket_artifact_folder: Path,
     return slack_msg_append, threaded_messages
 
 
-def construct_slack_msg(triggering_workflow: str,
-                        pipeline_url: str,
-                        pipeline_failed_jobs: list[ProjectPipelineJob],
+def construct_slack_msg(triggering_workflow: str, pipeline_url: str, pipeline_failed_jobs: list[ProjectPipelineJob],
                         pull_request: GithubPullRequest | None,
                         shame_message: tuple[str, str, str, str] | None,
-                        ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
+                        file: str | None) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
     # report failing jobs
     content_fields = []
 
@@ -455,12 +463,27 @@ def construct_slack_msg(triggering_workflow: str,
         has_failed_tests |= (test_playbooks_has_failure_xsoar or test_playbooks_has_failure_xsiam
                              or test_modeling_rules_has_failure_xsiam)
         slack_msg_append += missing_content_packs_test_conf(ARTIFACTS_FOLDER_XSOAR_SERVER_TYPE)
-        threaded_messages.extend(machines_saas_and_xsiam(failed_jobs_names))
     if triggering_workflow == CONTENT_NIGHTLY:
         # The coverage Slack message is only relevant for nightly and not for PRs.
         slack_msg_append += construct_coverage_slack_msg()
 
+    # Always add the machines used for the tests.
+    threaded_messages.extend(machines_saas_and_xsiam(failed_jobs_names))
+
     title = triggering_workflow
+
+    if file:
+        try:
+            text = Path(file).read_text()
+            slack_msg_append.extend(json.loads(text))
+        except Exception:
+            file_title = f"Failed to read file and parse {file}"
+            logging.exception(file_title)
+            slack_msg_append.append({
+                'fallback': file_title,
+                'title': file_title,
+                'color': 'danger',
+            })
 
     if pull_request:
         pr_number = pull_request.data['number']
@@ -536,6 +559,7 @@ def collect_pipeline_data(gitlab_client: Gitlab,
 
 
 def construct_coverage_slack_msg() -> list[dict[str, Any]]:
+    from demisto_sdk.commands.coverage_analyze.tools import get_total_coverage
     coverage_today = get_total_coverage(filename=(ROOT_ARTIFACTS_FOLDER / "coverage_report" / "coverage-min.json").as_posix())
     coverage_yesterday = get_total_coverage(date=datetime.now() - timedelta(days=1))
     # The artifacts are kept for 30 days, so we can get the coverage for the last month.
@@ -551,12 +575,13 @@ def construct_coverage_slack_msg() -> list[dict[str, Any]]:
     }]
 
 
-def build_link_to_message(response: SlackResponse) -> str:
-    if SLACK_WORKSPACE_NAME and response.status_code == requests.codes.ok:
-        data: dict = response.data  # type: ignore[assignment]
-        channel_id: str = data['channel']
-        message_ts: str = data['ts'].replace('.', '')
-        return f"https://{SLACK_WORKSPACE_NAME}.slack.com/archives/{channel_id}/p{message_ts}"
+def get_message_p_from_ts(ts):
+    return f"p{ts.replace('.', '')}"
+
+
+def build_link_to_message(channel_id: str, message_ts: str) -> str:
+    if SLACK_WORKSPACE_NAME:
+        return f"https://{SLACK_WORKSPACE_NAME}.slack.com/archives/{channel_id}/{message_ts}"
     return ""
 
 
@@ -571,6 +596,57 @@ def write_json_to_file(json_data: Any, file_path: Path) -> None:
     with contextlib.suppress(Exception), open(file_path, 'w') as f:
         json.dump(json_data, f, indent=4, sort_keys=True, default=str)
         logging.debug(f'Successfully wrote data to {file_path}')
+
+
+def get_pipeline_by_id(gitlab_client: Gitlab, project_id: str, pipeline_id: str) -> ProjectPipeline:
+    project = gitlab_client.projects.get(int(project_id))
+    pipeline = project.pipelines.get(int(pipeline_id))
+    return pipeline
+
+
+def get_slack_downstream_pipeline_id(pipeline: ProjectPipeline):
+    for bridge in pipeline.bridges.list(all=True):
+        if SLACK_NOTIFY in bridge.name.lower():
+            pipeline_id = bridge.downstream_pipeline.get('id')
+            return pipeline_id
+    return None
+
+
+def get_pipeline_slack_data(gitlab_client, pipeline_id, project_id):
+    pipeline = get_pipeline_by_id(gitlab_client, project_id, pipeline_id)
+    slack_message = []
+    slack_message_threads = []
+    slack_message_channel_to_thread = {}
+    slack_notify_job = None
+    slack_pipeline = None
+    if (slack_pipeline_id := get_slack_downstream_pipeline_id(pipeline)) and (
+            slack_pipeline := get_pipeline_by_id(gitlab_client, project_id, slack_pipeline_id)):
+        for job in slack_pipeline.jobs.list():
+            if job.name == SLACK_NOTIFY:
+                slack_notify_job = job
+                break
+
+    if slack_notify_job and slack_pipeline:
+        with tempfile.TemporaryDirectory(dir=ROOT_ARTIFACTS_FOLDER, prefix=SLACK_NOTIFY) as temp_dir:
+            artifacts_zip_file = Path(temp_dir) / f"{SLACK_NOTIFY}.zip"
+            logging.info(f"Downloading artifacts for slack notify job: {slack_notify_job.id} to file {artifacts_zip_file}")
+            gitlab_project = gitlab_client.projects.get(int(slack_pipeline.project_id))
+            slack_job_obj = gitlab_project.jobs.get(slack_notify_job.id)
+            with open(artifacts_zip_file, "wb") as f:
+                slack_job_obj.artifacts(streamed=True, action=f.write)
+            zip_file = zipfile.ZipFile(artifacts_zip_file)
+            temp_zip_dir = Path(temp_dir)
+            zip_file.extractall(temp_zip_dir)
+            for root, _dirs, files in os.walk(temp_zip_dir, topdown=True):
+                for file in files:
+                    if SLACK_MESSAGE in file or OLD_SLACK_MESSAGE in file:
+                        slack_message = json.loads((Path(root) / file).read_text())
+                    if SLACK_MESSAGE_THREADS in file or OLD_SLACK_MESSAGE_THREADS in file:
+                        slack_message_threads = json.loads((Path(root) / file).read_text())
+                    if SLACK_MESSAGE_CHANNEL_TO_THREAD in file or OLD_SLACK_MESSAGE_CHANNEL_TO_THREAD in file:
+                        slack_message_channel_to_thread = json.loads((Path(root) / file).read_text())
+
+    return slack_message, slack_message_threads, slack_message_channel_to_thread
 
 
 def main():
@@ -666,42 +742,81 @@ def main():
                                                                    pipeline_url,
                                                                    pipeline_failed_jobs,
                                                                    pull_request,
-                                                                   shame_message)
+                                                                   shame_message,
+                                                                   options.file)
 
-    slack_msg_output_file = ROOT_ARTIFACTS_FOLDER / 'slack_msg.json'
+    slack_msg_output_file = ROOT_ARTIFACTS_FOLDER / SLACK_MESSAGE
     logging.info(f'Writing Slack message to {slack_msg_output_file}')
     write_json_to_file(slack_msg_data, slack_msg_output_file)
-    threaded_messages_output_file = ROOT_ARTIFACTS_FOLDER / 'threaded_messages.json'
+    threaded_messages_output_file = ROOT_ARTIFACTS_FOLDER / SLACK_MESSAGE_THREADS
     logging.info(f'Writing Slack threaded messages to {threaded_messages_output_file}')
-    write_json_to_file(slack_msg_data, threaded_messages_output_file)
+    write_json_to_file(threaded_messages, threaded_messages_output_file)
     channel_to_thread = {}
+
+    # From the test upload flow we only want the Slack message and threads, so we can append them to the current
+    # pipeline's messages, we don't care about the channel mapping.
+    test_upload_flow_pipeline_id_file = ROOT_ARTIFACTS_FOLDER / TEST_UPLOAD_FLOW_PIPELINE_ID
+    if test_upload_flow_pipeline_id_file.exists():
+        test_upload_flow_pipeline_id = test_upload_flow_pipeline_id_file.read_text().strip()
+        test_upload_flow_slack_message, test_upload_flow_slack_message_threads, _ = (
+            get_pipeline_slack_data(gitlab_client, test_upload_flow_pipeline_id, project_id))
+        logging.info(f"Got Slack data from test upload flow pipeline: {test_upload_flow_pipeline_id}")
+        threaded_messages.append({
+            'color': 'good',
+            'fallback': 'Test Upload Flow Slack message',
+            'title': 'Test Upload Flow Slack message',
+        })
+        threaded_messages.extend(test_upload_flow_slack_message)
+        threaded_messages.extend(test_upload_flow_slack_message_threads)
+
+    # We only need the channel mapping from the parent pipeline, so we can append it to the current pipeline's messages.
+    parent_slack_message_channel_to_thread = {}
+    if ((parent_pipeline_id := os.getenv("SLACK_PARENT_PIPELINE_ID")) and
+            (parent_project_id := os.getenv("SLACK_PARENT_PROJECT_ID"))):
+        logging.info(f"Parent pipeline data found: {parent_pipeline_id} in project {parent_project_id}")
+        _, _, parent_slack_message_channel_to_thread = get_pipeline_slack_data(gitlab_client, parent_pipeline_id,
+                                                                               parent_project_id)
+        logging.info(f"Got Slack data from parent pipeline: {parent_pipeline_id} in project {parent_project_id}")
+    else:
+        logging.info("No parent pipeline data found")
+
+    errors = []
     for channel in channels_to_send_msg(computed_slack_channel):
         try:
+            parent_thread = parent_slack_message_channel_to_thread.get(channel)
             response = slack_client.chat_postMessage(
-                channel=channel, attachments=slack_msg_data, username=SLACK_USERNAME, link_names=True, text=title
+                channel=channel, attachments=slack_msg_data, username=SLACK_USERNAME, link_names=True, text=title,
+                thread_ts=parent_thread
             )
             data: dict = response.data  # type: ignore[assignment]
             thread_ts: str = data['ts']
             channel_to_thread[channel] = thread_ts
-
+            if parent_thread:
+                threaded_ts = parent_thread
+            else:
+                threaded_ts = thread_ts
             if threaded_messages:
                 for slack_msg in threaded_messages:
                     slack_client.chat_postMessage(
                         channel=channel, attachments=[slack_msg], username=SLACK_USERNAME,
-                        thread_ts=thread_ts, text=slack_msg.get("title", title)
+                        thread_ts=threaded_ts, text=slack_msg.get("title", title)
                     )
-
-            link = build_link_to_message(response)
-            logging.info(f'Successfully sent Slack message to channel {channel} link: {link}')
+            if response.status_code == requests.codes.ok:
+                link = build_link_to_message(data['channel'], get_message_p_from_ts(threaded_ts))
+                logging.info(f'Successfully sent Slack message to channel {channel} link: {link}')
         except Exception:
             if strtobool(options.allow_failure):
                 logging.warning(f'Failed to send Slack message to channel {channel} not failing build')
             else:
                 logging.exception(f'Failed to send Slack message to channel {channel}')
-                sys.exit(1)
-    channel_to_thread_output_file = ROOT_ARTIFACTS_FOLDER / 'channel_to_thread.json'
+                errors.append(channel)
+    channel_to_thread_output_file = ROOT_ARTIFACTS_FOLDER / SLACK_MESSAGE_CHANNEL_TO_THREAD
     logging.info(f'Writing channel to thread mapping to {channel_to_thread_output_file}')
     write_json_to_file(channel_to_thread, channel_to_thread_output_file)
+
+    if errors:
+        logging.error(f'Failed to send Slack message to channels: {", ".join(errors)}')
+        sys.exit(1)
 
 
 if __name__ == '__main__':

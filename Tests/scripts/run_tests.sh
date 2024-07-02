@@ -38,7 +38,6 @@ fi
 
 CONF_PATH="./Tests/conf.json"
 
-[ -n "${NIGHTLY}" ] && IS_NIGHTLY=true || IS_NIGHTLY=false
 [ -n "${MEM_CHECK}" ] && MEM_CHECK=true || MEM_CHECK=false
 [ -z "${NON_AMI_RUN}" ] && IS_AMI_RUN=true || IS_AMI_RUN=false
 

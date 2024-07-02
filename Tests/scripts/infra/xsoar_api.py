@@ -68,7 +68,6 @@ from infra.utils.time_utils import to_epoch_timestamp
 import logging
 
 from infra.enums.papi import KeySecurityLevel
-from infra.enums.tables import XdrTables
 from infra.enums.xsiam_alerts import SearchTableField
 from infra.models import PublicApiKey
 
@@ -80,8 +79,9 @@ class XsoarOnPremClient:
     CSRF_TOKEN_NAME = 'XSRF-TOKEN'
     ABOUT_PATH = 'about'
     PLATFORM_TYPE = 'xsoar'
+    PRODUCT_TYPE = 'XSOAR'
 
-    def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, cache: Cache = {}):
+    def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, cache: Cache | None = None):
         retry_strategy = Retry(
             #allowed_methods=frozenset(["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE", "POST"]),
             total=5,
@@ -96,7 +96,7 @@ class XsoarOnPremClient:
         self.session.headers['User-Agent'] = DEFAULT_USER_AGENT
         self.session.verify = False  # Disable SSL verification since we're working with self-signed certs here.
         self.xsoar_base_url = f'https://{xsoar_host}:443'
-        self.xsoar_webapp_url = None
+        self.xsoar_webapp_url: str | None = None
         self.xsoar_user = xsoar_user
         self.xsoar_pass = xsoar_pass
         # self.inc_metric = partial(metrics_client.incr, self.PLATFORM_TYPE, tenant_name)
@@ -144,17 +144,17 @@ class XsoarOnPremClient:
         keys = [PublicApiKey(id=key['id'], key='cant see real key') for key in res.json()]
         return keys
 
-    def create_api_key(self, key_name: str, key_value: str, **kwargs) -> PublicApiKey:
-        """
-        Calls XSOAR API to create an API key, returns a Dict of format::
-        {"name":"my_name", "id":"1fa9e9b9-bccf-4c38-8a75-d4fc7575d343", "key": "056692B32F4BD6CAF790B1239B7F5412"}
-        return tuple of key ID and the key value
-        """
-        res = self.session.post(url=f'{self.xsoar_base_url}/apikeys', json={"name": key_name, "apikey": key_value})
-        raise_for_status(res)
-        if not (key_id := first([key['id'] for key in res.json() if key.get('name') == key_name], default=None)):
-            raise Exception(f'Create api key action failed, the response was {res.text}')
-        return PublicApiKey(id=key_id, key=key_value)
+    # def create_api_key(self, key_name: str, key_value: str, **kwargs) -> PublicApiKey:
+    #     """
+    #     Calls XSOAR API to create an API key, returns a Dict of format::
+    #     {"name":"my_name", "id":"1fa9e9b9-bccf-4c38-8a75-d4fc7575d343", "key": "056692B32F4BD6CAF790B1239B7F5412"}
+    #     return tuple of key ID and the key value
+    #     """
+    #     res = self.session.post(url=f'{self.xsoar_base_url}/apikeys', json={"name": key_name, "apikey": key_value})
+    #     raise_for_status(res)
+    #     if not (key_id := first([key['id'] for key in res.json() if key.get('name') == key_name], default=None)):
+    #         raise Exception(f'Create api key action failed, the response was {res.text}')
+    #     return PublicApiKey(id=key_id, key=key_value)
 
     def revoke_api_key(self, key_id: str):
         """Call XSOAR API to revoke an API key"""
@@ -163,7 +163,7 @@ class XsoarOnPremClient:
         if first([key['id'] for key in res.json() if key.get('id') == key_id], default=None):
             raise Exception(f'api key {key_id=} revoke action failed, the response was {res.text}')
 
-    def edit_api_key(self, comment: str, new_role: list[str], key_id: str):
+    def edit_api_key(self, comment: str, new_roles: list[str], key_id: int):
         """Edit API key"""
         raise NotImplementedError('Not implemented by rocket on this env')
 
@@ -499,9 +499,10 @@ class XsoarClient(XsoarOnPremClient):
     XSRF_TOKEN_HEADER = "X-CSRF-TOKEN"
     CSRF_TOKEN_NAME = "csrf_token"
     PLATFORM_TYPE = 'xsoar-ng'
+    PRODUCT_TYPE = 'XSOAR'
     token_cache = Firestore()
 
-    def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, cache: Cache = {}):
+    def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, cache: Cache | None = None):
         super().__init__(xsoar_host, xsoar_user, xsoar_pass, tenant_name, cache)
         self.xsoar_host_url = f'https://{xsoar_host}'
         self.xsoar_base_url = f'https://{xsoar_host}/xsoar'
@@ -581,7 +582,7 @@ class XsoarClient(XsoarOnPremClient):
 
         # lock to reduce race condition of several sessions running via xdist
         with FileLock(f'{self.xsoar_user}.lock', timeout=300):
-            cached_cookies = self.cache.get('cached_cookies', {})
+            cached_cookies = self.cache.get('cached_cookies', {}) if isinstance(self.cache, Cache) else {}
             if cached_cookie := cached_cookies.get(self.xsoar_user):
                 if self.is_cached_cookies_valid(cookies=cached_cookie):
                     return
@@ -644,24 +645,24 @@ class XsoarClient(XsoarOnPremClient):
     def set_log_level(self, xsoar_log_level: str = None):
         logger.debug('Not setting log level for XSOAR NG environment.')
 
-    def search_api_keys(self) -> list[PublicApiKey]:
-        """Search for API keys"""
-
-        table_filter = {
-            "extraData": None,
-            "filter_data": {
-                "sort": [{"FIELD": "API_KEY_CREATION_TIME", "ORDER": "DESC"}],
-                "filter": {},
-                "free_text": "",
-                "visible_columns": None,
-                "locked": None,
-                "paging": {"from": 0, "to": 100},
-            },
-            "jsons": [],
-        }
-        data = self.get_table_data(table_name=XdrTables.API_KEYS_TABLE, table_filter=table_filter)['DATA']
-        keys = [PublicApiKey.parse_api_key_from_table_data(key=key) for key in data]
-        return keys
+    # def search_api_keys(self) -> list[PublicApiKey]:
+    #     """Search for API keys"""
+    #
+    #     table_filter = {
+    #         "extraData": None,
+    #         "filter_data": {
+    #             "sort": [{"FIELD": "API_KEY_CREATION_TIME", "ORDER": "DESC"}],
+    #             "filter": {},
+    #             "free_text": "",
+    #             "visible_columns": None,
+    #             "locked": None,
+    #             "paging": {"from": 0, "to": 100},
+    #         },
+    #         "jsons": [],
+    #     }
+    #     data = self.get_table_data(table_name=XdrTables.API_KEYS_TABLE, table_filter=table_filter)['DATA']
+    #     keys = [PublicApiKey.parse_api_key_from_table_data(key=key) for key in data]
+    #     return keys
 
     def create_api_key(
         self, rbac_roles: list[str] = None, expiration: DateTime = None, comment: Optional[str] = None, **kwargs
@@ -943,6 +944,7 @@ class XsoarClient(XsoarOnPremClient):
 class OppClient(XsoarClient):
     XSRF_TOKEN_HEADER = "Cookie"
     PLATFORM_TYPE = 'opp'
+    PRODUCT_TYPE = 'XSOAR'
 
     def _set_xsrf_header(self):
         auth_headers = "; ".join(f'{k}={v}' for k, v in self.session.cookies.get_dict().items())
@@ -995,17 +997,17 @@ class OppClient(XsoarClient):
         res = requests.post(f'{self.xsoar_api_url}/users/public/password/reset', json=data, verify=False)
         raise_for_status(res)
 
-    def reset_password_confirm(self, email: str, reset_link: str, password: str):
-        """Reset Password Confirm"""
-        token = self._extract_invite_user_token(reset_link)
-        data = {
-            "email": email,
-            "password": password,
-            "password_verification": password,
-            "token": token,
-        }
-        res = requests.post(f'{self.xsoar_api_url}/users/public/password/reset/confirm', json=data, verify=False)
-        raise_for_status(res)
+    # def reset_password_confirm(self, email: str, reset_link: str, password: str):
+    #     """Reset Password Confirm"""
+    #     token = self._extract_invite_user_token(reset_link)
+    #     data = {
+    #         "email": email,
+    #         "password": password,
+    #         "password_verification": password,
+    #         "token": token,
+    #     }
+    #     res = requests.post(f'{self.xsoar_api_url}/users/public/password/reset/confirm', json=data, verify=False)
+    #     raise_for_status(res)
     #
     # def invite_user(self, user_data: NewUserData) -> str:
     #     """Invite user to XSOAR"""
@@ -1085,8 +1087,9 @@ class OppClient(XsoarClient):
 
 class XsiamClient(XsoarClient):
     PLATFORM_TYPE = 'xsiam'
+    PRODUCT_TYPE = 'XSIAM'
 
-    def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, cache: Cache = {}):
+    def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, cache: Cache | None = None):
         super().__init__(xsoar_host, xsoar_user, xsoar_pass, tenant_name, cache)
         self.public_api_url_prefix = f'https://api-{xsoar_host}/public_api/v1'
         self._public_api_key = None
@@ -1134,7 +1137,7 @@ class XsiamClient(XsoarClient):
     #     incidents = [Incident.parse_alert_as_incident(alert) for alert in alerts_parsed]
     #     return incidents
 
-    def search_in_incident(self, query: str, query_size: int = 50) -> dict:
+    def search_in_incident(self, query: str, query_size: int = 50, last_days: int = 2) -> dict:
         """Search data IN incidents"""
         raise NotImplementedError('Not implemented by rocket on this env')
     #
@@ -1222,12 +1225,12 @@ class XsiamClient(XsoarClient):
     #     rsp = self.session.post(f"{self.xsoar_webapp_url}/alerts/update_alerts", json=data)
     #     raise_for_status(rsp)
     #     return rsp.json()
-
-    def start_investigation(self, incident_id: str, **kwargs) -> dict:
-        """Start incident investigation"""
-        rsp = self.session.post(f"{self.xsoar_base_url}/incident/investigate/v2", json={"id": incident_id, "version": 0})
-        raise_for_status(rsp)
-        return rsp.json()
+    #
+    # def start_investigation(self, incident_id: str, **kwargs) -> dict:
+    #     """Start incident investigation"""
+    #     rsp = self.session.post(f"{self.xsoar_base_url}/incident/investigate/v2", json={"id": incident_id, "version": 0})
+    #     raise_for_status(rsp)
+    #     return rsp.json()
     #
     # def download_attachment(self, attachment: Attachment) -> bytes:
     #     """Download attachments"""

@@ -1,0 +1,10 @@
+
+variables:
+  DOCKER_IO: "docker.io" # defined in the project level CI/CD variables
+  POETRY_VERSION: "1.8.2"
+  INSTALL_POETRY: "true"
+  PYTHONPATH: "${CI_PROJECT_DIR}"
+  ARTIFACTORY_ENABLED: "true"
+  PIPELINE_JOBS_FOLDER: "${CI_PROJECT_DIR}/pipeline_jobs_folder"
+  ARTIFACTS_FOLDER: artifacts
+  ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}

@@ -33,12 +33,21 @@ from-xsoar-registry-logs:
   script:
     - ./BucketLogs/process-logs.sh
 
-slack-notify-content-logs-processing:
+content-logs-processing-fan-in:
+  extends:
+    - .update-marketplace-bucket-logs-schedule-rule-always
+  stage: fan-in
+  script:
+    - echo "fan in"
+
+content-logs-processing-slack-notify:
   variables:
-    PIPELINE_ID: "$CI_PIPELINE_ID"
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: "content-logs-processing-fan-in"
     WORKFLOW: "content logs processing"
-    SLACK_CHANNEL: '#content-logs-processing'
+    SLACK_CHANNEL: 'content-logs-processing'
     SLACK_JOB: 'true'
+    SLACK_ALLOW_FAILURE: 'false'
   extends:
     - .trigger-slack-notification
     - .update-marketplace-bucket-logs-schedule-rule-always

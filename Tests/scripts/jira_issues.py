@@ -15,7 +15,7 @@ GITLAB_PROJECT_ID = os.getenv('CI_PROJECT_ID')
 GITLAB_SERVER_URL = os.getenv('CI_SERVER_URL')
 CI_PIPELINE_URL = os.getenv('CI_PIPELINE_URL', '')
 JIRA_SERVER_URL = os.getenv("JIRA_SERVER_URL")
-JIRA_VERIFY_SSL = bool(strtobool(os.environ.get("JIRA_VERIFY_SSL", "true")))
+JIRA_VERIFY_SSL = bool(strtobool(os.getenv("JIRA_VERIFY_SSL", "true")))
 JIRA_API_KEY = os.getenv("JIRA_API_KEY")
 JIRA_PROJECT_ID = os.getenv("JIRA_PROJECT_ID")
 JIRA_ISSUE_TYPE = os.getenv("JIRA_ISSUE_TYPE", "")  # Default to empty string if not set
@@ -24,9 +24,9 @@ JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME = os.getenv("JIRA_ISSUE_UNRESOLVED_TRANSIT
 JIRA_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z"
 # Jira additional fields are a json string that will be parsed into a dictionary containing the name of the field
 # as the key and the value as a dictionary containing the value of the field.
-JIRA_ADDITIONAL_FIELDS = json.loads(os.environ.get("JIRA_ADDITIONAL_FIELDS", "{}"))
+JIRA_ADDITIONAL_FIELDS = json.loads(os.getenv("JIRA_ADDITIONAL_FIELDS", "{}"))
 # Jira label are a json string that will be parsed into a list of labels.
-JIRA_LABELS = json.loads(os.environ.get("JIRA_LABELS", "[]"))
+JIRA_LABELS = json.loads(os.getenv("JIRA_LABELS", "[]"))
 
 
 def generate_ticket_summary(prefix: str) -> str:

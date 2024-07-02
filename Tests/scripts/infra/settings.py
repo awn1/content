@@ -20,8 +20,8 @@ class JiraConfig:
 
 
 class RocketUser:
-    username: str
-    password: str
+    username: Secret
+    password: Secret
 
 
 class XSOARAdminUser(RocketUser):

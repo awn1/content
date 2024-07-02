@@ -12,7 +12,7 @@ echo "Starting the print test modeling rule summary script - Server type: ${SERV
 python3 ./Tests/Marketplace/print_test_modeling_rule_summary.py --artifacts-path "${ARTIFACTS_FOLDER}"
 summary_exit_code=$?
 
-if [ -n "${NIGHTLY}" ]; then
+if [ "${IS_NIGHTLY}" == "true" ]; then
   if [ "${TEST_MODELING_RULE_JIRA_TICKETS,,}" == "true" ]; then
     echo "This is a nightly build, converting the results to Jira issues and exiting with 0"
     python3 ./Tests/scripts/convert_test_modeling_result_to_jira_issues.py --artifacts-path "${ARTIFACTS_FOLDER}" --build-number "${CI_PIPELINE_ID}"

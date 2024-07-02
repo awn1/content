@@ -60,4 +60,4 @@ class RocketDateTime(pendulum.DateTime):
             return pendulum.from_timestamp(value / 1000, tz='UTC')
         if isinstance(value, datetime):
             return pendulum.instance(value).in_tz('UTC')
-        return pendulum.parse(value, tz='UTC')
+        return pendulum.parse(value, tz='UTC')  # type: ignore[return-value]

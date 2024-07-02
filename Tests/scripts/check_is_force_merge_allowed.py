@@ -15,9 +15,10 @@ def get_job(pipeline: dict, job_name: str) -> dict:
     for job in pipeline:
         if job["name"] == job_name:
             return job
+    return {}
 
 
-def is_force_merge_allowed(job: dict, allowed_force_list: list[str]) -> True:
+def is_force_merge_allowed(job: dict, allowed_force_list: list[str]) -> bool:
     return job["user"]["username"] in allowed_force_list
 
 
