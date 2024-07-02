@@ -1,0 +1,10 @@
+{
+    "corePacks": [
+        "FeedMitreAttackv2/1.1.39/FeedMitreAttackv2.zip",
+        "Base/1.34.11/Base.zip"
+    ],
+    "upgradeCorePacks": [
+        "FeedMitreAttackv2"
+    ],
+    "buildNumber": "xxxxxxx"
+}
