@@ -11,6 +11,8 @@ variables:
   GCS_MARKET_XSOAR_SAAS_BUCKET_DEV: "marketplace-saas-dist-dev"
   STORAGE_BASE_PATH: ""
   SLACK_CHANNEL: "dmst-build-test"
+  SLACK_PARENT_PIPELINE_ID: ""  # empty string, no parent pipeline.
+  SLACK_PARENT_PROJECT_ID: ""  # empty string, no parent project.
   DEMISTO_README_VALIDATION: "true"
   ARTIFACTS_FOLDER: "${CI_PROJECT_DIR}/artifacts"
   PIPELINE_JOBS_FOLDER: "${CI_PROJECT_DIR}/pipeline_jobs_folder"
@@ -34,6 +36,8 @@ variables:
   GCS_PRODUCTION_XPANSE_BUCKET: "xpanse-dist"
   GCS_PRODUCTION_XSOAR_SAAS_BUCKET: "marketplace-saas-dist"
   DEMISTO_CONNECTION_POOL_MAXSIZE: "180" # see this issue for more info https://github.com/demisto/etc/issues/36886
+  DEMISTO_SDK_NIGHTLY: "false"
+  IS_NIGHTLY: "false"
   SDK_REF: "master" # The default sdk branch to use when OVERRIDE_SDK_REF has value.
   OVERRIDE_SDK_REF: "" # Whether to override the sdk branch over the sdk pypi release.
   OVERRIDE_ALL_PACKS: "false"

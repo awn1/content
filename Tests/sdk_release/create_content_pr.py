@@ -27,7 +27,7 @@ SLACK_MERGE_PRS_MESSAGE = 'Please merge the demisto-sdk and content pull request
 SLACK_RELEASE_MESSAGE = 'demisto-sdk `{sdk_version}` has been released :party-github:\n' \
                         ':alert: Please run in the terminal\n' \
                         '`~/dev/demisto/demisto-sdk/demisto_sdk/scripts/update_demisto_sdk_version.sh ~/dev/' \
-                        'demisto/content ~/dev/demisto/demisto-sdk`\nChange log\n```\n{changelog}\n```'
+                        'demisto/content ~/dev/demisto/demisto-sdk ~/dev/demisto/infra`\nChange log\n```\n{changelog}\n```'
 
 
 def get_pr_from_branch(repository, branch, access_token):

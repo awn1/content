@@ -6,12 +6,6 @@
     "keyname": "oregon-ci"
   },
   "config": {
-    "Private-Content-Build": [
-      {
-        "role": "Server Master",
-        "imagefamily": "master"
-      }
-    ],
     "Bucket-Upload": [
       {
         "role": "Server Master",
@@ -54,12 +48,6 @@
       {
         "role": "Server 6.9",
         "imagefamily": "ga-6-9"
-      }
-    ],
-    "Content-Master": [
-      {
-        "role": "Server Master",
-        "imagefamily": "master"
       }
     ],
     "Server Master": [

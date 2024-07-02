@@ -37,5 +37,6 @@ curl --request POST \
   --form "token=${_ci_token}" \
   --form "variables[SDK_REF]=${_sdk_ref}" \
   --form "variables[NIGHTLY]=true" \
+  --form "variables[IS_NIGHTLY]=true" \
   --form "variables[SLACK_CHANNEL]=${_slack_channel}" \
   "$BUILD_TRIGGER_URL"

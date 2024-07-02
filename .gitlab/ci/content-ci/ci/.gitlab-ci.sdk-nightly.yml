@@ -333,9 +333,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar:
     - !reference [.copy_env_results]
 
     - section_start "Wait Until Server Ready" --collapsed
-    - |
-      [ -n "${NIGHTLY}" ] && IS_NIGHTLY=true || IS_NIGHTLY=false
-      python3 ./Tests/scripts/wait_until_server_ready.py  -n ${IS_NIGHTLY} --instance-role "${INSTANCE_ROLE}" || EXIT_CODE=$?
+    - python3 ./Tests/scripts/wait_until_server_ready.py  -n "${IS_NIGHTLY}" --instance-role "${INSTANCE_ROLE}" || EXIT_CODE=$?
     - section_end "Wait Until Server Ready"
 
     - !reference [.secrets-fetch]
@@ -528,6 +526,8 @@ demisto-sdk-nightly:trigger-slack-notify:
     OVERRIDE_SDK_REF: $OVERRIDE_SDK_REF
     SDK_REF: $SDK_REF
     SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
+    SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
     SLACK_JOB: "true"
     SLACK_ALLOW_FAILURE: "false"
     CI_PROJECT_ID: $CI_PROJECT_ID

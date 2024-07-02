@@ -17,7 +17,7 @@ fi
 python3 ./Tests/Marketplace/print_test_playbook_summary.py --artifacts-path "${ARTIFACTS_FOLDER}" --fail-only-nightly-tests "${fail_only_nightly_tests}" --product-type "${PRODUCT_TYPE}"
 summary_exit_code=$?
 
-if [ -n "${NIGHTLY}" ]; then
+if [ "${IS_NIGHTLY}" == "true" ]; then
   if [ "${TEST_PLAYBOOKS_JIRA_TICKETS,,}" == "true" ]; then
     echo "This is a nightly build, converting the results to Jira issues and exiting with 0"
     python3 ./Tests/scripts/convert_test_playbook_result_to_jira_issues.py --artifacts-path "${ARTIFACTS_FOLDER}" --build-number "${CI_PIPELINE_ID}"

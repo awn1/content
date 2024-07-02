@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 from pathlib import Path
 import time
@@ -11,6 +12,8 @@ import json
 import urllib3
 
 from urllib3.exceptions import InsecureRequestWarning
+import common
+from Tests.scripts.utils.log_util import install_logging
 
 urllib3.disable_warnings(InsecureRequestWarning)
 
@@ -23,21 +26,25 @@ GITLAB_CONTENT_PROJECT_ID = "1061"
 GITLAB_CONTENT_TRIGGER_URL = (
     f"{GITLAB_SERVER_URL}/api/v4/projects/{GITLAB_CONTENT_PROJECT_ID}/trigger/pipeline"
 )
-GITLAB_CONTENT_PIPELINES_BASE_URL = (
-    f"{GITLAB_SERVER_URL}/api/v4/projects/{GITLAB_CONTENT_PROJECT_ID}/pipelines/"
-)
 GITLAB_CONTENT_REPO_URL = (
     f"{GITLAB_SERVER_URL}/api/v4/projects/{GITLAB_CONTENT_PROJECT_ID}/repository/branches/"
 )
+GITLAB_CONTENT_PIPELINES_BASE_URL = (
+    f"{GITLAB_SERVER_URL}/api/v4/projects/{GITLAB_CONTENT_PROJECT_ID}/pipelines/"
+)
 TIMEOUT = 60 * 60 * 6  # 6 hours
+ARTIFACTS_FOLDER = Path(os.getenv('ARTIFACTS_FOLDER', '.'))
 
 GITLAB_CI_PATH = Path("./content/.gitlab/ci/.gitlab-ci.yml")
+SLACK_CHANNEL = os.environ.get('SLACK_CHANNEL', 'dmst-build-test')
 
 
 class ExitCode:
     SUCCESS = 0
     FAILED = 1
 
+
+logger = logging.getLogger(__name__)
 
 # Create or update test branch
 
@@ -167,19 +174,17 @@ class TestBranch:
 
 
 class PipelineManager:
-    def __init__(
-        self,
-        trigger_url,
-        gl_trigger_token,
-        gl_info_token,
-        gl_cancel_token,
-        branch_name,
-    ):
+    def __init__(self, trigger_url, gl_trigger_token, gl_info_token, gl_cancel_token, branch_name, is_nightly, is_sdk_nightly,
+                 slack_channel):
+        self.pipeline_id = None
         self.trigger_url = trigger_url
         self.trigger_token = gl_trigger_token
         self.cancel_token = gl_cancel_token
         self.headers = {"Authorization": f"Bearer {gl_info_token}"}
         self.branch_name = branch_name
+        self.is_nightly = is_nightly
+        self.is_sdk_nightly = is_sdk_nightly
+        self.slack_channel = slack_channel
 
     def is_exist_pipeline_runs(self) -> list[dict]:
         headers = {
@@ -192,7 +197,7 @@ class PipelineManager:
                 GITLAB_CONTENT_PIPELINES_BASE_URL, params=params, headers=headers
             ).json()
         except Exception as e:
-            print(f"Error: {e}")
+            logging.info(f"Error: {e}")
             exit(ExitCode.FAILED)
         if response:
             return [res for res in response if res.get("status") == "running"]
@@ -210,41 +215,72 @@ class PipelineManager:
                     headers=headers,
                 )
             except Exception as e:
-                print(f"Error: {e}")
+                logging.info(f"Error: {e}")
                 exit(ExitCode.FAILED)
-        print(f"All pipelines for branch {self.branch_name} have been canceled")
+        logging.info(f"All pipelines for branch {self.branch_name} have been canceled")
 
-    def initiate_pipeline(self):
+    def initiate_pipeline(self, output_file) -> int:
         if pipelines_runs := self.is_exist_pipeline_runs():
             self.cancel_pipelines(pipelines_runs)
 
         files = {
             "token": (None, self.trigger_token),
             "ref": (None, self.branch_name),
-            "variables[TRIGGER_TEST_BRANCH]": (None, "true"),
             "variables[INFRA_BRANCH]": (None, self.branch_name),
         }
+        if self.slack_channel:
+            slack_parent_pipeline_id = os.environ["CI_PIPELINE_ID"]
+            slack_parent_project_id = os.environ["CI_PROJECT_ID"]
+            files["variables[SLACK_CHANNEL]"] = (None, self.slack_channel)
+            files["variables[SLACK_PARENT_PIPELINE_ID]"] = (None, slack_parent_pipeline_id)
+            files["variables[SLACK_PARENT_PROJECT_ID]"] = (None, slack_parent_project_id)
+        build_type = common.CONTENT_PR
+        if self.is_nightly:
+            build_type = common.CONTENT_NIGHTLY
+            files["variables[IS_NIGHTLY]"] = (None, "true")
+            files["variables[NIGHTLY]"] = (None, "true")  # backward compatibility.
+        if self.is_sdk_nightly:
+            build_type = common.SDK_NIGHTLY
+            files["variables[DEMISTO_SDK_NIGHTLY]"] = (None, "true")
+        if not self.is_nightly and not self.is_sdk_nightly:
+            files["variables[TRIGGER_TEST_BRANCH]"] = (None, "true")
         try:
             res = requests.post(url=self.trigger_url, files=files, verify=False).json()
-            # When it fails and an exception is not raised
+            # When it fails and an exception is not raised, so we raise an exception.
             if "web_url" not in res:
-                print(f"Error: {str(res)}")
-                sys.exit(ExitCode.FAILED)
-            print(f"Successful triggered test content build - see {res['web_url']}")
+                raise Exception(str(res))
+
+            logging.info(f"Successful triggered build type:{build_type} - see {res['web_url']}")
             self.pipeline_id = str(res["id"])
+            if output_file:
+                with open(output_file, "w") as f:
+                    title = (f"{build_type} - pipeline has been triggered. "
+                             f"See pipeline {common.slack_link(res['web_url'], 'here')}")
+                    f.write(json.dumps([{
+                        'color': 'good',
+                        'fallback': title,
+                        'title': title,
+                    }]))
+            return ExitCode.SUCCESS
         except Exception as e:
-            print(f"Error: {str(e)}")
-            sys.exit(ExitCode.FAILED)
+            logging.exception(f"Error: {str(e)}")
+            if output_file:
+                with open(output_file, "w") as f:
+                    title = f"Failed to trigger build type: {build_type}"
+                    f.write(json.dumps([{
+                        'color': 'danger',
+                        'fallback': title,
+                        'title': title,
+                    }]))
+
+        return ExitCode.FAILED
 
     def pipeline_info(self, field_info: str = "web_url"):
-        url = (
-            GITLAB_CONTENT_PIPELINES_BASE_URL
-            + self.pipeline_id
-            + ("/jobs" if field_info == "status" else "")
-        )
+        job_suffix = "/jobs" if field_info == "status" else ""
+        url = f"{GITLAB_CONTENT_PIPELINES_BASE_URL}{self.pipeline_id}{job_suffix}"
         res = requests.get(url, headers=self.headers)
         if res.status_code != 200:
-            print(
+            logging.info(
                 f"Failed to get status of pipeline {self.pipeline_id}, request to "
                 f"{GITLAB_CONTENT_PIPELINES_BASE_URL} failed with error: {str(res.content)}"
             )
@@ -253,7 +289,7 @@ class PipelineManager:
         try:
             jobs_info = json.loads(res.content)
         except Exception as e:
-            print(f"Unable to parse pipeline response: {e}")
+            logging.info(f"Unable to parse pipeline response: {e}")
             sys.exit(ExitCode.FAILED)
 
         if field_info == "status":
@@ -261,36 +297,31 @@ class PipelineManager:
         else:
             return jobs_info.get("web_url")
 
-    def wait_for_pipeline_completion(self):
-
-        pipeline_status = "running"  # pipeline status when start to run
+    def wait_for_pipeline_completion(self, sleep_time: int = 600):
 
         # initialize timer
         start = time.time()
-        elapsed: float = 0
 
-        while (
-            pipeline_status not in ["failed", "success", "canceled"]
-            and elapsed < TIMEOUT
-        ):
-            print(f"Pipeline {self.pipeline_id} status is {pipeline_status}")
-            time.sleep(600)
+        while True:
             pipeline_status = self.pipeline_info(field_info="status")
+            if pipeline_status in ["failed", "success", "canceled"]:
+                break
             elapsed = time.time() - start
-
-        if elapsed >= TIMEOUT:
-            print(
-                f"Timeout reached while waiting for upload to complete, pipeline number: {self.pipeline_id}"
-            )
-            sys.exit(ExitCode.FAILED)
+            if elapsed >= TIMEOUT:
+                logging.info(
+                    f"Timeout reached while waiting for upload to complete, pipeline number: {self.pipeline_id}"
+                )
+                return ExitCode.FAILED
+            logging.info(f"Pipeline {self.pipeline_id} status is {pipeline_status}, sleeping for {sleep_time} seconds")
+            time.sleep(sleep_time)
 
         pipeline_url = self.pipeline_info()
 
         if pipeline_status in ["failed", "canceled"]:
-            print(f"Content pipeline {pipeline_status}. See here: {pipeline_url}")
+            logging.info(f"Content pipeline {pipeline_status}. See here: {pipeline_url}")
             return ExitCode.FAILED
 
-        print(f"Content pipeline has finished. See pipeline here: {pipeline_url}")
+        logging.info(f"Content pipeline has finished. See pipeline here: {pipeline_url}")
         return ExitCode.SUCCESS
 
 
@@ -308,11 +339,18 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("-pn", "--project-name", help="A project name")
     parser.add_argument("-bn", "--branch-name", help="Current branch name")
     parser.add_argument("-ght", "--github-token", help="GitHub token")
+    parser.add_argument('-n', '--is-nightly', type=common.string_to_bool, help='Is nightly build')
+    parser.add_argument('-sn', '--sdk-nightly', type=common.string_to_bool, help='Is SDK nightly build')
+    parser.add_argument(
+        '-ch', '--slack-channel', help='The slack channel in which to send the notification', default=SLACK_CHANNEL
+    )
+    parser.add_argument('-w', '--wait', help='Wait for the pipeline to finish', action='store_true', default=False)
+    parser.add_argument('-o', '--output', help='Output file for the slack message', default=None)
     return parser.parse_args()
 
 
 def main():
-    # log_util.install_logging('trigger_content_build.log', logger=logging)
+    install_logging("trigger_content_build.log")
 
     # Parse arguments
     args = parse_arguments()
@@ -330,6 +368,14 @@ def main():
     test_branch = TestBranch(url, branch_name, github_token, token_cancel)
     test_branch.create_test_branch()
 
+    logging.info(f"Triggering content build for branch {branch_name}")
+    logging.info(f"Project name: {project_name}")
+    logging.info(f"Is nightly: {args.is_nightly}")
+    logging.info(f"Is SDK nightly: {args.sdk_nightly}")
+    logging.info(f"Slack channel: {args.slack_channel}")
+    logging.info(f"Wait for pipeline to finish: {args.wait}")
+    logging.info(f"Output file: {args.output}")
+
     # Managing and triggering the pipeline
     pipeline_manager = PipelineManager(
         GITLAB_CONTENT_TRIGGER_URL,
@@ -337,11 +383,15 @@ def main():
         token_info,
         token_cancel,
         branch_name,
+        args.is_nightly,
+        args.sdk_nightly,
+        args.slack_channel,
     )
-    pipeline_manager.initiate_pipeline()
-    exit_code = pipeline_manager.wait_for_pipeline_completion()
-
-    sys.exit(exit_code)
+    if exit_code := pipeline_manager.initiate_pipeline(args.output) != ExitCode.SUCCESS:
+        sys.exit(exit_code)
+    if args.wait:
+        exit_code = pipeline_manager.wait_for_pipeline_completion()
+        sys.exit(exit_code)
 
 
 if __name__ == "__main__":

@@ -18,9 +18,6 @@ fi
 
 CONF_PATH="./Tests/conf.json"
 
-[ -n "${NIGHTLY}" ] && IS_NIGHTLY=true || IS_NIGHTLY=false
-[ -n "${DEMISTO_SDK_NIGHTLY}" ] && DEMISTO_SDK_NIGHTLY=true || DEMISTO_SDK_NIGHTLY=false
-
 if [ -f ./Tests/test_pack.zip ]; then
   echo "Copying test_pack.zip to artifacts folder:${ARTIFACTS_FOLDER}"
   cp ./Tests/test_pack.zip "$ARTIFACTS_FOLDER"

@@ -2,12 +2,12 @@
 
 # Simple script to check if build should run all pre-commit. Will return empty result if no need or a string explaining why yes.
 
-if [ -n "$NIGHTLY" ]; then
-    echo "NIGHTLY env var is set: $NIGHTLY"
+if [[ "${IS_NIGHTLY}" == "true" ]]; then
+    echo "IS_NIGHTLY env var is set: $IS_NIGHTLY"
     exit 0
 fi
 
-if [ -n "$DEMISTO_SDK_NIGHTLY" ]; then
+if [ "${DEMISTO_SDK_NIGHTLY}" == "true" ]; then
     echo "DEMISTO_SDK_NIGHTLY env var is set: $DEMISTO_SDK_NIGHTLY"
     exit 0
 fi

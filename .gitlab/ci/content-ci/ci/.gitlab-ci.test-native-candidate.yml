@@ -64,6 +64,8 @@ test-native-candidate:trigger-slack-notify:
     WORKFLOW: 'Test Native Candidate'
     JOB_NAME: 'test-native-candidate:fan-in'
     SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
+    SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
     SLACK_JOB: 'true'
     SLACK_ALLOW_FAILURE: 'false'
     CI_PROJECT_ID: $CI_PROJECT_ID

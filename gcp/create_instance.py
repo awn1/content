@@ -27,7 +27,6 @@ def options_handler():
                             "Nightly",
                             "Bucket-Upload",
                             "Content-Env",
-                            "Content-Master",
                             "Server Master",
                             "Server 6.12",
                             "Server 6.11",

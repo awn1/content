@@ -1,5 +1,7 @@
 .trigger-slack-notification:
   stage: .post
+  inherit: # see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27775
+    variables: false
   trigger:
     strategy: depend
     include:
@@ -33,6 +35,14 @@
   - source ${ARTIFACTORY_SETUP_SCRIPT}
   - section_end "Setup Artifactory"
 
+.create_artifacts_folder:
+  - section_start "Create Artifacts" --collapsed
+  - |
+    if [[ -n "${ARTIFACTS_FOLDER}" ]] && [[ ! -d "${ARTIFACTS_FOLDER}/logs" ]]; then
+      echo "Creating Artifacts folder: ${ARTIFACTS_FOLDER} and it's log folder"
+      mkdir -p -m 777 "${ARTIFACTS_FOLDER}/logs" # using the -p to create the logs folder as well.
+    fi
+  - section_end "Create Artifacts"
 
 .granting_execute_permissions_on_files:
   - section_start "Granting execute permissions on files" --collapsed

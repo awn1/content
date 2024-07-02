@@ -197,9 +197,7 @@ xpanse-prepare-testing-bucket-upload-flow:
     - echo INSTANCE_CREATED="$INSTANCE_CREATED"
     - section_end "Get Instance Variables"
     - section_start "Wait Until Server Ready"
-    - |
-      [ -n "${NIGHTLY}" ] && IS_NIGHTLY=true || IS_NIGHTLY=false
-      python3 ./Tests/scripts/wait_until_server_ready.py  -n ${IS_NIGHTLY} --instance-role "${INSTANCE_ROLE}" || EXIT_CODE=$?
+    - python3 ./Tests/scripts/wait_until_server_ready.py  -n ${IS_NIGHTLY} --instance-role "${INSTANCE_ROLE}" || EXIT_CODE=$?
     - section_end "Wait Until Server Ready"
     - section_start "Install Packs"
     - ./Tests/Marketplace/install_packs.sh || EXIT_CODE=$?
@@ -813,6 +811,8 @@ slack-notify-bucket-upload:
     WORKFLOW: 'Upload Packs to Marketplace Storage'
     JOB_NAME: 'fan-in-bucket-upload'
     SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
+    SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
     SLACK_JOB: 'true'
     SLACK_ALLOW_FAILURE: 'false'
     CI_PROJECT_ID: $CI_PROJECT_ID

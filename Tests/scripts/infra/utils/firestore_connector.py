@@ -3,12 +3,11 @@ from contextlib import contextmanager
 from typing import Any, Union
 
 from google.api_core.exceptions import GoogleAPICallError
-from google.cloud import firestore
+from google.cloud.firestore import Client, DELETE_FIELD
 
-from infra.resources.constants import AUTOMATION_GCP_PROJECT
-from infra.utils.rocket_retry import retry
-from infra.utils.text import ConnectorName
-from infra.utils.time_utils import time_now
+from .rocket_retry import retry
+from .text import ConnectorName
+from .time_utils import time_now
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +23,8 @@ class Firestore:
 
     connector_name = ConnectorName()
 
-    def __init__(self, project=AUTOMATION_GCP_PROJECT):
-        self.client = firestore.Client(project=project)
+    def __init__(self, project):
+        self.client = Client(project=project)
         # self.inc_metric = partial(metrics_client.incr, self.connector_name)
 
     def _get_doc(self, collection, document):
@@ -48,7 +47,7 @@ class Firestore:
 
     def update_document_field(self, collection, document, field_name: str, field_value: Any):
         """Update document field"""
-        self._update_doc(collection=collection, document=document, data={firestore.Client.field_path(field_name): field_value})
+        self._update_doc(collection=collection, document=document, data={Client.field_path(field_name): field_value})
 
     @retry(exceptions=LockedException, tries=15, delay=20, raise_original_exception=True)
     def create_lock(self, collection, document, lock_field_name: str):
@@ -68,11 +67,11 @@ class Firestore:
         """Release the lock by deleting the lock field from token_mgmt_ref document"""
         logger.debug(f'Releasing lock on {lock_field_name=}')
         self.update_document_field(collection=collection, document=document,
-                                   field_name=lock_field_name, field_value=firestore.DELETE_FIELD)
+                                   field_name=lock_field_name, field_value=DELETE_FIELD)
 
 
 @contextmanager
-def lock_and_read(fs_client: Firestore, collection, document, field) -> dict:
+def lock_and_read(fs_client: Firestore, collection, document, field):
     """FireStore context manager to read values and lock them for reading of others until the context operation is done"""
     should_release_lock = True  # by default release lock otherwise we can fail using the data and not release the lock
     lock_field_name = f'{field}_lock'

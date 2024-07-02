@@ -42,7 +42,7 @@ echo "Found modeling rules to test, starting test modeling rules"
 
 CURRENT_DIR=$(pwd)
 echo "CURRENT_DIR: ${CURRENT_DIR}"
-echo "NIGHTLY: ${NIGHTLY}"
+echo "IS_NIGHTLY: ${IS_NIGHTLY}"
 
 MODELING_RULES_ARRAY=($(cat "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.txt"))
 
@@ -53,7 +53,7 @@ for modeling_rule in "${MODELING_RULES_ARRAY[@]}"; do
   # If it is nightly, run `test modeling rules` only on modeling rules that have `_testdata.json` file.
   # globbing is needed here, don't quote the variable.
   # shellcheck disable=SC2086
-  if [ -z "${NIGHTLY}" ] || [ -e ${MODELING_RULE_TEST_FILE_PATTERN} ]; then
+  if [ "${IS_NIGHTLY}" == "false" ] || [ -e ${MODELING_RULE_TEST_FILE_PATTERN} ]; then
     count=$((count+1))
     if [[ -n "${MODELING_RULES_TO_TEST}" ]]; then
         MODELING_RULES_TO_TEST="${MODELING_RULES_TO_TEST} Packs/${modeling_rule}"

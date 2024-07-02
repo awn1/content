@@ -35,7 +35,7 @@ class SearchTableField(Enum):
     INTEGRATION_LOG_TIMESTAMP = 'INTEGRATION_LOG_TIMESTAMP', "integration log timestamp", SearchTableOperator.RANGE
 
     def __init__(self, alert_field: str, alerts_field_pretty: str, search_type: SearchTableOperator):
-        self.field = alert_field
+        self.field = alert_field  # type: ignore[misc]
         self.field_pretty = alerts_field_pretty
         self.search_type = search_type
 
@@ -48,7 +48,7 @@ class SearchTableField(Enum):
         """Search field that will be generated on the fly with the required field name"""
         field = SearchTableField.CUSTOM
         field.field_pretty = field_name
-        field.field = field_name
+        field.field = field_name  # type: ignore[misc]
         return field
 
     def create_search_filter(self, search_value: Any, search_type: Optional[SearchTableOperator] = None) -> dict:
