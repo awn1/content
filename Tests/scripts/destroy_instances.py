@@ -142,7 +142,8 @@ def main():
     options = options_handler()
     start_time = datetime.utcnow()
     # if no TTL is set, the default TTL is to shut down the server immediately.
-    time_to_live = None if os.getenv('TIME_TO_LIVE') == '' else int(os.getenv('TIME_TO_LIVE'))  # type: ignore[arg-type]
+    env_ttl = os.getenv('TIME_TO_LIVE')
+    time_to_live = None if env_ttl == '' else int(env_ttl or DEFAULT_TTL)  # type: ignore[arg-type]
     time_to_live_str = f"{time_to_live} minutes" if time_to_live else "No TTL"
     logging.info(f"Starting destroy instances - environment from {options.env_file}, TTL:{time_to_live_str}, "
                  f"Artifacts dir: {options.artifacts_dir}")
