@@ -90,6 +90,7 @@ demisto-sdk-nightly:run-pre-commit:
   extends:
     - .run-pre-commit
     - .sdk-nightly-schedule-rule
+  timeout: 11 hours
 
 demisto-sdk-nightly:run-validations:
   extends:
