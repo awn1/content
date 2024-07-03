@@ -4,6 +4,10 @@ CYAN="\e[0;36m"
 CLEAR="\e[0m"
 SECTION_START="\e[0Ksection_start:the_time:section_id\r\e[0K${CYAN}section_header${CLEAR}"
 SECTION_END="\e[0Ksection_end:the_time:section_id\r\e[0K"
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m'
 
 section_start() {
     local section_header section_id start
