@@ -39,3 +39,4 @@ include:
   - local: .gitlab/ci/build-machines-cleanup/.gitlab-ci.build-machines-cleanup.yml
   - local: .gitlab/ci/Unit-Tests/.gitlab-ci.unit-tests.yml
   - local: .gitlab/ci/trigger-dev-nightly-builds/.trigger-dev-nightly-builds.yml
+  - local: .gitlab/ci/gitlab-ci.shared.variables.yml
