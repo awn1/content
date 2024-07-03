@@ -15,6 +15,7 @@ from jinja2 import Environment, FileSystemLoader
 from urllib3.exceptions import InsecureRequestWarning
 
 import common
+from infra.resources.constants import AUTOMATION_GCP_PROJECT
 
 urllib3.disable_warnings(InsecureRequestWarning)
 warnings.filterwarnings("ignore", _default._CLOUD_SDK_CREDENTIALS_WARNING)  # noqa
@@ -186,12 +187,14 @@ def get_record_for_tenant(tenant, current_date: datetime):
     }
 
 
-def get_version_from(xsoar_admin_user: XSOARAdminUser, client_type: type[XsoarClient], host: str, key: str) -> dict | None:
+def get_version_from(xsoar_admin_user: XSOARAdminUser, client_type: type[XsoarClient], host: str, key: str,
+                     project_id: str) -> dict | None:
     try:
         client = client_type(xsoar_host=host,
                              xsoar_user=xsoar_admin_user.username,
                              xsoar_pass=xsoar_admin_user.password,
-                             tenant_name=key)
+                             tenant_name=key,
+                             project_id=project_id)
         client.login_auth(force_login=True)
         return client.get_version_info()
     except Exception as e:
@@ -248,7 +251,7 @@ def generate_records(configuration_file_json_records: dict,
                 "ttl": generate_cell(NOT_AVAILABLE, "", generate_ttl_class()),
                 "slack_link": generate_cell(build_link_to_channel(XDR_UPGRADE_CHANNEL_ID_DEV)),
             }
-        versions = get_version_from(xsoar_admin_user, client_type, host, key)
+        versions = get_version_from(xsoar_admin_user, client_type, host, key, AUTOMATION_GCP_PROJECT)
         if versions is not None:
             record |= {key: generate_cell(value) for key, value in versions.items()}
             record["connectable"] = generate_cell(True)

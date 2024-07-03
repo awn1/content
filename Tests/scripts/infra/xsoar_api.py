@@ -71,6 +71,7 @@ from infra.enums.papi import KeySecurityLevel
 from infra.enums.xsiam_alerts import SearchTableField
 from infra.models import PublicApiKey
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -500,14 +501,15 @@ class XsoarClient(XsoarOnPremClient):
     CSRF_TOKEN_NAME = "csrf_token"
     PLATFORM_TYPE = 'xsoar-ng'
     PRODUCT_TYPE = 'XSOAR'
-    token_cache = Firestore()
 
-    def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, cache: Cache | None = None):
+    def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, project_id: str,
+                 cache: Cache | None = None):
         super().__init__(xsoar_host, xsoar_user, xsoar_pass, tenant_name, cache)
         self.xsoar_host_url = f'https://{xsoar_host}'
         self.xsoar_base_url = f'https://{xsoar_host}/xsoar'
         self.xsoar_api_url = f'https://{xsoar_host}/api'
         self.xsoar_webapp_url = f'https://{xsoar_host}/api/webapp'
+        self.token_cache = Firestore(project_id)
 
     def update_user_data(self):
         raise NotImplementedError('Update user data is not implemented at this env')
@@ -1089,8 +1091,9 @@ class XsiamClient(XsoarClient):
     PLATFORM_TYPE = 'xsiam'
     PRODUCT_TYPE = 'XSIAM'
 
-    def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, cache: Cache | None = None):
-        super().__init__(xsoar_host, xsoar_user, xsoar_pass, tenant_name, cache)
+    def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, project_id: str,
+                 cache: Cache | None = None):
+        super().__init__(xsoar_host, xsoar_user, xsoar_pass, tenant_name, project_id, cache)
         self.public_api_url_prefix = f'https://api-{xsoar_host}/public_api/v1'
         self._public_api_key = None
 
