@@ -407,7 +407,7 @@
   - |
     if [[ "${IS_NIGHTLY}" == "true" && "${CI_COMMIT_BRANCH}" == "master" ]]; then
       if [[ ! -d "${CI_PROJECT_DIR}/artifacts/production_packs" ]]; then
-        echo "content production packs do not exist in ${CI_PROJECT_DIR}/artifacts"
+        echo -e "${RED}ERROR: content production packs do not exist in ${CI_PROJECT_DIR}/artifacts${NC}"
         exit 1
       fi
       rm -rf ./Packs
