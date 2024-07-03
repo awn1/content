@@ -70,3 +70,10 @@
       echo "The MR is not a force merge"
     fi
   - section_end "Check is force merged allowed"
+.docker_services:
+  services:
+    - name: ${DOCKER_IO}/library/docker:20.10.12-dind
+      alias: docker
+      variables:
+        KUBERNETES_MEMORY_REQUEST: ${KUBERNETES_MEMORY_REQUEST}
+        KUBERNETES_MEMORY_LIMIT: ${KUBERNETES_MEMORY_LIMIT}

@@ -638,15 +638,13 @@
       - ${CI_PROJECT_DIR}/artifacts/*
       - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
     when: always
-  services:
-    - name: ${DOCKER_IO}/library/docker:20.10.12-dind
-      alias: docker
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
     DOCKER_TLS_CERTDIR: ""
   extends:
     - .default-job-settings
+    - .docker_services
 
 .test-infrastructure:
   stage: unittests-and-validations
@@ -811,3 +809,11 @@ cloning-content-repo-last-upload-commit:
     ARTIFACTS_FOLDER: ${CI_PROJECT_DIR}/artifacts
   script:
     - !reference [.add-content-production-to-artifacts]
+
+.docker_services:
+  services:
+    - name: ${DOCKER_IO}/library/docker:20.10.12-dind
+      alias: docker
+      variables:
+        KUBERNETES_MEMORY_REQUEST: ${KUBERNETES_MEMORY_REQUEST}
+        KUBERNETES_MEMORY_LIMIT: ${KUBERNETES_MEMORY_LIMIT}

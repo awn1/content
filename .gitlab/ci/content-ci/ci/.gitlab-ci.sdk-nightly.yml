@@ -269,9 +269,7 @@ demisto-sdk-nightly:run-end-to-end-tests-general:
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule-always
-  services:
-    - name: ${DOCKER_IO}/library/docker:20.10.12-dind
-      alias: docker
+    - .docker_services
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
@@ -309,9 +307,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar:
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule-always
-  services: # needed for running e2e tests for docker
-    - name: ${DOCKER_IO}/library/docker:20.10.12-dind
-      alias: docker
+    - .docker_services
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
@@ -381,9 +377,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsiam:
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule-always
-  services: # needed for running e2e tests for docker
-    - name: ${DOCKER_IO}/library/docker:20.10.12-dind
-      alias: docker
+    - .docker_services
   variables:
       CLOUD_MACHINES_TYPE: "build"
       CLOUD_MACHINES_COUNT: 1
@@ -449,9 +443,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar-saas:
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule-always
-  services: # needed for running e2e tests for docker
-    - name: ${DOCKER_IO}/library/docker:20.10.12-dind
-      alias: docker
+    - .docker_services
   variables:
     CLOUD_MACHINES_TYPE: "build"
     CLOUD_MACHINES_COUNT: 1
