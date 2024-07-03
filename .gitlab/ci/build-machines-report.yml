@@ -54,7 +54,7 @@ build-machines-report-slack-notify:
   variables:
     PIPELINE_TO_QUERY: $CI_PIPELINE_ID
     JOB_NAME: "build-machines-report-fan-in"
-    SLACK_CHANNEL: 'dmst-build-test'
+    SLACK_CHANNEL: $SLACK_CHANNEL
     SLACK_JOB: 'true'
     ARTIFACTS_FOLDER: artifacts
     ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
