@@ -103,9 +103,9 @@ def get_core_packs_from_file(storage_bucket: Any, path: str) -> dict:
         with blob.open("r") as f:
             core_packs_file_data = json.load(f)
             core_packs_file_list = core_packs_file_data.get("corePacks", [])
-            for core_pack in core_packs_file_list:
-                pack_name = extract_pack_name_from_path(core_pack)
-                pack_version = extract_pack_version_from_pack_path(core_pack, pack_name)
+            for core_pack_path in core_packs_file_list:
+                pack_name = extract_pack_name_from_path(core_pack_path)
+                pack_version = extract_pack_version_from_pack_path(core_pack_path, pack_name)
                 core_packs_dict.update(
                     {
                         f"{pack_name}": {
@@ -233,7 +233,12 @@ def extract_pack_version_from_pack_path(path_of_the_pack: str, pack_name: str) -
     Returns:
         str: The pack version
     """
-    pack_version_regex = re.findall(VERSION_FORMAT_REGEX, path_of_the_pack)
+    pack_path_extraction = re.findall(PACK_REGEX, path_of_the_pack)
+    if pack_path_extraction:
+        pack_verison = pack_path_extraction[0][1]
+        pack_version_regex = re.findall(VERSION_FORMAT_REGEX, pack_verison)
+    else:
+         pack_version_regex = re.findall(VERSION_FORMAT_REGEX, path_of_the_pack)
     if pack_version_regex:
         pack_version = pack_version_regex[0]
         return pack_version
