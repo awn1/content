@@ -51,10 +51,45 @@ def test_extract_pack_version_from_path_partial_path():
     """
     from Tests.Marketplace.validate_core_packs_list_versions import extract_pack_version_from_pack_path
 
-    pack_path = "pack-name/1.1.38/pack-name.zip"
+    pack_path = "pack-name/1.1.39/pack-name.zip"
     pack_name = "pack-name"
-    assert "1.1.38" == extract_pack_version_from_pack_path(pack_path, pack_name)
+    assert "1.1.39" == extract_pack_version_from_pack_path(pack_path, pack_name)
 
+
+def test_extract_pack_version_from_path_full_path():
+    """
+    Given
+    - A pack path and pack name.
+    When
+    - Extracting pack version from the path.
+    Then
+    - Ensure the version was extracted successfully.
+    """
+    from Tests.Marketplace.validate_core_packs_list_versions import extract_pack_version_from_pack_path
+
+    pack_path = ("https://storage.googleapis.com/marketplace-ci-build" \
+                 "/content/builds/1.0.99137-pr-batch-1/1111111" \
+                 "/xsoar/content/packs/pack-name/1.1.39/pack-name.zip")
+    pack_name = "pack-name"
+    assert "1.1.39" == extract_pack_version_from_pack_path(pack_path, pack_name)
+
+
+def test_extract_pack_version_from_path_full_path_2():
+    """
+    Given
+    - A pack path and pack name.
+    When
+    - Extracting pack version from the path.
+    Then
+    - Ensure the version was extracted successfully.
+    """
+    from Tests.Marketplace.validate_core_packs_list_versions import extract_pack_version_from_pack_path
+
+    pack_path = ("https://storage.googleapis.com/marketplace-ci-build" \
+                 "/content/builds/AUD-demisto/1.0.0.98891-pr-batch-1/1111111" \
+                 "/xsoar/content/packs/pack-name/1.1.39/pack-name.zip")
+    pack_name = "pack-name"
+    assert "1.1.39" == extract_pack_version_from_pack_path(pack_path, pack_name)
 
 def test_get_core_pack_from_file(mocker):
     """
