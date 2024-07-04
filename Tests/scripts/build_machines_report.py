@@ -286,7 +286,7 @@ def generate_records(configuration_file_json_records: dict,
                 "build_machine": generate_cell(False),
                 "comment": generate_cell(""),
             }
-            versions = get_version_from(xsoar_admin_user, client_type, host_url, host_url)
+            versions = get_version_from(xsoar_admin_user, client_type, host_url, host_url, AUTOMATION_GCP_PROJECT)
             if versions is not None:
                 record |= {key: generate_cell(value) for key, value in versions.items()}
                 record["connectable"] = generate_cell(True)

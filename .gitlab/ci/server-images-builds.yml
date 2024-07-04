@@ -129,16 +129,16 @@ build-images-dev-fan-in:
     - echo "fan in"
 
 build-images-dev-slack-notify:
+  extends:
+    - .build-images-dev-rule-always
+    - .trigger-slack-notification
   variables:
-    PIPELINE_ID: "$CI_PIPELINE_ID"
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
     JOB_NAME: "build-images-dev-fan-in"
     WORKFLOW: "$BUILD_TYPE"
     SLACK_CHANNEL: 'content-infra-images'
     SLACK_JOB: 'true'
     SLACK_ALLOW_FAILURE: 'false'
-  extends:
-    - .trigger-slack-notification
-    - .build-images-dev-rule-always
 
 build-images-ga-fan-in:
   stage: fan-in
@@ -148,6 +148,9 @@ build-images-ga-fan-in:
     - echo "fan in"
 
 build-images-ga-slack-notify:
+  extends:
+    - .build-images-ga-rule-always
+    - .trigger-slack-notification
   variables:
     PIPELINE_TO_QUERY: $CI_PIPELINE_ID
     JOB_NAME: "build-images-ga-fan-in"
@@ -155,6 +158,3 @@ build-images-ga-slack-notify:
     SLACK_CHANNEL: 'content-infra-images'
     SLACK_JOB: 'true'
     SLACK_ALLOW_FAILURE: 'false'
-  extends:
-    - .trigger-slack-notification
-    - .build-images-ga-rule-always

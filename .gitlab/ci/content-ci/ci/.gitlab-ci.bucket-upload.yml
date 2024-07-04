@@ -804,12 +804,12 @@ fan-in-bucket-upload:
 
 slack-notify-bucket-upload:
   extends:
-    - .trigger-slack-notification
     - .bucket-upload-rule-always
+    - .trigger-slack-notification
   variables:  # Passes the environment variable from the parent pipeline to the child which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
     PIPELINE_TO_QUERY: $CI_PIPELINE_ID
-    WORKFLOW: 'Upload Packs to Marketplace Storage'
     JOB_NAME: 'fan-in-bucket-upload'
+    WORKFLOW: 'Upload Packs to Marketplace Storage'
     SLACK_CHANNEL: $SLACK_CHANNEL
     SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
     SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
