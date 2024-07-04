@@ -86,6 +86,11 @@
     fi
   - section_end "Cleanup env results from artifacts folder"
 
+demisto-sdk-nightly:test-infrastructure:
+  extends:
+    - .sdk-nightly-schedule-rule
+    - .test-infrastructure
+
 demisto-sdk-nightly:run-pre-commit:
   extends:
     - .run-pre-commit
@@ -102,7 +107,7 @@ demisto-sdk-nightly:run-validations-new-validate-flow:
     - .run-validations-new-validate-flow
     - .sdk-nightly-schedule-rule
 
-demisto_sdk_nightly:check_idset_dependent_commands:
+demisto-sdk-nightly:check-idset-dependent-commands:
   tags:
     - gke
   extends:
@@ -497,6 +502,26 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar-saas:
     - source .gitlab/helper_functions.sh
     - !reference [.unlock-machine]
     - !reference [.clean-machine]
+
+demisto-sdk-nightly:jobs-done-check:
+  extends:
+    - .jobs-done-check
+    - .sdk-nightly-schedule-rule
+  needs:
+    - demisto-sdk-nightly:run-pre-commit
+    - demisto-sdk-nightly:run-validations
+    - demisto-sdk-nightly:run-validations-new-validate-flow
+    - demisto-sdk-nightly:test-infrastructure
+    - demisto-sdk-nightly:test-upload-flow
+    - demisto-sdk-nightly:check-idset-dependent-commands
+    - demisto-sdk-nightly:mpv2-prepare-testing-bucket
+    - demisto-sdk-nightly:xsoar-prepare-testing-bucket
+    - demisto-sdk-nightly:xpanse-prepare-testing-bucket
+    - demisto-sdk-nightly:xsoar-saas-prepare-testing-bucket
+    - demisto-sdk-nightly:run-end-to-end-tests-general
+    - demisto-sdk-nightly:run-end-to-end-tests-xsoar
+  variables:
+    WORKFLOW: 'Demisto SDK Nightly'
 
 demisto-sdk-nightly:fan-in:
   tags:

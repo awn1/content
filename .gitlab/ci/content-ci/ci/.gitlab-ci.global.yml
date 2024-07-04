@@ -652,11 +652,9 @@
     - .default-job-settings
   script:
     - section_start "Test Infrastructure"
-    - |
-      if [ "${DEMISTO_SDK_NIGHTLY}" == "true" ]; then
-        ./Tests/scripts/sdk_pylint_check.sh
-      fi
+    - ./Tests/scripts/sdk_pylint_check.sh
     - section_end "Test Infrastructure"
+    - job-done
 
 .run-pre-commit:
   cache:
