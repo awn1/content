@@ -5,13 +5,16 @@ if [ "$#" -lt "1" ]; then
   $0 -ct <token>
   -ct, --ci-token             The ci token.
   [-b, --branch]              The content repo branch name. Default is the current branch.
+  [-i, --infra-branch]        The infra repo branch name. Default is the current branch.
   [-g, --gitlab]              Flag to pass if triggering a build in GitLab
   [-ch, --slack-channel]      A Slack channel to send notifications to. Default is dmst-bucket-upload.
   [-sr, --sdk-ref]            The demisto-sdk repo branch to run this build with.
   "
   exit 1
 fi
+_gitlab=""
 _branch="$(git branch  --show-current)"
+_infra_branch="$(git branch  --show-current)"
 _sdk_ref="${SDK_REF:-master}"
 _override_sdk_ref="${DEMISTO_SDK_NIGHTLY:-}"
 
@@ -23,6 +26,10 @@ while [[ "$#" -gt 0 ]]; do
     shift;;
 
   -b|--branch) _branch="$2"
+    shift
+    shift;;
+
+  -i|--infra-branch) _infra_branch="$2"
     shift
     shift;;
 
@@ -65,6 +72,7 @@ if [ -n "${_gitlab}" ]; then
     --form "variables[SLACK_CHANNEL]=${_slack_channel}" \
     --form "variables[SDK_REF]=${_sdk_ref}" \
     --form "variables[OVERRIDE_SDK_REF]=${_override_sdk_ref}" \
+    --form "variables[INFRA_BRANCH]=${_infra_branch}" \
     "${BUILD_TRIGGER_URL}" | jq
 
 else
