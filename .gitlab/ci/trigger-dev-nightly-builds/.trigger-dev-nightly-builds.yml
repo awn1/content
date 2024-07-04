@@ -44,6 +44,9 @@ trigger-dev-nightly-builds-job-fan-in:
     - echo "fan in"
 
 trigger-dev-nightly-builds-job-slack-notify:
+  extends:
+    - .trigger-dev-nightly-builds-schedule-rule-always
+    - .trigger-slack-notification
   variables:
     PIPELINE_TO_QUERY: $CI_PIPELINE_ID
     JOB_NAME: "trigger-dev-nightly-builds-job-fan-in"
@@ -53,6 +56,3 @@ trigger-dev-nightly-builds-job-slack-notify:
     SLACK_MSG_FILE: "${ARTIFACTS_FOLDER}/slack_msg.txt"
     WORKFLOW: "Trigger dev nightly builds"
     SLACK_ALLOW_FAILURE: 'false'
-  extends:
-    - .trigger-slack-notification
-    - .trigger-dev-nightly-builds-schedule-rule-always

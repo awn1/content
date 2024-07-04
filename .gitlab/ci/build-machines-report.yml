@@ -51,6 +51,9 @@ build-machines-report-fan-in:
     - echo "fan in"
 
 build-machines-report-slack-notify:
+  extends:
+    - .build-machines-report-schedule-rule-always
+    - .trigger-slack-notification
   variables:
     PIPELINE_TO_QUERY: $CI_PIPELINE_ID
     JOB_NAME: "build-machines-report-fan-in"
@@ -61,6 +64,3 @@ build-machines-report-slack-notify:
     SLACK_MSG_FILE: "${ARTIFACT_PATH}/slack_msg.txt"
     WORKFLOW: "Build Machines Report"
     SLACK_ALLOW_FAILURE: 'false'
-  extends:
-    - .trigger-slack-notification
-    - .build-machines-report-schedule-rule-always

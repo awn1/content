@@ -25,7 +25,7 @@ class Firestore:
 
     def __init__(self, project):
         self.project = project
-        #self.client = Client(project=project)
+        self.client = Client(project=project)
         # self.inc_metric = partial(metrics_client.incr, self.connector_name)
 
     def _get_doc(self, collection, document):

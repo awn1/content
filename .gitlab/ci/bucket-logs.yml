@@ -41,6 +41,9 @@ content-logs-processing-fan-in:
     - echo "fan in"
 
 content-logs-processing-slack-notify:
+  extends:
+    - .update-marketplace-bucket-logs-schedule-rule-always
+    - .trigger-slack-notification
   variables:
     PIPELINE_TO_QUERY: $CI_PIPELINE_ID
     JOB_NAME: "content-logs-processing-fan-in"
@@ -48,6 +51,3 @@ content-logs-processing-slack-notify:
     SLACK_CHANNEL: 'content-logs-processing'
     SLACK_JOB: 'true'
     SLACK_ALLOW_FAILURE: 'false'
-  extends:
-    - .trigger-slack-notification
-    - .update-marketplace-bucket-logs-schedule-rule-always

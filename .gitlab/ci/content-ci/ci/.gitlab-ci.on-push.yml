@@ -503,15 +503,15 @@ jobs-done-check-on-merge:
 
 
 slack-notify-nightly-build:
-  extends:
-    - .trigger-slack-notification
   rules:
     - if: '$IS_NIGHTLY == "true"'
       when: always
+  extends:
+    - .trigger-slack-notification
   variables:  # Passes the environment variable from the parent pipeline to the child which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
     PIPELINE_TO_QUERY: $CI_PIPELINE_ID
-    WORKFLOW: 'Content Nightly'
     JOB_NAME: 'fan-in-nightly'
+    WORKFLOW: 'Content Nightly'
     SLACK_CHANNEL: $SLACK_CHANNEL
     SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
     SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
@@ -537,9 +537,9 @@ slack-notify-on-push:
     - .trigger-slack-notification
   variables:  # Passes the environment variable from the parent pipeline to the child which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
     PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: 'fan-in-on-push'
     WORKFLOW: 'Content PR'
     master_branch_name: master
-    JOB_NAME: 'fan-in-on-push'
     SLACK_CHANNEL: "#dmst-build-private-"
     SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
     SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
@@ -563,9 +563,9 @@ slack-notify-on-merge:
     - .trigger-slack-notification
   variables:  # Passes the environment variable from the parent pipeline to the child which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
     PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: 'fan-in-on-merge'
     WORKFLOW: 'Content Merge'
     master_branch_name: master
-    JOB_NAME: 'fan-in-on-merge'
     SLACK_CHANNEL: "#dmst-build-test"
     SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
     SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
