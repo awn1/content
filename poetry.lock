@@ -3840,111 +3840,6 @@ doc = ["cairosvg (>=2.5.2,<3.0.0)", "mdx-include (>=1.4.1,<2.0.0)", "mkdocs (>=1
 test = ["black (>=22.3.0,<23.0.0)", "coverage (>=6.2,<7.0)", "isort (>=5.0.6,<6.0.0)", "mypy (==0.971)", "pytest (>=4.4.0,<8.0.0)", "pytest-cov (>=2.10.0,<5.0.0)", "pytest-sugar (>=0.9.4,<0.10.0)", "pytest-xdist (>=1.32.0,<4.0.0)", "rich (>=10.11.0,<14.0.0)", "shellingham (>=1.3.0,<2.0.0)"]
 
 [[package]]
-name = "types-dateparser"
-version = "1.2.0.20240420"
-description = "Typing stubs for dateparser"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "types-dateparser-1.2.0.20240420.tar.gz", hash = "sha256:8f813ddf5ef41b32cabe6167138ae833ada10c22811e42220a1e38a0be7adbdc"},
-    {file = "types_dateparser-1.2.0.20240420-py3-none-any.whl", hash = "sha256:bf3695ddfbadfdfc875064895a51d926fd80b04da1a44364c6c1a9703db7b194"},
-]
-
-[[package]]
-name = "types-decorator"
-version = "5.1.8.20240310"
-description = "Typing stubs for decorator"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "types-decorator-5.1.8.20240310.tar.gz", hash = "sha256:52e316b03783886a8a2abdc228f7071680ba65894545cd2085ebe3cf88684a0e"},
-    {file = "types_decorator-5.1.8.20240310-py3-none-any.whl", hash = "sha256:3af75dc38f5baf65b9b53ea6661ce2056c5ca7d70d620d0b1f620285c1242757"},
-]
-
-[[package]]
-name = "types-paramiko"
-version = "3.4.0.20240423"
-description = "Typing stubs for paramiko"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "types-paramiko-3.4.0.20240423.tar.gz", hash = "sha256:aaa98dda232c47886563d66743d3a8b66c432790c596bc3bdd3f17f91be2a8c1"},
-    {file = "types_paramiko-3.4.0.20240423-py3-none-any.whl", hash = "sha256:c56e0d43399a1b909901b1e0375e0ff6ee62e16cd6e00695024abc2e9fe02035"},
-]
-
-[package.dependencies]
-cryptography = ">=37.0.0"
-
-[[package]]
-name = "types-pkg-resources"
-version = "0.1.3"
-description = "Typing stubs for pkg_resources"
-optional = false
-python-versions = "*"
-files = [
-    {file = "types-pkg_resources-0.1.3.tar.gz", hash = "sha256:834a9b8d3dbea343562fd99d5d3359a726f6bf9d3733bccd2b4f3096fbab9dae"},
-    {file = "types_pkg_resources-0.1.3-py2.py3-none-any.whl", hash = "sha256:0cb9972cee992249f93fff1a491bf2dc3ce674e5a1926e27d4f0866f7d9b6d9c"},
-]
-
-[[package]]
-name = "types-python-dateutil"
-version = "2.9.0.20240316"
-description = "Typing stubs for python-dateutil"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "types-python-dateutil-2.9.0.20240316.tar.gz", hash = "sha256:5d2f2e240b86905e40944dd787db6da9263f0deabef1076ddaed797351ec0202"},
-    {file = "types_python_dateutil-2.9.0.20240316-py3-none-any.whl", hash = "sha256:6b8cb66d960771ce5ff974e9dd45e38facb81718cc1e208b10b1baccbfdbee3b"},
-]
-
-[[package]]
-name = "types-pyyaml"
-version = "6.0.12.20240311"
-description = "Typing stubs for PyYAML"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "types-PyYAML-6.0.12.20240311.tar.gz", hash = "sha256:a9e0f0f88dc835739b0c1ca51ee90d04ca2a897a71af79de9aec5f38cb0a5342"},
-    {file = "types_PyYAML-6.0.12.20240311-py3-none-any.whl", hash = "sha256:b845b06a1c7e54b8e5b4c683043de0d9caf205e7434b3edc678ff2411979b8f6"},
-]
-
-[[package]]
-name = "types-requests"
-version = "2.32.0.20240622"
-description = "Typing stubs for requests"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "types-requests-2.32.0.20240622.tar.gz", hash = "sha256:ed5e8a412fcc39159d6319385c009d642845f250c63902718f605cd90faade31"},
-    {file = "types_requests-2.32.0.20240622-py3-none-any.whl", hash = "sha256:97bac6b54b5bd4cf91d407e62f0932a74821bc2211f22116d9ee1dd643826caf"},
-]
-
-[package.dependencies]
-urllib3 = ">=2"
-
-[[package]]
-name = "types-retry"
-version = "0.9.9.4"
-description = "Typing stubs for retry"
-optional = false
-python-versions = "*"
-files = [
-    {file = "types-retry-0.9.9.4.tar.gz", hash = "sha256:e4731dc684b56b875d9746459ad665d3bc281a56b530acdf1c97730167799941"},
-    {file = "types_retry-0.9.9.4-py3-none-any.whl", hash = "sha256:f29760a9fe8b1fefe253e5fe6be7e4c0eba243932c600e0eccffb42a21d17765"},
-]
-
-[[package]]
-name = "types-ujson"
-version = "5.10.0.20240515"
-description = "Typing stubs for ujson"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "types-ujson-5.10.0.20240515.tar.gz", hash = "sha256:ceae7127f0dafe4af5dd0ecf98ee13e9d75951ef963b5c5a9b7ea92e0d71f0d7"},
-    {file = "types_ujson-5.10.0.20240515-py3-none-any.whl", hash = "sha256:02bafc36b3a93d2511757a64ff88bd505e0a57fba08183a9150fbcfcb2015310"},
-]
-
-[[package]]
 name = "typing-extensions"
 version = "4.12.2"
 description = "Backported and Experimental Type Hints for Python 3.8+"
@@ -4309,4 +4204,4 @@ pyyaml = "*"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.11"
-content-hash = "442bc17e1b5eeb0acf6bdae16b86e2a565f51d5202d69205b56edc38e8b7a303"
+content-hash = "71d958f3e74893e536b52d5d8582bf4d70331489c9a3786fb14a8b618251cec3"

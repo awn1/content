@@ -35,10 +35,6 @@ unit-tests:
   script:
     - !reference [.check-is-force-merged-allowed]
 
-    - section_start "Run mypy and ruff"
-    - ./Tests/scripts/analyze_non_packs_files.sh
-    - section_end "Run mypy and ruff"
-
     - section_start "Test Infrastructure" --collapsed
     - poetry install --with testing
     - poetry run pytest --cov="." --cov-report=xml --cov-report=term

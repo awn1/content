@@ -129,7 +129,7 @@ def test_install_nightly_packs_endless_loop(mocker):
 
     def generic_request_mock(self, path: str, method, body=None, accept=None, _request_timeout=None):
         requested_pack_ids = {pack['id'] for pack in body['packs']}
-        for bad_integration in {'bad_integration1', 'bad_integration2'}:
+        for bad_integration in ['bad_integration1', 'bad_integration2']:
             if bad_integration in requested_pack_ids:
                 raise Exception(f'invalid version 1.2.0 for pack with ID {bad_integration}')
         return MOCK_PACKS_INSTALLATION_RESULT, 200, None
