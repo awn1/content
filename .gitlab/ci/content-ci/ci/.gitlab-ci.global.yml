@@ -629,12 +629,14 @@
   stage: unittests-and-validations
   artifacts:
     reports:
+      junit: .pre-commit/pytest-junit/*.xml
       coverage_report:
         coverage_format: cobertura
         path: ${CI_PROJECT_DIR}/artifacts/coverage_report/coverage.xml
     expire_in: 30 days
     paths:
       - ${CI_PROJECT_DIR}/unit-tests
+      - ${CI_PROJECT_DIR}/.pre-commit/pytest-junit
       - ${CI_PROJECT_DIR}/artifacts/*
       - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
     when: always
