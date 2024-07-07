@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from datetime import datetime, timedelta
 from distutils.util import strtobool
 from typing import Any
@@ -14,19 +14,32 @@ from Tests.scripts.utils import logging_wrapper as logging
 GITLAB_PROJECT_ID = os.getenv('CI_PROJECT_ID')
 GITLAB_SERVER_URL = os.getenv('CI_SERVER_URL')
 CI_PIPELINE_URL = os.getenv('CI_PIPELINE_URL', '')
-JIRA_SERVER_URL = os.getenv("JIRA_SERVER_URL")
-JIRA_VERIFY_SSL = bool(strtobool(os.getenv("JIRA_VERIFY_SSL", "true")))
-JIRA_API_KEY = os.getenv("JIRA_API_KEY")
-JIRA_PROJECT_ID = os.getenv("JIRA_PROJECT_ID")
-JIRA_ISSUE_TYPE = os.getenv("JIRA_ISSUE_TYPE", "")  # Default to empty string if not set
-JIRA_COMPONENT = os.getenv("JIRA_COMPONENT", "")  # Default to empty string if not set
-JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME = os.getenv("JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME")
 JIRA_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z"
-# Jira additional fields are a json string that will be parsed into a dictionary containing the name of the field
-# as the key and the value as a dictionary containing the value of the field.
-JIRA_ADDITIONAL_FIELDS = json.loads(os.getenv("JIRA_ADDITIONAL_FIELDS", "{}"))
-# Jira label are a json string that will be parsed into a list of labels.
-JIRA_LABELS = json.loads(os.getenv("JIRA_LABELS", "[]"))
+
+JiraServerInfo = namedtuple("JiraServerInfo", ["server_url", "api_key", "verify_ssl"])
+JiraTicketInfo = namedtuple("JiraTicketInfo", ["project_id", "issue_type", "component",
+                                               "issue_unresolved_transition_name", "additional_fields", "labels"])
+
+
+def get_jira_server_info() -> JiraServerInfo:
+    return JiraServerInfo(server_url=os.getenv("JIRA_SERVER_URL"),
+                          api_key=os.getenv("JIRA_API_KEY"),
+                          verify_ssl=bool(strtobool(os.getenv("JIRA_VERIFY_SSL", "true"))))
+
+
+def get_jira_ticket_info() -> JiraTicketInfo:
+    project_id = os.getenv("JIRA_PROJECT_ID")
+    issue_type = os.getenv("JIRA_ISSUE_TYPE", "")  # Default to empty string if not set
+    component = os.getenv("JIRA_COMPONENT", "")  # Default to empty string if not set
+    issue_unresolved_transition_name = os.getenv("JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME")
+    # Jira additional fields are a json string that will be parsed into a dictionary containing the name of the field
+    # as the key and the value as a dictionary containing the value of the field.
+    additional_fields = json.loads(os.getenv("JIRA_ADDITIONAL_FIELDS", "{}"))
+    # Jira label are a json string that will be parsed into a list of labels.
+    labels = json.loads(os.getenv("JIRA_LABELS", "[]"))
+    return JiraTicketInfo(project_id=project_id, issue_type=issue_type, component=component,
+                          issue_unresolved_transition_name=issue_unresolved_transition_name,
+                          additional_fields=additional_fields, labels=labels)
 
 
 def generate_ticket_summary(prefix: str) -> str:
@@ -35,14 +48,15 @@ def generate_ticket_summary(prefix: str) -> str:
     return summary
 
 
-def generate_query_by_component_and_issue_type() -> str:
-    jira_labels = "".join(f" AND labels = \"{x}\"" for x in JIRA_LABELS) if JIRA_LABELS else ""
-    return (f"project = \"{JIRA_PROJECT_ID}\" AND issuetype = \"{JIRA_ISSUE_TYPE}\" "
-            f"AND component = \"{JIRA_COMPONENT}\" {jira_labels}")
+def generate_query_by_component_and_issue_type(jira_ticket_info: JiraTicketInfo) -> str:
+    jira_labels = "".join(f" AND labels = \"{x}\"" for x in jira_ticket_info.labels) if jira_ticket_info.labels else ""
+    return (f"project = \"{jira_ticket_info.project_id}\" AND issuetype = \"{jira_ticket_info.issue_type}\" "
+            f"AND component = \"{jira_ticket_info.component}\" {jira_labels}")
 
 
-def generate_query_with_summary(summary: str) -> str:
-    jql_query = f"{generate_query_by_component_and_issue_type()} AND summary ~ \"{summary}\" ORDER BY created DESC"
+def generate_query_with_summary(jira_ticket_info: JiraTicketInfo, summary: str) -> str:
+    jql_query = (f"{generate_query_by_component_and_issue_type(jira_ticket_info)} "
+                 f"AND summary ~ \"{summary}\" ORDER BY created DESC")
     return jql_query
 
 
@@ -62,10 +76,10 @@ def jira_color_text(text: str, color: str) -> str:
     return f"{{color:{color}}}{text}{{color}}"
 
 
-def get_transition(jira_server, jira_issue) -> str | None:
+def get_transition(jira_ticket_info: JiraTicketInfo, jira_server: JIRA, jira_issue: Issue) -> str | None:
     transitions = jira_server.transitions(jira_issue)
-    unresolved_transition = next(filter(lambda transition: transition['name'] == JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME,
-                                        transitions), None)
+    unresolved_transition = next(filter(
+        lambda transition: transition['name'] == jira_ticket_info.issue_unresolved_transition_name, transitions), None)
     return unresolved_transition['id'] if unresolved_transition else None
 
 
@@ -74,7 +88,8 @@ def transition_jira_ticket_to_unresolved(jira_server: JIRA, jira_issue: Issue | 
         jira_server.transition_issue(jira_issue, unresolved_transition_id)
 
 
-def find_existing_jira_ticket(jira_server: JIRA,
+def find_existing_jira_ticket(jira_ticket_info: JiraTicketInfo,
+                              jira_server: JIRA,
                               now: datetime,
                               max_days_to_reopen: int,
                               jira_issue: Issue | None,
@@ -89,10 +104,10 @@ def find_existing_jira_ticket(jira_server: JIRA,
             if use_existing_issue := (resolution_date
                                       and (now - resolution_date)
                                       <= timedelta(days=max_days_to_reopen)):  # type: ignore[assignment]
-                if unresolved_transition_id := get_transition(jira_server, jira_issue):
+                if unresolved_transition_id := get_transition(jira_ticket_info, jira_server, jira_issue):
                     jira_issue_to_use = searched_issue
                 else:
-                    logging.error(f"Failed to find the '{JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME}' "
+                    logging.error(f"Failed to find the '{jira_ticket_info.issue_unresolved_transition_name}' "
                                   f"transition for issue {searched_issue.key}")
                     jira_issue_to_use = None
                     use_existing_issue = False

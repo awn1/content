@@ -12,9 +12,8 @@ from tabulate import tabulate
 
 from Tests.scripts.common import get_properties_for_test_suite, FAILED_TO_COLOR_NAME, FAILED_TO_MSG
 from Tests.scripts.jira_issues import generate_ticket_summary, generate_query_with_summary, \
-    find_existing_jira_ticket, JIRA_PROJECT_ID, JIRA_ISSUE_TYPE, JIRA_COMPONENT, JIRA_LABELS, JIRA_ADDITIONAL_FIELDS, \
-    generate_build_markdown_link, convert_jira_time_to_datetime, jira_ticket_to_json_data, jira_file_link, \
-    jira_sanitize_file_name, jira_color_text, transition_jira_ticket_to_unresolved
+    find_existing_jira_ticket, generate_build_markdown_link, convert_jira_time_to_datetime, jira_ticket_to_json_data, \
+    jira_file_link, jira_sanitize_file_name, jira_color_text, transition_jira_ticket_to_unresolved, JiraTicketInfo
 from Tests.scripts.utils import logging_wrapper as logging
 
 TEST_MODELING_RULES_BASE_HEADERS = ["Test Modeling Rule"]
@@ -28,7 +27,8 @@ def get_summary_for_test_modeling_rule(properties: dict[str, str]) -> str | None
     return f"{properties['pack_id']} - {properties['file_name']}"
 
 
-def create_jira_issue_for_test_modeling_rule(jira_server: JIRA,
+def create_jira_issue_for_test_modeling_rule(jira_ticket_info: JiraTicketInfo,
+                                             jira_server: JIRA,
                                              test_suite: TestSuite,
                                              max_days_to_reopen: int,
                                              now: datetime) -> Issue | None:
@@ -40,10 +40,10 @@ def create_jira_issue_for_test_modeling_rule(jira_server: JIRA,
     junit_file_name_with_suffix = f"{junit_file_name}.xml"
     description = generate_description_for_test_modeling_rule(ci_pipeline_id, properties, test_suite, junit_file_name_with_suffix)
     summary = generate_ticket_summary(get_summary_for_test_modeling_rule(properties))  # type: ignore[arg-type]
-    jql_query = generate_query_with_summary(summary)
+    jql_query = generate_query_with_summary(jira_ticket_info, summary)
     search_issues: ResultList[Issue] = jira_server.search_issues(jql_query, maxResults=1)  # type: ignore[assignment]
     jira_issue, link_to_issue, use_existing_issue, \
-        unresolved_transition_id = find_existing_jira_ticket(jira_server, now, max_days_to_reopen,
+        unresolved_transition_id = find_existing_jira_ticket(jira_ticket_info, jira_server, now, max_days_to_reopen,
                                                              search_issues[0] if search_issues else None)
 
     if jira_issue is not None:
@@ -57,13 +57,13 @@ def create_jira_issue_for_test_modeling_rule(jira_server: JIRA,
         if test_suite.failures == 0 and test_suite.errors == 0:
             logging.info(f"Skipping creating Jira issue for {test_suite.name} as it has no failures or errors")
             return None
-        jira_issue = jira_server.create_issue(project=JIRA_PROJECT_ID,
+        jira_issue = jira_server.create_issue(project=jira_ticket_info.project_id,
                                               summary=summary,
                                               description=description,
-                                              issuetype={'name': JIRA_ISSUE_TYPE},
-                                              components=[{'name': JIRA_COMPONENT}],
-                                              labels=JIRA_LABELS,
-                                              **JIRA_ADDITIONAL_FIELDS
+                                              issuetype={'name': jira_ticket_info.issue_type},
+                                              components=[{'name': jira_ticket_info.component}],
+                                              labels=jira_ticket_info.labels,
+                                              **jira_ticket_info.additional_fields
                                               )
         # Create a back link to the previous issue, which is resolved.
         if link_to_issue:
