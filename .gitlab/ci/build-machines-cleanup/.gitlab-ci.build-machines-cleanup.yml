@@ -197,9 +197,6 @@
     fi
   - section_end "Unlock Machine"
 
-stages:
-  - security
-
 build-machines-cleanup:
   stage: cleanup
   extends:
@@ -297,8 +294,3 @@ slack-notify-build-machines-cleanup:
     SLACK_ALLOW_FAILURE: 'false'
     CI_PROJECT_ID: $CI_PROJECT_ID
     CI_SERVER_URL: $CI_SERVER_URL
-    JIRA_SERVER_URL: $JIRA_SERVER_URL
-    JIRA_VERIFY_SSL: $JIRA_VERIFY_SSL
-    JIRA_API_KEY: $JIRA_API_KEY
-    JIRA_PROJECT_ID: $JIRA_PROJECT_ID
-    JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME: $JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME

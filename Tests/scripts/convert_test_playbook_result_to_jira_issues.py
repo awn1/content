@@ -15,11 +15,10 @@ from tabulate import tabulate
 
 from Tests.scripts.common import calculate_results_table, get_all_failed_results, \
     get_test_results_files, TEST_PLAYBOOKS_REPORT_FILE_NAME, TEST_SUITE_CELL_EXPLANATION, FAILED_TO_COLOR_NAME, FAILED_TO_MSG
-from Tests.scripts.jira_issues import JIRA_SERVER_URL, JIRA_VERIFY_SSL, JIRA_API_KEY, \
-    JIRA_PROJECT_ID, JIRA_ISSUE_TYPE, JIRA_COMPONENT, JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME, JIRA_LABELS, \
-    find_existing_jira_ticket, JIRA_ADDITIONAL_FIELDS, generate_ticket_summary, generate_build_markdown_link, \
+from Tests.scripts.jira_issues import find_existing_jira_ticket, generate_ticket_summary, generate_build_markdown_link, \
     jira_server_information, jira_search_all_by_query, generate_query_by_component_and_issue_type, jira_file_link, \
-    jira_sanitize_file_name, jira_color_text, transition_jira_ticket_to_unresolved
+    jira_sanitize_file_name, jira_color_text, transition_jira_ticket_to_unresolved, get_jira_server_info, get_jira_ticket_info, \
+    JiraTicketInfo
 from Tests.scripts.test_playbooks_report import calculate_test_playbooks_results, \
     TEST_PLAYBOOKS_BASE_HEADERS, get_jira_tickets_for_playbooks, TEST_PLAYBOOKS_JIRA_BASE_HEADERS, \
     write_test_playbook_to_jira_mapping, TEST_PLAYBOOKS_TO_JIRA_TICKETS_CONVERTED
@@ -64,7 +63,8 @@ def generate_description_for_test_playbook(playbook_id: str,
     return description
 
 
-def create_jira_issue(jira_server: JIRA,
+def create_jira_issue(jira_ticket_info: JiraTicketInfo,
+                      jira_server: JIRA,
                       jira_issue: Issue | None,
                       xml: JUnitXml,
                       playbook_id: str,
@@ -77,7 +77,8 @@ def create_jira_issue(jira_server: JIRA,
                       ) -> Issue:
     summary = generate_ticket_summary(playbook_id)
     description = generate_description_for_test_playbook(playbook_id, build_number, junit_file_name, table_data, failed)
-    jira_issue, link_to_issue, use_existing_issue, unresolved_transition_id = find_existing_jira_ticket(jira_server, now,
+    jira_issue, link_to_issue, use_existing_issue, unresolved_transition_id = find_existing_jira_ticket(jira_ticket_info,
+                                                                                                        jira_server, now,
                                                                                                         max_days_to_reopen,
                                                                                                         jira_issue)
 
@@ -85,13 +86,14 @@ def create_jira_issue(jira_server: JIRA,
         transition_jira_ticket_to_unresolved(jira_server, jira_issue, unresolved_transition_id)
         jira_server.add_comment(issue=jira_issue, body=description)
     else:
-        jira_issue = jira_server.create_issue(project=JIRA_PROJECT_ID,
+        jira_ticket_info = get_jira_ticket_info()
+        jira_issue = jira_server.create_issue(project=jira_ticket_info.project_id,
                                               summary=summary,
                                               description=description,
-                                              issuetype={'name': JIRA_ISSUE_TYPE},
-                                              components=[{'name': JIRA_COMPONENT}],
-                                              labels=JIRA_LABELS,
-                                              **JIRA_ADDITIONAL_FIELDS
+                                              issuetype={'name': jira_ticket_info.issue_type},
+                                              components=[{'name': jira_ticket_info.component}],
+                                              labels=jira_ticket_info.labels,
+                                              **jira_ticket_info.additional_fields
                                               )
         # Create a back link to the previous issue, which is resolved.
         if link_to_issue:
@@ -121,20 +123,23 @@ def main():
         now = datetime.now(tz=timezone.utc)
         options = options_handler()
         artifacts_path = Path(options.artifacts_path)
+        jira_server_info = get_jira_server_info()
+        jira_ticket_info = get_jira_ticket_info()
         logging.info("Converting test playbook results to Jira issues with the following settings:")
         logging.info(f"\tArtifacts path: {artifacts_path}")
-        logging.info(f"\tJira server url: {JIRA_SERVER_URL}")
-        logging.info(f"\tJira verify SSL: {JIRA_VERIFY_SSL}")
-        logging.info(f"\tJira project id: {JIRA_PROJECT_ID}")
-        logging.info(f"\tJira issue type: {JIRA_ISSUE_TYPE}")
-        logging.info(f"\tJira component: {JIRA_COMPONENT}")
-        logging.info(f"\tJira labels: {', '.join(JIRA_LABELS)}")
-        logging.info(f"\tJira issue unresolved transition name: {JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME}")
+        logging.info(f"\tJira server url: {jira_server_info.server_url}")
+        logging.info(f"\tJira verify SSL: {jira_server_info.verify_ssl}")
+        logging.info(f"\tJira project id: {jira_ticket_info.project_id}")
+        logging.info(f"\tJira issue type: {jira_ticket_info.issue_type}")
+        logging.info(f"\tJira component: {jira_ticket_info.component}")
+        logging.info(f"\tJira labels: {', '.join(jira_ticket_info.labels)}")
+        logging.info(f"\tJira issue unresolved transition name: {jira_ticket_info.issue_unresolved_transition_name}")
         logging.info(f"\tMax days to reopen: {options.max_days_to_reopen}")
         logging.info(f"\tMax failures to handle: {options.max_failures_to_handle}")
         logging.info(f"\tBuild number: {options.build_number}")
 
-        jira_server = JIRA(JIRA_SERVER_URL, token_auth=JIRA_API_KEY, options={'verify': JIRA_VERIFY_SSL})
+        jira_server = JIRA(jira_server_info.server_url, token_auth=jira_server_info.api_key,
+                           options={'verify': jira_server_info.verify_ssl})
         jira_server_info = jira_server_information(jira_server)
         server_url = jira_server_info["baseUrl"]
 
@@ -147,7 +152,7 @@ def main():
 
         playbooks_results, server_versions = calculate_test_playbooks_results(test_playbooks_result_files_list)
 
-        issues = jira_search_all_by_query(jira_server, generate_query_by_component_and_issue_type())
+        issues = jira_search_all_by_query(jira_server, generate_query_by_component_and_issue_type(jira_ticket_info))
         jira_tickets_for_playbooks: dict[str, Issue] = get_jira_tickets_for_playbooks(list(playbooks_results.keys()), issues)
         logging.info(f"Found {len(jira_tickets_for_playbooks)} Jira tickets out of {len(playbooks_results)} playbooks")
 
@@ -194,8 +199,9 @@ def main():
                     logging.debug(f"Skipped updating Jira issue for resolved test playbook:{playbook_id}")
                     continue
                 junit_file_name = get_attachment_file_name(playbook_id, options.build_number)
-                jira_ticket = create_jira_issue(jira_server, jira_ticket, xml, playbook_id, options.build_number, tabulate_data,
-                                                options.max_days_to_reopen, now, junit_file_name, total_errors > 0)
+                jira_ticket = create_jira_issue(jira_ticket_info, jira_server, jira_ticket, xml, playbook_id,
+                                                options.build_number, tabulate_data, options.max_days_to_reopen, now,
+                                                junit_file_name, total_errors > 0)
                 jira_tickets_for_playbooks[playbook_id] = jira_ticket
             else:
                 logging.debug(f"Skipped creating Jira issue for successful test playbook:{playbook_id}")

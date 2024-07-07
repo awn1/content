@@ -10,8 +10,8 @@ from tabulate import tabulate
 
 from Tests.scripts.common import calculate_results_table, TEST_PLAYBOOKS_REPORT_FILE_NAME, get_test_results_files, \
     TEST_SUITE_CELL_EXPLANATION
-from Tests.scripts.jira_issues import JIRA_SERVER_URL, JIRA_VERIFY_SSL, JIRA_PROJECT_ID, JIRA_ISSUE_TYPE, JIRA_COMPONENT, \
-    JIRA_API_KEY, jira_server_information, generate_query_by_component_and_issue_type, jira_search_all_by_query, JIRA_LABELS
+from Tests.scripts.jira_issues import (jira_server_information, generate_query_by_component_and_issue_type,
+                                       jira_search_all_by_query, get_jira_server_info, get_jira_ticket_info)
 from Tests.scripts.test_playbooks_report import calculate_test_playbooks_results, \
     TEST_PLAYBOOKS_BASE_HEADERS, get_jira_tickets_for_playbooks, write_test_playbook_to_jira_mapping
 from Tests.scripts.utils import logging_wrapper as logging
@@ -79,23 +79,26 @@ def print_test_playbooks_summary(artifacts_path: Path,
     playbooks_ids = filter_skipped_playbooks(playbooks_results)
     logging.info(f"Found {len(playbooks_ids)} playbooks out of {len(playbooks_results)} after filtering skipped playbooks")
 
+    jira_server_info = get_jira_server_info()
     if without_jira:
         logging.info("Printing test playbook summary without Jira tickets")
         jira_tickets_for_playbooks = {}
-        server_url = JIRA_SERVER_URL
+        server_url = jira_server_info.server_url
     else:
+        jira_ticket_info = get_jira_ticket_info()
         logging.info("Searching for Jira tickets for playbooks with the following settings:")
-        logging.info(f"\tJira server url: {JIRA_SERVER_URL}")
-        logging.info(f"\tJira verify SSL: {JIRA_VERIFY_SSL}")
-        logging.info(f"\tJira project id: {JIRA_PROJECT_ID}")
-        logging.info(f"\tJira issue type: {JIRA_ISSUE_TYPE}")
-        logging.info(f"\tJira component: {JIRA_COMPONENT}")
-        logging.info(f"\tJira labels: {', '.join(JIRA_LABELS)}")
-        jira_server = JIRA(JIRA_SERVER_URL, token_auth=JIRA_API_KEY, options={'verify': JIRA_VERIFY_SSL})
+        logging.info(f"\tJira server url: {jira_server_info.server_url}")
+        logging.info(f"\tJira verify SSL: {jira_server_info.verify_ssl}")
+        logging.info(f"\tJira project id: {jira_ticket_info.project_id}")
+        logging.info(f"\tJira issue type: {jira_ticket_info.issue_type}")
+        logging.info(f"\tJira component: {jira_ticket_info.component}")
+        logging.info(f"\tJira labels: {', '.join(jira_ticket_info.labels)}")
+        jira_server = JIRA(jira_server_info.server_url, token_auth=jira_server_info.api_key,
+                           options={'verify': jira_server_info.verify_ssl})
         jira_server_info = jira_server_information(jira_server)
         server_url = jira_server_info["baseUrl"]
 
-        issues = jira_search_all_by_query(jira_server, generate_query_by_component_and_issue_type())
+        issues = jira_search_all_by_query(jira_server, generate_query_by_component_and_issue_type(jira_ticket_info))
         jira_tickets_for_playbooks = get_jira_tickets_for_playbooks(playbooks_ids, issues)
         logging.info(f"Found {len(jira_tickets_for_playbooks)} Jira tickets out of {len(playbooks_ids)} filtered playbooks")
 

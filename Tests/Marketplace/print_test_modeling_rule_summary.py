@@ -9,8 +9,8 @@ from tabulate import tabulate
 
 from Tests.scripts.common import calculate_results_table, TEST_MODELING_RULES_REPORT_FILE_NAME, get_test_results_files, \
     TEST_SUITE_CELL_EXPLANATION
-from Tests.scripts.jira_issues import JIRA_SERVER_URL, JIRA_VERIFY_SSL, JIRA_PROJECT_ID, JIRA_ISSUE_TYPE, JIRA_COMPONENT, \
-    JIRA_API_KEY, jira_server_information, jira_search_all_by_query, generate_query_by_component_and_issue_type, JIRA_LABELS
+from Tests.scripts.jira_issues import (jira_server_information, jira_search_all_by_query,
+                                       generate_query_by_component_and_issue_type, get_jira_server_info, get_jira_ticket_info)
 from Tests.scripts.test_modeling_rule_report import TEST_MODELING_RULES_BASE_HEADERS, calculate_test_modeling_rule_results, \
     write_test_modeling_rule_to_jira_mapping
 from Tests.scripts.utils import logging_wrapper as logging
@@ -34,25 +34,27 @@ def print_test_modeling_rule_summary(artifacts_path: Path, without_jira: bool) -
         return True
 
     logging.info(f"Found {len(test_modeling_rules_results_files)} test modeling rules files")
-
+    jira_server_info = get_jira_server_info()
     if without_jira:
         logging.info("Printing test modeling rule summary without Jira tickets")
         issues = None
-        server_url = JIRA_SERVER_URL
+        server_url = jira_server_info.server_url
     else:
+        jira_ticket_info = get_jira_ticket_info()
         logging.info("Searching for Jira tickets for test modeling rule with the following settings:")
-        logging.info(f"\tJira server url: {JIRA_SERVER_URL}")
-        logging.info(f"\tJira verify SSL: {JIRA_VERIFY_SSL}")
-        logging.info(f"\tJira project id: {JIRA_PROJECT_ID}")
-        logging.info(f"\tJira issue type: {JIRA_ISSUE_TYPE}")
-        logging.info(f"\tJira component: {JIRA_COMPONENT}")
-        logging.info(f"\tJira labels: {', '.join(JIRA_LABELS)}")
+        logging.info(f"\tJira server url: {jira_server_info.server_url}")
+        logging.info(f"\tJira verify SSL: {jira_server_info.verify_ssl}")
+        logging.info(f"\tJira project id: {jira_ticket_info.project_id}")
+        logging.info(f"\tJira issue type: {jira_ticket_info.issue_type}")
+        logging.info(f"\tJira component: {jira_ticket_info.component}")
+        logging.info(f"\tJira labels: {', '.join(jira_ticket_info.labels)}")
 
-        jira_server = JIRA(JIRA_SERVER_URL, token_auth=JIRA_API_KEY, options={'verify': JIRA_VERIFY_SSL})
+        jira_server = JIRA(jira_server_info.server_url, token_auth=jira_server_info.api_key,
+                           options={'verify': jira_server_info.verify_ssl})
         jira_server_info = jira_server_information(jira_server)
         server_url = jira_server_info["baseUrl"]
 
-        issues = jira_search_all_by_query(jira_server, generate_query_by_component_and_issue_type())
+        issues = jira_search_all_by_query(jira_server, generate_query_by_component_and_issue_type(jira_ticket_info))
 
     modeling_rules_to_test_suite, jira_tickets_for_modeling_rule, server_versions = (
         calculate_test_modeling_rule_results(test_modeling_rules_results_files, issues)
