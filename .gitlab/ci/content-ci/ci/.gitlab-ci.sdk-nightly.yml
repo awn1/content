@@ -86,35 +86,52 @@
     fi
   - section_end "Cleanup env results from artifacts folder"
 
+demisto-sdk-nightly:cloning-repositories:
+  stage: .pre
+  extends:
+    - .sdk-nightly-schedule-rule
+    - .cloning-repositories
+  script:
+    - job-done
+
 demisto-sdk-nightly:test-infrastructure:
+  needs:
+    - demisto-sdk-nightly:cloning-repositories
   extends:
     - .sdk-nightly-schedule-rule
     - .test-infrastructure
 
 demisto-sdk-nightly:run-pre-commit:
+  needs:
+    - demisto-sdk-nightly:cloning-repositories
   extends:
     - .run-pre-commit
     - .sdk-nightly-schedule-rule
   timeout: 11 hours
 
 demisto-sdk-nightly:run-validations:
+  needs:
+    - demisto-sdk-nightly:cloning-repositories
   extends:
     - .run-validations
     - .sdk-nightly-schedule-rule
 
 demisto-sdk-nightly:run-validations-new-validate-flow:
+  needs:
+    - demisto-sdk-nightly:cloning-repositories
   extends:
     - .run-validations-new-validate-flow
     - .sdk-nightly-schedule-rule
 
 demisto-sdk-nightly:check-idset-dependent-commands:
+  needs:
+    - demisto-sdk-nightly:cloning-repositories
   tags:
     - gke
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
   stage: unittests-and-validations
-  needs: []
   inherit:
     variables: true
   variables:
@@ -162,6 +179,8 @@ demisto-sdk-nightly:check-idset-dependent-commands:
     - job-done
 
 demisto-sdk-nightly:xsoar-prepare-testing-bucket:
+  needs:
+    - demisto-sdk-nightly:cloning-repositories
   tags:
     - gke
   extends:
@@ -179,13 +198,14 @@ demisto-sdk-nightly:xsoar-prepare-testing-bucket:
     MARKETPLACE_BUCKET: "$GCS_MARKET_BUCKET"
   cache:
     policy: pull-push
-  needs: []
   stage: prepare-testing-bucket
   script:
     - !reference [.generic-prepare-testing-bucket, script]
     - job-done
 
 demisto-sdk-nightly:mpv2-prepare-testing-bucket:
+  needs:
+    - demisto-sdk-nightly:cloning-repositories
   tags:
     - gke
   extends:
@@ -204,13 +224,14 @@ demisto-sdk-nightly:mpv2-prepare-testing-bucket:
     IFRA_ENV_TYPE: "Server Master"
   cache:
     policy: pull-push
-  needs: []
   stage: prepare-testing-bucket
   script:
     - !reference [.generic-prepare-testing-bucket, script]
     - job-done
 
 demisto-sdk-nightly:xpanse-prepare-testing-bucket:
+  needs:
+    - demisto-sdk-nightly:cloning-repositories
   tags:
     - gke
   extends:
@@ -227,13 +248,14 @@ demisto-sdk-nightly:xpanse-prepare-testing-bucket:
     IFRA_ENV_TYPE: "Server Master"
   cache:
     policy: pull-push
-  needs: []
   stage: prepare-testing-bucket
   script:
     - !reference [.generic-prepare-testing-bucket, script]
     - job-done
 
 demisto-sdk-nightly:xsoar-saas-prepare-testing-bucket:
+  needs:
+    - demisto-sdk-nightly:cloning-repositories
   tags:
     - gke
   extends:
@@ -249,13 +271,14 @@ demisto-sdk-nightly:xsoar-saas-prepare-testing-bucket:
     MARKETPLACE_BUCKET: "$GCS_MARKET_XSOAR_SAAS_BUCKET"
   cache:
     policy: pull-push
-  needs: []
   stage: prepare-testing-bucket
   script:
     - !reference [.generic-prepare-testing-bucket, script]
     - job-done
 
 demisto-sdk-nightly:test-upload-flow:
+  needs:
+    - demisto-sdk-nightly:cloning-repositories
   tags:
     - gke
   extends:
@@ -263,7 +286,6 @@ demisto-sdk-nightly:test-upload-flow:
     - .sdk-nightly-schedule-rule
   variables:
     ALL_BUCKETS: "$GCS_MARKET_BUCKET_DEV,$GCS_MARKET_V2_BUCKET_DEV,$GCS_MARKET_XSOAR_SAAS_BUCKET_DEV"
-  needs: []
   stage: unittests-and-validations
   script:
     - !reference [test-upload-flow, script]
@@ -508,6 +530,7 @@ demisto-sdk-nightly:jobs-done-check:
     - .jobs-done-check
     - .sdk-nightly-schedule-rule
   needs:
+    - demisto-sdk-nightly:cloning-repositories
     - demisto-sdk-nightly:run-pre-commit
     - demisto-sdk-nightly:run-validations
     - demisto-sdk-nightly:run-validations-new-validate-flow

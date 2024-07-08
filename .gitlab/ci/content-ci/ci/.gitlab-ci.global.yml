@@ -58,7 +58,7 @@
   - if [ -f ./items_removed_manually_from_id_set.json ]; then cp ./items_removed_manually_from_id_set.json "${ARTIFACTS_FOLDER_SERVER_TYPE}/logs"; fi
   - section_end "Create ID Set"
 
-.download-demisto-conf: &download-demisto-conf
+.download-demisto-conf:
   - section_start "Download content-test-conf and infra" --collapsed
   - exec 3>&1 4>&2
   - exec > >(tee -a "${ARTIFACTS_FOLDER}/logs/download_demisto_conf.log") 2>&1
@@ -80,23 +80,30 @@
       local sleep_time=${7:-10}  # default sleep time is 10 seconds.
       local exit_code=0
       local i=1
-      echo -e "${GREEN}Cloning ${repo_name} from ${host} branch:${branch} with ${retry_count} retries${NC}"
+      echo -e "${GREEN}Checking if repository project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name} already exists in ${CI_PROJECT_DIR}/artifacts/repositories/${repo_name}${NC}"
+      if [ -d "${CI_PROJECT_DIR}/artifacts/repositories/${repo_name}" ]; then
+        echo -e "${GREEN}Repository ${repo_name} already exists, no need to clone it again${NC}"
+        return 0
+      fi
+      echo -e "${GREEN}Cloning project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name} from ${host} branch:${branch} with ${retry_count} retries${NC}"
       if [ -z "${user}" ] && [ -z "${token}" ]; then
         user_info=""
       else
         user_info="${user}:${token}@"
         # If either user or token is not empty, then we need to add them to the url.
       fi
+      pushd "${CI_PROJECT_DIR}/artifacts/repositories" || exit 1
       for ((i=1; i <= retry_count; i++)); do
-        git clone --depth=1 "https://${user_info}${host}/${repo_name}.git" --branch "${branch}" && exit_code=0 && break || exit_code=$?
+        git clone --depth=1 "https://${user_info}${host}/${CI_PROJECT_NAMESPACE}/${repo_name}.git" --branch "${branch}" && exit_code=0 && break || exit_code=$?
         if [ ${i} -ne "${retry_count}" ]; then
-          echo -e "${RED}Failed to clone ${repo_name} with branch:${branch}, exit code:${exit_code}, sleeping for ${sleep_time} seconds and trying again${NC}"
+          echo -e "${RED}Failed to clone project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name} with branch:${branch}, exit code:${exit_code}, sleeping for ${sleep_time} seconds and trying again${NC}"
           sleep "${sleep_time}"
         else
-          echo -e "${RED}Failed to clone ${repo_name} with branch:${branch}, exit code:${exit_code}, exhausted all ${retry_count} retries${NC}"
+          echo -e "${RED}Failed to clone project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name} with branch:${branch}, exit code:${exit_code}, exhausted all ${retry_count} retries${NC}"
           break
         fi
       done
+      popd || exit 1
       return ${exit_code}
     }
 
@@ -111,41 +118,41 @@
       local fallback_branch="${8:-master}"
 
       # Check if branch exists in the repository.
-      echo -e "${GREEN}Checking if branch ${branch} exists in ${repo_name}${NC}"
+      echo -e "${GREEN}Checking if branch ${branch} exists in project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name}${NC}"
       if [ -z "${user}" ] && [ -z "${token}" ]; then
         user_info=""
       else
         # If either user or token is not empty, then we need to add them to the url.
         user_info="${user}:${token}@"
       fi
-      git ls-remote --exit-code --quiet --heads "https://${user_info}${host}/${repo_name}.git" "refs/heads/${branch}" 1>/dev/null 2>&1
+      git ls-remote --exit-code --quiet --heads "https://${user_info}${host}/${CI_PROJECT_NAMESPACE}/${repo_name}.git" "refs/heads/${branch}" 1>/dev/null 2>&1
       local branch_exists=$?
 
       if [ "${branch_exists}" -ne 0 ]; then
-        echo -e "${RED}Branch ${branch} does not exist in ${repo_name}, defaulting to ${fallback_branch}${NC}"
+        echo -e "${RED}Branch ${branch} does not exist in  project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name}, defaulting to ${fallback_branch}${NC}"
         local exit_code=1
       else
-        echo -e "${GREEN}Branch ${branch} exists in ${repo_name}, trying to clone${NC}"
+        echo -e "${GREEN}Branch ${branch} exists in  project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name}, trying to clone${NC}"
         clone_repository "${host}" "${user}" "${token}" "${repo_name}" "${branch}" "${retry_count}" "${sleep_time}"
         local exit_code=$?
         if [ "${exit_code}" -ne 0 ]; then
-          echo -e "${RED}Failed to clone ${repo_name} with branch:${branch}, exit code:${exit_code}${NC}"
+          echo -e "${RED}Failed to clone project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name} with branch:${branch}, exit code:${exit_code}${NC}"
         fi
       fi
       if [ "${exit_code}" -ne 0 ]; then
         # Trying to clone from fallback branch.
-        echo -e "${RED}Trying to clone repository:${repo_name} with fallback branch ${fallback_branch}!${NC}"
+        echo -e "${RED}Trying to clone  project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name} with fallback branch ${fallback_branch}!${NC}"
         clone_repository "${host}" "${user}" "${token}" "${repo_name}" "${fallback_branch}" "${retry_count}" "${sleep_time}"
         local exit_code=$?
         if [ ${exit_code} -ne 0 ]; then
-          echo -e "${RED}ERROR: Failed to clone ${repo_name} with fallback branch:${fallback_branch}, exit code:${exit_code}, exiting!${NC}"
+          echo -e "${RED}ERROR: Failed to clone project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name} with fallback branch:${fallback_branch}, exit code:${exit_code}, exiting!${NC}"
           exit ${exit_code}
         else
-          echo -e "${GREEN}Successfully cloned ${repo_name} with fallback branch:${fallback_branch}${NC}"
+          echo -e "${GREEN}Successfully cloned project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name} with fallback branch:${fallback_branch}${NC}"
           return 0
         fi
       else
-        echo -e "${GREEN}Successfully cloned ${repo_name} with branch:${branch}${NC}"
+        echo -e "${GREEN}Successfully cloned project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name} with branch:${branch}${NC}"
         return 0
       fi
     }
@@ -164,7 +171,7 @@
 
     if [[ "${CURRENT_BRANCH_NAME}" == "master" ]]; then
       echo "Getting infra with branch:${CURRENT_BRANCH_NAME}"
-      echo -e "${BLUE}NOTE: If you want to run the build on a specific branch in Infra,\nyou need to replace the environment variable INFRA_BRANCH in the .gitlab-ci.yml file\nwith the name of the branch that exists in Infra.${NC}"
+      echo -e "${BLUE}NOTE: If you want to run the build on a specific branch in infra,\nYou need to replace the environment variable INFRA_BRANCH in the .gitlab-ci.yml file\nWith the name of the branch that exists in infra.${NC}"
     else
       echo "Getting infra with branch:${CURRENT_BRANCH_NAME}, with fallback to master"
     fi
@@ -188,9 +195,9 @@
 
     CI_SERVER_HOST=${CI_SERVER_HOST:-gitlab.xdr.pan.local} # disable-secrets-detection
 
-    clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "${CI_PROJECT_NAMESPACE}/content-test-conf" "${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF}" 3 10 "master"
+    clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "content-test-conf" "${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF}" 3 10 "master"
 
-    # We skip copying the PrivatePacks in run-validations because they currently don't pass validations - ()
+    # We skip copying the PrivatePacks in run-validations because they currently don't pass validations
     if [[ "${CI_JOB_NAME}" == "run-validations" ]]; then
       echo "skipping Cloning PrivatePacks for run-validations in Nightly"
     elif [[ "${CI_JOB_NAME}" == "run-validations-upload-flow" ]]; then
@@ -199,31 +206,26 @@
       echo "skipping Cloning PrivatePacks for demisto-sdk-nightly:run-validations"
     else
       echo "Cloning PrivatePacks"
-      cp -r ./content-test-conf/content/PrivatePacks/* ./Packs
+      cp -r "${CI_PROJECT_DIR}/artifacts/repositories/content-test-conf/content/PrivatePacks/"* ./Packs
       echo "Cloned PrivatePacks"
     fi
 
-    clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "${CI_PROJECT_NAMESPACE}/infra" "${CURRENT_BRANCH_NAME}" 3 10 "master"
+    clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "infra" "${CURRENT_BRANCH_NAME}" 3 10 "master"
 
-    cp -r ./infra/xsiam_servers.json $XSIAM_SERVERS_PATH
-    cp -r ./infra/xsoar_ng_servers.json $XSOAR_NG_SERVERS_PATH
-    cp -r ./infra/.gitlab/ci/name_mapping.json "${CI_PROJECT_DIR}/name_mapping.json"
+    cp -r "${CI_PROJECT_DIR}/artifacts/repositories/infra/xsiam_servers.json" "${XSIAM_SERVERS_PATH}"
+    cp -r "${CI_PROJECT_DIR}/artifacts/repositories/infra/xsoar_ng_servers.json" "${XSOAR_NG_SERVERS_PATH}"
+    cp -r "${CI_PROJECT_DIR}/artifacts/repositories/infra/.gitlab/ci/name_mapping.json" "${CI_PROJECT_DIR}/name_mapping.json"
+    cp -r "${CI_PROJECT_DIR}/artifacts/repositories/infra/demisto.lic" "${DEMISTO_LIC_PATH}"
+    cp -r "${CI_PROJECT_DIR}/artifacts/repositories/infra/signDirectory" "${DEMISTO_PACK_SIGNATURE_UTIL_PATH}"
 
-    cp -r ./infra/demisto.lic ${DEMISTO_LIC_PATH}
-    cp -r ./infra/signDirectory ${DEMISTO_PACK_SIGNATURE_UTIL_PATH}
-
-    cp -rf ./infra/Tests/* ./Tests && rm -R ./infra/Tests/*
-    cp -rf ./infra/Utils/* ./Utils && rm -R ./infra/Utils/*
-    mkdir -p ./SecretActions
-    cp -rf ./infra/SecretActions/* ./SecretActions && rm -R ./infra/SecretActions/*
-    mv ./infra/gcp ./gcp
-    rm -rf ./infra
-
-
-    # In xsiam_server_ga step, removing ./content-test-conf executed in extract_content_test_conf step
-    if [[ "${CI_JOB_NAME}" != "xsiam_server_ga" ]]; then
-      rm -rf ./content-test-conf
-    fi
+    [ ! -d "${CI_PROJECT_DIR}/Tests" ] && mkdir -p "${CI_PROJECT_DIR}/Tests" || echo "Tests directory already exists"
+    [ ! -d "${CI_PROJECT_DIR}/Utils" ] && mkdir -p "${CI_PROJECT_DIR}/Utils" || echo "Utils directory already exists"
+    [ ! -d "${CI_PROJECT_DIR}/SecretActions" ] && mkdir -p "${CI_PROJECT_DIR}/SecretActions" || echo "SecretActions directory already exists"
+    [ ! -d "${CI_PROJECT_DIR}/gcp" ] && mkdir -p "${CI_PROJECT_DIR}/gcp" || echo "gcp directory already exists"
+    cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/Tests/"* "${CI_PROJECT_DIR}/Tests"
+    cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/Utils/"* "${CI_PROJECT_DIR}/Utils"
+    cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/SecretActions/"* "${CI_PROJECT_DIR}/SecretActions"
+    cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/gcp/"* "${CI_PROJECT_DIR}/gcp"
 
     set -e
     echo "Successfully cloned content-test-conf and infra repositories"
@@ -232,13 +234,36 @@
   - exec 3>&- 4>&-
   - section_end "Download content-test-conf and infra"
 
+.cloning-repositories:
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - ${CI_PROJECT_DIR}/artifacts/*
+      - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
+    when: always
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.create_artifacts_and_server_type_instance_folders]
+    - !reference [.get_last_upload_commit]
+    - !reference [.stop_contrib_external_build]
+    - |
+      if [[ ! -d "${CI_PROJECT_DIR}/artifacts/repositories" ]]; then
+        echo "Creating repositories folder:${CI_PROJECT_DIR}/artifacts/repositories"
+        mkdir -p -m 777 "${CI_PROJECT_DIR}/artifacts/repositories" # using the -p to create the folder hierarchy.
+      fi
+    - !reference [.download-demisto-conf]
+  variables:
+    ARTIFACTS_FOLDER: ${CI_PROJECT_DIR}/artifacts
+
+
 .secrets-fetch:
   - section_start "Secrets Fetch" --collapsed
   - SECRET_CONF_PATH=$(cat secret_conf_path)
   - python3 ./SecretActions/SecretsBuild/add_secrets_file_to_build.py -sa "$GSM_SERVICE_ACCOUNT" -sf "$SECRET_CONF_PATH" -u "$DEMISTO_USERNAME" -p "$DEMISTO_PASSWORD" --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN" >> "${ARTIFACTS_FOLDER}/logs/handle_secrets.log"
   - section_end "Secrets Fetch"
 
-.check_build_files_are_up_to_date: &check_build_files_are_up_to_date
+.check_build_files_are_up_to_date:
   - section_start "Check Build Files Are Up To Date"
   - |
     if [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]] || [[ "${IS_NIGHTLY}" == "true" ]] || [[ -n "${BUCKET_UPLOAD}" ]] || [[ -n "${SLACK_JOB}" ]] || [[ "${BUILD_MACHINES_CLEANUP}" == "true" ]] || [[ "${DELETE_MISMATCHED_BRANCHES}" == "true" ]] || [[ "${SECURITY_SCANS}" == "true" ]] || [[ "${DEMISTO_TEST_NATIVE_CANDIDATE}" == "true" ]] || [[ "${CI_COMMIT_BRANCH}" == "master" ]] || [[ "${SDK_RELEASE}" == "true" ]] || [[ "${TRIGGER_CONTRIBUTION_BUILD}" == "true" ]]; then
@@ -254,7 +279,7 @@
     fi
   - section_end "Check Build Files Are Up To Date"
 
-.stop_contrib_external_build: &stop_contrib_external_build
+.stop_contrib_external_build:
   - - section_start "Stop contrib external build"
   - |
     if [[ $CI_COMMIT_BRANCH =~ ^contrib/* && $CI_PIPELINE_SOURCE = "push" && $(curl --get --header "Accept: application/vnd.github.v3.raw" --header "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/demisto/content/pulls?state=open&base=master" --data-urlencode "head=demisto:${CI_COMMIT_BRANCH}" | jq) = '[]' ]]; then
@@ -420,7 +445,6 @@
     else
       echo "not checking out to the latest upload commit $LAST_UPLOAD_COMMIT because the build is not content nightly"
     fi
-  - |
   - section_end "Checkout upload commit content nightly"
 
 .extract_content_test_conf: &extract_content_test_conf
@@ -428,13 +452,12 @@
   - |
     if [[ "${CI_JOB_NAME}" == "xsiam_server_ga" ]]; then
       if [[ "${IS_NIGHTLY}" == "true" || "${EXTRACT_PRIVATE_TESTDATA}" == "true" ]]; then
-          python ./Tests/scripts/extract_content_test_conf.py --content-path . --content-test-conf-path ./content-test-conf --missing-content-packs-test-conf "${ARTIFACTS_FOLDER_SERVER_TYPE}/missing_content_packs_test_conf.txt"
+          python ./Tests/scripts/extract_content_test_conf.py --content-path "${CI_PROJECT_DIR}" --content-test-conf-path "${CI_PROJECT_DIR}/artifacts/repositories/content-test-conf" --missing-content-packs-test-conf "${ARTIFACTS_FOLDER_SERVER_TYPE}/missing_content_packs_test_conf.txt"
       fi
-      rm -rf ./content-test-conf
     fi
   - section_end "extract_content_test_conf"
 
-.export_cloud_machine_constants: &export_cloud_machine_constants
+.export_cloud_machine_constants:
   # exporting the machine credentials
   - CLOUD_SERVERS_PATH=$(cat $CLOUD_SERVERS_FILE)
   - cat "${CLOUD_API_KEYS}" > "cloud_api_keys.json"
@@ -456,11 +479,9 @@
     - source .gitlab/helper_functions.sh
     - *setup-network-certs
     - *setup-artifactory
-    - *stop_contrib_external_build
     - *create_artifacts_and_server_type_instance_folders
-    - *download-demisto-conf
+    - !reference [.download-demisto-conf]
     - *clone_and_export_variables
-    - *check_build_files_are_up_to_date
     - *install_node_modules
     - *install_venv
     - *get_contribution_pack
@@ -481,17 +502,21 @@
 
 .add-content-production-to-artifacts:
   - section_start "Clone production content and add it to artifacts" --collapsed
-  - mkdir content_production
-  - cd content_production
-  - git init > /dev/null 2>&1
-  - git remote add origin https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_NAMESPACE}/content.git
-  - git fetch --depth 1 origin $LAST_UPLOAD_COMMIT
-  - git checkout FETCH_HEAD >${ARTIFACTS_FOLDER}/logs/add-content-production-to-artifacts.log 2>&1
-  - cp -r ./Packs ${ARTIFACTS_FOLDER}/production_packs
-  - echo "checked out ${LAST_UPLOAD_COMMIT} which is the last successful upload commit"
+  - |
+      if [[ "${IS_NIGHTLY}" == "true" && "${CI_COMMIT_BRANCH}" == "master" ]]; then
+        echo "Cloning production content"
+        mkdir content_production
+        cd content_production
+        git init > /dev/null 2>&1
+        git remote add origin https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_NAMESPACE}/content.git
+        git fetch --depth 1 origin $LAST_UPLOAD_COMMIT
+        git checkout FETCH_HEAD >${ARTIFACTS_FOLDER}/logs/add-content-production-to-artifacts.log 2>&1
+        cp -r ./Packs ${ARTIFACTS_FOLDER}/production_packs
+        echo "checked out ${LAST_UPLOAD_COMMIT} which is the last successful upload commit"
+      else
+        echo "not cloning production content because the build is not content nightly"
+      fi
   - section_end "Clone production content and add it to artifacts"
-  - job-done
-
 
 .default-job-settings:
   interruptible: true
@@ -789,26 +814,6 @@
     - .default-job-settings
   script:
     - python3 Tests/scripts/check_jobs_done.py --triggering-workflow "${WORKFLOW}" --job-done-files "${PIPELINE_JOBS_FOLDER}"
-
-cloning-content-repo-last-upload-commit:
-  stage: .pre
-  rules:
-    - if: '$IS_NIGHTLY == "true"'
-  artifacts:
-    expire_in: 30 days
-    paths:
-      - ${CI_PROJECT_DIR}/artifacts/*
-      - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
-    when: always
-  before_script:
-    - source .gitlab/helper_functions.sh
-    - *setup-network-certs
-    - *create_artifacts_and_server_type_instance_folders
-    - *get_last_upload_commit
-  variables:
-    ARTIFACTS_FOLDER: ${CI_PROJECT_DIR}/artifacts
-  script:
-    - !reference [.add-content-production-to-artifacts]
 
 .docker_services:
   services:
