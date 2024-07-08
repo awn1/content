@@ -29,7 +29,7 @@ def create_graphs(messages):
 
     # Sort messages into 3 objects
     for message in messages:
-        if "has joined the channel" in message:
+        if "has joined the channel" in message or 'Due to a high volume of activity, we are not displaying some messages sent by this application' in message:
             continue
         if "Lock Duration" in message:
             match_dict1 = message.split("\n")
@@ -64,7 +64,7 @@ def create_graphs(messages):
     plt.scatter(timestamps2, locks2, c=types2, label=types2)
     print('Number of builds in queue')
     calculate_average(types2, locks2)
-    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=1))  # Adjust the interval as needed
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=3))  # Adjust the interval as needed
     plt.gca().yaxis.set_major_locator(MultipleLocator(1))  # Adjust the interval as needed
     plt.gcf().autofmt_xdate()
     plt.xlabel('Timestamp')
@@ -83,7 +83,7 @@ def create_graphs(messages):
         loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=len(colors_dict),
         fontsize=7, handlelength=3, handletextpad=1, borderaxespad=0.5)
     plt.scatter(timestamps1, durations1, c=types1, label=types1)
-    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=1))  # Adjust the interval as needed
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=3))  # Adjust the interval as needed
     plt.xticks(fontsize=6)  # Adjust the fontsize value as needed
     print('Lock Duration (minutes)')
     calculate_average(types1, durations1)
@@ -106,7 +106,7 @@ def create_graphs(messages):
     plt.scatter(timestamps3, machines3, c=types3, label=types3)
     print('Number of available machines')
     calculate_average(types3, machines3)
-    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=1))  # Adjust the interval as needed
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=3))  # Adjust the interval as needed
     plt.xticks(fontsize=6)  # Adjust the fontsize value as needed
     plt.gca().yaxis.set_major_locator(MultipleLocator(1))  # Adjust the interval as needed
     plt.gcf().autofmt_xdate()
@@ -142,10 +142,10 @@ def get_messages_from_slack(channel_id):
     try:
         result = client.conversations_history(
             channel=channel_id,
-            # oldest='1705316166',
+            # oldest='1717200000.0',
             limit=1000)
         messages += [message['text'] for message in result['messages']]
-        while result['has_more']:
+        while result['has_more'] and len(messages) < 40000:
             sleep(1)  # need to wait 1 sec before next call due to rate limits
             result = client.conversations_history(
                 channel=channel_id,
