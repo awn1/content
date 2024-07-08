@@ -101,7 +101,11 @@ def main():
         for result_file in test_modeling_rules_results_files.values():
             xml = JUnitXml.fromfile(result_file.as_posix())
             for test_suite in xml.iterchildren(TestSuite):
-                if issue := create_jira_issue_for_test_modeling_rule(jira_server, test_suite, options.max_days_to_reopen, now):
+                if issue := create_jira_issue_for_test_modeling_rule(jira_ticket_info,
+                                                                     jira_server,
+                                                                     test_suite,
+                                                                     options.max_days_to_reopen,
+                                                                     now):
                     # if the ticket was created/updated successfully, we add it to the mapping and override the previous ticket.
                     properties = get_properties_for_test_suite(test_suite)
                     if summary := get_summary_for_test_modeling_rule(properties):
