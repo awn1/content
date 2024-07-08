@@ -234,6 +234,15 @@
   - exec 3>&- 4>&-
   - section_end "Download content-test-conf and infra"
 
+.create-artifacts-repositories-folder:
+  - section_start "Create Artifacts Repositories Folder" --collapsed
+  - |
+    if [[ ! -d "${CI_PROJECT_DIR}/artifacts/repositories" ]]; then
+      echo "Creating repositories folder:${CI_PROJECT_DIR}/artifacts/repositories"
+      mkdir -p -m 777 "${CI_PROJECT_DIR}/artifacts/repositories" # using the -p to create the folder hierarchy.
+    fi
+  - section_end "Create Artifacts Repositories Folder"
+
 .cloning-repositories:
   artifacts:
     expire_in: 30 days
@@ -247,11 +256,7 @@
     - !reference [.create_artifacts_and_server_type_instance_folders]
     - !reference [.get_last_upload_commit]
     - !reference [.stop_contrib_external_build]
-    - |
-      if [[ ! -d "${CI_PROJECT_DIR}/artifacts/repositories" ]]; then
-        echo "Creating repositories folder:${CI_PROJECT_DIR}/artifacts/repositories"
-        mkdir -p -m 777 "${CI_PROJECT_DIR}/artifacts/repositories" # using the -p to create the folder hierarchy.
-      fi
+    - !reference [.create-artifacts-repositories-folder]
     - !reference [.download-demisto-conf]
   variables:
     ARTIFACTS_FOLDER: ${CI_PROJECT_DIR}/artifacts
@@ -480,6 +485,7 @@
     - *setup-network-certs
     - *setup-artifactory
     - *create_artifacts_and_server_type_instance_folders
+    - !reference [.create-artifacts-repositories-folder]
     - !reference [.download-demisto-conf]
     - *clone_and_export_variables
     - *install_node_modules
