@@ -1,20 +1,48 @@
 default:
-  image: docker-io.art.code.pan.run/devdemisto/gitlab-content-ci:1.0.0.27109
+  image: ${DOCKER_IO}/devdemisto/gitlab-content-ci:1.0.0.64455
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - ${CI_PROJECT_DIR}/artifacts/*
+      - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
+    when: always
 
-.setup-network-certs: &setup-network-certs
-  - chmod 700 $NETWORK_SETUP
-  - source $NETWORK_SETUP
+include:
+  - file: .gitlab/ci/global.yml
+    ref: $CI_COMMIT_REF_NAME
+    project: "${CI_PROJECT_NAMESPACE}/infra"
+  - file: .gitlab/ci/variables.yml
+    ref: $CI_COMMIT_REF_NAME
+    project: "${CI_PROJECT_NAMESPACE}/infra"
 
-stages: 
+.before-script-slack-notify:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.poetry-install]
+    - !reference [.granting_execute_permissions_on_files]
+    - !reference [.setup-artifactory]
+    - !reference [.create_artifacts_folder]
+
+stages:
   - notify
 
 slack-notify:
   tags:
     - gke
   stage: notify
-  before_script:
-    - *setup-network-certs
+  needs:
+    - pipeline: $PIPELINE_TO_QUERY
+      job: $JOB_NAME
+  extends:
+    - .before-script-slack-notify
   script:
-    - python3 -u ./gitlab_slack_notifier.py -p "$PIPELINE_ID" -s "$SLACK_TOKEN" -c "$GITLAB_STATUS_TOKEN" -ch "$SLACK_CHANNEL" -tw "$WORKFLOW" -ofo "$ON_FAILED_ONLY"
+    - env
+    - |
+      if [ -n "${SLACK_MSG_FILE}" ]; then
+        poetry run python3 -u ./Tests/scripts/gitlab_slack_notifier.py -p "${PIPELINE_TO_QUERY}" -s "${SLACK_TOKEN}" -c "${GITLAB_STATUS_TOKEN}" -ch "${SLACK_CHANNEL}" -tw "${WORKFLOW}"  --allow-failure "${SLACK_ALLOW_FAILURE}" --name-mapping_path "${CI_PROJECT_DIR}/name_mapping.json" --file "${SLACK_MSG_FILE}"
+      else
+        poetry run python3 -u ./Tests/scripts/gitlab_slack_notifier.py -p "${PIPELINE_TO_QUERY}" -s "${SLACK_TOKEN}" -c "${GITLAB_STATUS_TOKEN}" -ch "${SLACK_CHANNEL}" -tw "${WORKFLOW}"  --allow-failure "${SLACK_ALLOW_FAILURE}" --name-mapping_path "${CI_PROJECT_DIR}/name_mapping.json"
+      fi
   retry:
     max: 2

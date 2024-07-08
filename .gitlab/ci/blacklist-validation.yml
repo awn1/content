@@ -1,0 +1,37 @@
+.blacklist-validation-schedule-rule:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BLACKLIST_VALIDATION == "true"'
+
+.clone_from_git: &clone_from_git
+  # If content are found in the runner, remove it. Clone from content repo.
+
+  - cd ${CI_PROJECT_DIR}
+  - git fetch --all
+  - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
+  - git config diff.renameLimit 6000
+  - git branch --set-upstream-to=origin/$CI_COMMIT_BRANCH $CI_COMMIT_BRANCH
+  - cd ${CI_BUILDS_DIR}/${CI_PROJECT_NAMESPACE}
+  - |
+      if [ -d "${CI_BUILDS_DIR}/${CI_PROJECT_NAMESPACE}/content" ]; then
+        echo "Found content, removing and re-cloning"
+        rm -rf "${CI_BUILDS_DIR}/${CI_PROJECT_NAMESPACE}/content"
+      fi
+  - git clone https://github.com/demisto/content.git --depth 1
+
+blacklist-validation-job:
+  extends:
+    - .blacklist-validation-schedule-rule  # put in comment for testing
+    - .default-job-settings
+  stage: blacklist-validation
+
+  variables:
+    SECRETS_GOLD_API_KEY_NG: $SECRETS_GOLD_API_KEY_NG
+    SECRETS_GOLD_AUTH_ID_NG: $SECRETS_GOLD_AUTH_ID_NG
+    SLACK_TOKEN: $SLACK_TOKEN
+
+  script:
+    - pip install -r ./BlacklistValidation/requirements.txt
+    - *clone_from_git
+    - CONTENT_TEST_CONF_FOLDER="${CI_PROJECT_DIR}"
+    - CONTENT_FOLDER="${CI_BUILDS_DIR}/${CI_PROJECT_NAMESPACE}/content"
+    - "python $CONTENT_TEST_CONF_FOLDER/BlacklistValidation/get_blacklist.py -u 'https://api-content-gold.crtx.us.paloaltonetworks.com/xsoar' -c $CONTENT_FOLDER -j $CI_JOB_URL"

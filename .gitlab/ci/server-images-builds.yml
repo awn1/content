@@ -2,10 +2,13 @@
   - echo "building $DOCKER_BUILD_DIR"
   - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   - cp -r .gitlab/ci/ci_resources "$DOCKER_BUILD_DIR/ci_resources"
-  - docker build $DOCKER_BUILD_DIR -t "test/$DOCKER_BUILD_DIR"
+  - gcloud auth configure-docker --quiet ${DOCKER_IO_DOMAIN}
+  - docker build $DOCKER_BUILD_DIR -t "test/$DOCKER_BUILD_DIR" --build-arg=DOCKER_IO=${DOCKER_IO}
 
 .create_image: &create-image
   - |
+    echo "Pipeline source:$CI_PIPELINE_SOURCE"
+    echo "Build type:$BUILD_TYPE"
     export BUILD_NUMBER=$(echo "$INSTALLER_URL" | grep -o -E "\-[0-9]+/" | grep -o -E "[0-9]+")
     echo "BUILD_NUMBER: ${BUILD_NUMBER}"
     export SERVER_IMG_NAME="server-image-$VERSION-$BUILD_NUMBER-$(date -u +"%Y-%m-%d")"
@@ -17,38 +20,46 @@
   - *build-docker-image
   - ./server-image-build/run.sh
 
-.build-server-dev-images-schedule-rule:
+.build-images-dev-rule:
   rules:
     - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "BUILD_SERVER_DEV_IMAGE"'
 
-.build-server-ga-images-schedule-rule:
+.build-images-dev-rule-always:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "BUILD_SERVER_DEV_IMAGE"'
+      when: always
+
+.build-images-ga-rule:
   rules:
     - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "BUILD_SERVER_GA_IMAGE"'
 
-.delete-server-images-schedule-rule:
+.build-images-ga-rule-always:
   rules:
-    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "DELETE_SERVER_IMAGES"'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "BUILD_SERVER_GA_IMAGE"'
+      when: always
 
 .docker-job:
   tags:
     - gce
-  services:
-    - name: docker.art.code.pan.run/build-tools--image-dind:latest
-      alias: docker
+  before_script:
+    - until docker info &> /dev/null; do sleep 1; done
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
     DOCKER_TLS_CERTDIR: ""
+  extends:
+    - .docker_services
+
 
 .config-pip:
   before_script:
     - cp .gitlab/ci/ci_resources/pip.conf /etc/pip.conf
 
-Build-Server-Dev-Image-job:
+build-images-dev:
   stage: build-server-images
   needs: []
   extends:
-    - .build-server-dev-images-schedule-rule # put in comment for testing
+    - .build-images-dev-rule # put in comment for testing
     - .docker-job
   script:
     - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
@@ -58,11 +69,11 @@ Build-Server-Dev-Image-job:
     - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
-Build-Server-6.12-Image-job:
+build-images-ga-6.12:
   stage: build-server-images
   needs: []
   extends:
-    - .build-server-ga-images-schedule-rule # put in comment for testing
+    - .build-images-ga-rule # put in comment for testing
     - .docker-job
   script:
     - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
@@ -71,11 +82,11 @@ Build-Server-6.12-Image-job:
     - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
-Build-Server-6.11-Image-job:
+build-images-ga-6.11:
   stage: build-server-images
   needs: []
   extends:
-    - .build-server-ga-images-schedule-rule # put in comment for testing
+    - .build-images-ga-rule # put in comment for testing
     - .docker-job
   script:
     - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
@@ -84,11 +95,11 @@ Build-Server-6.11-Image-job:
     - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
-Build-Server-6.10-Image-job:
+build-images-ga-6.10:
   stage: build-server-images
   needs: []
   extends:
-    - .build-server-ga-images-schedule-rule # put in comment for testing
+    - .build-images-ga-rule # put in comment for testing
     - .docker-job
   script:
     - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
@@ -97,11 +108,11 @@ Build-Server-6.10-Image-job:
     - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
-Build-Server-6.9-Image-job:
+build-images-ga-6.9:
   stage: build-server-images
   needs: []
   extends:
-    - .build-server-ga-images-schedule-rule # put in comment for testing
+    - .build-images-ga-rule # put in comment for testing
     - .docker-job
   script:
     - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
@@ -110,29 +121,40 @@ Build-Server-6.9-Image-job:
     - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
-Delete-Server-Images:
-  stage: delete-server-images
-  needs: []
+build-images-dev-fan-in:
+  stage: fan-in
   extends:
-    - .delete-server-images-schedule-rule # put in comment for testing
-    - .config-pip
+    - .build-images-dev-rule-always
   script:
-    - cd gcp
-    - python3 -m pip install google-cloud-compute
-    - python3 ./delete_old_images.py --server-version "master" --images-to-reserve 20 --creds $XSOAR_CONTENT_BUILD_CREDS
-    - python3 ./delete_old_images.py --server-version "ga-6-12" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
-    - python3 ./delete_old_images.py --server-version "ga-6-11" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
-    - python3 ./delete_old_images.py --server-version "ga-6-10" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
-    - python3 ./delete_old_images.py --server-version "ga-6-9" --images-to-reserve 10 --creds $XSOAR_CONTENT_BUILD_CREDS
+    - echo "fan in"
 
-slack-notify-build-delete-server-images:
-  when: always
+build-images-dev-slack-notify:
+  extends:
+    - .build-images-dev-rule-always
+    - .trigger-slack-notification
   variables:
-    PIPELINE_ID: "$CI_PIPELINE_ID"
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: "build-images-dev-fan-in"
     WORKFLOW: "$BUILD_TYPE"
     SLACK_CHANNEL: 'content-infra-images'
     SLACK_JOB: 'true'
+    SLACK_ALLOW_FAILURE: 'false'
+
+build-images-ga-fan-in:
+  stage: fan-in
   extends:
+    - .build-images-ga-rule-always
+  script:
+    - echo "fan in"
+
+build-images-ga-slack-notify:
+  extends:
+    - .build-images-ga-rule-always
     - .trigger-slack-notification
-  
-  
+  variables:
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: "build-images-ga-fan-in"
+    WORKFLOW: "$BUILD_TYPE"
+    SLACK_CHANNEL: 'content-infra-images'
+    SLACK_JOB: 'true'
+    SLACK_ALLOW_FAILURE: 'false'

@@ -1,0 +1,33 @@
+variables:
+  WORKFLOW_PIPELINE_NAME: 'Pipeline for branch: $CI_COMMIT_REF_NAME'
+
+workflow:
+  name: '$WORKFLOW_PIPELINE_NAME'
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Merge request #$CI_MERGE_REQUEST_IID pipeline for branch $CI_COMMIT_REF_NAME to $CI_MERGE_REQUEST_TARGET_BRANCH_NAME'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_MACHINES_REPORT == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Build machines report pipeline'
+    - if: '$UPDATE_BIG_QUERY_LOGS == "true"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Update marketplace bucket logs pipeline'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BLACKLIST_VALIDATION == "true"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Blacklist validation pipeline'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $SECRET_EXPIRATION_REPORT == "true"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Secret expiration report pipeline'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "BUILD_SERVER_DEV_IMAGE"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Build server dev image pipeline'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "BUILD_SERVER_GA_IMAGE"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Build server GA image pipeline'
+    - if: '$BUILD_MACHINES_CLEANUP == "true"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Build machines cleanup pipeline'
+
+    # Don't add any other rules after this one.
+    - when: always  # Other pipelines can run, but use the default name

@@ -1,0 +1,58 @@
+.trigger-dev-nightly-builds-schedule-rule:
+  rules:
+    - if: '$TRIGGER_DEV_NIGHTLY_BUILDS == "true"'
+
+.trigger-dev-nightly-builds-schedule-rule-always:
+  rules:
+    - if: '$TRIGGER_DEV_NIGHTLY_BUILDS == "true"'
+      when: always
+
+.before-script-trigger-dev-nightly-builds:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.poetry-install]
+    - !reference [.granting_execute_permissions_on_files]
+    - !reference [.setup-artifactory]
+    - !reference [.create_artifacts_folder]
+
+trigger-dev-nightly-builds-job:
+  extends:
+    - .trigger-dev-nightly-builds-schedule-rule
+    - .before-script-trigger-dev-nightly-builds
+  stage: trigger-dev-nightly-builds
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - ${ARTIFACTS_FOLDER}/*
+    when: always
+  variables:
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    DEV_BRANCH_NAME: $DEV_BRANCH_NAME
+  script:
+    - EXIT_CODE=0
+    - env
+    - echo "Triggering dev nightly builds for branch ${DEV_BRANCH_NAME}"
+    - poetry run python3 -u ./Tests/scripts/trigger_content_build.py -pn "${CI_PROJECT_NAMESPACE}/content" -gt "$GITLAB_API_TOKEN_CONTENT" -bn "${DEV_BRANCH_NAME}" -gtt "$GITLAB_SVC_USER_TOKEN" -gct "$GITLAB_CONTENT_CANCEL_TOKEN" -ght "$GITHUB_TOKEN" -n "${IS_NIGHTLY:-false}" -sn "${DEMISTO_SDK_NIGHTLY:-false}" -o "${ARTIFACTS_FOLDER}/slack_msg.txt" || EXIT_CODE=$?
+    - exit $EXIT_CODE
+
+trigger-dev-nightly-builds-job-fan-in:
+  stage: fan-in
+  extends:
+    - .trigger-dev-nightly-builds-schedule-rule-always
+  script:
+    - echo "fan in"
+
+trigger-dev-nightly-builds-job-slack-notify:
+  extends:
+    - .trigger-dev-nightly-builds-schedule-rule-always
+    - .trigger-slack-notification
+  variables:
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: "trigger-dev-nightly-builds-job-fan-in"
+    SLACK_CHANNEL: 'dmst-build-dev-infra'
+    SLACK_JOB: 'true'
+    ARTIFACTS_FOLDER: $ARTIFACTS_FOLDER
+    SLACK_MSG_FILE: "${ARTIFACTS_FOLDER}/slack_msg.txt"
+    WORKFLOW: "Trigger dev nightly builds"
+    SLACK_ALLOW_FAILURE: 'false'

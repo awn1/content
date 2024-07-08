@@ -1,4 +1,5 @@
-FROM demisto/python3:3.10.4.27798
+ARG DOCKER_IO=docker.io
+FROM ${DOCKER_IO}/demisto/python3:3.10.4.27798
 
 
 # Network setup

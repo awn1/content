@@ -1,0 +1,53 @@
+.update-marketplace-bucket-logs-schedule-rule:
+  rules:
+    - if: '$UPDATE_BIG_QUERY_LOGS == "true"'
+
+.update-marketplace-bucket-logs-schedule-rule-always:
+  rules:
+    - if: '$UPDATE_BIG_QUERY_LOGS == "true"'
+      when: always
+
+from-marketplace-dist-logs:
+  extends:
+    - .update-marketplace-bucket-logs-schedule-rule
+    - .default-job-settings
+  stage: bucket-logs
+  variables:
+    BUCKET_NAME: marketplace-dist
+    LOG_TABLE: marketplace_logs.usage
+  before_script:
+    - gcloud auth activate-service-account --key-file $GCLOUD_SERVICE_KEY
+  script:
+    - ./BucketLogs/process-logs.sh
+
+from-xsoar-registry-logs:
+  extends:
+    - .update-marketplace-bucket-logs-schedule-rule
+    - .default-job-settings
+  stage: bucket-logs
+  variables:
+    BUCKET_NAME: artifacts.xsoar-registry.appspot.com
+    LOG_TABLE: bucket_logs.xsoar_registry_usage
+  before_script:
+    - gcloud auth activate-service-account --key-file $GCLOUD_SERVICE_KEY
+  script:
+    - ./BucketLogs/process-logs.sh
+
+content-logs-processing-fan-in:
+  extends:
+    - .update-marketplace-bucket-logs-schedule-rule-always
+  stage: fan-in
+  script:
+    - echo "fan in"
+
+content-logs-processing-slack-notify:
+  extends:
+    - .update-marketplace-bucket-logs-schedule-rule-always
+    - .trigger-slack-notification
+  variables:
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: "content-logs-processing-fan-in"
+    WORKFLOW: "content logs processing"
+    SLACK_CHANNEL: 'content-logs-processing'
+    SLACK_JOB: 'true'
+    SLACK_ALLOW_FAILURE: 'false'

@@ -1,17 +1,11 @@
 {
   "globalconfig": {
     "serviceaccount": "vm-instance-service-account@{project}.iam.gserviceaccount.com",
-    "template": "general-xsoar-server-template",
+    "template": "nightly-xsoar-server-template",
     "sshuser": "gcp-user",
     "keyname": "oregon-ci"
   },
   "config": {
-    "Private-Content-Build": [
-      {
-        "role": "Server Master",
-        "imagefamily": "master"
-      }
-    ],
     "Bucket-Upload": [
       {
         "role": "Server Master",
@@ -56,12 +50,6 @@
         "imagefamily": "ga-6-9"
       }
     ],
-    "Content-Master": [
-      {
-        "role": "Server Master",
-        "imagefamily": "master"
-      }
-    ],
     "Server Master": [
       {
         "role": "Server Master",
@@ -71,78 +59,63 @@
     "Nightly": [
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       },
       {
         "role": "Server Master",
-        "imagefamily": "master",
-        "template": "nightly-xsoar-server-template"
+        "imagefamily": "master"
       }
     ]
   }

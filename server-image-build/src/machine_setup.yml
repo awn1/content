@@ -8,7 +8,7 @@
   register: network
 
 - name: validate network
-  assert: 
+  assert:
     that: network.resources|length == 1
     fail_msg: found "{{ network.resources }}" as network should be 1
     quiet: quiet_mode
@@ -28,7 +28,7 @@
   register: subnetwork
 
 - name: validate subnetwork
-  assert: 
+  assert:
     that: subnetwork.resources|length == 1
     fail_msg: found "{{ subnetwork.resources }}" as subnetwork should be 1
     quiet: quiet_mode

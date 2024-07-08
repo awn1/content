@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secret Expiration Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        h1 {
+            font-size: 32px;
+            color: #1877f2;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-size: 16px;
+        }
+
+        .expandable-row:hover {
+            background-color: #e8e8e8;
+        }
+
+        .active {
+            color: green;
+            font-weight: bold;
+        }
+
+        .inactive {
+            color: red;
+            font-weight: bold;
+        }
+
+        .expiration {
+            font-style: italic;
+        }
+
+        .subtitle {
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #555;
+        }
+
+        .expanded-row {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .expanded-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .expanded-table th,
+        .expanded-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .expanded-table th {
+            background-color: #f2f2f2;
+            font-size: 14px;
+        }
+
+        .expanded-table td {
+            font-size: 14px;
+        }
+
+        .total-row {
+            font-size: 14px;
+            text-align: left;
+            color: #555;
+        }
+
+        .filter-options {
+            margin-bottom: 10px;
+        }
+
+        .filter-options select,
+        .filter-options input[type="text"] {
+            width: calc(100% - 40px);
+            padding: 8px;
+            margin-top: 5px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+            font-size: 14px;
+        }
+
+        .filter-options select:focus,
+        .filter-options input[type="text"]:focus {
+            outline: none;
+            border-color: #1877f2;
+        }
+
+        .filter-label {
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Secret Expiration Report</h1>
+        <h2 class="subtitle">Secrets about to expire before {{ expiration_date }}</h2>
+        <table id="secret-table">
+            <thead>
+                <tr>
+                    <th onclick="showFilterOptions('filter-name')">Name</th>
+                    <th onclick="showFilterOptions('filter-status')">Status</th>
+                    <th onclick="showFilterOptions('filter-credentials_expiration')">Credentials (Token) Expiration</th>
+                    <th onclick="showFilterOptions('filter-license_expiration')">License Expiration</th>
+                    <th onclick="showFilterOptions('filter-integration')">Integration Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                {% set is_expired = (record.credentials_expiration and record.credentials_expiration < current_date) or (record.license_expiration and record.license_expiration < current_date) %}
+                <tr class="expandable-row" data-expanded="false"
+                    style="background-color: {% if is_expired %}#ffe6e6{% else %}white{% endif %};">
+                    <td>{{ record.name }}</td>
+                    <td class="{{ 'active' if record.status == 'active' else 'inactive' }}">{{ record.status }}</td>
+                    <td class="credentials_expiration" style="color: {% if record.credentials_expiration and record.credentials_expiration < current_date %}darkred{% endif %};">{{ record.credentials_expiration }}</td>
+                    <td class="license_expiration" style="color: {% if record.license_expiration and record.license_expiration < current_date %}darkred{% endif %};">{{ record.license_expiration }}</td>
+                    <td>{{ record['Integration Name'] }}</td>
+                </tr>
+                <tr class="expanded-row" style="display: none;">
+                    <td colspan="5">
+                        <table class="expanded-table">
+                            {% for key, value in record.items() %}
+                            <tr>
+                                <th>{{ key }}</th>
+                                <td>{{ value }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row" id="total-row">
+                    <td colspan="5">Total number of secrets: <span id="total-count">{{ records|length }}</span></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="filter-options" id="filter-integration" style="display: none;">
+            <div class="filter-label">Filter by Integration Name:</div>
+            <input type="text" id="filter-integration-input" onkeyup="applyFilters()">
+        </div>
+        <div class="filter-options" id="filter-name" style="display: none;">
+            <div class="filter-label">Filter by Name:</div>
+            <input type="text" id="filter-name-input" onkeyup="applyFilters()">
+        </div>
+        <div class="filter-options" id="filter-status" style="display: none;">
+            <div class="filter-label">Filter by Status:</div>
+            <select id="filter-status-select" onchange="applyFilters()">
+                <option value="">All</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+        </div>
+        <div class="filter-options" id="filter-credentials_expiration" style="display: none;">
+            <div class="filter-label">Filter by Credentials (Token) Expiration:</div>
+            <input type="text" id="filter-credentials_expiration-input" onkeyup="applyFilters()">
+        </div>
+        <div class="filter-options" id="filter-license_expiration" style="display: none;">
+            <div class="filter-label">Filter by License Expiration:</div>
+            <input type="text" id="filter-license_expiration-input" onkeyup="applyFilters()">
+        </div>
+    </div>
+    <script>
+
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const expandableRows = document.querySelectorAll('.expandable-row');
+            expandableRows.forEach(row => {
+                row.addEventListener('click', function () {
+                    const expandedRow = this.nextElementSibling;
+                    const isExpanded = this.getAttribute('data-expanded') === 'true';
+
+                    // Toggle the expanded row visibility
+                    if (isExpanded) {
+                        expandedRow.style.display = 'none';
+                        this.setAttribute('data-expanded', 'false');
+                    } else {
+                        expandedRow.style.display = 'table-row';
+                        this.setAttribute('data-expanded', 'true');
+                    }
+                });
+            });
+        });
+
+        function updateTotalCount() {
+            const visibleRows = document.querySelectorAll('.expandable-row:not([style*="display: none"])');
+            document.getElementById('total-count').textContent = visibleRows.length;
+        }
+
+        function applyFilters() {
+            const nameFilter = document.getElementById('filter-name-input').value.toUpperCase();
+            const statusFilter = document.getElementById('filter-status-select').value;
+            const instanceExpirationFilter = document.getElementById('filter-credentials_expiration-input').value.toUpperCase();
+            const licenseExpirationFilter = document.getElementById('filter-license_expiration-input').value.toUpperCase();
+            const integrationFilter = document.getElementById('filter-integration-input').value.toUpperCase();
+
+            const rows = document.querySelectorAll('.expandable-row');
+
+            rows.forEach(row => {
+                const nameCell = row.querySelector('td:first-child').textContent.toUpperCase();
+                const statusCell = row.querySelector('.active') || row.querySelector('.inactive');
+                const instanceExpirationCell = row.querySelector('.credentials_expiration').textContent.toUpperCase();
+                const licenseExpirationCell = row.querySelector('.license_expiration').textContent.toUpperCase();
+                const integrationCell = row.querySelector('td:last-child').textContent.toUpperCase();
+
+                // Compare instance and license expiration dates
+                const instanceExpirationDate = instanceExpirationCell ? new Date(instanceExpirationCell) : null;
+                const licenseExpirationDate = licenseExpirationCell ? new Date(licenseExpirationCell) : null;
+                const currentDate = new Date();
+
+                const isExpired = (instanceExpirationDate && instanceExpirationDate < currentDate) || (licenseExpirationDate && licenseExpirationDate < currentDate);
+
+                // Check filters
+                const nameMatch = nameCell.includes(nameFilter);
+                const statusMatch = statusFilter === '' || (statusCell && statusCell.classList.contains(statusFilter));
+                const instanceExpirationMatch = instanceExpirationCell.includes(instanceExpirationFilter);
+                const licenseExpirationMatch = licenseExpirationCell.includes(licenseExpirationFilter);
+                const integrationMatch = integrationCell.includes(integrationFilter);
+
+                if (nameMatch && statusMatch && instanceExpirationMatch && licenseExpirationMatch && integrationMatch) {
+                    row.style.display = '';
+
+                    // Highlight row if expired
+                    if (isExpired) {
+                        row.style.backgroundColor = '#ffe6e6'; // Light red color
+                    } else {
+                        row.style.backgroundColor = ''; // Reset background color if not expired
+                    }
+
+                    if (row.getAttribute('data-expanded') === 'true') {
+                        row.nextElementSibling.style.display = 'table-row';
+                    }
+                } else {
+                    row.style.display = 'none';
+                    if (row.nextElementSibling) {
+                        row.nextElementSibling.style.display = 'none';
+                    }
+                }
+            });
+
+            updateTotalCount();
+        }
+
+        function showFilterOptions(filterId) {
+            const filterOptions = document.querySelectorAll('.filter-options');
+            filterOptions.forEach(option => {
+                option.style.display = 'none';
+            });
+            document.getElementById(filterId).style.display = 'block';
+        }
+
+        // You may also want to add a function to clear all filters and reset the form
+        function clearFilters() {
+            // Reset all filter inputs and selects
+            document.getElementById('filter-name-input').value = '';
+            document.getElementById('filter-status-select').value = '';
+            document.getElementById('filter-expiration-input').value = '';
+            document.getElementById('filter-integration-input').value = '';
+
+            // Re-apply filters to reset the table view
+            applyFilters();
+        }
+    </script>
+
+</body>
+
+</html>
