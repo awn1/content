@@ -11,6 +11,13 @@
     - if: '$BUCKET_UPLOAD == "true" && $FORCE_BUCKET_UPLOAD == "false"'
       when: always
 
+cloning-repositories-upload-flow:
+  stage: .pre
+  extends:
+    - .bucket-upload-rule
+    - .cloning-repositories
+  script:
+    - job-done
 
 .check_user_permissions_to_upload_packs: &check_user_permissions_to_upload_packs
   - section_start "Check User Permissions to Upload Packs" # if bucket upload and uploading to marketplace-dist
@@ -66,6 +73,8 @@
   - section_end "Upload failed_to_upload Packs"
 
 run-validations-upload-flow:
+  needs:
+    - cloning-repositories-upload-flow
   variables:
     DEMISTO_SDK_GRAPH_FORCE_CREATE: "true"
   extends:
@@ -73,6 +82,8 @@ run-validations-upload-flow:
     - .bucket-upload-rule
 
 run-validations-upload-flow-new-validate-flow:
+  needs:
+    - cloning-repositories-upload-flow
   variables:
     DEMISTO_SDK_GRAPH_FORCE_CREATE: "true"
   extends:
@@ -80,6 +91,8 @@ run-validations-upload-flow-new-validate-flow:
     - .bucket-upload-rule
 
 run-pre-commit-upload-flow:
+  needs:
+    - cloning-repositories-upload-flow
   cache:
     policy: push
   extends:
@@ -90,15 +103,35 @@ jobs-done-check-upload-flow:
   extends:
     - .jobs-done-check
     - .bucket-upload-rule
-  needs: ['run-pre-commit-upload-flow', 'run-validations-upload-flow', 'mpv2-prepare-testing-bucket-upload-flow', 'upload-id-set-bucket', 'xpanse-prepare-testing-bucket-upload-flow', 'xsoar-prepare-testing-bucket-upload-flow', 'xsoar-saas-prepare-testing-bucket-upload-flow', 'install-packs-in-server6_9', 'install-packs-in-server6_10', 'install-packs-in-server6_11', 'install-packs-in-server6_12', 'install-packs-in-server-master', 'install-packs-in-xsiam-ga', 'sync-buckets-between-projects', 'upload-packs-to-marketplace', 'upload-packs-to-marketplace-v2', 'upload-packs-to-xpanse-marketplace', 'upload-packs-to-xsoar-saas-marketplace', 'run-validations-upload-flow-new-validate-flow']
+  needs:
+    - cloning-repositories-upload-flow
+    - run-pre-commit-upload-flow
+    - run-validations-upload-flow
+    - mpv2-prepare-testing-bucket-upload-flow
+    - upload-id-set-bucket
+    - xpanse-prepare-testing-bucket-upload-flow
+    - xsoar-prepare-testing-bucket-upload-flow
+    - xsoar-saas-prepare-testing-bucket-upload-flow
+    - install-packs-in-server6_9
+    - install-packs-in-server6_10
+    - install-packs-in-server6_11
+    - install-packs-in-server6_12
+    - install-packs-in-server-master
+    - install-packs-in-xsiam-ga
+    - sync-buckets-between-projects
+    - upload-packs-to-marketplace
+    - upload-packs-to-marketplace-v2
+    - upload-packs-to-xpanse-marketplace
+    - upload-packs-to-xsoar-saas-marketplace
+    - run-validations-upload-flow-new-validate-flow
   tags:
     - gke
   variables:
     WORKFLOW: 'Upload Packs to Marketplace Storage'
 
-
-
 xsoar-prepare-testing-bucket-upload-flow:
+  needs:
+    - cloning-repositories-upload-flow
   extends:
     - xsoar-prepare-testing-bucket
   variables:
@@ -112,6 +145,8 @@ xsoar-prepare-testing-bucket-upload-flow:
 
 
 xsoar-saas-prepare-testing-bucket-upload-flow:
+  needs:
+    - cloning-repositories-upload-flow
   extends:
     - xsoar-saas-prepare-testing-bucket
   variables:
@@ -125,6 +160,8 @@ xsoar-saas-prepare-testing-bucket-upload-flow:
 
 
 mpv2-prepare-testing-bucket-upload-flow:
+  needs:
+    - cloning-repositories-upload-flow
   extends:
       - mpv2-prepare-testing-bucket
   variables:
@@ -136,8 +173,9 @@ mpv2-prepare-testing-bucket-upload-flow:
     - if: '$BUCKET_UPLOAD == "true"'
     - if: '$FORCE_BUCKET_UPLOAD == "true"'
 
-
 xpanse-prepare-testing-bucket-upload-flow:
+  needs:
+    - cloning-repositories-upload-flow
   extends:
       - xpanse-prepare-testing-bucket
   variables:
@@ -153,7 +191,8 @@ xpanse-prepare-testing-bucket-upload-flow:
 .install_packs_in_xsoar_server:
   tags:
     - gke
-  needs: ["xsoar-prepare-testing-bucket-upload-flow"]
+  needs:
+    - xsoar-prepare-testing-bucket-upload-flow
   stage: run-instances
   artifacts:
     expire_in: 48 hrs
@@ -344,7 +383,6 @@ install-packs-in-xsiam-ga:
     CLOUD_API_TOKENS: $XSIAM_TOKENS
     NON_REMOVABLE_PACKS: "Base"
     MARKETPLACE_NAME: "marketplacev2"
-
 
 upload-packs-to-marketplace:
   tags:
@@ -825,6 +863,8 @@ slack-notify-bucket-upload:
     CURRENT_BRANCH_NAME: $INFRA_BRANCH
 
 upload-id-set-bucket:
+  needs:
+    - cloning-repositories-upload-flow
   tags:
     - gke
   stage: prepare-testing-bucket

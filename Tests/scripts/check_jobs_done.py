@@ -6,43 +6,24 @@ from Tests.scripts.common import WORKFLOW_TYPES, CONTENT_NIGHTLY, BUCKET_UPLOAD,
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 
-CONTENT_NIGHTLY_JOBS = [
-    'run-pre-commit',
-    'run-validations',
-    'run-validations-new-validate-flow',
-    'mpv2-prepare-testing-bucket',
-    'xpanse-prepare-testing-bucket',
-    'xsoar-prepare-testing-bucket',
-    'xsiam_server_ga',
-    # 'xsoar_ng_server_ga',
-    'tests_xsoar_server: [Server 6.9]',
-    'tests_xsoar_server: [Server 6.10]',
-    'tests_xsoar_server: [Server 6.11]',
-    'tests_xsoar_server: [Server 6.12]',
-    'tests_xsoar_server: [Server Master]',
-    'xsoar-test_playbooks_results',
-    'xsiam-test_playbooks_results',
-    'xsiam-test_modeling_rule_results',
-    'cloning-content-repo-last-upload-commit',
-    # 'xsoar-saas_test_e2e_results',
-]
-
 SDK_NIGHTLY_JOBS = [
-     "demisto-sdk-nightly:run-pre-commit",
-     "demisto-sdk-nightly:run-validations",
-     "demisto-sdk-nightly:run-validations-new-validate-flow",
-     "demisto-sdk-nightly:test-infrastructure",
-     "demisto-sdk-nightly:test-upload-flow",
-     "demisto-sdk-nightly:check-idset-dependent-commands",
-     "demisto-sdk-nightly:mpv2-prepare-testing-bucket",
-     "demisto-sdk-nightly:xsoar-prepare-testing-bucket",
-     "demisto-sdk-nightly:xpanse-prepare-testing-bucket",
-     "demisto-sdk-nightly:xsoar-saas-prepare-testing-bucket",
-     "demisto-sdk-nightly:run-end-to-end-tests-general",
-     "demisto-sdk-nightly:run-end-to-end-tests-xsoar",
+    "demisto-sdk-nightly:cloning-repositories",
+    "demisto-sdk-nightly:run-pre-commit",
+    "demisto-sdk-nightly:run-validations",
+    "demisto-sdk-nightly:run-validations-new-validate-flow",
+    "demisto-sdk-nightly:test-infrastructure",
+    "demisto-sdk-nightly:test-upload-flow",
+    "demisto-sdk-nightly:check-idset-dependent-commands",
+    "demisto-sdk-nightly:mpv2-prepare-testing-bucket",
+    "demisto-sdk-nightly:xsoar-prepare-testing-bucket",
+    "demisto-sdk-nightly:xpanse-prepare-testing-bucket",
+    "demisto-sdk-nightly:xsoar-saas-prepare-testing-bucket",
+    "demisto-sdk-nightly:run-end-to-end-tests-general",
+    "demisto-sdk-nightly:run-end-to-end-tests-xsoar",
 ]
 
 BUCKET_UPLOAD_JOBS = [
+    'cloning-repositories-upload-flow',
     'run-pre-commit-upload-flow',
     'run-validations-upload-flow',
     'run-validations-upload-flow-new-validate-flow',
@@ -62,11 +43,10 @@ BUCKET_UPLOAD_JOBS = [
 ]
 
 CONTENT_COMMON_JOBS = [
+    'cloning-repositories',
     'run-pre-commit',
     'run-validations',
     'run-validations-new-validate-flow',
-    'test-upload-flow',
-    'validate-content-conf',
     'mpv2-prepare-testing-bucket',
     'xpanse-prepare-testing-bucket',
     'xsoar-prepare-testing-bucket',
@@ -77,19 +57,25 @@ CONTENT_COMMON_JOBS = [
     'tests_xsoar_server: [Server 6.11]',
     'tests_xsoar_server: [Server 6.12]',
     'tests_xsoar_server: [Server Master]',
-    'xsoar_ng_server_ga',
     'xsoar-test_playbooks_results',
     'xsiam-test_playbooks_results',
     'xsiam-test_modeling_rule_results',
 ]
 
 CONTENT_PR_JOBS = CONTENT_COMMON_JOBS + [
+    'validate-content-conf',
+    'test-upload-flow',
+    'xsoar_ng_server_ga',
     'stop-running-pipelines',
 ]
 
 CONTENT_MERGE_JOBS = CONTENT_COMMON_JOBS + [
     'merge-dev-secrets',
+    'xsoar_ng_server_ga',
 ]
+
+CONTENT_NIGHTLY_JOBS = CONTENT_COMMON_JOBS
+
 
 JOBS_PER_TRIGGERING_WORKFLOW = {
     CONTENT_NIGHTLY: CONTENT_NIGHTLY_JOBS,

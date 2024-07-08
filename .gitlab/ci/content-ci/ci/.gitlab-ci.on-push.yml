@@ -35,6 +35,19 @@ merge-dev-secrets:
     - section_end "Merging and deleting dev secrets"
   allow_failure: true
 
+cloning-repositories:
+  stage: .pre
+  rules:
+    - if: '$IS_NIGHTLY == "true"'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
+    - if: '$TRIGGER_TEST_BRANCH == "true"'
+  extends:
+    - .cloning-repositories
+  script:
+    - !reference [.check_build_files_are_up_to_date]
+    - !reference [.add-content-production-to-artifacts]
+    - job-done
+
 stop-running-pipelines:
   tags:
     - gke
@@ -47,6 +60,8 @@ stop-running-pipelines:
     - !reference [.filter-non-nightly-docker-updates-rule, rules]
     - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/ && $CI_COMMIT_BRANCH != $master_branch_name'
     - if: '$TRIGGER_TEST_BRANCH == "true"'
+  needs:
+    - cloning-repositories
   script:
     - section_start "Stop running pipelines on current branch"
     - python3 ./Tests/scripts/stop_running_pipeline.py --creds "${CONTENT_BUILD_GCP}" --zone "${GCP_ZONE}"
@@ -56,6 +71,8 @@ stop-running-pipelines:
 run-pre-commit:
   extends:
     - .run-pre-commit
+  needs:
+    - cloning-repositories
   rules:
     - if: '$IS_NIGHTLY == "true"'
     - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
@@ -65,6 +82,8 @@ run-pre-commit:
 
 # runs in gitlab for the on-push flow (except for contributors)
 run-validations:
+  needs:
+    - cloning-repositories
   extends:
     - .run-validations
   rules:
@@ -74,6 +93,8 @@ run-validations:
 
 # runs in gitlab for the on-push flow (except for contributors)
 run-validations-new-validate-flow:
+  needs:
+    - cloning-repositories
   extends:
     - .run-validations-new-validate-flow
   rules:
@@ -84,6 +105,8 @@ run-validations-new-validate-flow:
 
 # runs in gitlab for the on-push flow, on every new commit pushed to the branch.
 validate-content-conf:
+  needs:
+      - cloning-repositories
   tags:
     - gke
   stage: unittests-and-validations
@@ -217,6 +240,8 @@ validate-content-conf:
     - job-done
 
 xsoar-prepare-testing-bucket:
+  needs:
+    - cloning-repositories
   variables:
     PRODUCT_TYPE: "XSOAR"
     SERVER_TYPE: "XSOAR"
@@ -228,6 +253,8 @@ xsoar-prepare-testing-bucket:
     - .generic-prepare-testing-bucket
 
 xsoar-saas-prepare-testing-bucket:
+  needs:
+    - cloning-repositories
   variables:
     PRODUCT_TYPE: "XSOAR"
     SERVER_TYPE: "XSOAR SAAS"
@@ -239,6 +266,8 @@ xsoar-saas-prepare-testing-bucket:
     - .generic-prepare-testing-bucket
 
 mpv2-prepare-testing-bucket:
+  needs:
+    - cloning-repositories
   variables:
     PRODUCT_TYPE: "XSIAM"
     SERVER_TYPE: "XSIAM"
@@ -251,6 +280,8 @@ mpv2-prepare-testing-bucket:
     - .generic-prepare-testing-bucket
 
 xpanse-prepare-testing-bucket:
+  needs:
+    - cloning-repositories
   variables:
     PRODUCT_TYPE: "XPANSE"
     SERVER_TYPE: "XPANSE"
@@ -390,7 +421,7 @@ jobs-done-check-nightly:
   extends:
     - .jobs-done-check
   needs:
-    - cloning-content-repo-last-upload-commit
+    - cloning-repositories
     - run-pre-commit
     - run-validations
     - run-validations-new-validate-flow
@@ -436,6 +467,7 @@ jobs-done-check-on-push:
     - .push-rule
     - .jobs-done-check
   needs:
+    - cloning-repositories
     - run-pre-commit
     - run-validations
     - run-validations-new-validate-flow
@@ -479,6 +511,7 @@ jobs-done-check-on-merge:
     - .push-rule
     - .jobs-done-check
   needs:
+    - cloning-repositories
     - merge-dev-secrets
     - run-pre-commit
     - run-validations
@@ -500,7 +533,6 @@ jobs-done-check-on-merge:
   variables:
     WORKFLOW: 'Content Merge'
     master_branch_name: master
-
 
 slack-notify-nightly-build:
   rules:
@@ -635,7 +667,6 @@ slack-notify-on-merge:
     - !reference [.clean-machine]
     - !reference [.unlock-machine]
 
-
 xsiam_server_ga:
   extends:
     - .test_content_on_cloud_server_instances_base
@@ -733,6 +764,8 @@ xsoar_ng_server_ga:
       - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*  # restoring the default artifacts path from the job default settings
 
 test-upload-flow:
+  needs:
+    - cloning-repositories
   tags:
     - gke
   extends:
