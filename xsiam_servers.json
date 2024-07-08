@@ -62,19 +62,6 @@
     "agent_host_ip": "172.16.8.65",
     "build_machine": true
   },
-  "qa2-test-9997392693186": {
-    "ui_url": "https://viso-8txxhjpgaxumfeaggpfpd9.xdr-qa2-uat.us.paloaltonetworks.com/",
-    "instance_name": "qa2-test-9997392693186",
-    "x-xdr-auth-id": 1,
-    "base_url": "https://api-viso-8txxhjpgaxumfeaggpfpd9.xdr-qa2-uat.us.paloaltonetworks.com",
-    "xsiam_version": "ga",
-    "demisto_version": "8.6.0",
-    "enabled": false,
-    "flow_type": "build",
-    "agent_host_name": "DC1ENV8APC-Win10-25",
-    "agent_host_ip": "172.16.8.66",
-    "build_machine": true
-  },
   "qa2-test-9995080931197": {
     "ui_url": "https://viso-u45j9goxpbjezebpa9utvf.xdr-qa2-uat.us.paloaltonetworks.com/",
     "instance_name": "qa2-test-9995080931197",
