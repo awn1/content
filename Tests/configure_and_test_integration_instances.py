@@ -40,7 +40,7 @@ from Tests.test_content import get_server_numeric_version
 from Tests.test_integration import __get_integration_config, test_integration_instance, disable_all_integrations
 from Tests.tools import run_with_proxy_configured
 from Tests.update_content_data import update_content
-
+from SecretActions.google_secret_manager_handler import get_secrets_from_gsm
 MARKET_PLACE_MACHINES = ('master',)
 SKIPPED_PACKS = ['NonSupported', 'ApiModules']
 NO_PROXY = ','.join([
@@ -222,7 +222,7 @@ class Build(ABC):
         self.ci_build_number = options.build_number
         self.is_nightly = options.is_nightly
         self.is_sdk_nightly = options.sdk_nightly
-        self.secret_conf = get_json_file(options.secret)
+        self.secret_conf = get_secrets_from_gsm(options, self.branch_name)
         self.username = options.user if options.user else self.secret_conf.get('username')
         self.password = options.password if options.password else self.secret_conf.get('userPassword')
         self.is_private = options.is_private
@@ -946,7 +946,6 @@ def options_handler(args=None):
                                           'The server url is determined by the AMI environment.')
     parser.add_argument('-g', '--git_sha1', help='commit sha1 to compare changes with')
     parser.add_argument('-c', '--conf', help='Path to conf file', required=True)
-    parser.add_argument('-s', '--secret', help='Path to secret conf file')
     parser.add_argument('-n', '--is-nightly', type=str2bool, help='Is nightly build')
     parser.add_argument('-sn', '--sdk-nightly', type=str2bool, help='Is SDK nightly build')
     parser.add_argument('-pr', '--is_private', type=str2bool, help='Is private build')
@@ -976,6 +975,17 @@ def options_handler(args=None):
                               "For more information go to: "
                               "https://googleapis.dev/python/google-api-core/latest/auth.html"),
                         required=False)
+
+    parser.add_argument('--gsm_service_account',
+                        help=("Path to gcloud service account, for circleCI usage. "
+                              "For local development use your personal account and "
+                              "authenticate using Google Cloud SDK by running: "
+                              "`gcloud auth application-default login` and leave this parameter blank. "
+                              "For more information see: "
+                              "https://googleapis.dev/python/google-api-core/latest/auth.html"))
+    parser.add_argument('--gsm_project_id_dev', help='The project id for the GSM dev.')
+    parser.add_argument('--gsm_project_id_prod', help='The project id for the GSM prod.')
+    parser.add_argument('-gt', '--github_token', help='the github token.')
     # disable-secrets-detection-end
     options = parser.parse_args(args)
 

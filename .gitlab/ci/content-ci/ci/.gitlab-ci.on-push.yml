@@ -138,7 +138,7 @@ validate-content-conf:
   stage: prepare-testing-bucket
   script:
     - !reference [.create-release-notes-and-common-docs]
-    - !reference [.secrets-fetch]
+
     - section_start "Create or update content graph" --collapsed
     - |
         echo "set DEMISTO_SDK_GRAPH_FORCE_CREATE to true to create graph from scratch"
@@ -339,8 +339,12 @@ xpanse-prepare-testing-bucket:
         exit 0
       fi
     - section_end "Check if should run Instance role"
+
+    # job secrets-fetch will be removed when test-content will be moved to infra in ./Tests/scripts/run_tests.sh
     - !reference [.secrets-fetch]
+
     - !reference [.ssh-config-setup]
+
     - section_start "Wait Until Server Ready"
     - python3 ./Tests/scripts/wait_until_server_ready.py  -n "${IS_NIGHTLY}" --instance-role "${INSTANCE_ROLE}"
     - section_end "Wait Until Server Ready"
@@ -617,7 +621,10 @@ slack-notify-on-merge:
   stage: run-instances
   script:
     - EXIT_CODE=0
+
+    # job secrets-fetch will be removed when test-content will be moved to infra in ./Tests/scripts/run_tests.sh
     - !reference [.secrets-fetch]
+
     - section_start "Are there tests to run?" --collapsed
     - |
       if ! [[ -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" || -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" ]]; then

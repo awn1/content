@@ -1,6 +1,5 @@
 import argparse
 import os
-from typing import List
 
 import json5
 import pathlib
@@ -8,21 +7,11 @@ import yaml
 
 from Tests.scripts.collect_tests.path_manager import PathManager
 from Tests.scripts.collect_tests.utils import find_pack_folder
-from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule
+from SecretActions.google_secret_manager_handler import get_secrets_from_gsm
 from Tests.scripts.utils import logging_wrapper as logging
-from Tests.scripts.common import BUCKET_UPLOAD_BRANCH_SUFFIX
 from pathlib import Path
-from Tests.scripts.github_client import GithubClient
-
 # The default previous commit branch to check for when getting the difference from master using git
 PREVIOUS_COMMIT = 'origin/master'
-
-
-def normalize_branch_name(branch_name: str):
-    """normalizing the branch name if it contains the upload bucket suffix"""
-    if BUCKET_UPLOAD_BRANCH_SUFFIX in branch_name:
-        branch_name = branch_name.split(BUCKET_UPLOAD_BRANCH_SUFFIX)[0]
-    return branch_name
 
 
 def get_changed_files(branch_name: str, repo) -> list[str]:
@@ -75,67 +64,6 @@ def find_files_diff(diff: str) -> list[str]:
 
         changed_files.append(file_path)
     return changed_files
-
-
-def get_secrets_from_gsm(branch_name: str, options: argparse.Namespace, yml_pack_ids: list[str]) -> dict:
-    """
-    Gets the dev secrets and main secrets from GSM and merges them
-    :param branch_name: the name of the branch of the PR
-    :param options: the parsed parameter for the script
-    :param yml_pack_ids: a list of IDs of changed integrations
-    :return: the list of secrets from GSM to use in the build
-    """
-    secret_conf = GoogleSecreteManagerModule(options.service_account)
-
-    master_secrets: List[dict] = []
-    branch_secrets: List[dict] = []
-    logging.info('Getting secrets for the master branch')
-    master_secrets = secret_conf.get_secrets_from_project(
-        options.gsm_project_id_prod)
-    logging.info(
-        f'Finished getting all secrets from prod, got {len(master_secrets)} master secrets')
-
-    if branch_name != 'master':
-        pr_number = 0
-        try:
-            github_client = GithubClient(options.github_token)
-            branch_name = normalize_branch_name(branch_name)
-            pr_number = github_client.get_pr_number_from_branch_name(branch_name)
-        except Exception as e:
-            if 'Did not find the PR' in str(e):
-                logging.info(f'Did not find the associated PR with the branch {branch_name}, you may be running from infra.' \
-                             'Will only use the secrets from prod')
-            else:
-                logging.info(f'Got the following error when trying to contact Github: {str(e)}')
-
-        if pr_number:
-            logging.info(
-                f'Getting secrets for the {branch_name} branch with pr number: {pr_number}')
-            branch_secrets = secret_conf.get_secrets_from_project(
-                options.gsm_project_id_dev, pr_number, is_dev_branch=True)
-            logging.info(
-                f'Finished getting all branch secrets, got {len(branch_secrets)} branch secrets')
-
-    if branch_secrets:
-        for dev_secret in branch_secrets:
-            replaced = False
-            instance = dev_secret.get('instance_name', 'no_instance_name')
-            for i in range(len(master_secrets)):
-                if dev_secret['name'] == master_secrets[i]['name'] and \
-                        master_secrets[i].get('instance_name', 'no_instance_name') == instance:
-                    master_secrets[i] = dev_secret
-                    replaced = True
-                    break
-            # If the dev secret is not in the changed packs it's a new secret
-            if not replaced:
-                master_secrets.append(dev_secret)
-
-    secret_file = {
-        "username": options.user,
-        "userPassword": options.password,
-        "integrations": master_secrets
-    }
-    return secret_file
 
 
 def write_secrets_to_file(options: argparse.Namespace, secrets: dict):
@@ -247,7 +175,7 @@ def run(options: argparse.Namespace):
         logging.info(
             f'Could not get specific dev secrets for the branch {branch_name}, \
             received the error {e}, using main store secrets')
-    secrets_file = get_secrets_from_gsm(branch_name, options, yml_pack_ids)
+    secrets_file = get_secrets_from_gsm(options, branch_name)
     logging.info(f'Using {len(secrets_file["integrations"])} secrets')
     names = [s.get('name') for s in secrets_file["integrations"]]
     logging.info(f'the names: {names}')
@@ -272,7 +200,7 @@ def options_handler(args=None) -> argparse.Namespace:
                         help='Path to the secret json file.')
     parser.add_argument('-gt', '--github_token', help='the github token.')
     # disable-secrets-detection-start
-    parser.add_argument('-sa', '--service_account',
+    parser.add_argument('-gsa', '--gsm_service_account',
                         help=("Path to gcloud service account, for circleCI usage. "
                               "For local development use your personal account and "
                               "authenticate using Google Cloud SDK by running: "

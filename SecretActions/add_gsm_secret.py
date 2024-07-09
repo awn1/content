@@ -8,8 +8,10 @@ import json5
 from google.api_core.exceptions import NotFound, PermissionDenied, InvalidArgument
 from google.auth.exceptions import DefaultCredentialsError
 
-from google_secret_manager_handler import GoogleSecreteManagerModule, DEV_PROJECT_ID, ExpirationData, SYNC_GSM_LABEL
+from google_secret_manager_handler import (GoogleSecreteManagerModule, DEV_PROJECT_ID, ExpirationData,
+                                           SYNC_GSM_LABEL, create_github_client)
 from Tests.scripts.github_client import GithubPullRequest, GithubClient
+
 
 EXPIRATION_LABELS = [ExpirationData.CREDS_EXPIRATION_LABEL_NAME,
                      ExpirationData.LICENSE_EXPIRATION_LABEL_NAME,
@@ -153,16 +155,10 @@ def update_pr(github_client: GithubClient, options: argparse.Namespace):
     logging.info(
         f"The PR {options.pr_number} was updated with the '{SYNC_GSM_LABEL}' label.")
 
-
-def create_github_client(gsm_object: GoogleSecreteManagerModule):
-    github_token = gsm_object.get_secret(
-        DEV_PROJECT_ID, 'Github_Content_Token').get('GITHUB_TOKEN', '')
-    return GithubClient(github_token, fail_on_error=True)
-
 def add_secret_to_dev(options: argparse.Namespace, project_id: str):
     """Adding the secret to dev project"""
     gsm_object = GoogleSecreteManagerModule(project_id=project_id)
-    github_client = create_github_client(gsm_object)
+    github_client = create_github_client(gsm_object, DEV_PROJECT_ID)
 
     secret_json = validate_secret(options.input, options, project_id, attr_validation=('name', 'params'),
                                   github_client=github_client)

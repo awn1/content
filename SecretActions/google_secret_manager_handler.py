@@ -5,6 +5,10 @@ import json5
 from google.auth import default
 from google.cloud import secretmanager
 import logging
+from typing import List
+from Tests.scripts.common import BUCKET_UPLOAD_BRANCH_SUFFIX
+from Tests.scripts.github_client import GithubClient
+import argparse
 
 SPECIAL_CHARS = [" ", "(", "(", ")", ".", "", "+", "="]
 GSM_MAXIMUM_LABEL_CHARS = 63
@@ -300,3 +304,75 @@ class GoogleSecreteManagerModule:
             project_id, labels_filter, with_secrets=True)
 
         return secrets
+
+def normalize_branch_name(branch_name: str):
+    """normalizing the branch name if it contains the upload bucket suffix"""
+    if BUCKET_UPLOAD_BRANCH_SUFFIX in branch_name:
+        branch_name = branch_name.split(BUCKET_UPLOAD_BRANCH_SUFFIX)[0]
+    return branch_name
+
+def create_github_client(gsm_object: GoogleSecreteManagerModule, project_id: str, github_token: str = ''):
+    if not github_token:
+        github_token = gsm_object.get_secret(project_id, 'Github_Content_Token').get('GITHUB_TOKEN', '')
+
+    return GithubClient(github_token)
+
+def get_secrets_from_gsm(options: argparse.Namespace, branch_name: str = '') -> dict:
+    """
+    Gets the dev secrets and main secrets from GSM and merges them
+    :param branch_name: the name of the branch of the PR
+    :param options: the parsed parameter for the script
+    :return: the list of secrets from GSM to use in the build
+    """
+    secret_conf = GoogleSecreteManagerModule(options.gsm_service_account)
+
+    master_secrets: List[dict] = []
+    branch_secrets: List[dict] = []
+    logging.info(f'Getting secrets for the master branch from {options.gsm_project_id_prod=} project')
+    master_secrets = secret_conf.get_secrets_from_project(
+        options.gsm_project_id_prod)
+    logging.info(
+        f'Finished getting all secrets from prod, got {len(master_secrets)} master secrets')
+
+    if branch_name and branch_name != 'master':
+        pr_number = 0
+        try:
+            github_client = GithubClient(options.github_token)
+            branch_name = normalize_branch_name(branch_name)
+            pr_number = github_client.get_pr_number_from_branch_name(branch_name)
+        except Exception as e:
+            if 'Did not find the PR' in str(e):
+                logging.info(f'Did not find the associated PR with the branch {branch_name}, you may be running from infra.' \
+                             'Will only use the secrets from prod')
+            else:
+                logging.info(f'Got the following error when trying to contact Github: {str(e)}')
+
+        if pr_number:
+            logging.info(
+                f'Getting secrets for the {branch_name} branch with pr number: {pr_number}')
+            branch_secrets = secret_conf.get_secrets_from_project(
+                options.gsm_project_id_dev, pr_number, is_dev_branch=True)
+            logging.info(
+                f'Finished getting all branch secrets, got {len(branch_secrets)} branch secrets')
+
+    if branch_secrets:
+        for dev_secret in branch_secrets:
+            replaced = False
+            instance = dev_secret.get('instance_name', 'no_instance_name')
+            for i in range(len(master_secrets)):
+                if dev_secret['name'] == master_secrets[i]['name'] and \
+                        master_secrets[i].get('instance_name', 'no_instance_name') == instance:
+                    master_secrets[i] = dev_secret
+                    replaced = True
+                    break
+            # If the dev secret is not in the changed packs it's a new secret
+            if not replaced:
+                master_secrets.append(dev_secret)
+
+    secret_file = {
+        "username": options.user,
+        "userPassword": options.password,
+        "integrations": master_secrets
+    }
+    return secret_file
+
