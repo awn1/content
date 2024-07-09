@@ -49,7 +49,7 @@ def test_edl_returns_indicators(request: SubRequest, xsoar_saas_client: XsoarSaa
 
     with save_indicators(xsoar_saas_client, indicators=feed_indicators):
         integration_params = get_integration_params(
-            request.config.option.integration_secrets_path, instance_name="edl_e2e_instance"
+            request.config.option, instance_name="edl_e2e_instance"
         )
         username = integration_params["credentials"]["identifier"]
         password = integration_params["credentials"]["password"]
@@ -99,7 +99,7 @@ def test_taxii2_server_returns_indicators(
     ]
     with save_indicators(xsoar_saas_client, indicators=feed_indicators):
         integration_params = get_integration_params(
-            request.config.option.integration_secrets_path, instance_name="taxii2server-e2e"
+            request.config.option, instance_name="taxii2server_e2e_instance"
         )
         # there are cases where the port can be taken in the machine, trying in a few other ports
         username = integration_params["credentials"]["identifier"]
@@ -169,7 +169,7 @@ def test_slack_ask(request: SubRequest, xsoar_saas_client: XsoarSaasClient):
         - make sure that the context is populated with thread ID(s) from the slack-ask and slack-response.
     """
     integration_params = get_integration_params(
-        request.config.option.integration_secrets_path, instance_name="slack-e2e-instance"
+            request.config.option, instance_name="slack_e2e_instance"
     )
 
     with save_integration_instance(
@@ -220,7 +220,7 @@ def test_qradar_mirroring(request: SubRequest, xsoar_saas_client: XsoarSaasClien
         - make sure that the XSOAR incident that represent the offense is closed after it by mirroring.
     """
     integration_params = get_integration_params(
-        request.config.option.integration_secrets_path, instance_name="qradar-e2e-instance"
+            request.config.option, instance_name="qradar_e2e_instance"
     )
     instance_name = get_integration_instance_name(integration_params, default="Qradar-v3")
 

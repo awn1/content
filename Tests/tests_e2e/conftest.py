@@ -13,7 +13,18 @@ def pytest_addoption(parser):
     parser.addoption("--cloud_machine", action="store", default=None)
     parser.addoption("--cloud_servers_path", action="store", default=None)
     parser.addoption("--cloud_servers_api_keys", action="store", default=None)
-    parser.addoption("--integration_secrets_path", action="store", default=None)
+    parser.addoption('--gsm_service_account',
+                        help=("Path to gcloud service account, for circleCI usage. "
+                              "For local development use your personal account and "
+                              "authenticate using Google Cloud SDK by running: "
+                              "`gcloud auth application-default login` and leave this parameter blank. "
+                              "For more information see: "
+                              "https://googleapis.dev/python/google-api-core/latest/auth.html"))
+    parser.addoption('--gsm_project_id_dev', help='The project id for the GSM dev.')
+    parser.addoption('--gsm_project_id_prod', help='The project id for the GSM prod.')
+    parser.addoption('-u', '--user', help='the user name for our build.')
+    parser.addoption('-p', '--password', help='The password for our build.')
+    parser.addoption('-gt', '--github_token', help='the github token.')
 
 
 def get_cloud_machine_credentials(request):

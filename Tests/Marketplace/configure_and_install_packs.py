@@ -2,13 +2,13 @@ import argparse
 import sys
 import traceback
 
-from demisto_sdk.commands.common.tools import get_json
 from Tests.configure_and_test_integration_instances import MARKET_PLACE_CONFIGURATION, \
     XSOARBuild, XSOARServer, CloudBuild, CloudServer, Build, get_packs_with_higher_min_version
 from Tests.Marketplace.search_and_install_packs import search_and_install_packs_and_their_dependencies
 from Tests.scripts.utils.log_util import install_logging
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.Marketplace.marketplace_constants import GCPConfig, XSIAM_MP, XSOAR_MP
+from SecretActions.google_secret_manager_handler import get_secrets_from_gsm
 from Tests.Marketplace.common import fetch_pack_ids_to_install
 
 
@@ -19,7 +19,6 @@ def options_handler():
                                           '"Server 6.5, "Server 6.6", "Server 6.8", "Server Master", "XSIAM Master"'
                                           'The server url is determined by the AMI environment.',
                         default="Server Master")
-    parser.add_argument('-s', '--secret', help='Path to secret conf file')
     parser.add_argument('--branch', help='GitHub branch name', required=True)
     parser.add_argument('--build_number', help='CI job number where the instances were created', required=True)
     parser.add_argument('--service_account', help="Path to gcloud service account", required=True)
@@ -29,6 +28,18 @@ def options_handler():
     parser.add_argument('--cloud_servers_path', help='Path to the secret cloud server metadata file.')
     parser.add_argument('-pl', '--pack_ids_to_install', help='Path to the packs to install file.')
     parser.add_argument('--cloud_servers_api_keys', help='Path to the file with cloud Servers api keys.')
+    parser.add_argument('--gsm_service_account',
+                        help=("Path to gcloud service account, for circleCI usage. "
+                              "For local development use your personal account and "
+                              "authenticate using Google Cloud SDK by running: "
+                              "`gcloud auth application-default login` and leave this parameter blank. "
+                              "For more information see: "
+                              "https://googleapis.dev/python/google-api-core/latest/auth.html"))
+    parser.add_argument('-gpidd', '--gsm_project_id_dev', help='The project id for the GSM dev.')
+    parser.add_argument('-gpidp', '--gsm_project_id_prod', help='The project id for the GSM prod.')
+    parser.add_argument('-u', '--user', help='the user name for our build.')
+    parser.add_argument('-p', '--password', help='The password for our build.')
+    parser.add_argument('-gt', '--github_token', help='the github token.')
     options = parser.parse_args()
     # disable-secrets-detection-end
 
@@ -68,9 +79,11 @@ def xsoar_configure_and_install_flow(options, branch_name: str, build_number: st
     server_to_port_mapping = XSOARBuild.get_servers(ami_env=options.ami_env)
 
     logging.info('Retrieving the credentials for Cortex XSOAR server')
-    secret_conf_file = get_json(file_path=options.secret)
-    username: str = secret_conf_file.get('username')
-    password: str = secret_conf_file.get('userPassword')
+
+    secret_conf_file = get_secrets_from_gsm(options, branch_name)
+    logging.info('Got credentials from GSM')
+    username: str = secret_conf_file['username']
+    password: str = secret_conf_file['userPassword']
 
     servers = []
     # Configure the Servers

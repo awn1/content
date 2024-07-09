@@ -176,10 +176,7 @@ xpanse-prepare-testing-bucket-upload-flow:
     - .default-job-settings
   script:
     - EXIT_CODE=0
-    - section_start "Secrets Fetch" --collapsed
-    - SECRET_CONF_PATH=$(cat secret_conf_path)
-    - python3 ./SecretActions/SecretsBuild/add_secrets_file_to_build.py -sa "$GSM_SERVICE_ACCOUNT" -sf "$SECRET_CONF_PATH" -u "$DEMISTO_USERNAME" -p "$DEMISTO_PASSWORD" --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN" >> $ARTIFACTS_FOLDER/logs/handle_secrets.log
-    - section_end "Secrets Fetch"
+
     - !reference [.ssh-config-setup]
     - section_start "Check if should run Instance role"
     - export INSTANCES_CREATED_FOR_ROLE=$(cat "${ENV_RESULTS_PATH}" | jq -c "map(select(.Role == \"${INSTANCE_ROLE}\")) | length")
@@ -192,16 +189,20 @@ xpanse-prepare-testing-bucket-upload-flow:
         exit 0
       fi
     - section_end "Check if should run Instance role"
+
     - section_start "Get Instance Variables"
     - echo INSTANCE_ROLE="$INSTANCE_ROLE"
     - echo INSTANCE_CREATED="$INSTANCE_CREATED"
     - section_end "Get Instance Variables"
+
     - section_start "Wait Until Server Ready"
     - python3 ./Tests/scripts/wait_until_server_ready.py  -n ${IS_NIGHTLY} --instance-role "${INSTANCE_ROLE}" || EXIT_CODE=$?
     - section_end "Wait Until Server Ready"
+
     - section_start "Install Packs"
     - ./Tests/Marketplace/install_packs.sh || EXIT_CODE=$?
     - section_end "Install Packs"
+
     - section_start "Create Build_Pass file"
     - |
       if [ "${EXIT_CODE}" -eq 0 ]; then
@@ -293,10 +294,7 @@ install-packs-in-server-master:
     - .default-job-settings
   script:
     - EXIT_CODE=0
-    - section_start "Secrets Fetch" --collapsed
-    - SECRET_CONF_PATH=$(cat secret_conf_path)
-    - python3 ./SecretActions/SecretsBuild/add_secrets_file_to_build.py -sa "$GSM_SERVICE_ACCOUNT" -sf "$SECRET_CONF_PATH" -u "$DEMISTO_USERNAME" -p "$DEMISTO_PASSWORD" --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN" >> $ARTIFACTS_FOLDER/logs/handle_secrets.log
-    - section_end "Secrets Fetch"
+
     - section_start "Lock Machine"
     - echo "Authenticating GCP"
     - gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1

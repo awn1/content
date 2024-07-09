@@ -9,7 +9,6 @@ function exit_on_error {
 
 echo "starting to install packs ..."
 
-SECRET_CONF_PATH=$(cat secret_conf_path)
 XSIAM_SERVERS_PATH=$(cat xsiam_servers_path)
 
 EXTRACT_FOLDER=$(mktemp -d)
@@ -39,7 +38,7 @@ if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; 
     exit_code=0
     IFS=', ' read -r -a CLOUD_CHOSEN_MACHINE_ID_ARRAY <<< "${CLOUD_CHOSEN_MACHINE_IDS}"
     for CLOUD_CHOSEN_MACHINE_ID in "${CLOUD_CHOSEN_MACHINE_ID_ARRAY[@]}"; do
-      python3 ./Tests/Marketplace/configure_and_install_packs.py -s "${SECRET_CONF_PATH}" --ami_env "${INSTANCE_ROLE}" --branch "${CI_COMMIT_BRANCH}" --build_number "${CI_PIPELINE_ID}" --service_account "${GCS_MARKET_KEY}" -e "${EXTRACT_FOLDER}" --cloud_machine "${CLOUD_CHOSEN_MACHINE_ID}" --cloud_servers_path "${XSIAM_SERVERS_PATH}" --pack_ids_to_install "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" --cloud_servers_api_keys cloud_api_keys.json
+python3 ./Tests/Marketplace/configure_and_install_packs.py --ami_env "${INSTANCE_ROLE}" --branch "${CI_COMMIT_BRANCH}" --build_number "${CI_PIPELINE_ID}" --service_account "${GCS_MARKET_KEY}" -e "${EXTRACT_FOLDER}" --cloud_machine "${CLOUD_CHOSEN_MACHINE_ID}" --cloud_servers_path "${XSIAM_SERVERS_PATH}" --pack_ids_to_install "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" --cloud_servers_api_keys cloud_api_keys.json --gsm_service_account "$GSM_SERVICE_ACCOUNT" --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" -u "$DEMISTO_USERNAME" -p "$DEMISTO_PASSWORD" --github_token "$GITHUB_TOKEN"
       if [ $? -ne 0 ]; then
         exit_code=1
         echo "Failed to install packs on machine ${CLOUD_CHOSEN_MACHINE_ID}"
@@ -55,7 +54,7 @@ if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; 
   fi
 elif [[ "${SERVER_TYPE}" == "XSOAR" ]]; then
   # Running on XSOAR instance roles
-  python3 ./Tests/Marketplace/configure_and_install_packs.py -s "${SECRET_CONF_PATH}" --ami_env "${INSTANCE_ROLE}" --branch "$CI_COMMIT_BRANCH" --build_number "${CI_PIPELINE_ID}" --service_account "${GCS_MARKET_KEY}" -e "${EXTRACT_FOLDER}" --pack_ids_to_install "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt"
+  python3 ./Tests/Marketplace/configure_and_install_packs.py --ami_env "${INSTANCE_ROLE}" --branch "$CI_COMMIT_BRANCH" --build_number "${CI_PIPELINE_ID}" --service_account "${GCS_MARKET_KEY}" -e "${EXTRACT_FOLDER}" --pack_ids_to_install "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" --gsm_service_account "$GSM_SERVICE_ACCOUNT" --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" -u "$DEMISTO_USERNAME" -p "$DEMISTO_PASSWORD" --github_token "$GITHUB_TOKEN"
   exit_on_error "$?" "Finished configure_and_install_packs script"
 
   echo "Finished configure_and_install_packs successfully"

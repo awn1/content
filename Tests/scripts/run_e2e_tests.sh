@@ -46,7 +46,7 @@ if [[ -n "$test_path" ]]; then
     IFS=', ' read -r -a CLOUD_CHOSEN_MACHINE_ID_ARRAY <<< "${CLOUD_CHOSEN_MACHINE_IDS}"
     for CLOUD_CHOSEN_MACHINE_ID in "${CLOUD_CHOSEN_MACHINE_ID_ARRAY[@]}"; do
       echo "Running end-to-end tests on ${CLOUD_CHOSEN_MACHINE_ID} from ${test_path}"
-      python3 -m pytest "${test_path}" -v --cloud_machine "${CLOUD_CHOSEN_MACHINE_ID}" --cloud_servers_path "${CLOUD_SERVERS_PATH}" --cloud_servers_api_keys "cloud_api_keys.json" --integration_secrets_path "${SECRET_CONF_PATH}" --disable-warnings --junitxml="${ARTIFACTS_FOLDER_INSTANCE}/e2e_tests_result.xml"
+      python3 -m pytest "${test_path}" -v --cloud_machine "${CLOUD_CHOSEN_MACHINE_ID}" --cloud_servers_path "${CLOUD_SERVERS_PATH}" --cloud_servers_api_keys "cloud_api_keys.json" --disable-warnings --junitxml="${ARTIFACTS_FOLDER_INSTANCE}/e2e_tests_result.xml"  --gsm_service_account "$GSM_SERVICE_ACCOUNT" --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" -u "$DEMISTO_USERNAME" -p "$DEMISTO_PASSWORD" --github_token "$GITHUB_TOKEN"
       # since xsiam e2e is in upload and not in nightly, we want to fail the job if its tests failed
       if [[ "${test_path}" == "./Tests/tests_e2e/content/xsiam" ]] && [[ $? -ne 0 ]]; then
         exit_code=1

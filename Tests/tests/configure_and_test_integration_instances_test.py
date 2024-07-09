@@ -29,7 +29,7 @@ XSIAM_SERVERS = {
 
 
 def create_build_object_with_mock(mocker, server_type):
-    args = ['-u', "$USERNAME", '-p', "$PASSWORD", '-c', "$CONF_PATH", '-s', "$SECRET_CONF_PATH",
+    args = ['-u', "$USERNAME", '-p', "$PASSWORD", '-c', "$CONF_PATH",
             '--tests_to_run', "$ARTIFACTS_FOLDER_SERVER_TYPE/filter_file.txt",
             '--pack_ids_to_install', "$ARTIFACTS_FOLDER_SERVER_TYPE/content_packs_to_install.txt",
             '-g', "$GIT_SHA1", '--ami_env', "$1", '-n', 'false', '--branch', "$CI_COMMIT_BRANCH",
@@ -43,6 +43,8 @@ def create_build_object_with_mock(mocker, server_type):
         'unmockable_integrations': [],
     }
     json_data.update(**XSIAM_SERVERS)
+    mocker.patch('Tests.configure_and_test_integration_instances.get_secrets_from_gsm',
+                 return_value=json_data)
     mocker.patch('Tests.configure_and_test_integration_instances.get_json_file',
                  return_value=json_data)
     mocker.patch('Tests.configure_and_test_integration_instances.Build.fetch_tests_list',
@@ -217,7 +219,6 @@ def test_get_packs_with_higher_min_version(mocker, pack_version, expected_result
     mocker.patch("Tests.configure_and_test_integration_instances.extract_packs_artifacts")
     mocker.patch("Tests.configure_and_test_integration_instances.get_json_file",
                  return_value={"serverMinVersion": "6.6.0"})
-
     packs_with_higher_min_version = get_packs_with_higher_min_version({'TestPack'}, pack_version)
     assert packs_with_higher_min_version == expected_results
 
