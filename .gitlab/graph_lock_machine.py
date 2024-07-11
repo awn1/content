@@ -15,11 +15,13 @@ channel_id = 'C06DQRKJLMU'
 client = WebClient(token=slack_token)
 colors_dict = {"content-locks/locks-xsiam-ga": 'red', "content-locks/locks-xsoar-ng": 'blue',
                "content-locks/locks-xsoar-ng-nightly": 'green', "content-locks/locks-xsiam-ga-nightly": 'orange',
-               "content-locks/locks-xsiam-ga-upload": 'purple'}
+               "content-locks/locks-xsiam-ga-upload": 'purple',
+               "content-locks/locks-xsoar-ng-upload": 'yellow'}
 labels_dict = {"content-locks/locks-xsiam-ga": 'xsiam-ga', "content-locks/locks-xsoar-ng": 'xsoar-ng',
                "content-locks/locks-xsoar-ng-nightly": 'xsoar-ng-nightly',
                "content-locks/locks-xsiam-ga-nightly": 'xsiam-ga-nightly',
-               "content-locks/locks-xsiam-ga-upload": 'xsiam-ga-upload'}
+               "content-locks/locks-xsiam-ga-upload": 'xsiam-ga-upload',
+               "content-locks/locks-xsoar-ng-upload": 'xsoar-ng-upload'}
 
 
 def create_graphs(messages):
@@ -29,7 +31,8 @@ def create_graphs(messages):
 
     # Sort messages into 3 objects
     for message in messages:
-        if "has joined the channel" in message or 'Due to a high volume of activity, we are not displaying some messages sent by this application' in message:
+        if ("has joined the channel" in message or
+                'Due to a high volume of activity, we are not displaying some messages sent by this application' in message):
             continue
         if "Lock Duration" in message:
             match_dict1 = message.split("\n")
@@ -64,7 +67,7 @@ def create_graphs(messages):
     plt.scatter(timestamps2, locks2, c=types2, label=types2)
     print('Number of builds in queue')
     calculate_average(types2, locks2)
-    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=3))  # Adjust the interval as needed
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=1))  # Adjust the interval as needed
     plt.gca().yaxis.set_major_locator(MultipleLocator(1))  # Adjust the interval as needed
     plt.gcf().autofmt_xdate()
     plt.xlabel('Timestamp')
@@ -73,6 +76,11 @@ def create_graphs(messages):
     plt.xticks(fontsize=6)
     plt.savefig('plot2.png')
     plt.show()
+    client.files_upload_v2(
+        channel="C07BU17UWCW",
+        title="Number of builds in queue",
+        file="./plot2.png",
+    )
 
     timestamps1 = [datetime.strptime(item, "%Y-%m-%dT%H:%M:%S.%f")
                    .replace(tzinfo=pytz.utc).astimezone(ist) for item in timestamps1]
@@ -83,7 +91,7 @@ def create_graphs(messages):
         loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=len(colors_dict),
         fontsize=7, handlelength=3, handletextpad=1, borderaxespad=0.5)
     plt.scatter(timestamps1, durations1, c=types1, label=types1)
-    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=3))  # Adjust the interval as needed
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=1))  # Adjust the interval as needed
     plt.xticks(fontsize=6)  # Adjust the fontsize value as needed
     print('Lock Duration (minutes)')
     calculate_average(types1, durations1)
@@ -94,6 +102,11 @@ def create_graphs(messages):
     plt.tight_layout()
     plt.savefig('plot1.png')
     plt.show()
+    client.files_upload_v2(
+        channel="C07BU17UWCW",
+        title="Lock Duration (minutes)",
+        file="./plot1.png",
+    )
 
     timestamps3 = [datetime.strptime(item, "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=pytz.utc).astimezone(ist)
                    for item in timestamps3]
@@ -106,7 +119,7 @@ def create_graphs(messages):
     plt.scatter(timestamps3, machines3, c=types3, label=types3)
     print('Number of available machines')
     calculate_average(types3, machines3)
-    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=3))  # Adjust the interval as needed
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=1))  # Adjust the interval as needed
     plt.xticks(fontsize=6)  # Adjust the fontsize value as needed
     plt.gca().yaxis.set_major_locator(MultipleLocator(1))  # Adjust the interval as needed
     plt.gcf().autofmt_xdate()
@@ -115,6 +128,11 @@ def create_graphs(messages):
     plt.tight_layout()
     plt.savefig('plot3.png')
     plt.show()
+    client.files_upload_v2(
+        channel="C07BU17UWCW",
+        title="Number of available machines",
+        file="./plot3.png",
+    )
 
 
 def calculate_average(types, values):
@@ -138,24 +156,27 @@ def calculate_average(types, values):
 
 def get_messages_from_slack(channel_id):
     messages = []
-    # oldest = ""
     try:
         result = client.conversations_history(
             channel=channel_id,
-            # oldest='1717200000.0',
-            limit=1000)
+            limit=200  # Reduce the limit to a smaller value
+        )
         messages += [message['text'] for message in result['messages']]
-        while result['has_more'] and len(messages) < 40000:
-            sleep(1)  # need to wait 1 sec before next call due to rate limits
+        while result.get('has_more') and len(messages) < 12000:
+            sleep(1)  # Wait before the next call due to rate limits
             result = client.conversations_history(
                 channel=channel_id,
                 cursor=result['response_metadata']['next_cursor'],
-                limit=1000
+                limit=200  # Reduce the limit to a smaller value
             )
             messages += [message['text'] for message in result['messages']]
         return messages
     except SlackApiError as e:
-        print("Error while fetching the conversation history")
+        print(f"Error while fetching the conversation history: {e.response['error']}")
+    except TimeoutError:
+        print("Request timed out. Retrying...")
+        sleep(5)  # Wait longer before retrying
+        return get_messages_from_slack(channel_id)
 
 
 slack_messages = get_messages_from_slack(channel_id)
