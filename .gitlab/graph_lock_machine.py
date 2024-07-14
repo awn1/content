@@ -138,7 +138,7 @@ def create_graphs(messages):
 def calculate_average(types, values):
     import numpy as np
     # Group values by type
-    type_values = {}
+    type_values: dict = {}
     for i, type_ in enumerate(types):
         if type_ not in type_values:
             type_values[type_] = []
