@@ -195,7 +195,7 @@ xpanse-prepare-testing-bucket-upload-flow:
     - xsoar-prepare-testing-bucket-upload-flow
   stage: run-instances
   artifacts:
-    expire_in: 48 hrs
+    expire_in: 30 days
     paths:
       - ${CI_PROJECT_DIR}/artifacts/*
       - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
@@ -301,7 +301,7 @@ install-packs-in-server-master:
   needs: ["mpv2-prepare-testing-bucket-upload-flow"]
   stage: run-instances
   artifacts:
-    expire_in: 48 hrs
+    expire_in: 30 days
     paths:
       - ${CI_PROJECT_DIR}/artifacts/*
       - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
@@ -388,7 +388,7 @@ upload-packs-to-marketplace:
   needs: ["run-validations-upload-flow", "install-packs-in-server6_9", "install-packs-in-server6_10", "install-packs-in-server6_11", "install-packs-in-server6_12", "install-packs-in-server-master", "run-pre-commit-upload-flow", "run-validations-upload-flow-new-validate-flow"]
   stage: upload-to-marketplace
   artifacts:
-    expire_in: 48 hrs
+    expire_in: 30 days
     paths:
       - ${CI_PROJECT_DIR}/artifacts/*
       - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
@@ -482,7 +482,7 @@ upload-packs-to-marketplace-v2:
   needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "mpv2-prepare-testing-bucket-upload-flow", "install-packs-in-xsiam-ga", "run-validations-upload-flow-new-validate-flow"] # "install-packs-in-xsiam-dev"
   stage: upload-to-marketplace
   artifacts:
-    expire_in: 48 hrs
+    expire_in: 30 days
     paths:
       - ${CI_PROJECT_DIR}/artifacts/*
       - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
@@ -574,7 +574,7 @@ upload-packs-to-xpanse-marketplace:
   needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "xpanse-prepare-testing-bucket-upload-flow", "run-validations-upload-flow-new-validate-flow"] # "install-packs-in-xpanse-dev"
   stage: upload-to-marketplace
   artifacts:
-    expire_in: 48 hrs
+    expire_in: 30 days
     paths:
       - ${CI_PROJECT_DIR}/artifacts/*
       - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
@@ -666,7 +666,7 @@ upload-packs-to-xsoar-saas-marketplace:
   needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "xsoar-saas-prepare-testing-bucket-upload-flow", "run-validations-upload-flow-new-validate-flow"] # "install-packs-in-xsoar-saas-dev"
   stage: upload-to-marketplace
   artifacts:
-    expire_in: 48 hrs
+    expire_in: 30 days
     paths:
       - ${CI_PROJECT_DIR}/artifacts/*
       - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
