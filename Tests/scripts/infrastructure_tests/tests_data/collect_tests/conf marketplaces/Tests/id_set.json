@@ -47,18 +47,35 @@
             "xsoar",
             "marketplacev2"
         ]
+      },
+      "myTestPlaybook_marketplacev2": {
+        "name": "myTestPlaybook_marketplacev2",
+        "file_path": "Packs/bothMarketplacesPack/TestPlaybooks/myTestPlaybook_marketplacev2.yml",
+        "pack": "bothMarketplacesPack",
+        "marketplaces": [
+            "marketplacev2"
+        ]
       }
     }
   ],
   "Packs": {
     "myPack": {
-      "name": "myPack",
-      "marketplaces": [
-        "xsoar",
-        "marketplacev2"
-      ],
-      "ContentItems": {
-      }
+        "name": "myPack",
+        "marketplaces": [
+            "xsoar",
+            "marketplacev2"
+        ],
+        "ContentItems": {
+        },
+     "bothMarketplacesPack": {
+        "name": "bothMarketplacesPack",
+        "marketplaces": [
+            "xsoar",
+            "marketplacev2"
+        ],
+        "ContentItems": {
+        }
+        }
     }
   }
 }

@@ -25,6 +25,12 @@
     {
       "playbookID": "myTestPlaybook_both2",
       "marketplaces": "xsoar"
+    },
+    {
+      "integrations": [
+        "myIntegration"
+      ],
+      "playbookID": "myTestPlaybook_marketplacev2"
     }
   ],
   "skipped_tests": {},

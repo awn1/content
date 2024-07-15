@@ -119,6 +119,22 @@ validate-content-conf:
     - !reference [ .validate_content_test_conf_branch_merged ]
     - job-done
 
+
+.check_bypass_url_label: &check_bypass_url_label
+  - section_start "Check if bypass.url Label in the PR"
+  - |
+    pr=$(curl -sS --get --header "Accept: application/vnd.github.v3.raw" --header "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/demisto/content/pulls?state=open&base=master" --data-urlencode "head=demisto:${CI_COMMIT_BRANCH}" | jq '.[0]')
+    has_label=false
+    if [[ $pr != 'null' ]]; then
+      pr_number=$(echo $pr | jq -r '.number')
+      pr_labels=$(curl -sS --get --header "Accept: application/vnd.github.v3.raw" --header "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/demisto/content/issues/${pr_number}/labels" | jq '.[].name')
+      if echo "$pr_labels" | grep -q "bypass.url"; then
+        has_label=true
+        echo "The PR has the bypass.url label."
+      fi
+    fi
+  - section_end "Check if bypass.url Label in the PR"
+
 .generic-prepare-testing-bucket:
   tags:
     - gke
@@ -209,18 +225,27 @@ validate-content-conf:
       fi
     - section_end "Collect Tests"
 
-    - section_start "Prepare Content Packs for Testing"
-    - ./Tests/scripts/prepare_content_packs_for_testing.sh "$MARKETPLACE_BUCKET" "$STORAGE_BASE_PATH" "$MARKETPLACE_VERSION"
-    - section_end "Prepare Content Packs for Testing"
+    - *check_bypass_url_label
+    - |
+      if [[ "${BUCKET_UPLOAD}" == "true" || "${IS_NIGHTLY}" == "true" ||
+      -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.txt" ||
+      -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" || "${has_label}" == "true" ]]; then
 
-    - section_start "Override and upload core packs versions"
-    - ./Tests/Marketplace/upload_versions_core_files.sh "$MARKETPLACE_BUCKET" "$STORAGE_BASE_PATH" "$MARKETPLACE_VERSION" "$LAST_UPLOAD_COMMIT"
-    - section_end "Override and upload core packs versions"
+        section_start "Prepare Content Packs for Testing"
+        ./Tests/scripts/prepare_content_packs_for_testing.sh "$MARKETPLACE_BUCKET" "$STORAGE_BASE_PATH" "$MARKETPLACE_VERSION"
+        section_end "Prepare Content Packs for Testing"
 
-    - section_start "Validate core packs list versions" --collapsed
-    # -s is the service account to init gcp client.
-    - python3 ./Tests/Marketplace/validate_core_packs_list_versions.py -s "${GCS_MARKET_KEY}" -c "${CI_COMMIT_REF_NAME}" -mp "${MARKETPLACE_VERSION}" -bb "${GCS_BUILD_BUCKET}" -n "${CI_PIPELINE_ID}"
-    - section_end "Validate core packs list versions"
+        section_start "Override and upload core packs versions"
+        ./Tests/Marketplace/upload_versions_core_files.sh "$MARKETPLACE_BUCKET" "$STORAGE_BASE_PATH" "$MARKETPLACE_VERSION" "$LAST_UPLOAD_COMMIT"
+        section_end "Override and upload core packs versions"
+
+        section_start "Validate core packs list versions" --collapsed
+        python3 ./Tests/Marketplace/validate_core_packs_list_versions.py -s "${GCS_MARKET_KEY}" -c "${CI_COMMIT_REF_NAME}" -mp "${MARKETPLACE_VERSION}" -bb "${GCS_BUILD_BUCKET}" -n "${CI_PIPELINE_ID}"
+        section_end "Validate core packs list versions"
+
+      else
+        echo "Skipping - Prepare Content Packs for Testing, Override and upload core packs versions, Validate core packs list versions."
+      fi
 
     - section_start "Create Instances for XSOAR"
     - |
@@ -623,7 +648,7 @@ slack-notify-on-merge:
 
     - section_start "Are there tests to run?" --collapsed
     - |
-      if ! [[ -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" || -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" ]]; then
+      if ! [[ -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.txt" || -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" ]]; then
         # The files are empty.
         echo "Not running the instance flow, no tests to run were found."
         ./Tests/scripts/run_tests.sh --generate-empty-result-file

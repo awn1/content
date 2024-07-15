@@ -3,7 +3,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, NamedTuple
 from collections.abc import Iterator
-
+import os
 from demisto_sdk.commands.common.constants import FileType, MarketplaceVersions
 from demisto_sdk.commands.common.tools import json, yaml
 from packaging import version
@@ -18,6 +18,8 @@ from Tests.scripts.collect_tests.exceptions import (
 from Tests.scripts.collect_tests.logger import logger
 from Tests.scripts.collect_tests.path_manager import PathManager
 from Tests.scripts.collect_tests.version_range import VersionRange
+from more_itertools import powerset, unique_everseen
+from demisto_sdk.commands.common.tools import str2bool
 
 
 def find_pack_folder(path: Path) -> Path:
@@ -46,31 +48,57 @@ class Machine(Enum):
     Represents an XSOAR version.
     Serves as the single source of truth for versions used for collect_tests.
     """
-    V6_9 = Version('6.9')
-    V6_10 = Version('6.10')
-    V6_11 = Version('6.11')
-    V6_12 = Version('6.12')
     MASTER = 'Master'
+    V6_MASTER = Version('6.99')
+    V6_12 = Version('6.12')
+    V6_11 = Version('6.11')
+    V6_10 = Version('6.10')
+    V6_9 = Version('6.9')
 
     @staticmethod
     def numeric_machines() -> tuple['Machine', ...]:
-        return tuple(machine for machine in Machine if isinstance(machine.value, Version))
+        return tuple(machine for machine in Machine if not isinstance(machine.value, str))
 
     @staticmethod
-    def get_suitable_machines(version_range: VersionRange | None) -> tuple['Machine', ...]:
+    def get_all_machines() -> tuple['Machine', ...]:
+        return tuple(machine for machine in Machine if machine != Machine.V6_MASTER)
+
+    @staticmethod
+    def get_suitable_machines(version_ranges: set[VersionRange]) -> tuple['Machine', ...]:
+        """
+        Finds the smallest set of machines that cover all specified version ranges.
+
+        This function is used to determine the optimal set of machines from `Machine.numeric_machines()`
+        that collectively satisfy all provided version ranges. If there are multiple suitable sets,
+        it returns the smallest one. `Machine.V6_MASTER` is replaced with `Machine.MASTER` in the result.
+
+        Note: The function is relevant only for branches. For Nightly or Upload the function returns all the machines.
+
+        :param version_ranges: List of `VersionRange` objects. If None or empty, an empty tuple is returned.
+        :return: Tuple of `Machine` objects covering all version ranges, or an empty tuple if none found.
         """
 
-        :param version_range: range of versions. If None, all versions are returned.
-        :return: Master, as well as all Machine items matching the input.
-        """
-        result: list[Machine] = [Machine.MASTER]
+        if str2bool(os.getenv('IS_NIGHTLY')) or os.getenv('IFRA_ENV_TYPE') == 'Bucket-Upload':  # TODO adjust to the new design
+            logger.debug("NIGHTLY/UPLOAD - Creating all XSOAR_6 Instances")
+            return Machine.get_all_machines()
 
-        if not version_range:
-            version_range = VersionRange(version.NegativeInfinity, version.Infinity)
+        logger.debug(f"Collected the following version_ranges: {version_ranges}")
+        result: tuple['Machine', ...] = ()
+        if not version_ranges:
+            return result
 
-        result.extend(machine for machine in Machine.numeric_machines() if machine.value in version_range)
+        all_machines = Machine.numeric_machines()
+        best_machine_count = len(all_machines)
 
-        return tuple(result)
+        for option in powerset(unique_everseen(all_machines)):
+            covers_all_ranges = all(any(m.value in version_range for m in option) for version_range in version_ranges)
+            if covers_all_ranges and len(option) < best_machine_count:
+                result = option
+                best_machine_count = len(option)
+
+        # Replace Machine.V6_MASTER with Machine.MASTER if present in the result
+        result = tuple(Machine.MASTER if machine == Machine.V6_MASTER else machine for machine in result)
+        return result
 
     def __str__(self):
         return f'Server {self.value}'
@@ -88,7 +116,7 @@ class DictBased:
         self.from_version: Version | NegativeInfinityType = self._calculate_from_version()
         self.to_version: Version | InfinityType = self._calculate_to_version()
         self.version_range = VersionRange(self.from_version, self.to_version)
-        self.marketplaces: tuple[MarketplaceVersions, ...] | None = self._handle_xsoar_marketplaces()
+        self.marketplaces: tuple[MarketplaceVersions, ...] = self._handle_xsoar_marketplaces()
 
     def get(self, key: str, default: Any = None, warn_if_missing: bool = True, warning_comment: str = ''):
         """
@@ -126,15 +154,15 @@ class DictBased:
             return Version(value)
         return version.Infinity
 
-    def _handle_xsoar_marketplaces(self) -> tuple[MarketplaceVersions, ...] | None:
+    def _handle_xsoar_marketplaces(self) -> tuple[MarketplaceVersions, ...]:
         """
         If xsoar marketplace supported add xsoar_saas marketplace.
         If xsoar_on_prem marketplace supported add xsoar marketplace.
         """
         pack_marketplaces = {MarketplaceVersions(v)
-                             for v in to_tuple(self.get('marketplaces', (), warn_if_missing=False))} or None
+                             for v in to_tuple(self.get('marketplaces', (), warn_if_missing=False))}
         if not pack_marketplaces:
-            return pack_marketplaces
+            return tuple(pack_marketplaces)
 
         if MarketplaceVersions.XSOAR in pack_marketplaces:
             pack_marketplaces.add(MarketplaceVersions.XSOAR_SAAS)
@@ -344,7 +372,7 @@ def find_yml_content_type(yml_path: Path) -> FileType | None:
     :return: matching FileType, based on the yml path
     """
     return {'Playbooks': FileType.PLAYBOOK, 'TestPlaybooks': FileType.TEST_PLAYBOOK}.get(yml_path.parent.name) or \
-           {'Integrations': FileType.INTEGRATION, 'Scripts': FileType.SCRIPT, }.get(yml_path.parents[1].name)
+        {'Integrations': FileType.INTEGRATION, 'Scripts': FileType.SCRIPT, }.get(yml_path.parents[1].name)
 
 
 def hotfix_detect_old_script_yml(path: Path):

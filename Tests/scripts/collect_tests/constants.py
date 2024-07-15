@@ -46,8 +46,8 @@ SKIPPED_CONTENT_ITEMS__NOT_UNDER_PACK: set[str] = {
     'playbook-TestCommonPython_4_1.yml',
 }
 
-ONLY_INSTALL_PACK_FILE_TYPES: set[FileType] = {
-    # upon collection, no tests are collected, but the pack is installed.
+NON_CODE_FILE_TYPES_TO_COLLECT: set[FileType] = {
+    # upon collection, no tests are collected, but the pack is collected.
     FileType.RELEASE_NOTES_CONFIG,
     FileType.RELEASE_NOTES,
     FileType.IMAGE,
@@ -96,9 +96,6 @@ ONLY_INSTALL_PACK_FILE_TYPES: set[FileType] = {
     FileType.CASE_LAYOUT,
 }
 
-ONLY_UPLOAD_PACK_FILE_TYPES: set[FileType] = {
-    FileType.README,
-}
 
 IGNORED_FILE_TYPES: set[FileType] = {
     FileType.PACK_IGNORE,

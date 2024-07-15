@@ -26,6 +26,14 @@ class VersionRange:
 
         return self
 
+    def __eq__(self, other):
+        if not isinstance(other, VersionRange):
+            return NotImplemented
+        return (self.min_version, self.max_version) == (other.min_version, other.max_version)
+
+    def __hash__(self):
+        return hash((self.min_version, self.max_version))
+
     @property
     def is_default(self):
         """
