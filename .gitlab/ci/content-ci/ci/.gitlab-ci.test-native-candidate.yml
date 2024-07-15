@@ -12,6 +12,10 @@ test-native-candidate:run-pre-commit-with-native-candidate:
   extends:
     - .pre-commit-settings
     - .test-native-candidate-rule
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
+    IMAGES_BATCH: 30
   script:
     - section_start "Versions"
     - |
