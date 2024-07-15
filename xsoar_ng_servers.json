@@ -275,7 +275,7 @@
     "demisto_version": "99.99.98",
     "xsoar_ng_version": "8.6.0",
     "enabled": true,
-    "flow_type": "build-effort",
+    "flow_type": "upload",
     "build_machine": true
   }
 }

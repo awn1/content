@@ -18,21 +18,18 @@ from demisto_sdk.commands.common import tools
 from demisto_sdk.commands.common.logger import logger
 from demisto_sdk.commands.content_graph.common import PACK_METADATA_FILENAME, ContentType
 from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
+from demisto_sdk.commands.test_content.ParallelLoggingManager import ARTIFACTS_PATH
 from google.cloud.storage import Bucket  # noqa
 from packaging.version import Version
 from requests import Session
-
-from Tests.Marketplace.common import ALREADY_IN_PROGRESS
-from Tests.Marketplace.common import wait_until_not_updating, generic_request_with_retries
+from Tests.Marketplace.common import (ALREADY_IN_PROGRESS, wait_until_not_updating, generic_request_with_retries,
+                                      get_packs_with_higher_min_version)
 from Tests.Marketplace.marketplace_constants import (PACKS_FOLDER,
                                                      GCPConfig, Metadata)
 from Tests.Marketplace.marketplace_services import (Pack, init_storage_client,
                                                     load_json)
 from Tests.Marketplace.upload_packs import download_and_extract_index, extract_packs_artifacts
 from Tests.scripts.utils import logging_wrapper as logging
-
-from demisto_sdk.commands.test_content.ParallelLoggingManager import ARTIFACTS_PATH
-
 from Tests.test_content import get_server_numeric_version
 
 PACK_PATH_VERSION_REGEX = re.compile(fr'^{GCPConfig.PRODUCTION_STORAGE_BASE_PATH}/[A-Za-z0-9-_.]+/(\d+\.\d+\.\d+)/[A-Za-z0-9-_.]'  # noqa: E501
@@ -567,40 +564,6 @@ def search_and_install_packs_and_their_dependencies_private(test_pack_path: str,
     logging.info(f'Starting to search and install packs in server: {host}')
 
     return install_packs_private(client, host, pack_ids, test_pack_path)
-
-
-def get_json_file(path):
-    with open(path) as json_file:
-        return json.loads(json_file.read())
-
-
-def get_packs_with_higher_min_version(packs_names: set[str],
-                                      server_numeric_version: str,
-                                      extract_content_packs_path: str) -> set[str]:
-    """
-    Return a set of packs that have higher min version than the server version.
-
-    Args:
-        packs_names (Set[str]): A set of packs to install.
-        server_numeric_version (str): The server version.
-        extract_content_packs_path (str): Path to a temporary folder with extracted content packs metadata.
-
-    Returns:
-        (Set[str]): The set of the packs names that supposed to be not installed because
-                    their min version is greater than the server version.
-    """
-    packs_with_higher_version = set()
-    for pack_name in packs_names:
-        pack_metadata = get_json_file(f"{extract_content_packs_path}/{pack_name}/metadata.json")
-        server_min_version = pack_metadata.get(Metadata.SERVER_MIN_VERSION,
-                                               pack_metadata.get('server_min_version', Metadata.SERVER_DEFAULT_MIN_VERSION))
-
-        if 'Master' not in server_numeric_version and Version(server_numeric_version) < Version(server_min_version):
-            packs_with_higher_version.add(pack_name)
-            logging.info(f"Skipping to install pack '{pack_name}' since the min version {server_min_version}, that is "
-                         f"higher than server version {server_numeric_version}")
-
-    return packs_with_higher_version
 
 
 def create_graph(

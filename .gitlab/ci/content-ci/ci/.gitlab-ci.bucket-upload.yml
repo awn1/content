@@ -118,6 +118,7 @@ jobs-done-check-upload-flow:
     - install-packs-in-server6_12
     - install-packs-in-server-master
     - install-packs-in-xsiam-ga
+    - install-packs-in-xsoar-ng-ga
     - sync-buckets-between-projects
     - upload-packs-to-marketplace
     - upload-packs-to-marketplace-v2
@@ -210,6 +211,7 @@ xpanse-prepare-testing-bucket-upload-flow:
     INSTANCE_CREATED: "true"
     SSH_TUNNEL_TIMEOUT: 10
     TIME_TO_LIVE: ""  # set to no TTL, shutdown immediately
+    MARKETPLACE_NAME: "xsoar"
   extends:
     - .bucket-upload-rule
     - .default-job-settings
@@ -237,11 +239,7 @@ xpanse-prepare-testing-bucket-upload-flow:
     - section_start "Wait Until Server Ready"
     - python3 ./Tests/scripts/wait_until_server_ready.py  -n ${IS_NIGHTLY} --instance-role "${INSTANCE_ROLE}" || EXIT_CODE=$?
     - section_end "Wait Until Server Ready"
-
-    - section_start "Install Packs"
-    - ./Tests/Marketplace/install_packs.sh || EXIT_CODE=$?
-    - section_end "Install Packs"
-
+    - !reference [ .install_packs_by_machines ]
     - section_start "Create Build_Pass file"
     - |
       if [ "${EXIT_CODE}" -eq 0 ]; then
@@ -295,40 +293,10 @@ install-packs-in-server-master:
     INSTANCE_ROLE: "Server Master"
 
 
-.install-mpv2-packs-on-xsiam-instances:
+.install-packs-on-cloud-instances:
   tags:
     - gke
-  needs: ["mpv2-prepare-testing-bucket-upload-flow"]
   stage: run-instances
-  artifacts:
-    expire_in: 30 days
-    paths:
-      - ${CI_PROJECT_DIR}/artifacts/*
-      - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
-    when: always
-  rules:
-    - if: '$CI_COMMIT_BRANCH =~ /pull\/[0-9]+/'
-      when: never
-    - if: $TEST_UPLOAD == "true" && $BUCKET_UPLOAD == "true" && $FORCE_BUCKET_UPLOAD == "false"
-      when: always
-      variables:
-        CLOUD_MACHINES_TYPE: "build"
-        GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga"
-        CLEAN_MACHINE_NEEDED: "true"
-    - if: '$BUCKET_UPLOAD == "true" && $FORCE_BUCKET_UPLOAD == "false"'
-  variables:
-    PRODUCT_TYPE: "XSIAM"
-    SERVER_TYPE: "XSIAM"
-    ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_MPV2}"
-    ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER_MPV2}/instance_${INSTANCE_ROLE}"
-    ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_MPV2}/server_type_${SERVER_TYPE}"
-    ENV_RESULTS_PATH: "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json"
-    INSTANCE_CREATED: "true"
-    TIME_TO_LIVE: ""  # set to no TTL, shutdown immediately
-    GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-upload"
-    CLOUD_MACHINES_TYPE: "upload"
-    CLOUD_MACHINES_COUNT: 1
-    CLEAN_MACHINE_NEEDED: "true"
   extends:
     - .default-job-settings
   script:
@@ -349,18 +317,12 @@ install-packs-in-server-master:
     - cat "${CLOUD_API_KEYS}" > "cloud_api_keys.json"
     - !reference [.uninstall-packs-and-reset-bucket-cloud]
 
-    - section_start "Run XSIAM end to end sanity tests"
-    - ./Tests/scripts/run_e2e_tests.sh || EXIT_CODE=$?
-    - section_end "Run XSIAM end to end sanity tests"
-
     - section_start "Get Instance Variables"
     - echo INSTANCE_ROLE="$INSTANCE_ROLE"
     - echo INSTANCE_CREATED="$INSTANCE_CREATED"
     - section_end "Get Instance Variables"
 
-    - section_start "Install Packs"
-    - ./Tests/Marketplace/install_packs.sh || EXIT_CODE=$?
-    - section_end "Install Packs"
+    - !reference [ .install_packs_by_machines ]
 
     - job-done
     - exit "$EXIT_CODE"
@@ -370,8 +332,30 @@ install-packs-in-server-master:
     - !reference [ .unlock-machine ]
 
 install-packs-in-xsiam-ga:
-  extends: .install-mpv2-packs-on-xsiam-instances
+  needs:
+    - job: mpv2-prepare-testing-bucket-upload-flow
+  extends: .install-packs-on-cloud-instances
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - ${CI_PROJECT_DIR}/artifacts/*
+      - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
+    when: always
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /pull\/[0-9]+/'
+      when: never
+    - if: $TEST_UPLOAD == "true" && $BUCKET_UPLOAD == "true" && $FORCE_BUCKET_UPLOAD == "false"
+      when: always
+      variables:
+        CLOUD_MACHINES_TYPE: "build"
+        GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga"
+        CLEAN_MACHINE_NEEDED: "true"
+    - if: '$BUCKET_UPLOAD == "true" && $FORCE_BUCKET_UPLOAD == "false"'
   variables:
+    GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-upload"
+    CLOUD_MACHINES_TYPE: "upload"
+    CLOUD_MACHINES_COUNT: 1
+    CLEAN_MACHINE_NEEDED: "true"
     INSTANCE_ROLE: "XSIAM"
     GCS_QUEUE_FILE: "queue-ga"
     GCS_SOURCE_BUCKET: "$GCS_PRODUCTION_V2_BUCKET"
@@ -381,6 +365,58 @@ install-packs-in-xsiam-ga:
     CLOUD_API_TOKENS: $XSIAM_TOKENS
     NON_REMOVABLE_PACKS: "Base"
     MARKETPLACE_NAME: "marketplacev2"
+    PRODUCT_TYPE: "XSIAM"
+    SERVER_TYPE: "XSIAM"
+    ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_MPV2}"
+    ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER_MPV2}/instance_${INSTANCE_ROLE}"
+    ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_MPV2}/server_type_${SERVER_TYPE}"
+    ENV_RESULTS_PATH: "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json"
+    INSTANCE_CREATED: "true"
+    TIME_TO_LIVE: ""  # set to no TTL, shutdown immediately
+
+
+install-packs-in-xsoar-ng-ga:
+  needs:
+    - job: xsoar-saas-prepare-testing-bucket-upload-flow
+  extends: .install-packs-on-cloud-instances
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - ${CI_PROJECT_DIR}/artifacts/*
+      - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
+    when: always
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /pull\/[0-9]+/'
+      when: never
+    - if: $TEST_UPLOAD == "true" && $BUCKET_UPLOAD == "true" && $FORCE_BUCKET_UPLOAD == "false"
+      when: always
+      variables:
+        CLOUD_MACHINES_TYPE: "build"
+        GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng"
+        CLEAN_MACHINE_NEEDED: "true"
+    - if: '$BUCKET_UPLOAD == "true" && $FORCE_BUCKET_UPLOAD == "false"'
+  variables:
+    GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng-upload"
+    CLOUD_MACHINES_TYPE: "upload"
+    CLOUD_MACHINES_COUNT: 1
+    CLEAN_MACHINE_NEEDED: "true"
+    INSTANCE_ROLE: "XSOAR SAAS"
+    GCS_QUEUE_FILE: "queue-ga"
+    GCS_SOURCE_BUCKET: "${GCS_PRODUCTION_XSOAR_SAAS_BUCKET}"
+    GCS_MACHINES_BUCKET: "marketplace-saas-dist-dev/upload-flow/builds-xsoar-ng"
+    CLOUD_SERVERS_FILE: "xsoar_ng_servers_path"
+    CLOUD_API_KEYS: $XSOAR_NG_API_KEYS
+    CLOUD_API_TOKENS: $XSIAM_TOKENS
+    NON_REMOVABLE_PACKS: "Base"
+    MARKETPLACE_NAME: "xsoar_saas"
+    PRODUCT_TYPE: "XSOAR"
+    SERVER_TYPE: "XSOAR SAAS"
+    ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_XSOAR}"
+    ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER_XSOAR}/instance_saas"
+    ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_XSOAR}/server_type_${SERVER_TYPE}"
+    ENV_RESULTS_PATH: "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json"
+    INSTANCE_CREATED: "true"
+    TIME_TO_LIVE: ""  # set to no TTL, shutdown immediately
 
 upload-packs-to-marketplace:
   tags:
@@ -479,7 +515,7 @@ upload-packs-to-marketplace:
 upload-packs-to-marketplace-v2:
   tags:
     - gke
-  needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "mpv2-prepare-testing-bucket-upload-flow", "install-packs-in-xsiam-ga", "run-validations-upload-flow-new-validate-flow"] # "install-packs-in-xsiam-dev"
+  needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "mpv2-prepare-testing-bucket-upload-flow", "install-packs-in-xsiam-ga", "run-validations-upload-flow-new-validate-flow"]
   stage: upload-to-marketplace
   artifacts:
     expire_in: 30 days
@@ -663,7 +699,7 @@ upload-packs-to-xpanse-marketplace:
 upload-packs-to-xsoar-saas-marketplace:
   tags:
     - gke
-  needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "xsoar-saas-prepare-testing-bucket-upload-flow", "run-validations-upload-flow-new-validate-flow"] # "install-packs-in-xsoar-saas-dev"
+  needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "xsoar-saas-prepare-testing-bucket-upload-flow", "run-validations-upload-flow-new-validate-flow", "install-packs-in-xsoar-ng-ga"]
   stage: upload-to-marketplace
   artifacts:
     expire_in: 30 days

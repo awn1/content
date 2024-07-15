@@ -296,18 +296,16 @@ xpanse-prepare-testing-bucket:
 .run_tests:
   - section_start "Run Tests"
   - |
-    if [[ "${IS_NIGHTLY}" == "true" && $SERVER_TYPE == "XSOAR SAAS" ]]; then
-      ./Tests/scripts/run_tests.sh --generate-empty-result-file
+    if [[ "${IS_NIGHTLY}" == "true" && "${SERVER_TYPE}" == "XSIAM" ]]; then
       cat "${CLOUD_API_KEYS}" > "cloud_api_keys.json"
       ./Tests/scripts/run_e2e_tests.sh || EXIT_CODE=$?
-    else
-      ./Tests/scripts/run_e2e_tests.sh --generate-empty-result-file
-      if [[ -f "${ARTIFACTS_FOLDER_SERVER_TYPE}/conf.json" ]]; then
-        cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/conf.json" Tests/conf.json
-      fi
-      ./Tests/scripts/run_tests.sh || EXIT_CODE=$?
-      rm -f Tests/conf.json
     fi
+  - |
+    if [[ -f "${ARTIFACTS_FOLDER_SERVER_TYPE}/conf.json" ]]; then
+      cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/conf.json" Tests/conf.json
+    fi
+  - ./Tests/scripts/run_tests.sh || EXIT_CODE=$?
+  - rm -f Tests/conf.json
   - section_end "Run Tests"
 
 .test_content_on_xsoar_server_instances_base:
@@ -323,6 +321,7 @@ xpanse-prepare-testing-bucket:
     ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER_XSOAR}/instance_${INSTANCE_ROLE}"
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_XSOAR}/server_type_${SERVER_TYPE}"
     ENV_RESULTS_PATH: "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json"
+    MARKETPLACE_NAME: "xsoar"
   stage: run-instances
   needs:
     - job: xsoar-prepare-testing-bucket
@@ -354,10 +353,7 @@ xpanse-prepare-testing-bucket:
       cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json" "./artifacts/env_results.json"
       cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" "./artifacts/filter_file.txt"
     - section_end "Copy env results to artifacts folder"
-    - section_start "Install Packs and run Test-Module"
-    - ./Tests/scripts/install_content_and_test_integrations.sh || EXIT_CODE=$?
-    - cp -f "${ARTIFACTS_FOLDER_SERVER_TYPE}/conf.json" Tests/conf.json
-    - section_end "Install Packs and run Test-Module"
+    - !reference [ .install_packs_by_machines ]
     - section_start "Wait Until Server Ready"
     - echo Going to sleep for 15 minutes to allow server finish indexing
     - sleep-with-progress 900 30 "Sleeping... " 150
@@ -434,12 +430,11 @@ jobs-done-check-nightly:
     - xsoar-prepare-testing-bucket
     - xsoar-saas-prepare-testing-bucket
     - xsiam_server_ga
-    # - xsoar_ng_server_ga
+    - xsoar_ng_server_ga
     - tests_xsoar_server
     - xsoar-test_playbooks_results
     - xsiam-test_playbooks_results
     - xsiam-test_modeling_rule_results
-    # - xsoar-saas_test_e2e_results
   tags:
     - gke
   rules:
@@ -611,13 +606,14 @@ slack-notify-on-merge:
 
 .test_content_on_cloud_server_instances_base:
   tags:
-    - gke
-    - us-west1
+    - gce
   extends:
     - .default-job-settings
     - .push-rule
   variables:
     EXTRACT_PRIVATE_TESTDATA: "true"
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
   stage: run-instances
   script:
     - EXIT_CODE=0
@@ -632,7 +628,6 @@ slack-notify-on-merge:
         echo "Not running the instance flow, no tests to run were found."
         ./Tests/scripts/run_tests.sh --generate-empty-result-file
         ./Tests/scripts/test_modeling_rules.sh --generate-empty-result-file
-        ./Tests/scripts/run_e2e_tests.sh --generate-empty-result-file
         job-done
         exit $EXIT_CODE
       fi
@@ -643,10 +638,7 @@ slack-notify-on-merge:
     - !reference [.update-content-graph]
     - !reference [.lock-machine]
     - !reference [.uninstall-packs-and-reset-bucket-cloud]
-
-    - section_start "Install Packs and run Test-Module"
-    - ./Tests/scripts/install_content_and_test_integrations.sh || EXIT_CODE=$?
-    - section_end "Install Packs and run Test-Module"
+    - !reference [.install_packs_by_machines]
     - !reference [.run_tests]
     - section_start "Test Modeling Rules"
     - ./Tests/scripts/test_modeling_rules.sh || EXIT_CODE=$?
@@ -733,8 +725,13 @@ xsoar_ng_server_ga:
     - !reference [.filter-non-nightly-docker-updates-rule, rules]
     - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
     - if: '$TRIGGER_TEST_BRANCH == "true"'
-    - if: '$IS_NIGHTLY == "true"'
-      when: never
+    - if: '$IS_NIGHTLY == "true" && $SCHEDULED_NIGHTLY == "true"'
+      when: always
+      variables:
+        CLOUD_MACHINES_TYPE: "build-effort"
+        CLEAN_MACHINE_NEEDED: "true"
+        CLOUD_MACHINES_COUNT: 6
+        GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng-nightly"
   variables:
     CLEAN_MACHINE_NEEDED: "true"
     CLOUD_MACHINES_TYPE: "build"
@@ -763,10 +760,8 @@ xsoar_ng_server_ga:
     reports:
       junit:
         - "${ARTIFACTS_FOLDER_INSTANCE}/test_playbooks_report.xml"
-        - "${ARTIFACTS_FOLDER_INSTANCE}/e2e_tests_result.xml"
     paths:
       - "${ARTIFACTS_FOLDER_INSTANCE}/test_playbooks_report.xml"
-      - "${ARTIFACTS_FOLDER_INSTANCE}/e2e_tests_result.xml"
       - ${CI_PROJECT_DIR}/artifacts/*  # restoring the default artifacts path from the job default settings
       - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*  # restoring the default artifacts path from the job default settings
 

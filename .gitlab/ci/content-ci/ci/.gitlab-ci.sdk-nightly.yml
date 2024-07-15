@@ -52,12 +52,6 @@
     fi
   - section_end "Copy env results to artifacts folder"
 
-.prepare_for_test_content: &prepare_for_test_content
-  - section_start "Install Packs" --collapsed
-  - cat "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt"
-  - ./Tests/scripts/install_content_and_test_integrations.sh || EXIT_CODE=$?
-  - cp -f "${ARTIFACTS_FOLDER_SERVER_TYPE}/conf.json" Tests/conf.json
-  - section_end "Install Packs"
 
 .assert_test_content: &assert_test_content
   - section_start "Assert test-content" --collapsed
@@ -348,6 +342,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar:
     ENV_RESULTS_PATH: "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json"
     FAIL_ON_ERROR: "true"
     E2E_TEST_FOLDER: "xsoar"
+    MARKETPLACE_NAME: "xsoar"
   needs: ["demisto-sdk-nightly:xsoar-prepare-testing-bucket"]
   stage: run-instances
   script:
@@ -373,7 +368,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar:
       python3 -m pytest ${ARTIFACTS_FOLDER}/demisto-sdk/tests_end_to_end/${E2E_TEST_FOLDER} || EXIT_CODE=$?
     - section_end "End to End Tests"
 
-    - !reference [.prepare_for_test_content]
+    - !reference [.install_packs_by_machines]
 
     - section_start "Wait Until Server Ready"  --collapsed
     - echo Going to sleep for 15 minutes to allow server finish indexing
@@ -444,7 +439,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsiam:
 
     - !reference [.run_end_to_end_tests]
 
-    - !reference [.prepare_for_test_content]
+    - !reference [.install_packs_by_machines]
 
     - !reference [.run_test_content]
 
@@ -508,7 +503,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar-saas:
 
     - !reference [.run_end_to_end_tests]
 
-    - !reference [.prepare_for_test_content]
+    - !reference [.install_packs_by_machines]
 
     - !reference [.run_test_content]
 

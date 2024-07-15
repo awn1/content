@@ -17,7 +17,6 @@ import urllib3
 from google.api_core.exceptions import PreconditionFailed
 from google.cloud import storage  # type: ignore[attr-defined]
 from Tests.test_dependencies import get_used_integrations
-from demisto_sdk.commands.common.constants import FILTER_CONF
 from demisto_sdk.commands.test_content.ParallelLoggingManager import ParallelLoggingManager
 from demisto_sdk.commands.common.tools import get_demisto_version
 
@@ -284,13 +283,6 @@ def collect_integrations(integrations_conf, skipped_integration, skipped_integra
     return test_skipped_integration, integrations
 
 
-def extract_filtered_tests():
-    with open(FILTER_CONF) as filter_file:
-        filtered_tests = [line.strip('\n') for line in filter_file.readlines()]
-
-    return filtered_tests
-
-
 def load_conf_files(conf_path, secret_conf_path):
     with open(conf_path) as data_file:
         conf = json.load(data_file)
@@ -347,11 +339,6 @@ def get_test_records_of_given_test_names(tests_settings, tests_names_to_search):
         if test_name and test_name in tests_names_to_search:
             test_records_with_supplied_names.append(test_record)
     return test_records_with_supplied_names
-
-
-def get_json_file(path):
-    with open(path) as json_file:
-        return json.loads(json_file.read())
 
 
 def initialize_queue_and_executed_tests_set(tests):

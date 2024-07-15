@@ -626,6 +626,23 @@
     fi
   - section_end "Trigger Cleanup Machine"
 
+
+.split-packs-to-machines:
+  - section_start "Split packs to chosen machines" --collapsed
+  - IFS=', ' read -r -a CLOUD_CHOSEN_MACHINE_ID_ARRAY <<< "${CLOUD_CHOSEN_MACHINE_IDS}"
+  - echo "There are ${#CLOUD_CHOSEN_MACHINE_ID_ARRAY[@]} chosen cloud machines."
+  - python3 Tests/scripts/split_packs_to_machines.py --cloud_machines "${CLOUD_CHOSEN_MACHINE_IDS}" --server_type "${SERVER_TYPE}" --service_account "${GCS_ARTIFACTS_KEY}" --playbooks_to_packs "${ARTIFACTS_FOLDER_SERVER_TYPE}/tpb_dependencies_packs.json" --packs_to_install_path "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" --marketplace "${MARKETPLACE_NAME}"
+  - section_end "Split packs to chosen machines"
+
+.install_packs_by_machines:
+  - !reference [ .split-packs-to-machines ]
+  - section_start "Install Packs and run Test-Module"
+  - ./Tests/scripts/install_content_and_test_integrations.sh || EXIT_CODE=$?
+  - if [ "${EXIT_CODE}" -ne 0 ]; then exit 1; fi
+  - cp -f "${ARTIFACTS_FOLDER_SERVER_TYPE}/conf.json" Tests/conf.json
+  - section_end "Install Packs and run Test-Module"
+
+
 .cloud-machine-information:
   - section_start "Cloud Machine information"
   - ./Tests/scripts/print_cloud_machine_details.sh

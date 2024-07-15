@@ -1,17 +1,28 @@
-from datetime import datetime, timedelta
 import time
+import os
+import json
+import requests
 from typing import Any
 from collections.abc import Callable
 from urllib.parse import urljoin
-from demisto_client.demisto_api.api.default_api import DefaultApi as DemistoClient
-import demisto_client
-import requests
-from demisto_client.demisto_api.rest import ApiException
 from urllib3.exceptions import HTTPError, HTTPWarning
-
+from packaging.version import Version
+from tempfile import mkdtemp
+from datetime import datetime, timedelta
+from demisto_client.demisto_api.api.default_api import DefaultApi as DemistoClient
+from demisto_client.demisto_api.rest import ApiException
+import demisto_client
 from Tests.scripts.utils import logging_wrapper as logging
+from Tests.Marketplace.marketplace_constants import Metadata
+from Tests.Marketplace.upload_packs import extract_packs_artifacts
+
 
 ALREADY_IN_PROGRESS = "operation is already in progress"
+
+
+def get_json_file(path):
+    with open(path) as json_file:
+        return json.loads(json_file.read())
 
 
 def generic_request_with_retries(client: DemistoClient,
@@ -91,8 +102,7 @@ def generic_request_with_retries(client: DemistoClient,
                 if api_exception_handler:
                     body = api_exception_handler(ex, attempts_left)
                 if not attempts_left:  # exhausted all attempts, understand what happened and exit.
-                    raise Exception(
-                        f"Got status {ex.status} from server, message: {ex.body}, headers: {ex.headers}") from ex
+                    raise Exception(f"Got status {ex.status} from server, message: {ex.body}, headers: {ex.headers}") from ex
                 logging.debug(f"Process failed, got error {ex}")
             except (HTTPError, HTTPWarning) as http_ex:
                 if http_exception_handler:
@@ -114,6 +124,7 @@ def get_updating_status(client: DemistoClient,
                         sleep_interval: int = 60,
                         request_timeout: int = 300,
                         ) -> tuple[bool, bool | None]:
+
     def success_handler(response):
         updating_status = 'true' in str(response).lower()
         logging.info(f"Got updating status: {updating_status}")
@@ -168,24 +179,24 @@ def wait_until_not_updating(client: DemistoClient,
 
 
 def send_api_request_with_retries(
-        base_url: str,
-        retries_message: str,
-        exception_message: str,
-        success_message: str,
-        prior_message: str,
-        endpoint: str,
-        method: str,
-        params: dict | None = None,
-        headers: dict | None = None,
-        request_timeout: int | None = None,
-        accept: str = 'application/json',
-        body: Any | None = None,
-        attempts_count: int = 5,
-        sleep_interval: int = 60,
-        should_try_handler: Callable[[Any], bool] | None = None,
-        success_handler: Callable[[Any], Any] | None = None,
-        api_exception_handler: Callable[[ApiException, int], Any] | None = None,
-        http_exception_handler: Callable[[HTTPError | HTTPWarning], Any] | None = None
+    base_url: str,
+    retries_message: str,
+    exception_message: str,
+    success_message: str,
+    prior_message: str,
+    endpoint: str,
+    method: str,
+    params: dict | None = None,
+    headers: dict | None = None,
+    request_timeout: int | None = None,
+    accept: str = 'application/json',
+    body: Any | None = None,
+    attempts_count: int = 5,
+    sleep_interval: int = 60,
+    should_try_handler: Callable[[Any], bool] | None = None,
+    success_handler: Callable[[Any], Any] | None = None,
+    api_exception_handler: Callable[[ApiException, int], Any] | None = None,
+    http_exception_handler: Callable[[HTTPError | HTTPWarning], Any] | None = None
 ):
     """
     Args:
@@ -252,8 +263,7 @@ def send_api_request_with_retries(
                 if api_exception_handler:
                     api_exception_handler(ex, attempts_left)
                 if not attempts_left:
-                    raise Exception(
-                        f"Got status {ex.status} from server, message: {ex.body}, headers: {ex.headers}") from ex
+                    raise Exception(f"Got status {ex.status} from server, message: {ex.body}, headers: {ex.headers}") from ex
                 logging.debug(f"Process failed, got error {ex}")
             except (HTTPError, HTTPWarning) as http_ex:
                 if http_exception_handler:
@@ -285,3 +295,38 @@ def fetch_pack_ids_to_install(packs_to_install_path: str) -> list[str]:
         return []
 
     return packs_to_install
+
+
+def get_packs_with_higher_min_version(packs_names: set[str],
+                                      server_numeric_version: str,
+                                      extract_content_packs_path: str | None = None) -> set[str]:
+    """
+    Return a set of packs that have higher min version than the server version.
+
+    Args:
+        packs_names (Set[str]): A set of packs to install.
+        server_numeric_version (str): The server version.
+        extract_content_packs_path (str | None): Path to a temporary folder with extracted content packs metadata.
+
+    Returns:
+        (Set[str]): The set of the packs names that supposed to be not installed because
+                    their min version is greater than the server version.
+    """
+    if not extract_content_packs_path:
+        artifacts_folder_server_type = os.getenv('ARTIFACTS_FOLDER_SERVER_TYPE')
+        extract_content_packs_path = mkdtemp()
+        packs_artifacts_path = f'{artifacts_folder_server_type}/content_packs.zip'
+        extract_packs_artifacts(packs_artifacts_path, extract_content_packs_path)
+
+    packs_with_higher_version = set()
+    for pack_name in packs_names:
+        pack_metadata = get_json_file(f"{extract_content_packs_path}/{pack_name}/metadata.json")
+        server_min_version = pack_metadata.get(Metadata.SERVER_MIN_VERSION,
+                                               pack_metadata.get('server_min_version', Metadata.SERVER_DEFAULT_MIN_VERSION))
+
+        if 'Master' not in server_numeric_version and Version(server_numeric_version) < Version(server_min_version):
+            packs_with_higher_version.add(pack_name)
+            logging.info(f"Found pack '{pack_name}' with min version {server_min_version} that is "
+                         f"higher than server version {server_numeric_version}")
+
+    return packs_with_higher_version

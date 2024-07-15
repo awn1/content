@@ -3,8 +3,7 @@ import os
 import demisto_client
 import pytest
 from Tests.configure_and_test_integration_instances import XSOARBuild, create_build_object, \
-    options_handler, CloudBuild, get_turned_non_hidden_packs, update_integration_lists, \
-    get_packs_with_higher_min_version, filter_new_to_marketplace_packs, packs_names_to_integrations_names
+    options_handler, CloudBuild, packs_names_to_integrations_names, Server
 
 XSIAM_SERVERS = {
     "qa2-test-111111": {
@@ -30,31 +29,29 @@ XSIAM_SERVERS = {
 
 def create_build_object_with_mock(mocker, server_type):
     args = ['-u', "$USERNAME", '-p', "$PASSWORD", '-c', "$CONF_PATH",
-            '--tests_to_run', "$ARTIFACTS_FOLDER_SERVER_TYPE/filter_file.txt",
             '--pack_ids_to_install', "$ARTIFACTS_FOLDER_SERVER_TYPE/content_packs_to_install.txt",
-            '-g', "$GIT_SHA1", '--ami_env', "$1", '-n', 'false', '--branch', "$CI_COMMIT_BRANCH",
-            '--build-number', "$CI_PIPELINE_ID", '-sa', "$GCS_MARKET_KEY", '--server-type', server_type,
-            '--cloud_machine', "qa2-test-111111", '--cloud_servers_path', '$XSIAM_SERVERS_PATH',
-            '--marketplace_name', 'marketplacev2', '--test_pack_path', '$ARTIFACTS_FOLDER', '--content_root', '$CONTENT_ROOT']
+            '-g', "$GIT_SHA1", '--ami_env', "$1", '--branch', "$CI_COMMIT_BRANCH",
+            '--build_number', "$CI_PIPELINE_ID", '-sa', "$GCS_MARKET_KEY", '--server_type', server_type,
+            '--cloud_servers_path', '$XSIAM_SERVERS_PATH',
+            '--marketplace_name', 'marketplacev2', '--test_pack_path', '$ARTIFACTS_FOLDER',
+            '--machine_assignment', "$ARTIFACTS_FOLDER_SERVER_TYPE/packs_to_install_by_machine.json"]
     options = options_handler(args=args)
-    json_data = {
-        'tests': [],
-        'skipped_integrations': [],
-        'unmockable_integrations': [],
-    }
-    json_data.update(**XSIAM_SERVERS)
-    mocker.patch('Tests.configure_and_test_integration_instances.get_secrets_from_gsm',
-                 return_value=json_data)
+    json_data = [{'tests': [], 'skipped_integrations': [], 'unmockable_integrations': []}]
+    if server_type == 'XSOAR':  # machine_assignment
+        json_data += [{"xsoar-machine": {"packs_to_install": ["TEST"]}}]
+    else:
+        json_data += [{"qa2-test-111111": {"packs_to_install": ["TEST"]}, "qa2-test-222222": {"packs_to_install": ["TEST2"]}}]
+    json_data += [XSIAM_SERVERS, {}] *2
+
+
     mocker.patch('Tests.configure_and_test_integration_instances.get_json_file',
-                 return_value=json_data)
-    mocker.patch('Tests.configure_and_test_integration_instances.Build.fetch_tests_list',
-                 return_value=[])
-    mocker.patch('Tests.configure_and_test_integration_instances.fetch_pack_ids_to_install',
-                 return_value=[])
+                 side_effect=json_data)
     mocker.patch('Tests.configure_and_test_integration_instances.options_handler',
                  return_value=options)
     mocker.patch('Tests.configure_and_test_integration_instances.XSOARBuild.get_servers',
                  return_value=({'1.1.1.1': '7000'}))
+    mocker.patch('Tests.configure_and_test_integration_instances.get_secrets_from_gsm',
+                 return_value={})
     mocker.patch('Tests.configure_and_test_integration_instances.XSOARServer.server_numeric_version', return_value="6.5.0")
     build = create_build_object()
     return build
@@ -72,21 +69,20 @@ def test_configure_old_and_new_integrations(mocker):
         - Assert there the configured old integrations has no intersection with the configured new integrations
     """
     def configure_integration_instance_mocker(integration,
-                                              _,
-                                              __):
+                                              _):
         return integration
 
     mocker.patch('Tests.configure_and_test_integration_instances.XSOARBuild.__init__',
                  return_value=None)
 
-    mocker.patch('Tests.configure_and_test_integration_instances.configure_integration_instance',
+    mocker.patch('Tests.configure_and_test_integration_instances.Server.configure_integration_instance',
                  side_effect=configure_integration_instance_mocker)
-    build = XSOARBuild({})
-    build.servers = ['server1']
-    old_modules_instances, new_modules_instances = build.configure_modified_and_new_integrations(
+    server = Server()
+    server.build = XSOARBuild({})
+    server.build.servers = ['server1']
+    old_modules_instances, new_modules_instances = server.configure_modified_and_new_integrations(
         modified_integrations_to_configure=['old_integration1', 'old_integration2'],
-        new_integrations_to_configure=['new_integration1', 'new_integration2'],
-        demisto_client_=None,
+        new_integrations_to_configure=['new_integration1', 'new_integration2']
     )
     assert not set(old_modules_instances).intersection(new_modules_instances)
 
@@ -143,9 +139,9 @@ def test_get_turned_non_hidden_packs(mocker, diff, the_expected_result):
     Then:
         - Assert the expected result is returned.
     """
-    build = create_build_object_with_mock(mocker, 'XSOAR')
-    mocker.patch('Tests.configure_and_test_integration_instances.run_git_diff', return_value=diff)
-    turned_non_hidden = get_turned_non_hidden_packs({'test'}, build)
+    mocker.patch('Tests.configure_and_test_integration_instances.Server.run_git_diff', return_value=diff)
+    server = Server()
+    turned_non_hidden = server.get_turned_non_hidden_packs({'test'})
     assert ('test' in turned_non_hidden) is the_expected_result
 
 
@@ -173,7 +169,8 @@ def test_update_integration_lists(mocker, new_integrations_names, turned_non_hid
     """
     mocker.patch('Tests.configure_and_test_integration_instances.packs_names_to_integrations_names',
                  return_value=turned_non_hidden_packs_id)
-    returned_results = update_integration_lists(new_integrations_names, turned_non_hidden_packs_id, modified_integrations_names)
+    returned_results = Server.update_integration_lists(new_integrations_names, turned_non_hidden_packs_id,
+                                                       modified_integrations_names)
     assert the_expected_result(returned_results[0], returned_results[1])
 
 
@@ -215,11 +212,17 @@ def test_get_packs_with_higher_min_version(mocker, pack_version, expected_result
         - case 1: shouldn't filter any packs.
         - case 2: should filter the pack.
     """
+    from Tests.Marketplace.common import get_packs_with_higher_min_version
 
-    mocker.patch("Tests.configure_and_test_integration_instances.extract_packs_artifacts")
-    mocker.patch("Tests.configure_and_test_integration_instances.get_json_file",
+    mocker.patch("Tests.Marketplace.common.extract_packs_artifacts")
+    mocker.patch("Tests.Marketplace.common.get_json_file",
                  return_value={"serverMinVersion": "6.6.0"})
-    packs_with_higher_min_version = get_packs_with_higher_min_version({'TestPack'}, pack_version)
+    server = Server()
+    server.pack_ids_to_install = ['TestPack']
+    server.server_numeric_version = pack_version
+
+    packs_with_higher_min_version = get_packs_with_higher_min_version(server.pack_ids_to_install,
+                                                                      server.server_numeric_version)
     assert packs_with_higher_min_version == expected_results
 
 
@@ -262,8 +265,10 @@ def test_first_added_to_marketplace(mocker, diff, build_type, the_expected_resul
         - Assert the expected result is returned.
     """
     build = create_build_object_with_mock(mocker, build_type)
-    mocker.patch('Tests.configure_and_test_integration_instances.run_git_diff', return_value=diff)
-    first_added_to_marketplace = filter_new_to_marketplace_packs(build, {'pack_name'})
+    mocker.patch('Tests.configure_and_test_integration_instances.Server.run_git_diff', return_value=diff)
+    server = Server()
+    server.build = build
+    first_added_to_marketplace = server.filter_new_to_marketplace_packs(modified_pack_names={'pack_name'})
     assert the_expected_result == first_added_to_marketplace
 
 

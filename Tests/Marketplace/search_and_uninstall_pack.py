@@ -14,7 +14,7 @@ import demisto_client
 
 from Tests.Marketplace.common import generic_request_with_retries, wait_until_not_updating, ALREADY_IN_PROGRESS, \
     send_api_request_with_retries, fetch_pack_ids_to_install
-from Tests.Marketplace.configure_and_install_packs import search_and_install_packs_and_their_dependencies
+from Tests.Marketplace.search_and_install_packs import search_and_install_packs_and_their_dependencies
 from Tests.configure_and_test_integration_instances import CloudBuild, get_custom_user_agent
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
