@@ -16,13 +16,13 @@ if [ "$#" -lt "1" ]; then
   echo "Usage:
   $0 -ct <token>
 
-  [-ct, --ci-token]      The ci gitlab trigger token.
-  [-rv, --release-version]      The release version.
-  [-r, --reviewer]         Github username of the release owner.
-  [-ch, --slack-channel] A Slack channel to send notifications to. Default is dmst-sdk-release.
-  [-b, --branch]         The content branch name to run the .gitlab-ci.sdk-release.yml workflow. Default is master branch.
-  [-d, --is-draft]         Whether to create draft release and draft pull requests or not. Default is FALSE.
-  [-s, --sdk-branch-name]         From which branch in demisto-sdk we want to create the release. Default is master.
+  [-ct, --ci-token]           The ci gitlab trigger token.
+  [-rv, --release-version]    The release version.
+  [-r, --reviewer]            Github username of the release owner.
+  [-ch, --slack-channel]      A Slack channel to send notifications to. Default is dmst-sdk-release.
+  [-b, --branch]              The infra branch name to run the .gitlab-ci.sdk-release.yml workflow. Default is master branch.
+  [-d, --is-draft]            Whether to create draft release and draft pull requests or not. Default is FALSE.
+  [-s, --sdk-branch-name]     From which branch in demisto-sdk we want to create the release. Default is master.
   "
   exit 1
 fi
