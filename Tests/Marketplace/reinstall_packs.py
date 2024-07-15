@@ -4,7 +4,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 import demisto_client
-from Tests.Marketplace.configure_and_install_packs import search_and_install_packs_and_their_dependencies
+from Tests.Marketplace.search_and_install_packs import search_and_install_packs_and_their_dependencies
 from Tests.Marketplace.search_and_uninstall_pack import uninstall_pack
 from Tests.configure_and_test_integration_instances import CloudBuild, get_custom_user_agent
 from Tests.scripts.utils import logging_wrapper as logging

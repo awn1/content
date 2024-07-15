@@ -48,31 +48,27 @@ echo "Running server tests on Instance role:${INSTANCE_ROLE}, nightly:${IS_NIGHT
 
 exit_code=0
 if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; then
-
   if [ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]; then
-    IFS=', ' read -r -a CLOUD_CHOSEN_MACHINE_ID_ARRAY <<< "${CLOUD_CHOSEN_MACHINE_IDS}"
-    for CLOUD_CHOSEN_MACHINE_ID in "${CLOUD_CHOSEN_MACHINE_ID_ARRAY[@]}"; do
-      demisto-sdk test-content -k "$DEMISTO_API_KEY" -c "$CONF_PATH" -e "$SECRET_CONF_PATH" -n "${IS_NIGHTLY}" -t "$SLACK_TOKEN" \
-        -a "$CIRCLECI_TOKEN" -b "${CI_PIPELINE_ID}" -g "$CI_COMMIT_BRANCH" -m "${MEM_CHECK}" --is-ami "${IS_AMI_RUN}" -d "${INSTANCE_ROLE}" \
-        --xsiam-machine "${CLOUD_CHOSEN_MACHINE_ID}" --xsiam-servers-path "$CLOUD_SERVERS_PATH" --server-type "${SERVER_TYPE}" \
-        --use-retries --xsiam-servers-api-keys-path "cloud_api_keys.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" \
-        --product-type="${PRODUCT_TYPE}" --service_account "${GCS_ARTIFACTS_KEY}" --artifacts_bucket "${GCS_ARTIFACTS_BUCKET}"
-      command_exit_code=$?
-      if [ "${command_exit_code}" -ne 0 ]; then
-        exit_code=1
-        echo "Failed to run test content on cloud machine:${CLOUD_CHOSEN_MACHINE_ID} with exit code:${command_exit_code}"
-      fi
-    done
+    demisto-sdk test-content -k "$DEMISTO_API_KEY" -c "$CONF_PATH" -e "$SECRET_CONF_PATH" -n "${IS_NIGHTLY}" -t "$SLACK_TOKEN" \
+        -b "${CI_PIPELINE_ID}" -g "$CI_COMMIT_BRANCH" -m "${MEM_CHECK}" --is-ami "${IS_AMI_RUN}" -d "${INSTANCE_ROLE}" \
+        --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" --cloud_servers_path "$CLOUD_SERVERS_PATH" --server-type "${SERVER_TYPE}" \
+        --use-retries --cloud_servers_api_keys "cloud_api_keys.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" --product-type="${PRODUCT_TYPE}" --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_to_install_by_machine.json" \
+        --service_account "${GCS_ARTIFACTS_KEY}" --artifacts_bucket "${GCS_ARTIFACTS_BUCKET}"
+    command_exit_code=$?
+    if [ "${command_exit_code}" -ne 0 ]; then
+      exit_code=1
+      echo "Failed to run test content on cloud machine:${CLOUD_CHOSEN_MACHINE_IDS} with exit code:${command_exit_code}"
+    fi
   else
     echo "No cloud machines were chosen to run tests on"
     exit_code=1
   fi
 
-elif [[ "${SERVER_TYPE}" == "XSOAR" ]]; then
+elif [[ "${SERVER_TYPE}" == "XSOAR" && "${IS_NIGHTLY}" == "false" ]]; then
     demisto-sdk test-content -k "$DEMISTO_API_KEY" -c "$CONF_PATH" -e "$SECRET_CONF_PATH" -n "${IS_NIGHTLY}" -t "$SLACK_TOKEN" \
-      -a "$CIRCLECI_TOKEN" -b "${CI_PIPELINE_ID}" -g "$CI_COMMIT_BRANCH" -m "${MEM_CHECK}" --is-ami "${IS_AMI_RUN}" -d "${INSTANCE_ROLE}" \
-      --xsiam-machine "${CLOUD_CHOSEN_MACHINE_ID}" --xsiam-servers-path "$CLOUD_SERVERS_PATH" --server-type "${SERVER_TYPE}" \
-      --use-retries --xsiam-servers-api-keys-path "cloud_api_keys.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" --product-type="${PRODUCT_TYPE}" \
+      -b "${CI_PIPELINE_ID}" -g "$CI_COMMIT_BRANCH" -m "${MEM_CHECK}" --is-ami "${IS_AMI_RUN}" -d "${INSTANCE_ROLE}" \
+      --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" --cloud_servers_path "$CLOUD_SERVERS_PATH" --server-type "${SERVER_TYPE}" \
+      --use-retries --cloud_servers_api_keys "cloud_api_keys.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" --product-type="${PRODUCT_TYPE}" --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_to_install_by_machine.json" \
       --service_account "${GCS_ARTIFACTS_KEY}" --artifacts_bucket "${GCS_ARTIFACTS_BUCKET}"
     exit_code=$?
     echo "Failed to run test content with exit code:${exit_code}"

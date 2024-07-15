@@ -38,6 +38,7 @@ variables:
   DEMISTO_CONNECTION_POOL_MAXSIZE: "180" # see this issue for more info https://github.com/demisto/etc/issues/36886
   DEMISTO_SDK_NIGHTLY: "false"
   IS_NIGHTLY: "false"
+  SCHEDULED_NIGHTLY: "false" # true only during a real scheduled nightly run.
   SDK_REF: "master" # The default sdk branch to use when OVERRIDE_SDK_REF has value.
   OVERRIDE_SDK_REF: "" # Whether to override the sdk branch over the sdk pypi release.
   OVERRIDE_ALL_PACKS: "false"

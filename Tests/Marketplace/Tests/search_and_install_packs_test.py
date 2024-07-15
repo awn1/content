@@ -1098,10 +1098,12 @@ def test_get_packs_with_higher_min_version(mocker: MockFixture, pack_version, ex
         - case 1: shouldn't filter any packs.
         - case 2: should filter the pack.
     """
-    mocker.patch.object(script, "get_json_file",
-                        return_value={"serverMinVersion": "6.6.0"})
+    from Tests.Marketplace.common import get_packs_with_higher_min_version
+    mocker.patch("Tests.Marketplace.common.extract_packs_artifacts")
 
-    packs_with_higher_min_version = script.get_packs_with_higher_min_version({'TestPack'}, pack_version, "")
+    mocker.patch("Tests.Marketplace.common.get_json_file",
+                 return_value={"serverMinVersion": "6.6.0"})
+    packs_with_higher_min_version = get_packs_with_higher_min_version({'TestPack'}, pack_version, "")
     assert packs_with_higher_min_version == expected_results
 
 
@@ -1116,7 +1118,7 @@ def test_filter_packs_by_min_server_version_packs_filtered(mocker: MockFixture):
     """
     packs_id = {"Pack1", "Pack2", "Pack3"}
     server_version = "6.10.0"
-    mocker.patch.object(script, 'get_packs_with_higher_min_version', return_value={"Pack2", "Pack3"})
+    mocker.patch('Tests.Marketplace.search_and_install_packs.get_packs_with_higher_min_version', return_value={"Pack2", "Pack3"})
 
     filtered_packs = script.filter_packs_by_min_server_version(packs_id, server_version, "")
 
@@ -1134,7 +1136,7 @@ def test_filter_packs_by_min_server_version_no_packs_filtered(mocker: MockFixtur
     """
     packs_id = {"Pack1", "Pack2", "Pack3"}
     server_version = "6.9.0"
-    mocker.patch.object(script, 'get_packs_with_higher_min_version', return_value=set())
+    mocker.patch('Tests.Marketplace.search_and_install_packs.get_packs_with_higher_min_version', return_value=set())
 
     filtered_packs = script.filter_packs_by_min_server_version(packs_id, server_version, "")
 

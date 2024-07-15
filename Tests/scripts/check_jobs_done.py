@@ -37,6 +37,7 @@ BUCKET_UPLOAD_JOBS = [
     'install-packs-in-server6_12',
     'install-packs-in-server-master',
     'install-packs-in-xsiam-ga',
+    'install-packs-in-xsoar-ng-ga',
     'upload-packs-to-marketplace',
     'upload-packs-to-marketplace-v2',
     'upload-packs-to-xpanse-marketplace',
@@ -52,6 +53,7 @@ CONTENT_COMMON_JOBS = [
     'xsoar-prepare-testing-bucket',
     'xsoar-saas-prepare-testing-bucket',
     'xsiam_server_ga',
+    'xsoar_ng_server_ga',
     'tests_xsoar_server: [Server 6.9]',
     'tests_xsoar_server: [Server 6.10]',
     'tests_xsoar_server: [Server 6.11]',
@@ -65,7 +67,6 @@ CONTENT_COMMON_JOBS = [
 CONTENT_PR_JOBS = CONTENT_COMMON_JOBS + [
     'validate-content-conf',
     'test-upload-flow',
-    'xsoar_ng_server_ga',
     'stop-running-pipelines',
 ]
 
