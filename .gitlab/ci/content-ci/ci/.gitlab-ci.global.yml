@@ -440,7 +440,7 @@
 .checkout-upload-commit-content-nightly: &checkout-upload-commit-content-nightly
   - section_start "Checkout upload commit content nightly" --collapsed
   - |
-    if [[ "${IS_NIGHTLY}" == "true" && "${CI_COMMIT_BRANCH}" == "master" ]]; then
+    if [[ "${IS_NIGHTLY}" == "true" && "${CI_COMMIT_BRANCH}" == "master" && "${OLD_NIGHTLY}" == "true" ]]; then
       if [[ ! -d "${CI_PROJECT_DIR}/artifacts/production_packs" ]]; then
         echo -e "${RED}ERROR: content production packs do not exist in ${CI_PROJECT_DIR}/artifacts${NC}"
         exit 1
@@ -514,7 +514,7 @@
 .add-content-production-to-artifacts:
   - section_start "Clone production content and add it to artifacts" --collapsed
   - |
-      if [[ "${IS_NIGHTLY}" == "true" && "${CI_COMMIT_BRANCH}" == "master" ]]; then
+      if [[ "${IS_NIGHTLY}" == "true" && "${CI_COMMIT_BRANCH}" == "master" && "${OLD_NIGHTLY}" == "true" ]]; then
         echo "Cloning production content"
         mkdir content_production
         cd content_production
