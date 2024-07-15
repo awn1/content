@@ -19,7 +19,7 @@ FULL_IGNORE_LOWER = [ignore.lower() for ignore in FULL_IGNORE]
 
 # Items that will be ignored as an item but will be searched for with '@' before them
 IGNORES = [
-    '', '?', '1E', '542000000', '00000000000', '0000000000', '0123456789', '+44', '060606060606',
+    '', '?', '1E', '542000000', '00000000000', '0000000000', '0123456789', '+44', '060606060606', '0600000000',
 
     # A
     'AACN', 'ABB', 'ADP', 'ADT', 'AFORP', 'AGEAS', 'AJ', 'AREAS', 'Abanca', 'Alstom',
