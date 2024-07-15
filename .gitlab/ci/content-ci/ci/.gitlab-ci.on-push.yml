@@ -757,6 +757,7 @@ xsoar_ng_server_ga:
         CLEAN_MACHINE_NEEDED: "true"
         CLOUD_MACHINES_COUNT: 6
         GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng-nightly"
+    - if: '$IS_NIGHTLY == "true"'
   variables:
     CLEAN_MACHINE_NEEDED: "true"
     CLOUD_MACHINES_TYPE: "build"
