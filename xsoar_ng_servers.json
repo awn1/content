@@ -277,5 +277,16 @@
     "enabled": true,
     "flow_type": "upload",
     "build_machine": true
+  },
+  "qa2-test-9993045859472": {
+    "ui_url": "https://viso-avcm4vnv8xdjtwpag3ml2d.crtx-qa2-uat.us.paloaltonetworks.com/",
+    "instance_name": "qa2-test-9993045859472",
+    "x-xdr-auth-id": 1,
+    "base_url": "https://api-viso-avcm4vnv8xdjtwpag3ml2d.crtx-qa2-uat.us.paloaltonetworks.com",
+    "demisto_version": "99.99.98",
+    "xsoar_ng_version": "8.7.0",
+    "enabled": true,
+    "flow_type": "build-effort",
+    "build_machine": true
   }
 }
