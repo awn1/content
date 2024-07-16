@@ -379,6 +379,18 @@ xpanse-prepare-testing-bucket:
       cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" "./artifacts/filter_file.txt"
     - section_end "Copy env results to artifacts folder"
     - !reference [ .install_packs_by_machines ]
+    - section_start "Avoid running playbooks on nightly" --collapsed
+    - |
+      if [[ "${IS_NIGHTLY}" == "true" ]]; then
+        echo "IS_NIGHTLY is set to true. Skipping run tests."
+        ./Tests/scripts/run_tests.sh --generate-empty-result-file
+        # workaround for the hard-coded value in the sdk
+        rm -f "./artifacts/env_results.json"
+        rm -f "./artifacts/filter_file.txt"
+        job-done
+        exit $EXIT_CODE
+      fi
+    - section_end "Avoid running playbooks on nightly"
     - section_start "Wait Until Server Ready"
     - echo Going to sleep for 15 minutes to allow server finish indexing
     - sleep-with-progress 900 30 "Sleeping... " 150
