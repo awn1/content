@@ -73,7 +73,7 @@ def get_pr_modified_files_and_packs(pr_number, github_token, verify_ssl):
     return modified_packs, pr_files
 
 
-def tag_user_on_pr(reviewers: set, pr_number: str, pack: str, pack_files: set, github_token: str = None,
+def tag_user_on_pr(reviewers: set, pr_number: str, pack: str, pack_files: set, github_token: str | None = None,
                    verify_ssl: bool = True):
     comments_endpoint = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/issues/{pr_number}/comments"
     headers = {"Authorization": "Bearer " + github_token} if github_token else {}

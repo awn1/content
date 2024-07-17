@@ -536,10 +536,10 @@ class Pack:
 
         return pack_metadata
 
-    def _get_updated_changelog_entry(self, changelog: dict, version: str, release_notes: str = None,
-                                     version_display_name: str = None, build_number_with_prefix: str = None,
-                                     released_time: str = None, pull_request_numbers=None, marketplace: str = 'xsoar',
-                                     id_set: dict = None):
+    def _get_updated_changelog_entry(self, changelog: dict, version: str, release_notes: str | None = None,
+                                     version_display_name: str | None = None, build_number_with_prefix: str | None = None,
+                                     released_time: str | None = None, pull_request_numbers=None, marketplace: str = 'xsoar',
+                                     id_set: dict | None = None):
         """
         Args:
             changelog (dict): The changelog from the production bucket.

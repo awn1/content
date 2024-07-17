@@ -165,8 +165,8 @@ def calculate_results_table(jira_tickets_for_result: dict[str, Issue],
                             multiline_headers: bool = True,
                             transpose: bool = False,
                             fail_only_nightly_tests: bool = False,
-                            artifacts_path: Path = None,
-                            product_type: str = None) -> tuple[list[str], list[list[Any]], JUnitXml, int]:
+                            artifacts_path: Path | None = None,
+                            product_type: str | None = None) -> tuple[list[str], list[list[Any]], JUnitXml, int]:
     xml = JUnitXml()
     headers_multiline_char = "\n" if multiline_headers else " "
     headers = [h.replace("\n", headers_multiline_char) for h in base_headers]

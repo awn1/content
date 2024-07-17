@@ -189,7 +189,7 @@ def change_placeholders_to_values(placeholders_map, config_item):
     return json.loads(item_as_string)
 
 
-def create_test_pack(packs: list = None):
+def create_test_pack(packs: list | None = None):
     packs = packs or []
     test_pack_zip(Build.content_path, Build.test_pack_target, packs)
 
@@ -233,7 +233,7 @@ def get_test_playbooks_in_dir(path):
         yield playbook.path, playbook
 
 
-def test_files(content_path, packs_to_install: list = None):
+def test_files(content_path, packs_to_install: list | None = None):
     packs_root = f'{content_path}/Packs'
     packs_to_install = packs_to_install or []
 
@@ -256,7 +256,7 @@ def test_files(content_path, packs_to_install: list = None):
                     yield playbook_path, playbook
 
 
-def test_pack_zip(content_path, target, packs: list = None):
+def test_pack_zip(content_path, target, packs: list | None = None):
     """
     Iterates over all TestPlaybooks folders and adds all files from there to test_pack.zip file.
     """

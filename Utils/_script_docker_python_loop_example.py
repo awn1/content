@@ -1,4 +1,4 @@
-# type: ignore[attr-defined]
+# mypy: disable-error-code="attr-defined"
 """
 This is a simplified example script which demonstrates the concept of how the XSOAR Server executes python integrations/scripts.
 
@@ -418,7 +418,7 @@ def send_script_completed():
 def send_script_exception(exc_type, exc_value, exc_traceback):
     ex_string = traceback.format_exception(exc_type, exc_value, exc_traceback)
     if ex_string == 'None\n':
-        ex_string = str(exc_value)
+        ex_string = str(exc_value)  # type: ignore[assignment]
 
     json.dump({'type': 'exception', 'args': {'exception': ex_string}}, sys.stdout)
     sys.stdout.write('\n')

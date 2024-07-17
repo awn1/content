@@ -10,7 +10,9 @@ DATE_FORMAT = '%Y-%m-%d'
 
 class GoogleSecreteExpirationManagerModule(GoogleSecreteManagerModule):
 
-    def update_secret_metadata(self, project_id: str, secret_id: str, labels: dict = None, deprecate: bool = False) -> None:
+    def update_secret_metadata(
+        self, project_id: str, secret_id: str, labels: dict | None = None, deprecate: bool = False
+        ) -> None:
         """
         Update a secret in GSM
         :param project_id: The project ID for GCP
