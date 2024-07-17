@@ -304,7 +304,7 @@ class XsoarOnPremClient:
         """Delete roles from user"""
         raise NotImplementedError('Not implemented by rocket on this env')
 
-    def sync_user_permission(self, user_name: str) -> dict:
+    def sync_user_permission(self, user_name: str) -> dict:  # type:ignore[empty-body]
         pass
 
     def add_role(self, data: dict):
@@ -644,7 +644,7 @@ class XsoarClient(XsoarOnPremClient):
         versions.update(demisto_version)
         return versions
 
-    def set_log_level(self, xsoar_log_level: str = None):
+    def set_log_level(self, xsoar_log_level: str | None = None):
         logger.debug('Not setting log level for XSOAR NG environment.')
 
     # def search_api_keys(self) -> list[PublicApiKey]:
@@ -667,7 +667,7 @@ class XsoarClient(XsoarOnPremClient):
     #     return keys
 
     def create_api_key(
-        self, rbac_roles: list[str] = None, expiration: DateTime = None, comment: Optional[str] = None, **kwargs
+        self, rbac_roles: list[str] | None = None, expiration: DateTime | None = None, comment: Optional[str] = None, **kwargs
     ) -> PublicApiKey:
         """
         Calls XSOAR API to create an API key

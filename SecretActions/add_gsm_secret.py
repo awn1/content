@@ -26,7 +26,7 @@ YELLOW_BOLD_PRINT = '\033[1;33m'
 
 
 def validate_secret(secret: str, options: argparse.Namespace, project_id, attr_validation: tuple,
-                    github_client: GithubClient = None) -> json5:
+                    github_client: GithubClient | None = None) -> json5:
     """
     Validate that the secret comply to our format
     :param secret: The secret json as a string

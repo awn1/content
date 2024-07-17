@@ -72,7 +72,7 @@ class GoogleSecreteManagerModule:
 
             return datetime.strftime(d, DATE_FORMAT) if d else None
 
-    def __init__(self, service_account_file: str = None, project_id=DEV_PROJECT_ID):
+    def __init__(self, service_account_file: str | None = None, project_id=DEV_PROJECT_ID):
         self.client = self.create_secret_manager_client(
             project_id, service_account_file
         )
@@ -236,7 +236,7 @@ class GoogleSecreteManagerModule:
 
     @staticmethod
     def create_secret_manager_client(
-        project_id, service_account: str = None
+        project_id, service_account: str | None = None
     ) -> secretmanager.SecretManagerServiceClient:
         """
         Creates GSM object using a service account
@@ -290,7 +290,7 @@ class GoogleSecreteManagerModule:
                 request={"parent": parent, "filter": query})
         )
 
-    def get_secrets_from_project(self, project_id: str, pr_number: int = None, is_dev_branch: bool = False):
+    def get_secrets_from_project(self, project_id: str, pr_number: int | None = None, is_dev_branch: bool = False):
         """getting the secrets from a given project id. Can also get a secret by stating a pr number
         """
         labels_filter = {FilterLabels.SECRET_ID: FilterOperators.NOT_NONE,

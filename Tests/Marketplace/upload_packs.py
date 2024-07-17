@@ -176,7 +176,7 @@ def download_and_extract_index(storage_bucket: Any, extract_destination_path: st
         sys.exit(1)
 
 
-def update_index_folder(index_folder_path: str, pack: Pack, pack_versions_to_keep: list = None) -> bool:
+def update_index_folder(index_folder_path: str, pack: Pack, pack_versions_to_keep: list | None = None) -> bool:
     """
     Updates index folder with pack metadata, changelog and README files.
 

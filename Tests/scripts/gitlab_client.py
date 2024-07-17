@@ -33,8 +33,8 @@ class GitlabClient:
 
     def get_pipelines(
             self,
-            commit_sha: str = None,
-            ref: str = None,
+            commit_sha: str | None = None,
+            ref: str | None = None,
             sort: str = "asc",
     ) -> list:
         params = {
@@ -72,7 +72,7 @@ class GitlabClient:
         commit_sha: str,
         job_name: str,
         artifact_filepath: Path,
-        ref: str = None,
+        ref: str | None = None,
     ) -> str:
         """Gets an artifact file data as text.
 

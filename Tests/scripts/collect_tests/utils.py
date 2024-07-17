@@ -118,7 +118,7 @@ class DictBased:
         self.version_range = VersionRange(self.from_version, self.to_version)
         self.marketplaces: tuple[MarketplaceVersions, ...] = self._handle_xsoar_marketplaces()
 
-    def get(self, key: str, default: Any = None, warn_if_missing: bool = True, warning_comment: str = ''):
+    def get(self, key: str, default: Any | None = None, warn_if_missing: bool = True, warning_comment: str = ''):
         """
         allows fetching an attribute, with or without logging (useful for debug purposes)
         """

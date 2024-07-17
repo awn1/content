@@ -3,7 +3,7 @@ from datetime import datetime
 import pendulum
 
 
-def to_epoch_timestamp(date: pendulum.DateTime = None) -> int:
+def to_epoch_timestamp(date: pendulum.DateTime | None = None) -> int:
     """Return int epoch timestamp in milliseconds from date object"""
     date = date or time_now()
     timestamp = date.timestamp() * 1000

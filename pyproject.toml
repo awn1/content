@@ -95,12 +95,12 @@ optional = true
 pytest-cov = "^5.0.0"
 
 [tool.ruff]
-ignore = [
+lint.ignore = [
     "F403", # undefined-local-with-import-star
     "F405", # undefined-local-with-import-star-usage
     "PLC1901", #compare-to-empty-string
 ]
-select =['E','F','PLC','PLE']
+lint.select = ['E', 'F', 'PLC', 'PLE']
 extend-exclude = ["Tests/scripts/infrastructure_tests/tests_data", "Utils/test_upload_flow"]
 line-length = 130
 
