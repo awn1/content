@@ -166,7 +166,7 @@ def machines_saas_and_xsiam(failed_jobs):
         machines.extend(
             get_msg_machines(
                 failed_jobs,
-                {"xsiam_server_ga", "install-packs-in-xsiam-ga", "install-packs-in-xsoar-ng-ga"},
+                {"xsiam_server_ga", "install-packs-in-xsiam-ga"},
                 {"xsiam-test_playbooks_results", "xsiam-test_modeling_rule_results"},
                 f"XSIAM:\n{','.join(xsiam_machine)}",
             )
@@ -180,7 +180,6 @@ def machines_saas_and_xsiam(failed_jobs):
                 "xsoar_ng_server_ga",
                 "xsiam_server_ga",
                 "install-packs-in-xsiam-ga",
-                "install-packs-in-xsoar-ng-ga",
             },
             {
                 "xsoar-test_playbooks_results",
