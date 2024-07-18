@@ -1369,8 +1369,6 @@ class CloudServer(Server):
         return self.name
 
     def reconnect_client(self):
-        logging.info(f"{self.base_url=}")
-        logging.info(f"{os.getenv('DEMISTO_BASE_URL')=}")
         self.__client = demisto_client.configure(base_url=self.base_url,
                                                  verify_ssl=False,
                                                  api_key=self.api_key,
