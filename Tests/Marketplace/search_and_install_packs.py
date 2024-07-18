@@ -664,6 +664,9 @@ def get_all_content_packs_dependencies(client: DemistoClient) -> dict[str, dict]
         if len(packs) < PAGE_SIZE_DEFAULT:
             all_packs_len = len(all_packs_dependencies)
             total = response["total"]
+            logging.info(
+                f"The total number of packs is {total}."
+            )
             if total > all_packs_len:
                 logging.critical(
                     f"Marketplace API returned less than the total packs. Collected: {all_packs_len}, Total: {total}"
