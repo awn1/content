@@ -1,0 +1,72 @@
+variables:
+  WORKFLOW_PIPELINE_NAME: 'Pipeline for branch: $CI_COMMIT_REF_NAME'
+
+workflow:
+  name: '$WORKFLOW_PIPELINE_NAME'
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Merge request #$CI_MERGE_REQUEST_IID pipeline for branch $CI_COMMIT_REF_NAME to $CI_MERGE_REQUEST_TARGET_BRANCH_NAME'
+
+    - if: '"${BUCKET_UPLOAD}" == "true" && "${FORCE_BUCKET_UPLOAD}" == "false" && "${OVERRIDE_ALL_PACKS}" == "false"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Bucket upload pipeline'
+
+    - if: '"${BUCKET_UPLOAD}" == "true" && "${FORCE_BUCKET_UPLOAD}" == "true" && "${OVERRIDE_ALL_PACKS}" == "false"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Force bucket upload pipeline - packs to upload:$PACKS_TO_UPLOAD'
+
+    - if: '"${BUCKET_UPLOAD}" == "true" && "${OVERRIDE_ALL_PACKS}" == "true"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Bucket upload override all packs pipeline'
+
+    - if: '"${BUCKET_UPLOAD}" == "true" && "${TEST_UPLOAD}" == "true"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Test upload flow pipeline for branch: $CURRENT_BRANCH_NAME'
+
+    - if: '"${DELETE_MISMATCHED_BRANCHES}" == "true"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Delete mismatched branches pipeline'
+
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/ && $CI_COMMIT_REF_NAME != "master"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Merge request for branch:$CI_COMMIT_REF_NAME pipeline'
+
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/ && $CI_COMMIT_REF_NAME != "master"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Merge to master pipeline'
+
+    - if: '$IS_NIGHTLY == "true" && $CI_PIPELINE_SOURCE == "schedule"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Scheduled Content Nightly pipeline for branch: $CI_COMMIT_REF_NAME'
+
+    - if: '$IS_NIGHTLY == "true" && $CI_PIPELINE_SOURCE == "trigger"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Triggered Content Nightly pipeline for branch: $CI_COMMIT_REF_NAME'
+
+    - if: '$DEMISTO_SDK_NIGHTLY == "true" && $CI_PIPELINE_SOURCE == "schedule"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Scheduled SDK Nightly pipeline'
+
+    - if: '$DEMISTO_SDK_NIGHTLY == "true" && $CI_PIPELINE_SOURCE == "trigger"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Triggered SDK Nightly pipeline for branch: $CI_COMMIT_REF_NAME'
+
+    - if: '$SECURITY_SCANS == "true"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Security scans pipeline'
+
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $DEMISTO_TEST_NATIVE_CANDIDATE == "true"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: '$CI_PIPELINE_SOURCE - Test Native Candidate pipeline'
+
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $TRIGGER_CONTRIBUTION_BUILD == "true"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: '$CI_PIPELINE_SOURCE - Trigger contribution build pipeline'
+
+    - if: '$TRIGGER_TEST_BRANCH == "true"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Trigger Content test branch pipeline for infra branch: $INFRA_BRANCH'
+
+    # Don't add any other rules after this one.
+    - when: always  # Other pipelines can run, but use the default name
