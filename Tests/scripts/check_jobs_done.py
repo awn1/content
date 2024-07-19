@@ -37,6 +37,7 @@ BUCKET_UPLOAD_JOBS = [
     'install-packs-in-server6_12',
     'install-packs-in-server-master',
     'install-packs-in-xsiam-ga',
+    'install-packs-in-xsoar-ng-ga',
     'upload-packs-to-marketplace',
     'upload-packs-to-marketplace-v2',
     'upload-packs-to-xpanse-marketplace',
