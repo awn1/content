@@ -26,6 +26,7 @@ stages:
 
 include:
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.variables.yml
+  - local: .gitlab/ci/content-ci/ci/.gitlab-ci.workflow.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.global.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.on-push.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.bucket-upload.yml
