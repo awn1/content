@@ -1,8 +1,8 @@
 {
   "id": "wizard_harry",
   "wizard": "yes, harry, you are one",
-  "fromversion": "6.9.0",
-  "toversion": "6.9.0",
+  "fromversion": "6.11.0",
+  "toversion": "6.11.0",
   "marketplaces": [
     "marketplacev2"
   ]

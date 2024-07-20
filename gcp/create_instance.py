@@ -30,8 +30,6 @@ def options_handler():
                             "Server Master",
                             "Server 6.12",
                             "Server 6.11",
-                            "Server 6.10",
-                            "Server 6.9",
                         ],
                         required=True)
     parser.add_argument("--outfile",
@@ -50,12 +48,15 @@ def options_handler():
                         help='GCP zone',
                         required=True,
                         type=str)
+    parser.add_argument('--instances-config',
+                        help='path to the instances config file',
+                        required=True)
     return parser.parse_args()
 
 
 def instance_config(env_type: str,
-                    instancesconfig_file_path: str = './gcp/instancesconfig.json') -> List[Dict]:
-    with open(instancesconfig_file_path, 'r') as inst_config:
+                    instances_config_file_path) -> List[Dict]:
+    with open(instances_config_file_path, 'r') as inst_config:
         data = json.load(inst_config)
     config = data['config'][env_type]
     global_config = data['globalconfig']
@@ -91,7 +92,7 @@ def create_instances(inst_config: List[Dict], filtered_envs: Dict[str, bool], sa
 def main():
     options = options_handler()
     logging.info(f'creating instances for infra type: {options.env_type}')
-    inst_config = instance_config(options.env_type)
+    inst_config = instance_config(options.env_type, options.instances_config)
     start_time = datetime.utcnow()
 
     with open(options.filter_envs) as json_file:

@@ -2,24 +2,21 @@ import argparse
 import logging
 import os
 import sys
-import requests
 from distutils.util import strtobool
-from slack_sdk import WebClient
-from slack_sdk.web import SlackResponse
-from Utils.github_workflow_scripts.utils import get_env_var
-from Tests.scripts.utils.log_util import install_logging
 from pathlib import Path
 
+import requests
+from slack_sdk import WebClient
+from slack_sdk.web import SlackResponse
+
+from Tests.scripts.utils.log_util import install_logging
+from common import get_slack_user_name
 
 CONTENT_CHANNEL = 'dmst-build-test'
 
 SLACK_USERNAME = 'Content GitlabCI'
 
 SLACK_WORKSPACE_NAME = os.getenv('SLACK_WORKSPACE_NAME', '')
-CI_API_V4_URL = get_env_var('CI_API_V4_URL', 'https://gitlab.xdr.pan.local/api/v4')  # disable-secrets-detection
-INFRA_PROJECT_ID = get_env_var('INFRA_PROJECT_ID', '1701')
-
-NAME_MAPPING_URL = f'{CI_API_V4_URL}/projects/{INFRA_PROJECT_ID}/repository/files/.gitlab%2Fci%2Fname_mapping.json/raw'
 
 
 def options_handler() -> argparse.Namespace:
@@ -34,22 +31,8 @@ def options_handler() -> argparse.Namespace:
     )
     parser.add_argument('-a', '--allow-failure',
                         help="Allow posting message to fail in case the channel doesn't exist", required=True)
+    parser.add_argument('-n', '--name-mapping_path', help='Path to name mapping file.', required=True)
     return parser.parse_args()
-
-
-def get_slack_user(gitlab_token, github_username):
-    headers = {'PRIVATE-TOKEN': gitlab_token}
-    response = requests.request('GET', NAME_MAPPING_URL, headers=headers, verify=False)
-    if response.status_code != requests.codes.ok:
-        logging.error('Failed to retrieve the name_mapping.json file')
-        logging.error(response.text)
-        sys.exit(1)
-
-    slack_user = response.json().get('names', {}).get(github_username)
-    if not slack_user:
-        logging.error(f'The user {github_username} not exists in the name_mapping.json file')
-        sys.exit(1)
-    return slack_user
 
 
 def build_link_to_message(response: SlackResponse) -> str:
@@ -93,7 +76,7 @@ def main():
 
     if github_username:
         # tag the slack user in the message
-        text = f'Hi @{get_slack_user(gitlab_token, github_username)} {text}'
+        text = f'Hi @{get_slack_user_name(github_username, github_username, options.name_mapping_path)} {text}'
 
     try:
         response = slack_client.chat_postMessage(

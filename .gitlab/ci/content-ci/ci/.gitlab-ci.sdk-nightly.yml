@@ -408,7 +408,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsiam:
       GCS_QUEUE_FILE: "queue-ga"
       GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga"
       CLOUD_SERVERS_FILE: "xsiam_servers_path"
-      XSIAM_SERVERS_PATH: "./xsiam_servers.json"
+      XSIAM_SERVERS_PATH: "xsiam_servers.json"
       CLOUD_API_KEYS: $XSIAM_API_KEYS
       CLOUD_API_TOKENS: $XSIAM_TOKENS
       ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_MPV2}"

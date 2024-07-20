@@ -52,8 +52,6 @@ class Machine(Enum):
     V6_MASTER = Version('6.99')
     V6_12 = Version('6.12')
     V6_11 = Version('6.11')
-    V6_10 = Version('6.10')
-    V6_9 = Version('6.9')
 
     @staticmethod
     def numeric_machines() -> tuple['Machine', ...]:

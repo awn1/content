@@ -1,24 +1,24 @@
-import json
-import requests
-import sys
-import re
 import argparse
-import urllib3
 import logging
-from pathlib import Path
+import re
+import sys
+
+import requests
+import urllib3
+
 from Tests.scripts.utils.log_util import install_logging
+from common import get_slack_user_name
 
 # Disable insecure warnings
 urllib3.disable_warnings()
 
 # regex to validate that the version format is correct e.g: <2.1.3>
-VERSION_FORMAT_REGEX = "\d{1,3}\.\d{1,3}\.\d{1,3}"
+VERSION_FORMAT_REGEX = "\d{1,3}\.\d{1,3}\.\d{1,3}"  # noqa: W605
 
 GITHUB_USER_URL = "https://api.github.com/users/{username}"
 GITHUB_BRANCH_URL = (
     "https://api.github.com/repos/demisto/demisto-sdk/branches/{branch_name}"
 )
-NAME_MAPPING_PATH = Path(".gitlab/ci/name_mapping.json")
 
 
 def options_handler():
@@ -41,6 +41,7 @@ def options_handler():
         help="From which branch in demisto-sdk we want to create the release",
         required=True,
     )
+    parser.add_argument('-n', '--name-mapping_path', help='Path to name mapping file.', required=True)
     options = parser.parse_args()
     return options
 
@@ -82,8 +83,8 @@ def main():
         )
 
     # validate if the user exists in name_mapping.json file
-    name_mapping_json = json.loads(NAME_MAPPING_PATH.read_text())
-    if not name_mapping_json.get("names", {}).get(reviewer):
+    slack_user_name = get_slack_user_name(reviewer, None, options.name_mapping_path)
+    if slack_user_name is None:
         errors.append(f"The user {reviewer} not exists in the name_mapping.json file")
 
     if errors:

@@ -95,32 +95,6 @@ build-images-ga-6.11:
     - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
-build-images-ga-6.10:
-  stage: build-server-images
-  needs: []
-  extends:
-    - .build-images-ga-rule # put in comment for testing
-    - .docker-job
-  script:
-    - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
-    - export VERSION="ga-6-10"
-    - export INSTALLER_URL="xsoar-ci-artifacts-server/$(gsutil ls -d "gs://xsoar-ci-artifacts-server/server/6.10.0-[0-9]*/0/demistoserver-*.sh" | tail -n 1 | grep -o -E "server/[0-9.-]+/0/demistoserver-[0-9.-]+\.sh")"
-    - gcloud auth revoke --all --quiet || echo "expected"
-    - *create-image
-
-build-images-ga-6.9:
-  stage: build-server-images
-  needs: []
-  extends:
-    - .build-images-ga-rule # put in comment for testing
-    - .docker-job
-  script:
-    - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
-    - export VERSION="ga-6-9"
-    - export INSTALLER_URL="xsoar-ci-artifacts-server/$(gsutil ls -d "gs://xsoar-ci-artifacts-server/server/6.9.0-[0-9]*/0/demistoserver-*.sh" | tail -n 1 | grep -o -E "server/[0-9.-]+/0/demistoserver-[0-9.-]+\.sh")"
-    - gcloud auth revoke --all --quiet || echo "expected"
-    - *create-image
-
 build-images-dev-fan-in:
   stage: fan-in
   extends:

@@ -58,10 +58,10 @@
   - if [ -f ./items_removed_manually_from_id_set.json ]; then cp ./items_removed_manually_from_id_set.json "${ARTIFACTS_FOLDER_SERVER_TYPE}/logs"; fi
   - section_end "Create ID Set"
 
-.download-demisto-conf:
-  - section_start "Download content-test-conf and infra" --collapsed
+.clone-content-test-conf-and-infra:
+  - section_start "Clone content-test-conf and infra" --collapsed
   - exec 3>&1 4>&2
-  - exec > >(tee -a "${ARTIFACTS_FOLDER}/logs/download_demisto_conf.log") 2>&1
+  - exec > >(tee -a "${ARTIFACTS_FOLDER}/logs/clone_demisto_content_test_conf_and_infra.log") 2>&1
   - |
     set +e
 
@@ -129,10 +129,10 @@
       local branch_exists=$?
 
       if [ "${branch_exists}" -ne 0 ]; then
-        echo -e "${RED}Branch ${branch} does not exist in  project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name}, defaulting to ${fallback_branch}${NC}"
+        echo -e "${RED}Branch ${branch} does not exist in project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name}, defaulting to ${fallback_branch}${NC}"
         local exit_code=1
       else
-        echo -e "${GREEN}Branch ${branch} exists in  project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name}, trying to clone${NC}"
+        echo -e "${GREEN}Branch ${branch} exists in project namespace:${CI_PROJECT_NAMESPACE} repository:${repo_name}, trying to clone${NC}"
         clone_repository "${host}" "${user}" "${token}" "${repo_name}" "${branch}" "${retry_count}" "${sleep_time}"
         local exit_code=$?
         if [ "${exit_code}" -ne 0 ]; then
@@ -181,12 +181,6 @@
     SECRET_CONF_PATH="./conf_secret.json"
     echo ${SECRET_CONF_PATH} > secret_conf_path
 
-    XSIAM_SERVERS_PATH="./xsiam_servers.json"
-    echo ${XSIAM_SERVERS_PATH} > xsiam_servers_path
-
-    XSOAR_NG_SERVERS_PATH="./xsoar_ng_servers.json"
-    echo ${XSOAR_NG_SERVERS_PATH} > xsoar_ng_servers_path
-
     DEMISTO_LIC_PATH="./demisto.lic"
     echo ${DEMISTO_LIC_PATH} > demisto_lic_path
 
@@ -196,6 +190,29 @@
     CI_SERVER_HOST=${CI_SERVER_HOST:-gitlab.xdr.pan.local} # disable-secrets-detection
 
     clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "content-test-conf" "${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF}" 3 10 "master"
+
+    if [ ! -d "${CI_PROJECT_DIR}/config" ]; then mkdir -p "${CI_PROJECT_DIR}/config"; else echo "Directory ${CI_PROJECT_DIR}/config already exists"; fi
+    cp -r "${CI_PROJECT_DIR}/artifacts/repositories/content-test-conf/config/"* "${CI_PROJECT_DIR}/config/"
+
+    NAME_MAPPING_PATH="${CI_PROJECT_DIR}/config/name_mapping.json"
+    if [ ! -f "${NAME_MAPPING_PATH}" ]; then
+      echo "File ${NAME_MAPPING_PATH} does not exist, exiting!"
+      exit 1;
+    fi
+
+    XSIAM_SERVERS_PATH="${CI_PROJECT_DIR}/config/xsiam_servers.json"
+    if [ ! -f "${XSIAM_SERVERS_PATH}" ]; then
+      echo "File ${XSIAM_SERVERS_PATH} does not exist, exiting!"
+      exit 1;
+    fi
+    echo "${XSIAM_SERVERS_PATH}" > "${CI_PROJECT_DIR}/xsiam_servers_path"
+
+    XSOAR_NG_SERVERS_PATH="${CI_PROJECT_DIR}/config/xsoar_ng_servers.json"
+    if [ ! -f "${XSOAR_NG_SERVERS_PATH}" ]; then
+      echo "File ${XSOAR_NG_SERVERS_PATH} does not exist, exiting!"
+      exit 1;
+    fi
+    echo "${XSOAR_NG_SERVERS_PATH}" > "${CI_PROJECT_DIR}/xsoar_ng_servers_path"
 
     # We skip copying the PrivatePacks in run-validations because they currently don't pass validations
     if [[ "${CI_JOB_NAME}" == "run-validations" ]]; then
@@ -212,14 +229,13 @@
 
     clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "infra" "${CURRENT_BRANCH_NAME}" 3 10 "master"
 
-    cp -r "${CI_PROJECT_DIR}/artifacts/repositories/infra/xsiam_servers.json" "${XSIAM_SERVERS_PATH}"
-    cp -r "${CI_PROJECT_DIR}/artifacts/repositories/infra/xsoar_ng_servers.json" "${XSOAR_NG_SERVERS_PATH}"
-    cp -r "${CI_PROJECT_DIR}/artifacts/repositories/infra/.gitlab/ci/name_mapping.json" "${CI_PROJECT_DIR}/name_mapping.json"
+
     cp -r "${CI_PROJECT_DIR}/artifacts/repositories/infra/demisto.lic" "${DEMISTO_LIC_PATH}"
     cp -r "${CI_PROJECT_DIR}/artifacts/repositories/infra/signDirectory" "${DEMISTO_PACK_SIGNATURE_UTIL_PATH}"
 
     [ ! -d "${CI_PROJECT_DIR}/Tests" ] && mkdir -p "${CI_PROJECT_DIR}/Tests" || echo "Tests directory already exists"
     [ ! -d "${CI_PROJECT_DIR}/Utils" ] && mkdir -p "${CI_PROJECT_DIR}/Utils" || echo "Utils directory already exists"
+    [ ! -d "${CI_PROJECT_DIR}/config" ] && mkdir -p "${CI_PROJECT_DIR}/config" || echo "config directory already exists"
     [ ! -d "${CI_PROJECT_DIR}/SecretActions" ] && mkdir -p "${CI_PROJECT_DIR}/SecretActions" || echo "SecretActions directory already exists"
     [ ! -d "${CI_PROJECT_DIR}/gcp" ] && mkdir -p "${CI_PROJECT_DIR}/gcp" || echo "gcp directory already exists"
     cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/Tests/"* "${CI_PROJECT_DIR}/Tests"
@@ -232,7 +248,7 @@
 
   - exec 1>&3 2>&4
   - exec 3>&- 4>&-
-  - section_end "Download content-test-conf and infra"
+  - section_end "Clone content-test-conf and infra"
 
 .create-artifacts-repositories-folder:
   - section_start "Create Artifacts Repositories Folder" --collapsed
@@ -257,7 +273,7 @@
     - !reference [.get_last_upload_commit]
     - !reference [.stop_contrib_external_build]
     - !reference [.create-artifacts-repositories-folder]
-    - !reference [.download-demisto-conf]
+    - !reference [.clone-content-test-conf-and-infra]
   variables:
     ARTIFACTS_FOLDER: ${CI_PROJECT_DIR}/artifacts
 
@@ -491,7 +507,7 @@
     - *setup-artifactory
     - *create_artifacts_and_server_type_instance_folders
     - !reference [.create-artifacts-repositories-folder]
-    - !reference [.download-demisto-conf]
+    - !reference [.clone-content-test-conf-and-infra]
     - *clone_and_export_variables
     - *install_node_modules
     - *install_venv

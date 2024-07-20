@@ -397,7 +397,7 @@ def test_nightly(mocker, monkeypatch, case_mocker: CollectTestsMocker, collector
              (), True),
 
             # (8) Case D: playbook changes, expect it and its pack to be collected only to install
-            (MockerCases.D, ('myTestPlaybook',), ('myPack',), (Machine.V6_9,), None, XSOAR_BRANCH_ARGS,
+            (MockerCases.D, ('myTestPlaybook',), ('myPack',), (Machine.V6_11,), None, XSOAR_BRANCH_ARGS,
              ('Packs/myPack/TestPlaybooks/myTestPlaybook.yml',), (), (), True),
 
             # (9) Case D: playbook changes, expect it and its pack to be collected only to install
@@ -435,7 +435,7 @@ def test_nightly(mocker, monkeypatch, case_mocker: CollectTestsMocker, collector
              ('Packs/myPack/Integrations/mySkippedIntegration/mySkippedIntegration.yml',), (), ('myPack',), True),
 
             # (17) Testing version ranges
-            (MockerCases.D, ('myTestPlaybook',), ('myPack',), (Machine.V6_9,), None,
+            (MockerCases.D, ('myTestPlaybook',), ('myPack',), (Machine.V6_11,), None,
              XSOAR_BRANCH_ARGS, ('Packs/myPack/TestPlaybooks/myTestPlaybook.yml',), (), (), True),
 
             # (18) see M2 definition at the top of this file
@@ -810,7 +810,7 @@ def test_release_note_config_in_only_install_pack():
     """
     Makes sure the FileType.RELEASE_NOTES_CONFIG is in NON_CODE_FILE_TYPES_TO_COLLECT,
     as we have a special treatment for it under __collect_single.
-    If this test fails, and you deliberatly removed it from the list, make sure to remove the special case (`except KeyError`...)
+    If this test fails, and you deliberately removed it from the list, make sure to remove the special case (`except KeyError`...)
     """
     assert FileType.RELEASE_NOTES_CONFIG in NON_CODE_FILE_TYPES_TO_COLLECT
 
@@ -875,7 +875,7 @@ def test_upload_all_packs(mocker, monkeypatch, case_mocker, expected_tests: set[
                           (['marketplacev2', 'xsoar'], {MarketplaceVersions.XSOAR,
                                                         MarketplaceVersions.XSOAR_SAAS,
                                                         MarketplaceVersions.MarketplaceV2})])
-def test_handle_xsoar_marketplces(marketplaces, expected_results):
+def test_handle_xsoar_marketplaces(marketplaces, expected_results):
     from Tests.scripts.collect_tests.utils import DictBased
     metadata_dict = {'marketplaces': marketplaces}
     dict_based_obj = DictBased(metadata_dict)
@@ -883,7 +883,7 @@ def test_handle_xsoar_marketplces(marketplaces, expected_results):
     assert set(dict_based_obj.marketplaces) == expected_results
 
 
-def test_handle_xsoar_marketplces_none():
+def test_handle_xsoar_marketplaces_none():
     from Tests.scripts.collect_tests.utils import DictBased
     metadata_dict: dict = {'marketplaces': []}
     dict_based_obj = DictBased(metadata_dict)
@@ -942,17 +942,16 @@ def test_get_tpb_dependencies_packs(
     """
     monkeypatch.chdir(MockerCases.R.path_manager.content_path)
     mocker.patch.object(BranchTestCollector, '_get_git_diff',
-                        return_value=
-                        FilesToCollect(('Packs/bothMarketplacesPackOnlyXSIAMIntegration/Integrations'
-                                        '/onlyXSIAMIntegration/onlyXSIAMIntegration.yml',), ()))
+                        return_value=FilesToCollect(('Packs/bothMarketplacesPackOnlyXSIAMIntegration/Integrations'
+                                                     '/onlyXSIAMIntegration/onlyXSIAMIntegration.yml',), ()))
 
     with MockerCases.R:
         collector = BranchTestCollector(*XSIAM_BRANCH_ARGS)
         collected = collector.collect()
-    assert collected.tpb_dependencies_packs == {'myXSIAMOnlyTestPlaybook': {'dependencies':
-                                                                                [
-                                                                                    'bothMarketplacesPackOnlyXSIAMIntegration'],
-                                                                            'pack': 'myXSIAMOnlyPack'}}
+    assert collected.tpb_dependencies_packs == {
+        'myXSIAMOnlyTestPlaybook': {
+            'dependencies': ['bothMarketplacesPackOnlyXSIAMIntegration'],
+            'pack': 'myXSIAMOnlyPack'}}
 
 
 @pytest.mark.parametrize(
