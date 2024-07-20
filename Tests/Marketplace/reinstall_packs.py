@@ -40,9 +40,9 @@ def reinstall_packs(options: argparse.Namespace, cloud_machine: str) -> bool:
         Boolean - If the operation succeeded.
     """
     success = True
-    api_key, _, base_url, xdr_auth_id = CloudBuild.get_cloud_configuration(cloud_machine,
-                                                                           options.cloud_servers_path,
-                                                                           options.cloud_servers_api_keys)
+    api_key, _, base_url, xdr_auth_id, _ = CloudBuild.get_cloud_configuration(cloud_machine,
+                                                                              options.cloud_servers_path,
+                                                                              options.cloud_servers_api_keys)
 
     client = demisto_client.configure(base_url=base_url,
                                       verify_ssl=False,

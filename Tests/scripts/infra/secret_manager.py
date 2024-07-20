@@ -7,7 +7,7 @@ from google.cloud.exceptions import NotFound
 from google.cloud.secretmanager import SecretManagerServiceClient
 
 
-from infra.resources.constants import AUTOMATION_GCP_PROJECT, GCP_SERVICE_ACCOUNT
+from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT, GSM_SERVICE_ACCOUNT
 
 
 class SecretManager:
@@ -19,8 +19,8 @@ class SecretManager:
         # self.log = log
         self.project_id = project_id
         # self.log.debug('Instantiate GCP Secret Manager client')
-        if GCP_SERVICE_ACCOUNT is not None:
-            self.client = SecretManagerServiceClient.from_service_account_file(GCP_SERVICE_ACCOUNT)
+        if GSM_SERVICE_ACCOUNT is not None:
+            self.client = SecretManagerServiceClient.from_service_account_file(GSM_SERVICE_ACCOUNT)
         else:
             self.client = SecretManagerServiceClient()
         logging.getLogger('google.auth.transport.requests').setLevel(logging.WARNING)

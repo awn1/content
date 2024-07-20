@@ -25,9 +25,12 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_TYPE == "BUILD_SERVER_GA_IMAGE"'
       variables:
           WORKFLOW_PIPELINE_NAME: 'Build server GA image pipeline'
-    - if: '$BUILD_MACHINES_CLEANUP == "true"'
+    - if: '$BUILD_MACHINES_CLEANUP == "true" && $LOCK_MACHINE_NAME != ""'
       variables:
-          WORKFLOW_PIPELINE_NAME: 'Build machines cleanup pipeline'
+          WORKFLOW_PIPELINE_NAME: 'Build machines cleanup pipeline on machines:${LOCK_MACHINE_NAME}'
+    - if: '$BUILD_MACHINES_CLEANUP == "true" && $LOCK_MACHINE_NAME == ""'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Build machines cleanup pipeline'
 
     # Don't add any other rules after this one.
     - when: always  # Other pipelines can run, but use the default name

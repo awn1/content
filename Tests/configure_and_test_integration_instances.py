@@ -1697,7 +1697,7 @@ class CloudBuild(Build):
         conf = cloud_servers.get(cloud_machine)
         cloud_servers_api_keys = get_json_file(cloud_servers_api_keys_path)
         api_key = cloud_servers_api_keys.get(cloud_machine)
-        return api_key, conf.get('demisto_version'), conf.get('base_url'), conf.get('x-xdr-auth-id')
+        return api_key, conf.get('demisto_version'), conf.get('base_url'), conf.get('x-xdr-auth-id'), conf.get('ui_url')
 
     @property
     def marketplace_name(self) -> str:
@@ -1718,7 +1718,7 @@ class CloudBuild(Build):
             logging.info(f"{packs_to_install=}")
             logging.info(f"{tests_to_run=}")
 
-            api_key, server_numeric_version, base_url, xdr_auth_id = \
+            api_key, server_numeric_version, base_url, xdr_auth_id, _ = \
                 self.get_cloud_configuration(machine, options.cloud_servers_path,
                                              options.cloud_servers_api_keys)
             servers.append(CloudServer(api_key=api_key,

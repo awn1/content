@@ -624,10 +624,10 @@
         echo  "Cleanup - ${CLOUD_CHOSEN_MACHINE_ID} machine"
         # retry mechanism for trigger upload pipeline in case it failed because of gitlab connectivity issues.
         for _ in {1..3}; do
-          export pipeline_id=$(./Utils/gitlab_triggers/trigger_cleanup_build_machines.sh -b "${CURRENT_BRANCH_NAME}" -ct "${TRIGGER_INFRA_TOKEN}" -m "${CLOUD_CHOSEN_MACHINE_ID}" -mc "${CLOUD_MACHINES_COUNT}" -mt "${CLOUD_MACHINES_TYPE}" -p "${GCS_LOCKS_PATH}" -csf "${CLOUD_SERVERS_FILE}" -op "${CI_PIPELINE_ID}" | jq .id)
+          export pipeline_id=$(./Utils/gitlab_triggers/trigger_cleanup_build_machines.sh -b "${CURRENT_BRANCH_NAME}" -ct "${TRIGGER_INFRA_TOKEN}" -m "${CLOUD_CHOSEN_MACHINE_ID}" -mc "${CLOUD_MACHINES_COUNT}" -mt "${CLOUD_MACHINES_TYPE}" -p "${GCS_LOCKS_PATH}" -csf "${CLOUD_SERVERS_FILE}" -st "${SERVER_TYPE}" -op "${CI_PIPELINE_ID}" | jq .id)
           if [ "${pipeline_id}" != "null" ]; then
-            echo "Triggered Clean Machine pipeline id- ${pipeline_id}"
-            echo "rename lock file of ${CLOUD_CHOSEN_MACHINE_ID}, jobid: ${CI_JOB_ID} ,current pipelineid: ${CI_PIPELINE_ID} to new pipeline_id ${pipeline_id}"
+            echo "Triggered Clean Machine pipeline id:${pipeline_id} server type:${SERVER_TYPE}"
+            echo "rename lock file of ${CLOUD_CHOSEN_MACHINE_ID}, jobid: ${CI_JOB_ID} ,current pipeline id: ${CI_PIPELINE_ID} to new pipeline_id ${pipeline_id}"
             gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
             gsutil mv "gs://xsoar-ci-artifacts/${GCS_LOCKS_PATH}/machines_locks/${CI_PROJECT_ID}-lock-${CLOUD_CHOSEN_MACHINE_ID}-lock-${CI_PIPELINE_ID}_${CI_JOB_ID}" "gs://xsoar-ci-artifacts/${GCS_LOCKS_PATH}/machines_locks/${INFRA_PROJECT_ID}-lock-${CLOUD_CHOSEN_MACHINE_ID}-lock-${pipeline_id}"
             echo "Successful triggered cleanup machine pipeline - ${CI_SERVER_URL}/${CI_PROJECT_NAMESPACE}/infra/-/pipelines/$pipeline_id"

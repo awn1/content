@@ -2,9 +2,9 @@ import os
 
 from distutils.util import strtobool
 
-from infra.resources.constants import CI_PIPELINE_SOURCE
-from infra.resources.constants import IS_MSSP_TENANT
-from infra.resources.constants import IS_PROD_ENV_PATH
+from Tests.scripts.infra.resources.constants import CI_PIPELINE_SOURCE
+from Tests.scripts.infra.resources.constants import IS_MSSP_TENANT
+from Tests.scripts.infra.resources.constants import IS_PROD_ENV_PATH
 # from build_machines.resources.constants import ROCKET_BRANCH
 
 

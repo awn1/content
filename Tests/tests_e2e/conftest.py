@@ -50,7 +50,7 @@ def get_cloud_machine_credentials(request):
                 raise ValueError(message)
             pytest.skip(message)
     else:
-        api_key, _, url, api_key_id = CloudBuild.get_cloud_configuration(
+        api_key, _, url, api_key_id, _ = CloudBuild.get_cloud_configuration(
             cloud_machine, cloud_servers_path, cloud_servers_api_keys
         )
     return url, api_key, api_key_id

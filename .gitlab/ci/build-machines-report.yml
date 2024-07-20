@@ -36,8 +36,6 @@ build-machines-report-job:
     SLACK_CHANNEL: $SLACK_CHANNEL
     CI_PIPELINE_URL: $CI_PIPELINE_URL
     GITLAB_ARTIFACTS_URL: https://xdr.docs-prod.xdr.pan.local/-/cortex-content/infra/-/jobs
-    GCP_SERVICE_ACCOUNT: $GSM_SERVICE_ACCOUNT
-
   script:
     - EXIT_CODE=0
     - gcloud auth activate-service-account --key-file="${GCS_ARTIFACTS_KEY}" >> "${ARTIFACT_PATH}/logs/gcloud_auth.log" 2>&1
