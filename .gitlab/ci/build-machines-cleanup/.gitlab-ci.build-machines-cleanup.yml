@@ -36,6 +36,7 @@
     - !reference [.granting_execute_permissions_on_files]
     - !reference [.setup-artifactory]
     - *create_artifacts_and_server_type_instance_folders
+    - !reference [.create-artifacts-repositories-folder]
     - !reference [.clone-content-test-conf]
 
 .lock-machine:
