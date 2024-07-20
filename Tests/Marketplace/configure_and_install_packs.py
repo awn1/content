@@ -153,7 +153,7 @@
 #     """
 #     logging.info('Retrieving the credentials for Cortex XSIAM server')
 #     cloud_machine = options.cloud_machine
-#     api_key, server_numeric_version, base_url, xdr_auth_id = CloudBuild.get_cloud_configuration(
+#     api_key, server_numeric_version, base_url, xdr_auth_id, _ = CloudBuild.get_cloud_configuration(
 #         cloud_machine,
 #         options.cloud_servers_path,
 #         options.cloud_servers_api_keys)

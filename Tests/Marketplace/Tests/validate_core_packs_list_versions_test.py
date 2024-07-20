@@ -5,6 +5,7 @@ from Tests.Marketplace.marketplace_services import load_json
 from pathlib import Path
 from Tests.Marketplace.validate_core_packs_list_versions import LogAggregator
 
+
 def test_extract_pack_name_from_path_full_path():
     """
     Given

@@ -1,7 +1,7 @@
 import datetime
 from typing import Optional, Union
 
-from infra.enums.papi import KeySecurityLevel
+from Tests.scripts.infra.enums.papi import KeySecurityLevel
 
 
 class PublicApiKey:

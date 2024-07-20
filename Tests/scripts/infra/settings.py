@@ -1,4 +1,4 @@
-from infra.secret_manager import SecretManager
+from Tests.scripts.infra.secret_manager import SecretManager
 
 
 class Secret:

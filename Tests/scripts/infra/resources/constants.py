@@ -3,7 +3,7 @@ from pathlib import Path
 
 AUTOMATION_GCP_PROJECT = 'oproxy-dev'
 
-GCP_SERVICE_ACCOUNT = Path(os.environ['GCP_SERVICE_ACCOUNT']) if 'GCP_SERVICE_ACCOUNT' in os.environ else None
+GSM_SERVICE_ACCOUNT = Path(os.environ['GSM_SERVICE_ACCOUNT']) if 'GSM_SERVICE_ACCOUNT' in os.environ else None
 
 # Max allowed validity for public api keys in days
 MAX_API_KEY_EXPIRATION_TIME_IN_DAYS = 180

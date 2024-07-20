@@ -6,22 +6,23 @@ import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from pathlib import Path
 from time import sleep
 from typing import Any
 
 import demisto_client
+from demisto_sdk.commands.common.tools import string_to_bool
 
 from Tests.Marketplace.common import generic_request_with_retries, wait_until_not_updating, ALREADY_IN_PROGRESS, \
     send_api_request_with_retries, fetch_pack_ids_to_install
 from Tests.Marketplace.search_and_install_packs import search_and_install_packs_and_their_dependencies
 from Tests.configure_and_test_integration_instances import CloudBuild, get_custom_user_agent
+from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT
+from Tests.scripts.infra.settings import XSOARAdminUser
+from Tests.scripts.infra.xsoar_api import XsiamClient
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
-from demisto_sdk.commands.common.tools import string_to_bool
+from Tests.scripts.infra.enums.tables import XdrTables
 
-
-TEST_DATA_PATTERN = '*_testdata.json'
 DATASET_NOT_FOUND_ERROR_CODE = 599
 
 
@@ -78,24 +79,24 @@ def get_all_installed_packs(client: demisto_client, non_removable_packs: list, a
 
     def success_handler(response_data):
         installed_packs = ast.literal_eval(response_data)
-        installed_packs_ids = [pack.get('id') for pack in installed_packs]
+        success_handler_installed_packs_ids = [success_handler_pack.get('id') for success_handler_pack in installed_packs]
         logging.success('Successfully fetched all installed packs.')
-        installed_packs_ids_str = ', '.join(installed_packs_ids)
+        installed_packs_ids_str = ', '.join(success_handler_installed_packs_ids)
         logging.debug(
             f'The following packs are currently installed from a previous build run:\n{installed_packs_ids_str}')
-        return True, installed_packs_ids
+        return True, success_handler_installed_packs_ids
     try:
         logging.info("Attempting to fetch all installed packs.")
         _, installed_packs_ids = generic_request_with_retries(client=client,
-                                                                           retries_message="Failed to get all installed packs.",
-                                                                           exception_message="Failed to get installed packs.",
-                                                                           prior_message="Getting all installed packs",
-                                                                           path='/contentpacks/metadata/installed',
-                                                                           method='GET',
-                                                                           attempts_count=attempts_count,
-                                                                           request_timeout=request_timeout,
-                                                                           success_handler=success_handler
-                                                                           )
+                                                              retries_message="Failed to get all installed packs.",
+                                                              exception_message="Failed to get installed packs.",
+                                                              prior_message="Getting all installed packs",
+                                                              path='/contentpacks/metadata/installed',
+                                                              method='GET',
+                                                              attempts_count=attempts_count,
+                                                              request_timeout=request_timeout,
+                                                              success_handler=success_handler
+                                                              )
         for pack in non_removable_packs:
             if pack in installed_packs_ids:
                 installed_packs_ids.remove(pack)
@@ -355,9 +356,9 @@ def sync_marketplace(client: demisto_client,
     return success
 
 
-def delete_datasets(dataset_names, base_url, api_key, auth_id):
+def delete_datasets(dataset_names: set[str], base_url: str, api_key: str, auth_id: str):
     """
-    Return dataset names from testdata files.
+    Delete datasets from the machine.
     Args:
         dataset_names (set):dataset names to delete
         base_url (str): The base url of the machine.
@@ -396,48 +397,45 @@ def delete_datasets(dataset_names, base_url, api_key, auth_id):
     return success
 
 
-def get_datasets_to_delete(modeling_rules_file: str):
+def get_xsiam_client(base_url: str) -> XsiamClient | None:
     """
-    Given a path to a file containing a list of modeling rules paths,
-    returns a list of their corresponding datasets that should be deleted.
+    Create a client connected to the UI of the machine.
     Args:
-        modeling_rules_file (str): A path to a file holding the list of modeling rules collected for testing in this build.
-    Returns:
-        Set - datasets to delete.
-    """
-    datasets_to_delete = set()
-    if Path(modeling_rules_file).is_file():
-        with open(modeling_rules_file) as f:
-            for modeling_rule_to_test in f.readlines():
-                modeling_rule_path = Path(f'Packs/{modeling_rule_to_test.strip()}')
-                test_data_matches = list(modeling_rule_path.glob(TEST_DATA_PATTERN))
-                if test_data_matches:
-                    modeling_rule_testdata_path = test_data_matches[0]
-                    test_data = json.loads(modeling_rule_testdata_path.read_text())
-                    for data in test_data.get('data', []):
-                        dataset_name = data.get('dataset')
-                        if dataset_name:
-                            datasets_to_delete.add(dataset_name)
-    return datasets_to_delete
-
-
-def delete_datasets_by_testdata(base_url, api_key, auth_id, dataset_names):
-    """
-    Delete all datasets that the build will test in this job.
-
-    Args:
-        base_url (str): The base url of the cloud machine.
-        api_key (str): API key of the machine.
-        auth_id (str): authentication parameter for the machine.
-        dataset_names (set): datasets to delete
+        base_url (str): The base url of the machine.
 
     Returns:
-        Boolean - If the operation succeeded.
+        XsiamClient: The client to connect to the machine.
     """
-    logging.info("Starting to handle delete datasets from cloud instance.")
-    logging.debug(f'Collected datasets to delete {dataset_names=}.')
-    success = delete_datasets(dataset_names=dataset_names, base_url=base_url, api_key=api_key, auth_id=auth_id)
-    return success
+    try:
+        client = XsiamClient(xsoar_host=base_url,
+                             xsoar_user=XSOARAdminUser.username,
+                             xsoar_pass=XSOARAdminUser.password,
+                             tenant_name=base_url,
+                             project_id=AUTOMATION_GCP_PROJECT)
+        client.login_auth(force_login=True)
+        return client
+    except Exception as e:
+        logging.error(f"Failed to connect to {base_url}. Error: {e!s}")
+    return None
+
+
+def get_datasets_to_delete(ui_url):
+    """
+    Return dataset names from testdata files.
+    Args:
+        ui_url (str): The ui url of the machine.
+    Returns:
+        set: dataset names to delete.
+    """
+    client = get_xsiam_client(ui_url)
+    if not client:
+        return set()
+    # Accessing the get_data table to delete all the data sets list.
+    # The type for modeling rules installed from a pack is "RAW".
+    table = client.get_table_data(XdrTables.DATASET_MANAGEMENT_TABLE)
+    rows = set(map(lambda n: n['name'], filter(lambda r: r['type'] == 'RAW', table.get('DATA', []))))
+    logging.info(f'Collected datasets to delete: {",".join(rows)}')
+    return rows
 
 
 def options_handler() -> argparse.Namespace:
@@ -466,9 +464,9 @@ def options_handler() -> argparse.Namespace:
 
 
 def clean_machine(options: argparse.Namespace, cloud_machine: str) -> bool:
-    api_key, _, base_url, xdr_auth_id = CloudBuild.get_cloud_configuration(cloud_machine,
-                                                                           options.cloud_servers_path,
-                                                                           options.cloud_servers_api_keys)
+    api_key, _, base_url, xdr_auth_id, ui_url = CloudBuild.get_cloud_configuration(cloud_machine,
+                                                                                   options.cloud_servers_path,
+                                                                                   options.cloud_servers_api_keys)
 
     client = demisto_client.configure(base_url=base_url,
                                       verify_ssl=False,
@@ -495,12 +493,15 @@ def clean_machine(options: argparse.Namespace, cloud_machine: str) -> bool:
             success = uninstall_all_packs(client, cloud_machine, non_removable_packs) and \
                 wait_for_uninstallation_to_complete(client, non_removable_packs)
     success &= sync_marketplace(client=client)
-    success &= delete_datasets_by_testdata(base_url=base_url,
-                                           api_key=api_key,
-                                           auth_id=xdr_auth_id,
-                                           dataset_names=get_datasets_to_delete(
-                                               modeling_rules_file=options.modeling_rules_to_test_files)
-                                           )
+    if os.getenv("SERVER_TYPE") == "XSIAM":
+        logging.info('Deleting datasets from the machine.')
+        success &= delete_datasets(base_url=base_url,
+                                   api_key=api_key,
+                                   auth_id=xdr_auth_id,
+                                   dataset_names=get_datasets_to_delete(ui_url)
+                                   )
+    else:
+        logging.info(f'Skipping datasets deletion as the server type:{os.getenv("SERVER_TYPE")} is not XSIAM')
     return success
 
 

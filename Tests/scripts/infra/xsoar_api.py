@@ -19,6 +19,7 @@ from requests import HTTPError
 from requests import TooManyRedirects
 from urllib3.util import Retry
 
+from Tests.scripts.infra.enums.tables import XdrTables
 # from infra.enums.layouts import LayoutObjectType
 # from infra.enums.papi import KeySecurityLevel
 # from infra.enums.tables import XdrTables
@@ -32,7 +33,7 @@ from urllib3.util import Retry
 # from infra.exceptions import SetupException
 # from infra.exceptions import TeardownException
 # from infra.firestore_connector import Firestore
-from infra.utils.firestore_connector import lock_and_read, Firestore
+from Tests.scripts.infra.utils.firestore_connector import lock_and_read, Firestore
 # from infra.logger import log
 # from infra.logger import session_log
 # from infra.metric_client import metrics_client
@@ -50,26 +51,26 @@ from infra.utils.firestore_connector import lock_and_read, Firestore
 # from infra.models.user import NewUserData
 # from infra.models.user import User
 # from infra.models.xsoar_settings.layout import Layout
-from infra.resources.constants import DEFAULT_USER_AGENT
-from infra.resources.constants import OKTA_AUTH_URL
-from infra.resources.constants import OKTA_HEADERS
-from infra.resources.constants import OKTA_PROD_AUTH_URL
-from infra.resources.constants import TokenCache
-from infra.utils.env import is_production
-from infra.utils.html import find_html_attribute
-from infra.utils.html import find_html_form_action
-from infra.utils.requests_handler import raise_for_status
-from infra.utils.requests_handler import TimeoutHTTPAdapter
-from infra.utils.rocket_retry import retry
-from infra.utils.text import to_list
-from infra.utils.time_utils import time_now
-from infra.utils.time_utils import to_epoch_timestamp
+from Tests.scripts.infra.resources.constants import DEFAULT_USER_AGENT
+from Tests.scripts.infra.resources.constants import OKTA_AUTH_URL
+from Tests.scripts.infra.resources.constants import OKTA_HEADERS
+from Tests.scripts.infra.resources.constants import OKTA_PROD_AUTH_URL
+from Tests.scripts.infra.resources.constants import TokenCache
+from Tests.scripts.infra.utils.env import is_production
+from Tests.scripts.infra.utils.html import find_html_attribute
+from Tests.scripts.infra.utils.html import find_html_form_action
+from Tests.scripts.infra.utils.requests_handler import raise_for_status
+from Tests.scripts.infra.utils.requests_handler import TimeoutHTTPAdapter
+from Tests.scripts.infra.utils.rocket_retry import retry
+from Tests.scripts.infra.utils.text import to_list
+from Tests.scripts.infra.utils.time_utils import time_now
+from Tests.scripts.infra.utils.time_utils import to_epoch_timestamp
 
 import logging
 
-from infra.enums.papi import KeySecurityLevel
-from infra.enums.xsiam_alerts import SearchTableField
-from infra.models import PublicApiKey
+from Tests.scripts.infra.enums.papi import KeySecurityLevel
+from Tests.scripts.infra.enums.xsiam_alerts import SearchTableField
+from Tests.scripts.infra.models import PublicApiKey
 
 
 logger = logging.getLogger(__name__)
@@ -505,10 +506,12 @@ class XsoarClient(XsoarOnPremClient):
     def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, project_id: str,
                  cache: Cache | None = None):
         super().__init__(xsoar_host, xsoar_user, xsoar_pass, tenant_name, cache)
-        self.xsoar_host_url = f'https://{xsoar_host}'
-        self.xsoar_base_url = f'https://{xsoar_host}/xsoar'
-        self.xsoar_api_url = f'https://{xsoar_host}/api'
-        self.xsoar_webapp_url = f'https://{xsoar_host}/api/webapp'
+        self.xsoar_host_base = xsoar_host.replace('https://', '').replace('http://', '').replace('/', '')
+
+        self.xsoar_host_url = f'https://{self.xsoar_host_base}'
+        self.xsoar_base_url = f'https://{self.xsoar_host_base}/xsoar'
+        self.xsoar_api_url = f'https://{self.xsoar_host_base}/api'
+        self.xsoar_webapp_url = f'https://{self.xsoar_host_base}/api/webapp'
         self.token_cache = Firestore(project_id)
 
     def update_user_data(self):
@@ -554,7 +557,7 @@ class XsoarClient(XsoarOnPremClient):
         params = {'RelayState': tenant_url, 'SAMLResponse': saml_request}
 
         # Complete login by sending SAML response to proxy url
-        res = self.session.post(url=proxy_url, data=params, verify=False)
+        res = self.session.post(url=proxy_url, data=params, verify=False)  # type: ignore[arg-type]
         raise_for_status(res)
 
         # Imitate request sent by UI, to get csrf_token cookie
@@ -846,23 +849,24 @@ class XsoarClient(XsoarOnPremClient):
     #     ]
     #     return roles
     #
-    # def get_table_data(self, table_name: XdrTables, table_filter: dict = None) -> dict:
-    #     """Fetch table data from XDR/XSIAM/XSOAR-NG"""
-    #     table_filter = table_filter or {"filter_data": {}}
-    #     #self.inc_metric('get_table_data', table_name)
-    #     params = {'type': 'grid', 'table_name': table_name.value}
-    #     res = self.session.post(url=f'{self.xsoar_webapp_url}/get_data', json=table_filter, params=params)
-    #     raise_for_status(res)
-    #     try:
-    #         result = res.json()['reply']
-    #     except JSONDecodeError as e:
-    #         raise GetTableDataException(
-    #             f'Failed parsing get_table_data response: {e.msg}\n{table_name=}, {table_filter=}\nRaw response: {res.text}'
-    #         )
-    #     if (count := result.get('FILTER_COUNT')) and count < len(result['DATA']):
-    #         log.warning(f"Not all results were returned - {len(result['DATA'])} instead of {result['FILTER_COUNT']}.
-    #         Consider pagination.")
-    #     return result
+
+    def get_table_data(self, table_name: XdrTables, table_filter: dict | None = None) -> dict:
+        """Fetch table data from XDR/XSIAM/XSOAR-NG"""
+        table_filter = table_filter or {"filter_data": {}}
+        #self.inc_metric('get_table_data', table_name)
+        params = {'type': 'grid', 'table_name': table_name.value}
+        res = self.session.post(url=f'{self.xsoar_webapp_url}/get_data', json=table_filter, params=params)
+        raise_for_status(res)
+        try:
+            result = res.json()['reply']
+        except JSONDecodeError as e:
+            raise Exception(
+                f'Failed parsing get_table_data response: {e.msg}\n{table_name=}, {table_filter=}\nRaw response: {res.text}'
+            )
+        if (count := result.get('FILTER_COUNT')) and count < len(result['DATA']):
+            logger.warning(f"Not all results were returned - {len(result['DATA'])} "
+                           f"instead of {result['FILTER_COUNT']}. Consider pagination.")
+        return result
     #
     # def get_audit_trail(
     #     self, description: Optional[str] = None, audit_email: Optional[str] = None, sort_descending: bool = True
@@ -1094,7 +1098,7 @@ class XsiamClient(XsoarClient):
     def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, project_id: str,
                  cache: Cache | None = None):
         super().__init__(xsoar_host, xsoar_user, xsoar_pass, tenant_name, project_id, cache)
-        self.public_api_url_prefix = f'https://api-{xsoar_host}/public_api/v1'
+        self.public_api_url_prefix = f'https://api-{self.xsoar_host_base}/public_api/v1'
         self._public_api_key = None
 
     def logout_auth(self):
@@ -1105,7 +1109,7 @@ class XsiamClient(XsoarClient):
 
     @cached_property
     def public_api_key(self):
-        self._public_api_key = self.create_api_key(comment='Session key')
+        self._public_api_key = self.create_api_key(comment='Session key')  # type: ignore[assignment]
         return self._public_api_key
     #
     # def load_incident(self, incident_id: str, direct_load_from_xsoar: bool = False, **kwargs) -> Incident:
