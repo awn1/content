@@ -833,7 +833,7 @@ def test_get_packs_and_dependencies_to_install_no_deprecated(mocker: MockFixture
     client = MockClient()
     mocker.patch.object(script, 'search_for_deprecated_dependencies',
                         return_value=True)
-    mocker.patch.object(script, "get_server_numeric_version", return_value="6.9")
+    mocker.patch.object(script, "get_server_numeric_version", return_value="6.11")
     mocker.patch.object(script, "create_packs_artifacts", return_value="")
 
     pack_id = "PackA"
@@ -897,7 +897,7 @@ def test_get_packs_and_dependencies_to_install_deprecated(mocker: MockFixture):
     client = MockClient()
     mocker.patch.object(script, "search_for_deprecated_dependencies",
                         return_value=False)
-    mocker.patch.object(script, "get_server_numeric_version", return_value="6.9")
+    mocker.patch.object(script, "get_server_numeric_version", return_value="6.11")
     mocker.patch.object(script, "create_packs_artifacts", return_value="")
 
     pack_id = "PackA"
@@ -1135,7 +1135,7 @@ def test_filter_packs_by_min_server_version_no_packs_filtered(mocker: MockFixtur
         It returns the original set of pack IDs
     """
     packs_id = {"Pack1", "Pack2", "Pack3"}
-    server_version = "6.9.0"
+    server_version = "6.11.0"
     mocker.patch('Tests.Marketplace.search_and_install_packs.get_packs_with_higher_min_version', return_value=set())
 
     filtered_packs = script.filter_packs_by_min_server_version(packs_id, server_version, "")

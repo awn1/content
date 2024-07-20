@@ -272,7 +272,7 @@ def test_get_slack_user_name__name_in_map():
         - It should return the mapped name.
     """
     name = "Mike"
-    result = get_slack_user_name(name, str(Path(__file__).parent / 'tests_data/test_mapping.json'))
+    result = get_slack_user_name(name, name, str(Path(__file__).parent / 'tests_data/test_mapping.json'))
     assert result == "mike"
 
 
@@ -286,7 +286,7 @@ def test_get_slack_user_name__name_not_in_map():
         - It should return the original name.
     """
     name = "Jon"
-    result = get_slack_user_name(name, str(Path(__file__).parent / 'tests_data/test_mapping.json'))
+    result = get_slack_user_name(name, name, str(Path(__file__).parent / 'tests_data/test_mapping.json'))
     assert result == "Jon"
 
 
@@ -300,7 +300,7 @@ def test_get_slack_user_name__name_is_github_actions_bot():
         - It should return the owner of the docker image update bot.
     """
     name = "github-actions[bot]"
-    result = get_slack_user_name(name, str(Path(__file__).parent / 'tests_data/test_mapping.json'))
+    result = get_slack_user_name(name, name, str(Path(__file__).parent / 'tests_data/test_mapping.json'))
     assert result == "docker images bot owner"
 
 

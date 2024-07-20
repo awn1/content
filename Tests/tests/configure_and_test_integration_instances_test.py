@@ -272,7 +272,7 @@ def test_first_added_to_marketplace(mocker, diff, build_type, the_expected_resul
     assert the_expected_result == first_added_to_marketplace
 
 
-@pytest.mark.parametrize('version', ["6.9.0", "6.10.0", "6.11.0"])
+@pytest.mark.parametrize('version', ["6.11.0", "6.12.0"])
 def test_get_server_numeric_version(mocker, version):
     """
     Given:

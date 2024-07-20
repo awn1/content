@@ -426,22 +426,23 @@ def get_reviewer(pr_url: str) -> str | None:
     return approved_reviewer
 
 
-def get_slack_user_name(name: str | None, name_mapping_path: str) -> str:
+def get_slack_user_name(name: str | None, default: str | None, name_mapping_path: str) -> str:
     """
-    Get the slack user name for a given Github name.
+    Get the slack username for a given GitHub name.
     Args:
+        default: The default name to return if the name is not found.
         name: The name to convert.
         name_mapping_path: The path to the name mapping file.
     Returns:
-        The slack user name.
+        The slack username.
     """
     with open(name_mapping_path) as map:
         mapping = json.load(map)
     # If the name is the name of the 'docker image update bot' reviewer - return the owner of that bot.
         if name == CONTENT_BOT_REVIEWER:
-            return mapping["docker_images"]["owner"]
+            return mapping.get("docker_images", {}).get("owner", default)
         else:
-            return mapping["names"].get(name, name)
+            return mapping.get("names", {}).get(name, default)
 
 
 def get_commit_by_sha(commit_sha: str, list_of_commits: list[ProjectCommit]) -> ProjectCommit | None:
@@ -485,7 +486,7 @@ def create_shame_message(suspicious_commits: list[ProjectCommit],
         if name and pr and beginning_of_pr:
             if name == CONTENT_BOT:
                 name = get_reviewer(pr)
-            name = get_slack_user_name(name, name_mapping_path)
+            name = get_slack_user_name(name, name, name_mapping_path)
             msg = "broken" if pipeline_changed_status else "fixed"
             color = "danger" if pipeline_changed_status else "good"
             emoji = ":cry:" if pipeline_changed_status else ":muscle:"

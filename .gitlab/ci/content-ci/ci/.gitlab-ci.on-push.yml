@@ -253,9 +253,9 @@ validate-content-conf:
         echo "Creating Instances, only for XSOAR."
         if [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]]; then
           echo "Creating Xsoar Instances for SDK nightly- changing the filter_envs json."
-          jq '.' <<< '{"Server 6.9": false, "Server 6.10": false, "Server 6.11": false, "Server 6.12": false, "Server Master": true}' > "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json"
+          jq '.' <<< '{"Server 6.11": false, "Server 6.12": false, "Server Master": true}' > "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json"
         fi
-        python3 ./gcp/create_instance.py --env-type "${IFRA_ENV_TYPE}" --outfile "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json" --filter-envs "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json" --creds "${CONTENT_BUILD_GCP}" --zone "${GCP_ZONE}"
+        python3 ./gcp/create_instance.py --env-type "${IFRA_ENV_TYPE}" --outfile "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json" --filter-envs "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json" --creds "${CONTENT_BUILD_GCP}" --zone "${GCP_ZONE}" --instances-config "${CI_PROJECT_DIR}/config/instances_config.json"
       fi
     - section_end "Create Instances for XSOAR"
     - section_start "Upload Artifacts to GCP" --collapsed
@@ -438,8 +438,6 @@ tests_xsoar_server:
   parallel:
     matrix:
       - INSTANCE_ROLE:
-        - "Server 6.9"
-        - "Server 6.10"
         - "Server 6.11"
         - "Server 6.12"
         - "Server Master"

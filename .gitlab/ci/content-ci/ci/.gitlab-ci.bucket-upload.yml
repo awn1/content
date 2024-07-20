@@ -112,8 +112,6 @@ jobs-done-check-upload-flow:
     - xpanse-prepare-testing-bucket-upload-flow
     - xsoar-prepare-testing-bucket-upload-flow
     - xsoar-saas-prepare-testing-bucket-upload-flow
-    - install-packs-in-server6_9
-    - install-packs-in-server6_10
     - install-packs-in-server6_11
     - install-packs-in-server6_12
     - install-packs-in-server-master
@@ -267,16 +265,6 @@ xpanse-prepare-testing-bucket-upload-flow:
     - !reference [.destroy_xsoar_instances]
 
 
-install-packs-in-server6_9:
-  extends: .install_packs_in_xsoar_server
-  variables:
-    INSTANCE_ROLE: "Server 6.9"
-
-install-packs-in-server6_10:
-  extends: .install_packs_in_xsoar_server
-  variables:
-    INSTANCE_ROLE: "Server 6.10"
-
 install-packs-in-server6_11:
   extends: .install_packs_in_xsoar_server
   variables:
@@ -301,7 +289,6 @@ install-packs-in-server-master:
     - .default-job-settings
   script:
     - EXIT_CODE=0
-
     - section_start "Lock Machine"
     - echo "Authenticating GCP"
     - gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
@@ -421,7 +408,13 @@ install-packs-in-xsoar-ng-ga:
 upload-packs-to-marketplace:
   tags:
     - gke
-  needs: ["run-validations-upload-flow", "install-packs-in-server6_9", "install-packs-in-server6_10", "install-packs-in-server6_11", "install-packs-in-server6_12", "install-packs-in-server-master", "run-pre-commit-upload-flow", "run-validations-upload-flow-new-validate-flow"]
+  needs:
+    - run-validations-upload-flow
+    - install-packs-in-server6_11
+    - install-packs-in-server6_12
+    - install-packs-in-server-master
+    - run-pre-commit-upload-flow
+    - run-validations-upload-flow-new-validate-flow
   stage: upload-to-marketplace
   artifacts:
     expire_in: 30 days
