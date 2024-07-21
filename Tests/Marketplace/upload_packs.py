@@ -613,8 +613,8 @@ Total number of packs: {len(successful_packs + skipped_packs + failed_packs)}
             f.write(successful_packs_table.get_string())
     if skipped_packs:
         skipped_packs_table = _build_summary_table(skipped_packs, include_pack_status=True)
-        logging.warning(f"Number of skipped packs: {len(skipped_packs)}")
-        logging.warning(f"Skipped packs:\n{skipped_packs_table}")
+        logging.warning(f"Number of skipped packs: {len(skipped_packs)}. Skipped packs result table is printed in debug log.")
+        logging.debug(f"Skipped packs:\n{skipped_packs_table}")
     if failed_packs:
         failed_packs_table = _build_summary_table(failed_packs, include_pack_status=True)
         logging.critical(f"Number of failed packs: {len(failed_packs)}")
