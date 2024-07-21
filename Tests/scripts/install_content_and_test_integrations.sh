@@ -28,13 +28,9 @@ fi
 
 CONF_PATH="./Tests/conf.json"
 
-if [ -f ./Tests/test_pack.zip ]; then
-  echo "Copying test_pack.zip to artifacts folder:${ARTIFACTS_FOLDER}"
-  cp ./Tests/test_pack.zip "$ARTIFACTS_FOLDER"
-  exit_on_error $? "Failed to copy test_pack.zip to artifacts folder:${ARTIFACTS_FOLDER}"
-else
-  echo "test_pack.zip was not found in the build directory, skipping..."
-fi
+echo "Copying test_pack_*.zip to artifacts folder:${ARTIFACTS_FOLDER}"
+cp ./Tests/test_pack_*.zip "$ARTIFACTS_FOLDER" || true
+
 
 echo "Starting $0 script instance role:${INSTANCE_ROLE}, Server type:${SERVER_TYPE} nightly:${IS_NIGHTLY}"
 
@@ -47,7 +43,6 @@ if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; 
       --server_type "${SERVER_TYPE}" --cloud_servers_path "$CLOUD_SERVERS_PATH" \
       --cloud_servers_api_keys "cloud_api_keys.json" --marketplace_name "$MARKETPLACE_NAME" \
       --artifacts_folder "$ARTIFACTS_FOLDER" --marketplace_buckets "$GCS_MACHINES_BUCKET" \
-      --test_pack_path "${ARTIFACTS_FOLDER_SERVER_TYPE}" \
       --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_to_install_by_machine.json" \
       --gsm_service_account "$GSM_SERVICE_ACCOUNT" \
       --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN"
@@ -69,7 +64,6 @@ elif [[ "${SERVER_TYPE}" == "XSOAR" ]]; then
       --server_type "${SERVER_TYPE}" \
       --cloud_servers_path "$CLOUD_SERVERS_PATH" --cloud_servers_api_keys "cloud_api_keys.json" \
       --marketplace_name "$MARKETPLACE_NAME" --artifacts_folder "$ARTIFACTS_FOLDER" --marketplace_buckets "$GCS_MACHINES_BUCKET" \
-      --test_pack_path "${ARTIFACTS_FOLDER_SERVER_TYPE}" \
       --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_to_install_by_machine.json" \
       --gsm_service_account "$GSM_SERVICE_ACCOUNT" \
       --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN"
