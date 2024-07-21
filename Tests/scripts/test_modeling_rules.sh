@@ -83,7 +83,7 @@ fi
 
 if [ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]; then
 
-  XSIAM_SERVERS_PATH=${XSIAM_SERVERS_PATH:-"xsiam_servers.json"}
+XSIAM_SERVERS_PATH=$(cat "${CI_PROJECT_DIR}/xsiam_servers_path")
   echo "Testing Modeling Rules - Results will be saved to ${MODELING_RULES_RESULTS_FILE_NAME}"
 
   IFS=', ' read -r -a CLOUD_CHOSEN_MACHINE_ID_ARRAY <<< "${CLOUD_CHOSEN_MACHINE_IDS}"
