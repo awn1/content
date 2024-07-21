@@ -7,7 +7,7 @@ import requests
 import urllib3
 
 from Tests.scripts.utils.log_util import install_logging
-from common import get_slack_user_name
+from Tests.scripts.common import get_slack_user_name
 
 # Disable insecure warnings
 urllib3.disable_warnings()
