@@ -9,7 +9,7 @@ function exit_on_error {
 
 echo "starting to install packs ..."
 
-XSIAM_SERVERS_PATH=$(cat xsiam_servers_path)
+XSIAM_SERVERS_PATH=$(cat "${CI_PROJECT_DIR}/xsiam_servers_path")
 
 EXTRACT_FOLDER=$(mktemp -d)
 
