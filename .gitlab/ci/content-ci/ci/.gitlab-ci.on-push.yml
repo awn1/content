@@ -946,7 +946,6 @@ xsoar-test_playbooks_results:
   needs:
     - job: tests_xsoar_server
     - job: xsoar_ng_server_ga
-      optional: true
   dependencies:
     - tests_xsoar_server
     - xsoar_ng_server_ga

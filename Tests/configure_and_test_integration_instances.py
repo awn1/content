@@ -189,11 +189,6 @@ def change_placeholders_to_values(placeholders_map, config_item):
     return json.loads(item_as_string)
 
 
-def create_test_pack(packs: list | None = None):
-    packs = packs or []
-    test_pack_zip(Build.content_path, Build.test_pack_target, packs)
-
-
 def test_pack_metadata():
     now = datetime.now().isoformat().split('.')[0]
     now = f'{now}Z'
@@ -256,32 +251,6 @@ def test_files(content_path, packs_to_install: list | None = None):
                     yield playbook_path, playbook
 
 
-def test_pack_zip(content_path, target, packs: list | None = None):
-    """
-    Iterates over all TestPlaybooks folders and adds all files from there to test_pack.zip file.
-    """
-    packs = packs or []
-    with zipfile.ZipFile(f'{target}/test_pack.zip', 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        zip_file.writestr('test_pack/metadata.json', test_pack_metadata())
-        for test_path, test in test_files(content_path, packs):
-            if not test_path.endswith('.yml'):
-                continue
-            test = test.name
-            with open(test_path) as test_file:
-                if not (test.startswith(('playbook-', 'script-'))):
-                    test_type = find_type(_dict=yaml.safe_load(test_file), file_type='yml', path=test_path).value
-                    test_file.seek(0)
-                    # we need to convert to the regular filetype if we get a test type, because that what the server expects
-                    if test_type == FileType.TEST_PLAYBOOK.value:
-                        test_type = FileType.PLAYBOOK.value
-                    if test_type == FileType.TEST_SCRIPT.value:
-                        test_type = FileType.SCRIPT.value
-                    test_target = f'test_pack/TestPlaybooks/{test_type}-{test}'
-                else:
-                    test_target = f'test_pack/TestPlaybooks/{test}'
-                zip_file.writestr(test_target, test_file.read())
-
-
 def get_env_conf():
     if Build.run_environment == Running.CI_RUN:
         return get_json_file(Build.env_results_path)
@@ -337,6 +306,7 @@ class Server:
         self.tests_to_run = []
         self.build = None
         self.__client = None
+        self.test_pack_path = None
 
     @abstractmethod
     def install_packs(self, pack_ids: list | None = None, install_packs_in_batches=False,
@@ -1061,11 +1031,36 @@ class Server:
         """Creates and uploads a test pack that contains the test playbook of the specified packs to install list.
 
         """
-        create_test_pack(self.pack_ids_to_install)
+        self.test_pack_zip()
 
         upload_zipped_packs(client=self.client,
                             host=self.name or self.internal_ip,
-                            pack_path=f'{Build.test_pack_target}/test_pack.zip')
+                            pack_path=f'{Build.test_pack_target}/{self.test_pack_path}.zip')
+
+    def test_pack_zip(self):
+        """
+        Iterates over all TestPlaybooks folders and adds all files from there to test_pack_path.zip file.
+        """
+        packs = self.pack_ids_to_install or []
+        with zipfile.ZipFile(f'{self.build.test_pack_target}/{self.test_pack_path}.zip', 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.writestr(f'{self.test_pack_path}/metadata.json', test_pack_metadata())
+            for test_path, test in test_files(Build.content_path, packs):
+                if not test_path.endswith('.yml'):
+                    continue
+                test = test.name
+                with open(test_path) as test_file:
+                    if not (test.startswith(('playbook-', 'script-'))):
+                        test_type = find_type(_dict=yaml.safe_load(test_file), file_type='yml', path=test_path).value
+                        test_file.seek(0)
+                        # we need to convert to the regular filetype if we get a test type, because that what the server expects
+                        if test_type == FileType.TEST_PLAYBOOK.value:
+                            test_type = FileType.PLAYBOOK.value
+                        if test_type == FileType.TEST_SCRIPT.value:
+                            test_type = FileType.SCRIPT.value
+                        test_target = f'{self.test_pack_path}/TestPlaybooks/{test_type}-{test}'
+                    else:
+                        test_target = f'{self.test_pack_path}/TestPlaybooks/{test}'
+                    zip_file.writestr(test_target, test_file.read())
 
     # ---------------------------------------- Success report flow ----------------------------------------------
 
@@ -1198,6 +1193,7 @@ class XSOARServer(Server):
         self.tests_to_run = tests_to_run
         self.build = build
         self.build_number = build_number
+        self.test_pack_path = f'test_pack_{internal_ip}'
 
     def __str__(self):
         return self.internal_ip
@@ -1364,6 +1360,7 @@ class CloudServer(Server):
         self.__client = None
         # we use client without demisto username
         os.environ.pop('DEMISTO_USERNAME', None)
+        self.test_pack_path = f'test_pack_{name}'
 
     def __str__(self):
         return self.name
@@ -1538,7 +1535,6 @@ class Build(ABC):
         self.tests = conf['tests']
         self.skipped_integrations_conf = conf['skipped_integrations']
         self.unmockable_integrations = conf['unmockable_integrations']
-        self.test_pack_path = options.test_pack_path if options.test_pack_path else None
         self.service_account = options.service_account
         self.marketplace_tag_name = None
         self.artifacts_folder = None
@@ -1749,7 +1745,6 @@ def options_handler(args=None):
     parser.add_argument('-pr', '--is_private', type=str2bool, help='Is private build')
     parser.add_argument('--branch', help='GitHub branch name', required=True)
     parser.add_argument('--build_number', help='CI job number where the instances were created', required=True)
-    parser.add_argument('--test_pack_path', help='Path to where the test pack will be saved.', required=True)
     parser.add_argument('-pl', '--pack_ids_to_install', help='Path to the packs to install file.',
                         default='./content_packs_to_install.txt')
     parser.add_argument('--server_type', help=f'Server type running, choices: {",".join(SERVER_TYPES)}',

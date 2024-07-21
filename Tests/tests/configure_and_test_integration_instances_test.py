@@ -33,7 +33,7 @@ def create_build_object_with_mock(mocker, server_type):
             '-g', "$GIT_SHA1", '--ami_env', "$1", '--branch', "$CI_COMMIT_BRANCH",
             '--build_number', "$CI_PIPELINE_ID", '-sa', "$GCS_MARKET_KEY", '--server_type', server_type,
             '--cloud_servers_path', '$XSIAM_SERVERS_PATH',
-            '--marketplace_name', 'marketplacev2', '--test_pack_path', '$ARTIFACTS_FOLDER',
+            '--marketplace_name', 'marketplacev2',
             '--machine_assignment', "$ARTIFACTS_FOLDER_SERVER_TYPE/packs_to_install_by_machine.json"]
     options = options_handler(args=args)
     json_data = [{'tests': [], 'skipped_integrations': [], 'unmockable_integrations': []}]
