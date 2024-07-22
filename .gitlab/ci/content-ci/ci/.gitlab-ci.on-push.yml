@@ -124,10 +124,23 @@ validate-content-conf:
   - section_start "Check if bypass.url Label in the PR"
   - |
     pr=$(curl -sS --get --header "Accept: application/vnd.github.v3.raw" --header "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/demisto/content/pulls?state=open&base=master" --data-urlencode "head=demisto:${CI_COMMIT_BRANCH}" | jq '.[0]')
+    EXIT_CODE=$?
+    if [[ "${EXIT_CODE}" -ne 0 ]]; then
+      echo "Failed to fetch PR details, exit code:${EXIT_CODE}"
+      exit "${EXIT_CODE}"
+    fi
+
     has_label=false
     if [[ $pr != 'null' ]]; then
       pr_number=$(echo $pr | jq -r '.number')
       pr_labels=$(curl -sS --get --header "Accept: application/vnd.github.v3.raw" --header "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/demisto/content/issues/${pr_number}/labels" | jq '.[].name')
+      EXIT_CODE=$?
+      if [[ "${EXIT_CODE}" -ne 0 ]]; then
+        echo "Failed to fetch PR details, exit code:${EXIT_CODE}"
+        exit "${EXIT_CODE}"
+      fi
+
+
       if echo "$pr_labels" | grep -q "bypass.url"; then
         has_label=true
         echo "The PR has the bypass.url label."
