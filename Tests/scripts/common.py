@@ -68,7 +68,7 @@ FAILED_TO_MSG = {
     False: "succeeded",
 }
 
-# This is the github username of the bot (and its reviewer) that pushes contributions and docker updates to the content repo.
+# This is the GitHub username of the bot (and its reviewer) that pushes contributions and docker updates to the content repo.
 CONTENT_BOT = 'content-bot'
 CONTENT_BOT_REVIEWER = 'github-actions[bot]'
 
@@ -279,7 +279,7 @@ def get_json_data(path: Path) -> dict:
     return file_data
 
 
-def is_tpb_part_of_nightly(playbook:str, config: TestConf, tpb_dependencies_packs: dict) -> bool:
+def is_tpb_part_of_nightly(playbook: str, config: TestConf, tpb_dependencies_packs: dict) -> bool:
     """Return whether the given playbook id is one that should run in nightly or not.
 
     Args:
@@ -350,7 +350,7 @@ def get_person_in_charge(commit: ProjectCommit) -> tuple[str, str, str] | tuple[
         beginning_of_pr_name: The beginning of the PR name.
     """
     name = commit.author_name
-    # pr number is always the last id in the commit title, starts with a number sign, may or may not be in parenthesis.
+    # pr number is always the last id in the commit title, starts with a number sign, may or may not be in parentheses.
     pr_number = commit.title.split("#")[-1].strip("()")
     beginning_of_pr_name = commit.title[:20] + "..."
     if pr_number.isnumeric():
@@ -436,9 +436,9 @@ def get_slack_user_name(name: str | None, default: str | None, name_mapping_path
     Returns:
         The slack username.
     """
-    with open(name_mapping_path) as map:
-        mapping = json.load(map)
-    # If the name is the name of the 'docker image update bot' reviewer - return the owner of that bot.
+    with open(name_mapping_path) as name_mapping:
+        mapping = json.load(name_mapping)
+        # If the name is the name of the 'docker image update bot' reviewer - return the owner of that bot.
         if name == CONTENT_BOT_REVIEWER:
             return mapping.get("docker_images", {}).get("owner", default)
         else:

@@ -497,7 +497,7 @@ def main() -> None:
 
         with open(output_path / "slack_msg.txt", "w") as slack_msg_file:
             report_url = f"{GITLAB_ARTIFACTS_URL}/{CI_JOB_ID}/artifacts/{ARTIFACTS_FOLDER}/{report_file_name}"
-            title = f"Build machines report - {current_date_str} was created"
+            title = f"Click here to view Build machines report for {current_date_str}"
             json.dump([{
                 "color": "good",
                 "title": title,

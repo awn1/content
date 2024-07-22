@@ -606,7 +606,7 @@ slack-notify-on-push:
     JOB_NAME: 'fan-in-on-push'
     WORKFLOW: 'Content PR'
     master_branch_name: master
-    SLACK_CHANNEL: "#dmst-build-private-"
+    SLACK_CHANNEL: $SLACK_CHANNEL
     SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
     SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
     SLACK_JOB: 'true'
@@ -632,7 +632,7 @@ slack-notify-on-merge:
     JOB_NAME: 'fan-in-on-merge'
     WORKFLOW: 'Content Merge'
     master_branch_name: master
-    SLACK_CHANNEL: "#dmst-build-test"
+    SLACK_CHANNEL: "dmst-build-test"
     SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
     SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
     SLACK_JOB: 'true'
