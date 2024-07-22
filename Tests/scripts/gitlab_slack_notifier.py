@@ -23,7 +23,7 @@ from Tests.Marketplace.marketplace_services import get_upload_data
 from Tests.scripts.common import CONTENT_NIGHTLY, CONTENT_PR, get_instance_directories, \
     get_properties_for_test_suite, BUCKET_UPLOAD, BUCKET_UPLOAD_BRANCH_SUFFIX, TEST_MODELING_RULES_REPORT_FILE_NAME, \
     get_test_results_files, CONTENT_MERGE, TEST_PLAYBOOKS_REPORT_FILE_NAME, \
-    replace_escape_characters
+    replace_escape_characters, get_slack_user_name
 from Tests.scripts.common import get_pipelines_and_commits, is_pivot, get_commit_by_sha, get_pipeline_by_commit, \
     create_shame_message, slack_link, was_message_already_sent, get_nearest_newer_commit_with_pipeline, \
     get_nearest_older_commit_with_pipeline
@@ -187,7 +187,7 @@ def machines_saas_and_xsiam(failed_jobs):
                 "xsiam-test_playbooks_results",
                 "xsiam-test_modeling_rule_results",
             },
-            f"Used {len(machines)} machine(s)",
+            f"Used {len(machines)} machine types",
         ) + machines
 
 
@@ -607,7 +607,7 @@ def get_pipeline_by_id(gitlab_client: Gitlab, project_id: str, pipeline_id: str)
 
 def get_slack_downstream_pipeline_id(pipeline: ProjectPipeline):
     for bridge in pipeline.bridges.list(all=True):
-        if SLACK_NOTIFY in bridge.name.lower():
+        if SLACK_NOTIFY in bridge.name.lower() and bridge.downstream_pipeline:
             pipeline_id = bridge.downstream_pipeline.get('id')
             return pipeline_id
     return None
@@ -683,10 +683,10 @@ def main():
             author = pull_request.data.get('user', {}).get('login')
             if triggering_workflow in {CONTENT_NIGHTLY, CONTENT_PR}:
                 # This feature is only supported for content nightly and content pr workflows.
-                computed_slack_channel = f"{computed_slack_channel}{author}"
+                computed_slack_channel = f"@{get_slack_user_name(author, author, options.name_mapping_path)}"
             else:
                 logging.info(f"Not supporting custom Slack channel for {triggering_workflow} workflow")
-            logging.info(f"Sending slack message to channel {computed_slack_channel} for "
+            logging.info(f"Sending slack message to channel '{computed_slack_channel}' for "
                          f"Author:{author} of PR#{pull_request.data.get('number')}")
         except Exception:
             logging.error(f'Failed to get pull request data for branch {options.current_branch}')
