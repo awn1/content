@@ -31,12 +31,13 @@ from Tests.scripts.utils.log_util import install_logging
 DATASET_NOT_FOUND_ERROR_CODE = 599
 
 
-def check_if_pack_still_installed(client: demisto_client,
-                                  pack_id: str,
-                                  attempts_count: int = 3,
-                                  sleep_interval: int = 30,
-                                  request_timeout: int = 300,
-                                  ):
+def check_if_pack_still_installed(
+    client: demisto_client,
+    pack_id: str,
+    attempts_count: int = 3,
+    sleep_interval: int = 30,
+    request_timeout: int = 300,
+):
     """
 
     Args:
@@ -50,26 +51,32 @@ def check_if_pack_still_installed(client: demisto_client,
         True if the pack is still installed, False otherwise.
 
     """
+
     def success_handler(response_data):
         installed_packs = ast.literal_eval(response_data)
-        installed_packs_ids = [pack.get('id') for pack in installed_packs]
+        installed_packs_ids = [pack.get("id") for pack in installed_packs]
         return pack_id in installed_packs_ids, None
 
-    return generic_request_with_retries(client=client,
-                                        retries_message="Failed to get all installed packs.",
-                                        exception_message="Failed to get installed packs.",
-                                        prior_message=f"Checking if pack {pack_id} is still installed",
-                                        path='/contentpacks/metadata/installed',
-                                        method='GET',
-                                        attempts_count=attempts_count,
-                                        sleep_interval=sleep_interval,
-                                        success_handler=success_handler,
-                                        request_timeout=request_timeout,
-                                        )
+    return generic_request_with_retries(
+        client=client,
+        retries_message="Failed to get all installed packs.",
+        exception_message="Failed to get installed packs.",
+        prior_message=f"Checking if pack {pack_id} is still installed",
+        path="/contentpacks/metadata/installed",
+        method="GET",
+        attempts_count=attempts_count,
+        sleep_interval=sleep_interval,
+        success_handler=success_handler,
+        request_timeout=request_timeout,
+    )
 
 
-def get_all_installed_packs(client: demisto_client, non_removable_packs: list, attempts_count: int = 3,
-                            request_timeout: int = 300, ):
+def get_all_installed_packs(
+    client: demisto_client,
+    non_removable_packs: list,
+    attempts_count: int = 3,
+    request_timeout: int = 300,
+):
     """
 
     Args:
@@ -84,36 +91,38 @@ def get_all_installed_packs(client: demisto_client, non_removable_packs: list, a
 
     def success_handler(response_data):
         installed_packs = ast.literal_eval(response_data)
-        success_handler_installed_packs_ids = [success_handler_pack.get('id') for success_handler_pack in installed_packs]
-        logging.success('Successfully fetched all installed packs.')
-        installed_packs_ids_str = ', '.join(success_handler_installed_packs_ids)
-        logging.debug(
-            f'The following packs are currently installed from a previous build run:\n{installed_packs_ids_str}')
+        success_handler_installed_packs_ids = [success_handler_pack.get("id") for success_handler_pack in installed_packs]
+        logging.success("Successfully fetched all installed packs.")
+        installed_packs_ids_str = ", ".join(success_handler_installed_packs_ids)
+        logging.debug(f"The following packs are currently installed from a previous build run:\n{installed_packs_ids_str}")
         return True, success_handler_installed_packs_ids
+
     try:
         logging.info("Attempting to fetch all installed packs.")
-        _, installed_packs_ids = generic_request_with_retries(client=client,
-                                                              retries_message="Failed to get all installed packs.",
-                                                              exception_message="Failed to get installed packs.",
-                                                              prior_message="Getting all installed packs",
-                                                              path='/contentpacks/metadata/installed',
-                                                              method='GET',
-                                                              attempts_count=attempts_count,
-                                                              request_timeout=request_timeout,
-                                                              success_handler=success_handler
-                                                              )
+        _, installed_packs_ids = generic_request_with_retries(
+            client=client,
+            retries_message="Failed to get all installed packs.",
+            exception_message="Failed to get installed packs.",
+            prior_message="Getting all installed packs",
+            path="/contentpacks/metadata/installed",
+            method="GET",
+            attempts_count=attempts_count,
+            request_timeout=request_timeout,
+            success_handler=success_handler,
+        )
         for pack in non_removable_packs:
             if pack in installed_packs_ids:
                 installed_packs_ids.remove(pack)
         return installed_packs_ids
     except Exception as e:
-        logging.exception(f'The request to fetch installed packs has failed. Additional info: {e!s}')
+        logging.exception(f"The request to fetch installed packs has failed. Additional info: {e!s}")
         return None
 
 
-def uninstall_all_packs_one_by_one(client: demisto_client, hostname, non_removable_packs: list,
-                                   packs_to_be_installed: set | None = None) -> bool:
-    """ Lists all installed packs and uninstalling them.
+def uninstall_all_packs_one_by_one(
+    client: demisto_client, hostname, non_removable_packs: list, packs_to_be_installed: set | None = None
+) -> bool:
+    """Lists all installed packs and uninstalling them.
     Args:
         client (demisto_client): The client to connect to.
         hostname (str): cloud hostname
@@ -129,8 +138,10 @@ def uninstall_all_packs_one_by_one(client: demisto_client, hostname, non_removab
     else:
         packs_to_uninstall = get_all_installed_packs(client, non_removable_packs)
 
-    logging.info(f'Starting to search and uninstall packs in server: {hostname}, packs count to '
-                 f'uninstall: {len(packs_to_uninstall)} and they are: {packs_to_uninstall!s}')
+    logging.info(
+        f"Starting to search and uninstall packs in server: {hostname}, packs count to "
+        f"uninstall: {len(packs_to_uninstall)} and they are: {packs_to_uninstall!s}"
+    )
     uninstalled_count = 0
     failed_to_uninstall = []
     start_time = datetime.utcnow()
@@ -143,19 +154,22 @@ def uninstall_all_packs_one_by_one(client: demisto_client, hostname, non_removab
             else:
                 failed_to_uninstall.append(pack_to_uninstall)
     end_time = datetime.utcnow()
-    logging.info(f"Finished uninstalling - Succeeded: {uninstalled_count} out of {len(packs_to_uninstall)}, "
-                 f"Took:{end_time - start_time}")
+    logging.info(
+        f"Finished uninstalling - Succeeded: {uninstalled_count} out of {len(packs_to_uninstall)}, "
+        f"Took:{end_time - start_time}"
+    )
     if failed_to_uninstall:
         logging.error(f"Failed to uninstall: {','.join(failed_to_uninstall)}")
     return uninstalled_count == len(packs_to_uninstall)
 
 
-def uninstall_pack(client: demisto_client,
-                   pack_id: str,
-                   attempts_count: int = 5,
-                   sleep_interval: int = 60,
-                   request_timeout: int = 300,
-                   ):
+def uninstall_pack(
+    client: demisto_client,
+    pack_id: str,
+    attempts_count: int = 5,
+    sleep_interval: int = 60,
+    request_timeout: int = 300,
+):
     """
 
     Args:
@@ -170,7 +184,7 @@ def uninstall_pack(client: demisto_client,
     """
 
     def success_handler(_):
-        logging.success(f'Pack: {pack_id} was successfully uninstalled from the server')
+        logging.success(f"Pack: {pack_id} was successfully uninstalled from the server")
         return True, None
 
     def should_try_handler():
@@ -179,32 +193,30 @@ def uninstall_pack(client: demisto_client,
         Returns: true if we should try and uninstall the pack - the pack is still installed
 
         """
-        still_installed, _ = check_if_pack_still_installed(client=client,
-                                                           pack_id=pack_id)
+        still_installed, _ = check_if_pack_still_installed(client=client, pack_id=pack_id)
         return still_installed
 
     def api_exception_handler(api_ex, _) -> Any:
         if ALREADY_IN_PROGRESS in api_ex.body and not wait_until_not_updating(client):
-            raise Exception(
-                "Failed to wait for the server to exit installation/updating status"
-            ) from api_ex
+            raise Exception("Failed to wait for the server to exit installation/updating status") from api_ex
         return None
 
-    failure_massage = f'Failed to uninstall pack: {pack_id}'
+    failure_massage = f"Failed to uninstall pack: {pack_id}"
 
-    return generic_request_with_retries(client=client,
-                                        retries_message=failure_massage,
-                                        exception_message=failure_massage,
-                                        prior_message=f'Uninstalling pack {pack_id}',
-                                        path=f'/contentpacks/installed/{pack_id}',
-                                        method='DELETE',
-                                        attempts_count=attempts_count,
-                                        sleep_interval=sleep_interval,
-                                        should_try_handler=should_try_handler,
-                                        success_handler=success_handler,
-                                        api_exception_handler=api_exception_handler,
-                                        request_timeout=request_timeout
-                                        )
+    return generic_request_with_retries(
+        client=client,
+        retries_message=failure_massage,
+        exception_message=failure_massage,
+        prior_message=f"Uninstalling pack {pack_id}",
+        path=f"/contentpacks/installed/{pack_id}",
+        method="DELETE",
+        attempts_count=attempts_count,
+        sleep_interval=sleep_interval,
+        should_try_handler=should_try_handler,
+        success_handler=success_handler,
+        api_exception_handler=api_exception_handler,
+        request_timeout=request_timeout,
+    )
 
 
 def uninstall_packs(client: demisto_client, pack_ids: list):
@@ -221,21 +233,23 @@ def uninstall_packs(client: demisto_client, pack_ids: list):
     body = {"IDs": pack_ids}
     try:
         logging.info("Attempting to uninstall all installed packs.")
-        response_data, status_code, _ = demisto_client.generic_request_func(client,
-                                                                            path='/contentpacks/installed/delete',
-                                                                            method='POST',
-                                                                            body=body,
-                                                                            accept='application/json',
-                                                                            _request_timeout=None)
+        response_data, status_code, _ = demisto_client.generic_request_func(
+            client,
+            path="/contentpacks/installed/delete",
+            method="POST",
+            body=body,
+            accept="application/json",
+            _request_timeout=None,
+        )
     except Exception as e:
-        logging.exception(f'The request to uninstall packs has failed. Additional info: {e!s}')
+        logging.exception(f"The request to uninstall packs has failed. Additional info: {e!s}")
         return False
 
     return True
 
 
 def uninstall_all_packs(client: demisto_client, hostname, non_removable_packs: list):
-    """ Lists all installed packs and uninstalling them.
+    """Lists all installed packs and uninstalling them.
     Args:
         non_removable_packs: list of packs that can't be uninstalled.
         client (demisto_client): The client to connect to.
@@ -244,12 +258,12 @@ def uninstall_all_packs(client: demisto_client, hostname, non_removable_packs: l
     Returns (list, bool):
         A flag that indicates if the operation succeeded or not.
     """
-    logging.info(f'Starting to search and uninstall packs in server: {hostname}')
+    logging.info(f"Starting to search and uninstall packs in server: {hostname}")
 
     packs_to_uninstall: list = get_all_installed_packs(client, non_removable_packs)
     if packs_to_uninstall:
         return uninstall_packs(client, packs_to_uninstall)
-    logging.debug('Skipping packs uninstallation - nothing to uninstall')
+    logging.debug("Skipping packs uninstallation - nothing to uninstall")
     return True
 
 
@@ -263,12 +277,10 @@ def reset_core_pack_version(client: demisto_client, non_removable_packs: list):
 
 
     """
-    host = client.api_client.configuration.host.replace('https://api-', 'https://')  # disable-secrets-detection
-    _, success = search_and_install_packs_and_their_dependencies(pack_ids=non_removable_packs,
-                                                                 client=client,
-                                                                 hostname=host,
-                                                                 install_packs_in_batches=True,
-                                                                 production_bucket=True)
+    host = client.api_client.configuration.host.replace("https://api-", "https://")  # disable-secrets-detection
+    _, success = search_and_install_packs_and_their_dependencies(
+        pack_ids=non_removable_packs, client=client, hostname=host, install_packs_in_batches=True, production_bucket=True
+    )
     return success
 
 
@@ -292,12 +304,15 @@ def wait_for_uninstallation_to_complete(client: demisto_client, non_removable_pa
         retries = math.ceil(len(installed_packs) / 2)
         while len(installed_packs) > len(non_removable_packs):
             if retry > retries:
-                raise Exception('Waiting time for packs to be uninstalled has passed, there are still installed '
-                                'packs. Aborting.')
+                raise Exception(
+                    "Waiting time for packs to be uninstalled has passed, there are still installed " "packs. Aborting."
+                )
             if failed_uninstall_attempt_count >= 3:
-                raise Exception(f'Uninstalling packs failed three times. {installed_packs=}')
-            logging.info(f'The process of uninstalling all packs is not over! There are still {len(installed_packs)} '
-                         f'packs installed. Sleeping for {sleep_duration} seconds.')
+                raise Exception(f"Uninstalling packs failed three times. {installed_packs=}")
+            logging.info(
+                f"The process of uninstalling all packs is not over! There are still {len(installed_packs)} "
+                f"packs installed. Sleeping for {sleep_duration} seconds."
+            )
             sleep(sleep_duration)
             installed_packs = get_all_installed_packs(client, non_removable_packs)
 
@@ -311,18 +326,19 @@ def wait_for_uninstallation_to_complete(client: demisto_client, non_removable_pa
             retry += 1
 
     except Exception as e:
-        logging.exception(f'Exception while waiting for the packs to be uninstalled. The error is {e}')
+        logging.exception(f"Exception while waiting for the packs to be uninstalled. The error is {e}")
         return False
     return True
 
 
-def sync_marketplace(client: demisto_client,
-                     attempts_count: int = 5,
-                     sleep_interval: int = 60,
-                     request_timeout: int = 120,
-                     sleep_time_after_sync: int = 120,
-                     hard: bool = True,
-                     ) -> bool:
+def sync_marketplace(
+    client: demisto_client,
+    attempts_count: int = 5,
+    sleep_interval: int = 60,
+    request_timeout: int = 120,
+    sleep_time_after_sync: int = 120,
+    hard: bool = True,
+) -> bool:
     """
     Send a request to sync marketplace.
 
@@ -340,23 +356,23 @@ def sync_marketplace(client: demisto_client,
 
     def api_exception_handler(api_ex, _) -> Any:
         if ALREADY_IN_PROGRESS in api_ex.body and not wait_until_not_updating(client):
-            raise Exception(
-                "Failed to wait for the server to exit installation/updating status"
-            ) from api_ex
+            raise Exception("Failed to wait for the server to exit installation/updating status") from api_ex
         return None
 
-    success, _ = generic_request_with_retries(client=client,
-                                              retries_message="Retrying to sync marketplace.",
-                                              exception_message="Failed to sync marketplace.",
-                                              prior_message=f"Sent request for sync marketplace, hard: {hard}",
-                                              path=f'/contentpacks/marketplace/sync?hard={str(hard).lower()}',
-                                              method='POST',
-                                              attempts_count=attempts_count,
-                                              sleep_interval=sleep_interval,
-                                              request_timeout=request_timeout,
-                                              api_exception_handler=api_exception_handler)
+    success, _ = generic_request_with_retries(
+        client=client,
+        retries_message="Retrying to sync marketplace.",
+        exception_message="Failed to sync marketplace.",
+        prior_message=f"Sent request for sync marketplace, hard: {hard}",
+        path=f"/contentpacks/marketplace/sync?hard={str(hard).lower()}",
+        method="POST",
+        attempts_count=attempts_count,
+        sleep_interval=sleep_interval,
+        request_timeout=request_timeout,
+        api_exception_handler=api_exception_handler,
+    )
     if success:
-        logging.success(f'Sent request for sync successfully, sleeping for {sleep_time_after_sync} seconds.')
+        logging.success(f"Sent request for sync successfully, sleeping for {sleep_time_after_sync} seconds.")
         sleep(sleep_time_after_sync)
     return success
 
@@ -372,6 +388,7 @@ def delete_datasets(dataset_names: set[str], base_url: str, api_key: str, auth_i
     Returns:
         Boolean - If the operation succeeded.
     """
+
     def should_try_handler(response) -> Any:
         if response is not None and response.status_code == DATASET_NOT_FOUND_ERROR_CODE:
             logging.info("Failed to delete dataset, probably it is not exist on the machine.")
@@ -385,17 +402,17 @@ def delete_datasets(dataset_names: set[str], base_url: str, api_key: str, auth_i
             "Authorization": api_key,
             "Content-Type": "application/json",
         }
-        body = {'dataset_name': dataset}
+        body = {"dataset_name": dataset}
         success &= send_api_request_with_retries(
             base_url=base_url,
-            retries_message='Retrying to delete dataset',
+            retries_message="Retrying to delete dataset",
             success_message=f'Successfully deleted dataset: "{dataset}".',
             exception_message=f'Failed to delete dataset: "{dataset}"',
             prior_message=f'Trying to delete dataset: "{dataset}"',
-            endpoint='/public_api/v1/xql/delete_dataset',
-            method='POST',
+            endpoint="/public_api/v1/xql/delete_dataset",
+            method="POST",
             headers=headers,
-            accept='application/json',
+            accept="application/json",
             body=json.dumps(body),
             should_try_handler=should_try_handler,
         )
@@ -412,11 +429,13 @@ def get_xsiam_client(base_url: str) -> XsiamClient | None:
         XsiamClient: The client to connect to the machine.
     """
     try:
-        client = XsiamClient(xsoar_host=base_url,
-                             xsoar_user=XSOARAdminUser.username,
-                             xsoar_pass=XSOARAdminUser.password,
-                             tenant_name=base_url,
-                             project_id=AUTOMATION_GCP_PROJECT)
+        client = XsiamClient(
+            xsoar_host=base_url,
+            xsoar_user=XSOARAdminUser.username,
+            xsoar_pass=XSOARAdminUser.password,
+            tenant_name=base_url,
+            project_id=AUTOMATION_GCP_PROJECT,
+        )
         client.login_auth(force_login=True)
         return client
     except Exception as e:
@@ -438,7 +457,7 @@ def get_datasets_to_delete(ui_url):
     # Accessing the get_data table to delete all the data sets list.
     # The type for modeling rules installed from a pack is "RAW".
     table = client.get_table_data(XdrTables.DATASET_MANAGEMENT_TABLE)
-    rows = set(map(lambda n: n['name'], filter(lambda r: r['type'] == 'RAW', table.get('DATA', []))))
+    rows = set(map(lambda n: n["name"], filter(lambda r: r["type"] == "RAW", table.get("DATA", []))))
     logging.info(f'Collected datasets to delete: {",".join(rows)}')
     return rows
 
@@ -449,19 +468,21 @@ def options_handler() -> argparse.Namespace:
     Returns: options parsed from input arguments.
 
     """
-    parser = argparse.ArgumentParser(description='Utility for cleaning Cloud machines.')
-    parser.add_argument('--cloud_machine', help='cloud machine to use, if it is cloud build.')
-    parser.add_argument('--cloud_servers_path', help='Path to secret cloud server metadata file.')
-    parser.add_argument('--cloud_servers_api_keys', help='Path to the file with cloud Servers api keys.')
-    parser.add_argument('--non-removable-packs', help='List of packs that cant be removed.')
-    parser.add_argument('--one-by-one', help='Uninstall pack one pack at a time.', action='store_true')
-    parser.add_argument('--build-number', help='CI job number where the instances were created', required=True)
-    parser.add_argument('--modeling_rules_to_test_files', help='List of modeling rules test data to check.', required=True)
-    parser.add_argument('--reset-core-pack-version', help='Reset the core pack version.', type=string_to_bool)
-    parser.add_argument('-pl', '--pack_ids_to_install', help='Path to the packs to install file.',
-                        default='./content_packs_to_install.txt')
-    parser.add_argument('--only_to_be_installed', help='True if should uninstall only going to be installed packs.',
-                        action='store_true')
+    parser = argparse.ArgumentParser(description="Utility for cleaning Cloud machines.")
+    parser.add_argument("--cloud_machine", help="cloud machine to use, if it is cloud build.")
+    parser.add_argument("--cloud_servers_path", help="Path to secret cloud server metadata file.")
+    parser.add_argument("--cloud_servers_api_keys", help="Path to the file with cloud Servers api keys.")
+    parser.add_argument("--non-removable-packs", help="List of packs that cant be removed.")
+    parser.add_argument("--one-by-one", help="Uninstall pack one pack at a time.", action="store_true")
+    parser.add_argument("--build-number", help="CI job number where the instances were created", required=True)
+    parser.add_argument("--modeling_rules_to_test_files", help="List of modeling rules test data to check.", required=True)
+    parser.add_argument("--reset-core-pack-version", help="Reset the core pack version.", type=string_to_bool)
+    parser.add_argument(
+        "-pl", "--pack_ids_to_install", help="Path to the packs to install file.", default="./content_packs_to_install.txt"
+    )
+    parser.add_argument(
+        "--only_to_be_installed", help="True if should uninstall only going to be installed packs.", action="store_true"
+    )
 
     options = parser.parse_args()
 
@@ -469,74 +490,67 @@ def options_handler() -> argparse.Namespace:
 
 
 def clean_machine(options: argparse.Namespace, cloud_machine: str) -> bool:
-    api_key, _, base_url, xdr_auth_id, ui_url = CloudBuild.get_cloud_configuration(cloud_machine,
-                                                                                   options.cloud_servers_path,
-                                                                                   options.cloud_servers_api_keys)
+    api_key, _, base_url, xdr_auth_id, ui_url = CloudBuild.get_cloud_configuration(
+        cloud_machine, options.cloud_servers_path, options.cloud_servers_api_keys
+    )
 
-    client = demisto_client.configure(base_url=base_url,
-                                      verify_ssl=False,
-                                      api_key=api_key,
-                                      auth_id=xdr_auth_id)
+    client = demisto_client.configure(base_url=base_url, verify_ssl=False, api_key=api_key, auth_id=xdr_auth_id)
     client.api_client.user_agent = get_custom_user_agent(options.build_number)
-    logging.debug(f'Setting user agent on client to: {client.api_client.user_agent}')
+    logging.debug(f"Setting user agent on client to: {client.api_client.user_agent}")
 
     # We are syncing marketplace since we are copying production bucket to build bucket and if packs were configured
     # in earlier builds they will appear in the bucket as it is cached.
     success = sync_marketplace(client=client)
-    non_removable_packs = options.non_removable_packs.split(',')
+    non_removable_packs = options.non_removable_packs.split(",")
     if options.reset_core_pack_version:
-        logging.info('Resets core pack version to prod version.')
+        logging.info("Resets core pack version to prod version.")
         success &= reset_core_pack_version(client, non_removable_packs)
     if success:
         if options.only_to_be_installed:
             packs_to_install = set(fetch_pack_ids_to_install(options.pack_ids_to_install))
-            logging.info(f'Packs that are going to be installed: {packs_to_install}')
+            logging.info(f"Packs that are going to be installed: {packs_to_install}")
             success = uninstall_all_packs_one_by_one(client, cloud_machine, non_removable_packs, packs_to_install)
         elif options.one_by_one:
             success = uninstall_all_packs_one_by_one(client, cloud_machine, non_removable_packs)
         else:
-            success = uninstall_all_packs(client, cloud_machine, non_removable_packs) and \
-                wait_for_uninstallation_to_complete(client, non_removable_packs)
+            success = uninstall_all_packs(client, cloud_machine, non_removable_packs) and wait_for_uninstallation_to_complete(
+                client, non_removable_packs
+            )
     success &= sync_marketplace(client=client)
     if os.getenv("SERVER_TYPE") == "XSIAM":
-        logging.info('Deleting datasets from the machine.')
-        success &= delete_datasets(base_url=base_url,
-                                   api_key=api_key,
-                                   auth_id=xdr_auth_id,
-                                   dataset_names=get_datasets_to_delete(ui_url)
-                                   )
+        logging.info("Deleting datasets from the machine.")
+        success &= delete_datasets(
+            base_url=base_url, api_key=api_key, auth_id=xdr_auth_id, dataset_names=get_datasets_to_delete(ui_url)
+        )
     else:
         logging.info(f'Skipping datasets deletion as the server type:{os.getenv("SERVER_TYPE")} is not XSIAM')
     return success
 
 
 def main():
-    install_logging('cleanup_cloud_instance.log', logger=logging)
+    install_logging("cleanup_cloud_instance.log", logger=logging)
 
     # In Cloud, We don't use demisto username
-    os.environ.pop('DEMISTO_USERNAME', None)
+    os.environ.pop("DEMISTO_USERNAME", None)
 
     options = options_handler()
-    logging.info(f'Starting cleanup for CLOUD servers:{options.cloud_machine}')
-    cloud_machines: list[str] = list(filter(None, options.cloud_machine.split(',')))
+    logging.info(f"Starting cleanup for CLOUD servers:{options.cloud_machine}")
+    cloud_machines: list[str] = list(filter(None, options.cloud_machine.split(",")))
     success = True
-    with ThreadPoolExecutor(max_workers=len(cloud_machines), thread_name_prefix='clean-machine') as executor:
-        futures = [
-            executor.submit(clean_machine, options, cloud_machine)
-            for cloud_machine in cloud_machines
-        ]
+    with ThreadPoolExecutor(max_workers=len(cloud_machines), thread_name_prefix="clean-machine") as executor:
+        futures = [executor.submit(clean_machine, options, cloud_machine) for cloud_machine in cloud_machines]
         for future in as_completed(futures):
             try:
                 success &= future.result()
             except Exception as ex:
-                logging.exception(f'Failed to cleanup machine. Additional info: {ex!s}')
+                logging.exception(f"Failed to cleanup machine. Additional info: {ex!s}")
                 success = False
 
     if not success:
-        logging.error('Failed to uninstall packs.')
+        logging.error("Failed to uninstall packs.")
         sys.exit(2)
-    logging.info('Finished cleanup successfully.')
+    logging.info("Finished cleanup successfully.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -3,23 +3,23 @@ from demisto_sdk.commands.common.constants import SAMPLES_DIR, TESTS_AND_DOC_DIR
 XSOAR_SANITY_TEST_NAMES: tuple[str, ...] = (
     # Skipped until helloworld server will be fixed
     # 'Sanity Test - Playbook with integration',
-    'Sanity Test - Playbook with no integration',
+    "Sanity Test - Playbook with no integration",
     # 'Sanity Test - Playbook with mocked integration',
-    'Sanity Test - Playbook with Unmockable Whois Integration',
+    "Sanity Test - Playbook with Unmockable Whois Integration",
 )
 SANITY_TEST_TO_PACK: dict[str, str] = {
-    'Sanity Test - Playbook with Unmockable Whois Integration': 'Whois',
-    'Sanity Test - Playbook with integration': 'HelloWorld',
-    'Sanity Test - Playbook with no integration': 'HelloWorld',
-    'Sanity Test - Playbook with mocked integration': 'HelloWorld',
+    "Sanity Test - Playbook with Unmockable Whois Integration": "Whois",
+    "Sanity Test - Playbook with integration": "HelloWorld",
+    "Sanity Test - Playbook with no integration": "HelloWorld",
+    "Sanity Test - Playbook with mocked integration": "HelloWorld",
 }
 
 ALWAYS_INSTALLED_PACKS_XSOAR = (
-    'Base',
-    'DeveloperTools',
+    "Base",
+    "DeveloperTools",
 )
 
-ALWAYS_INSTALLED_PACKS_MARKETPLACE_V2 = ALWAYS_INSTALLED_PACKS_XSOAR + ('CoreAlertFields',)
+ALWAYS_INSTALLED_PACKS_MARKETPLACE_V2 = ALWAYS_INSTALLED_PACKS_XSOAR + ("CoreAlertFields",)
 
 ALWAYS_INSTALLED_PACKS_XPANSE = ALWAYS_INSTALLED_PACKS_MARKETPLACE_V2
 
@@ -38,9 +38,9 @@ DEFAULT_MARKETPLACES_WHEN_MISSING: tuple[MarketplaceVersions, ...] = (
 
 SKIPPED_CONTENT_ITEMS__NOT_UNDER_PACK: set[str] = {
     # these are not under packs, and are not supported anymore.
-    'playbook-Jask_Test-4.0.0.yml',
-    'playbook-Recorded_Future_Test_4_0.yml',
-    'playbook-TestCommonPython_4_1.yml',
+    "playbook-Jask_Test-4.0.0.yml",
+    "playbook-Recorded_Future_Test_4_0.yml",
+    "playbook-TestCommonPython_4_1.yml",
 }
 
 NON_CODE_FILE_TYPES_TO_COLLECT: set[FileType] = {
@@ -151,7 +151,7 @@ XSIAM_COMPONENT_FILES: set[FileType] = {
     FileType.CASE_LAYOUT,
 }
 
-TEST_DATA_PATTERN = '*_testdata.json'
+TEST_DATA_PATTERN = "*_testdata.json"
 XSOAR_SAAS = "server_type_XSOAR SAAS"
 XSOAR_ON_PREM = "server_type_XSOAR"
 CONF_FILE = "conf.json"

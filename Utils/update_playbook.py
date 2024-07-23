@@ -76,19 +76,19 @@ def update_replace_copy_dev(playbook):
         inner_task = playbook_task.get("task", {})
 
         if "scriptName" in inner_task:
-            playbook["tasks"][task_id]["task"]["scriptName"] = playbook["tasks"][task_id]["task"]["scriptName"]\
-                .replace("_copy", "")\
-                .replace("_dev", "")
+            playbook["tasks"][task_id]["task"]["scriptName"] = (
+                playbook["tasks"][task_id]["task"]["scriptName"].replace("_copy", "").replace("_dev", "")
+            )
 
         if "playbookName" in inner_task:
-            playbook["tasks"][task_id]["task"]["playbookName"] = playbook["tasks"][task_id]["task"]["playbookName"]\
-                .replace("_copy", "")\
-                .replace("_dev", "")
+            playbook["tasks"][task_id]["task"]["playbookName"] = (
+                playbook["tasks"][task_id]["task"]["playbookName"].replace("_copy", "").replace("_dev", "")
+            )
 
         if "script" in inner_task:
-            playbook["tasks"][task_id]["task"]["script"] = playbook["tasks"][task_id]["task"]["script"] \
-                .replace("_copy", "") \
-                .replace("_dev", "")
+            playbook["tasks"][task_id]["task"]["script"] = (
+                playbook["tasks"][task_id]["task"]["script"].replace("_copy", "").replace("_dev", "")
+            )
 
     return playbook
 
@@ -122,17 +122,14 @@ def update_playbook(source_path, destination_path):
     yaml.SafeDumper.org_represent_str = yaml.SafeDumper.represent_str  # type: ignore[attr-defined]
 
     def repr_str(dumper, data):
-        if '\n' in data:
-            return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+        if "\n" in data:
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
         return dumper.org_represent_str(data)
+
     yaml.add_representer(str, repr_str, Dumper=yamlordereddictloader.SafeDumper)
 
-    with open(destination_path, 'w') as f:
-        yaml.dump(
-            playbook,
-            f,
-            Dumper=yamlordereddictloader.SafeDumper,
-            default_flow_style=False)
+    with open(destination_path, "w") as f:
+        yaml.dump(playbook, f, Dumper=yamlordereddictloader.SafeDumper, default_flow_style=False)
 
     logging.info(f"Finished - new yml saved at {destination_path}")
 

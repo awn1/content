@@ -23,52 +23,52 @@ SDK_NIGHTLY_JOBS = [
 ]
 
 BUCKET_UPLOAD_JOBS = [
-    'cloning-repositories-upload-flow',
-    'run-pre-commit-upload-flow',
-    'run-validations-upload-flow',
-    'run-validations-upload-flow-new-validate-flow',
-    'mpv2-prepare-testing-bucket-upload-flow',
-    'upload-id-set-bucket',
-    'xpanse-prepare-testing-bucket-upload-flow',
-    'xsoar-prepare-testing-bucket-upload-flow',
-    'install-packs-in-server6_11',
-    'install-packs-in-server6_12',
-    'install-packs-in-server-master',
-    'install-packs-in-xsiam-ga',
-    'install-packs-in-xsoar-ng-ga',
-    'upload-packs-to-marketplace',
-    'upload-packs-to-marketplace-v2',
-    'upload-packs-to-xpanse-marketplace',
+    "cloning-repositories-upload-flow",
+    "run-pre-commit-upload-flow",
+    "run-validations-upload-flow",
+    "run-validations-upload-flow-new-validate-flow",
+    "mpv2-prepare-testing-bucket-upload-flow",
+    "upload-id-set-bucket",
+    "xpanse-prepare-testing-bucket-upload-flow",
+    "xsoar-prepare-testing-bucket-upload-flow",
+    "install-packs-in-server6_11",
+    "install-packs-in-server6_12",
+    "install-packs-in-server-master",
+    "install-packs-in-xsiam-ga",
+    "install-packs-in-xsoar-ng-ga",
+    "upload-packs-to-marketplace",
+    "upload-packs-to-marketplace-v2",
+    "upload-packs-to-xpanse-marketplace",
 ]
 
 CONTENT_COMMON_JOBS = [
-    'cloning-repositories',
-    'run-pre-commit',
-    'run-validations',
-    'run-validations-new-validate-flow',
-    'mpv2-prepare-testing-bucket',
-    'xpanse-prepare-testing-bucket',
-    'xsoar-prepare-testing-bucket',
-    'xsoar-saas-prepare-testing-bucket',
-    'xsiam_server_ga',
-    'xsoar_ng_server_ga',
-    'tests_xsoar_server: [Server 6.11]',
-    'tests_xsoar_server: [Server 6.12]',
-    'tests_xsoar_server: [Server Master]',
-    'xsoar-test_playbooks_results',
-    'xsiam-test_playbooks_results',
-    'xsiam-test_modeling_rule_results',
+    "cloning-repositories",
+    "run-pre-commit",
+    "run-validations",
+    "run-validations-new-validate-flow",
+    "mpv2-prepare-testing-bucket",
+    "xpanse-prepare-testing-bucket",
+    "xsoar-prepare-testing-bucket",
+    "xsoar-saas-prepare-testing-bucket",
+    "xsiam_server_ga",
+    "xsoar_ng_server_ga",
+    "tests_xsoar_server: [Server 6.11]",
+    "tests_xsoar_server: [Server 6.12]",
+    "tests_xsoar_server: [Server Master]",
+    "xsoar-test_playbooks_results",
+    "xsiam-test_playbooks_results",
+    "xsiam-test_modeling_rule_results",
 ]
 
 CONTENT_PR_JOBS = CONTENT_COMMON_JOBS + [
-    'validate-content-conf',
-    'test-upload-flow',
-    'stop-running-pipelines',
+    "validate-content-conf",
+    "test-upload-flow",
+    "stop-running-pipelines",
 ]
 
 CONTENT_MERGE_JOBS = CONTENT_COMMON_JOBS + [
-    'merge-dev-secrets',
-    'xsoar_ng_server_ga',
+    "merge-dev-secrets",
+    "xsoar_ng_server_ga",
 ]
 
 CONTENT_NIGHTLY_JOBS = CONTENT_COMMON_JOBS
@@ -85,15 +85,18 @@ JOBS_PER_TRIGGERING_WORKFLOW = {
 
 def parse_args():
     parser = ArgumentParser()
-    parser.add_argument('--job-done-files', required=True, help='the folder where the job files are located')
+    parser.add_argument("--job-done-files", required=True, help="the folder where the job files are located")
     parser.add_argument(
-        '-tw', '--triggering-workflow', help='The type of ci pipeline workflow the notifier is reporting on',
-        choices=WORKFLOW_TYPES)
+        "-tw",
+        "--triggering-workflow",
+        help="The type of ci pipeline workflow the notifier is reporting on",
+        choices=WORKFLOW_TYPES,
+    )
     return parser.parse_args()
 
 
 def main():
-    install_logging('check_jobs_done.log', logger=logging)
+    install_logging("check_jobs_done.log", logger=logging)
     args = parse_args()
 
     base_path = Path(args.job_done_files)
@@ -101,12 +104,12 @@ def main():
     for job in JOBS_PER_TRIGGERING_WORKFLOW[args.triggering_workflow]:
         if "new-validate-flow" in job:
             continue
-        job_file = base_path / f'{job}.txt'
-        logging.info(f'checking job {job} with file {job_file} in {job_file.absolute()}')
+        job_file = base_path / f"{job}.txt"
+        logging.info(f"checking job {job} with file {job_file} in {job_file.absolute()}")
         if not job_file.exists():
             logging.error(f"job {job} is not done yet")
             should_fail = True
-        elif job_file.read_text().strip() != 'done':
+        elif job_file.read_text().strip() != "done":
             logging.error(f"something isn't OK with job name {job}")
             should_fail = True
 
@@ -114,5 +117,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

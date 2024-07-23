@@ -6,7 +6,7 @@ from demisto_sdk.commands.common.tools import find_type, run_command
 
 from Tests.scripts.spell_checker import spell_checker
 
-IGNORED_FILES = ['.devcontainer/devcontainer.json', '.vscode/extensions.json']
+IGNORED_FILES = [".devcontainer/devcontainer.json", ".vscode/extensions.json"]
 
 
 def get_modified_files(files_string):
@@ -18,7 +18,7 @@ def get_modified_files(files_string):
     Returns:
         (yml_files, md_files). Tuple of sets.
     """
-    all_files = files_string.split('\n')
+    all_files = files_string.split("\n")
     yml_files = set([])
     md_files = set([])
     for f in all_files:
@@ -30,14 +30,13 @@ def get_modified_files(files_string):
         file_path = file_data[1]
         if file_path in IGNORED_FILES:
             continue
-        if file_path.endswith(('.js', '.py')):
+        if file_path.endswith((".js", ".py")):
             continue
-        if file_status.lower().startswith('r'):
+        if file_status.lower().startswith("r"):
             file_path = file_data[2]
 
-        if file_status.lower() == 'm' or file_status.lower() == 'a' or file_status.lower().startswith('r'):
-            if find_type(file_path) in [FileType.INTEGRATION, FileType.BETA_INTEGRATION, FileType.SCRIPT,
-                                        FileType.PLAYBOOK]:
+        if file_status.lower() == "m" or file_status.lower() == "a" or file_status.lower().startswith("r"):
+            if find_type(file_path) in [FileType.INTEGRATION, FileType.BETA_INTEGRATION, FileType.SCRIPT, FileType.PLAYBOOK]:
                 yml_files.add(file_path)
             elif re.match(DESCRIPTION_REGEX, file_path, re.IGNORECASE):
                 md_files.add(file_path)

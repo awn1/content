@@ -22,18 +22,16 @@ install_logging("find_pack_dependencies_changes.log", logger=logger)
 
 def parse_args() -> Namespace:
     options = ArgumentParser()
-    options.add_argument('--gitlab-token', required=True, help='A GitLab API token')
-    options.add_argument('--master-sha', required=True, help='master branch commit SHA')
-    options.add_argument('--job-name', required=True, help='The job name to take the artifact from')
-    options.add_argument('--artifacts-folder', required=True, help='Artifacts folder to write the output to')
+    options.add_argument("--gitlab-token", required=True, help="A GitLab API token")
+    options.add_argument("--master-sha", required=True, help="master branch commit SHA")
+    options.add_argument("--job-name", required=True, help="The job name to take the artifact from")
+    options.add_argument("--artifacts-folder", required=True, help="Artifacts folder to write the output to")
     return options.parse_args()
 
 
 def log_deps_change(pack_id: str, data: dict, change_type: str) -> None:
     data_str = json.dumps(data, indent=4)
-    logger.debug(
-        f"{change_type.title()} pack {pack_id} dependencies: {data_str}"
-    )
+    logger.debug(f"{change_type.title()} pack {pack_id} dependencies: {data_str}")
 
 
 def compare_field(pack_id: str, previous: dict, current: dict, res: dict, field: str) -> None:
@@ -52,9 +50,7 @@ def compare_field(pack_id: str, previous: dict, current: dict, res: dict, field:
         res.setdefault("removed", {})[field] = removed
 
     if modified := {
-        k: v for k, v in current[field].items()
-        if k in previous[field]
-        and v["mandatory"] != previous[field][k]["mandatory"]
+        k: v for k, v in current[field].items() if k in previous[field] and v["mandatory"] != previous[field][k]["mandatory"]
     }:
         log_deps_change(pack_id, modified, "modified")
         res.setdefault("modified", {})[field] = modified
@@ -82,17 +78,14 @@ def get_pack_diff(pack_id: str, previous: dict, current: dict) -> dict:
 
 def compare(previous: dict, current: dict) -> dict:
     diff: dict = {}
-    for pack_id in (previous.keys() | current.keys()):
+    for pack_id in previous.keys() | current.keys():
         if pack_diff := get_pack_diff(pack_id, previous, current):
             diff[pack_id] = pack_diff
     return diff
 
 
 def get_diff(args: Namespace) -> dict:  # pragma: no cover
-    logger.info(
-        f"Comparing {PACKS_DEPENDENCIES_FILENAME} of current branch "
-        f"and master branch (commit: {args.master_sha})"
-    )
+    logger.info(f"Comparing {PACKS_DEPENDENCIES_FILENAME} of current branch " f"and master branch (commit: {args.master_sha})")
     absolute_artifacts_folder = Path(args.artifacts_folder)
     relative_artifacts_folder = absolute_artifacts_folder.relative_to(ARTIFACTS_DIR_LOCATION)
     gitlab_client = GitlabClient(args.gitlab_token)
@@ -104,9 +97,7 @@ def get_diff(args: Namespace) -> dict:  # pragma: no cover
             ref="master",
         )
     )
-    current_packs_dependencies_json = json.loads(
-        (absolute_artifacts_folder / PACKS_DEPENDENCIES_FILENAME).read_text()
-    )
+    current_packs_dependencies_json = json.loads((absolute_artifacts_folder / PACKS_DEPENDENCIES_FILENAME).read_text())
     return compare(master_packs_dependencies_json, current_packs_dependencies_json)
 
 
@@ -121,5 +112,5 @@ def main():  # pragma: no cover
         logger.warning(f"Skipping pack dependencies calculation: \n{e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

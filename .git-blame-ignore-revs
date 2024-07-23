@@ -1,0 +1,7 @@
+# read about this file at https://docs.github.com/en/repositories/working-with-files/using-files/viewing-a-file#ignore-commits-in-the-blame-view
+# Most IDEs support it, GitHub's Web UI supports it, but GitLab's Web UI doesn't yet (https://gitlab.com/gitlab-org/gitlab/-/issues/31423)
+
+# IMPORTANT: Add a comment before each commit hash, explaining why it's listed here
+
+# Applied ruff-format to the whole infra repo
+9bed4f0a5a5d204b8195641fca9050779711adb6

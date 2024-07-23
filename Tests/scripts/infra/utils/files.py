@@ -1,6 +1,7 @@
 """
 Various utility methods for working with files
 """
+
 import json
 import logging
 from json import JSONDecodeError
@@ -14,5 +15,5 @@ def read_json_file(path: Path) -> dict:
     try:
         return json.loads(path.read_text())
     except (JSONDecodeError, FileNotFoundError) as e:
-        logger.error(f'Failed parsing json file at {path}: {e}')
+        logger.error(f"Failed parsing json file at {path}: {e}")
         raise

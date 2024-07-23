@@ -26,7 +26,7 @@ from infra.xsoar_api import XsoarClient, XsiamClient  # noqa
 ARTIFACTS_FOLDER = os.environ["ARTIFACTS_FOLDER"]
 GITLAB_ARTIFACTS_URL = os.environ["GITLAB_ARTIFACTS_URL"]
 CI_JOB_ID = os.environ["CI_JOB_ID"]
-SLACK_WORKSPACE_NAME = os.getenv('SLACK_WORKSPACE_NAME', '')
+SLACK_WORKSPACE_NAME = os.getenv("SLACK_WORKSPACE_NAME", "")
 XDR_PERMISSIONS_DEV = os.environ["XDR_PERMISSIONS_DEV"]
 XDR_UPGRADE_CHANNEL_DEV = os.environ["XDR_UPGRADE_CHANNEL_DEV"]
 XDR_UPGRADE_CHANNEL_ID_DEV = os.environ["XDR_UPGRADE_CHANNEL_ID_DEV"]
@@ -41,14 +41,13 @@ TTL_EXPIRED_DAYS = timedelta(days=int(os.getenv("TTL_EXPIRED_DAYS", TTL_EXPIRED_
 TOKENS_COUNT_PERCENTAGE_THRESHOLD_DEFAULT = 80  # % of the disposable tenants tokens usage to raise a warning.
 TOKENS_COUNT_PERCENTAGE_THRESHOLD = int(os.getenv("TOKENS_COUNT_PERCENTAGE_THRESHOLD", TOKENS_COUNT_PERCENTAGE_THRESHOLD_DEFAULT))
 MAX_OWNERS_TO_NOTIFY_DISPLAY = 5
-BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT = {
-    XsiamClient.PLATFORM_TYPE: ["build", "nightly"]
-}
+BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT = {XsiamClient.PLATFORM_TYPE: ["build", "nightly"]}
 COMMENT_FIELD_NAME = "__comment__"
 
 
-def create_column(tenants: bool, key: str, data: str, exportable: bool, visible: bool, add_class: bool, filterable: bool,
-                  **kwargs) -> dict:
+def create_column(
+    tenants: bool, key: str, data: str, exportable: bool, visible: bool, add_class: bool, filterable: bool, **kwargs
+) -> dict:
     return {
         "tenants": tenants,
         "key": key,
@@ -57,65 +56,73 @@ def create_column(tenants: bool, key: str, data: str, exportable: bool, visible:
         "visible": visible,
         "add_class": add_class,
         "filterable": filterable,
-        **kwargs
+        **kwargs,
     }
 
 
 def generate_columns(without_viso: bool) -> list[dict]:
     columns = [
-        create_column(False, '', '', False, True, False, False, className='dt-control', orderable='false', defaultContent=''),
-        create_column(False, 'host', 'Host', True, True, False, False),
-        create_column(False, 'machine_name', 'Machine Name', True, True, False, False),
-        create_column(False, 'enabled', 'Enabled', True, True, True, True),
-        create_column(False, 'flow_type', 'Flow Type', True, True, True, True),
-        create_column(False, 'platform_type', 'Platform Type', True, True, True, True),
-        create_column(False, 'version', 'Server Version', True, True, True, True),
-        create_column(False, 'lcaas_id', 'LCAAS ID', True, True, True, False),
-        create_column(True, 'ttl', 'TTL', True, True, True, False),
-        create_column(True, 'owner', 'Owner', True, False, True, True),
-        create_column(True, 'tenant_status', 'Tenant Status', True, False, True, True),
-        create_column(False, 'build_machine', 'Build Machine', True, False, True, True),
-        create_column(False, 'comment', 'Comment', True, False, False, False),
-        create_column(True, 'disposable', 'Disposable', True, False, True, True),
-        create_column(False, 'connectable', 'Connectable', False, False, False, True),
-        create_column(False, 'agent_host_name', 'Agent Host Name', True, False, True, False),
-        create_column(False, 'agent_host_ip', 'Agent IP', True, False, True, False),
+        create_column(False, "", "", False, True, False, False, className="dt-control", orderable="false", defaultContent=""),
+        create_column(False, "host", "Host", True, True, False, False),
+        create_column(False, "machine_name", "Machine Name", True, True, False, False),
+        create_column(False, "enabled", "Enabled", True, True, True, True),
+        create_column(False, "flow_type", "Flow Type", True, True, True, True),
+        create_column(False, "platform_type", "Platform Type", True, True, True, True),
+        create_column(False, "version", "Server Version", True, True, True, True),
+        create_column(False, "lcaas_id", "LCAAS ID", True, True, True, False),
+        create_column(True, "ttl", "TTL", True, True, True, False),
+        create_column(True, "owner", "Owner", True, False, True, True),
+        create_column(True, "tenant_status", "Tenant Status", True, False, True, True),
+        create_column(False, "build_machine", "Build Machine", True, False, True, True),
+        create_column(False, "comment", "Comment", True, False, False, False),
+        create_column(True, "disposable", "Disposable", True, False, True, True),
+        create_column(False, "connectable", "Connectable", False, False, False, True),
+        create_column(False, "agent_host_name", "Agent Host Name", True, False, True, False),
+        create_column(False, "agent_host_ip", "Agent IP", True, False, True, False),
     ]
     if without_viso:
         return list(filter(lambda c: c["tenants"] is False, columns))
     return columns
 
 
-def create_report(current_date: str, records: list[dict],
-                  columns: list[dict],
-                  columns_filterable: list[int],
-                  managers: list[str]) -> str:
-
+def create_report(
+    current_date: str, records: list[dict], columns: list[dict], columns_filterable: list[int], managers: list[str]
+) -> str:
     template_path = Path(__file__).parent / "BuildMachines" / "templates"
     env = Environment(loader=FileSystemLoader(template_path))
     template = env.get_template("ReportTemplate.html")
     logging.info("Successfully loaded template.")
     report_title = f"Build Machines Report - {current_date}"
-    content = template.render(records=records, report_title=report_title,
-                              columns_json=json.dumps(columns), columns=columns,
-                              columns_filterable=columns_filterable, managers=managers,
-                              xdr_permissions_dev=XDR_PERMISSIONS_DEV,
-                              xdr_upgrade_channel_dev=XDR_UPGRADE_CHANNEL_DEV,
-                              permission_role=PERMISSION_ROLE)
+    content = template.render(
+        records=records,
+        report_title=report_title,
+        columns_json=json.dumps(columns),
+        columns=columns,
+        columns_filterable=columns_filterable,
+        managers=managers,
+        xdr_permissions_dev=XDR_PERMISSIONS_DEV,
+        xdr_upgrade_channel_dev=XDR_UPGRADE_CHANNEL_DEV,
+        permission_role=PERMISSION_ROLE,
+    )
     logging.info("Successfully rendered report.")
     return content
 
 
 def options_handler() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description='Script to generate a report for the build machines.')
-    parser.add_argument('--xsiam-json', type=str, action="store", required=True, help='Tenant json for xsiam tenants')
-    parser.add_argument('--xsoar-ng-json', type=str, action="store", required=True, help='Tenant files for xsoar-ng tenants')
-    parser.add_argument('-o', '--output-path', required=True, help='The path to save the report to.')
-    parser.add_argument('-n', '--name-mapping_path', help='Path to name mapping file.', required=False)
-    parser.add_argument('-t', '--test-data', help="Use test data and don't connect to the servers.", required=False)
-    parser.add_argument('-wv', '--without-viso', type=common.string_to_bool, default=WITHOUT_VISO,
-                        help="Don't connect to Viso to get tenants data.", required=False)
+    parser = argparse.ArgumentParser(description="Script to generate a report for the build machines.")
+    parser.add_argument("--xsiam-json", type=str, action="store", required=True, help="Tenant json for xsiam tenants")
+    parser.add_argument("--xsoar-ng-json", type=str, action="store", required=True, help="Tenant files for xsoar-ng tenants")
+    parser.add_argument("-o", "--output-path", required=True, help="The path to save the report to.")
+    parser.add_argument("-n", "--name-mapping_path", help="Path to name mapping file.", required=False)
+    parser.add_argument("-t", "--test-data", help="Use test data and don't connect to the servers.", required=False)
+    parser.add_argument(
+        "-wv",
+        "--without-viso",
+        type=common.string_to_bool,
+        default=WITHOUT_VISO,
+        help="Don't connect to Viso to get tenants data.",
+        required=False,
+    )
     return parser.parse_args()
 
 
@@ -150,7 +157,6 @@ def get_datetime_from_epoch(epoch: str) -> datetime:
 
 
 def generate_ttl_class(expired: bool | None = None):
-
     return "expired" if expired else "ok" if expired is not None else "na"
 
 
@@ -165,13 +171,12 @@ def tenant_status_has_error(status: str) -> bool:
 
 
 def generate_tenant_status_cell(status: str) -> dict:
-    return generate_cell(status, status, 'error' if tenant_status_has_error(status) else 'ok')
+    return generate_cell(status, status, "error" if tenant_status_has_error(status) else "ok")
 
 
 def get_record_for_tenant(tenant, current_date: datetime):
     if "thread_ts" in tenant:
-        slack_link = build_link_to_message(XDR_UPGRADE_CHANNEL_ID_DEV,
-                                           get_message_p_from_ts(tenant["thread_ts"]))
+        slack_link = build_link_to_message(XDR_UPGRADE_CHANNEL_ID_DEV, get_message_p_from_ts(tenant["thread_ts"]))
         slack_link_cell = generate_cell(generate_html_link("Slack thread", slack_link), tenant["thread_ts"])
     else:
         slack_link = build_link_to_channel(XDR_UPGRADE_CHANNEL_ID_DEV)
@@ -186,14 +191,17 @@ def get_record_for_tenant(tenant, current_date: datetime):
     }
 
 
-def get_version_from(xsoar_admin_user: XSOARAdminUser, client_type: type[XsoarClient], host: str, key: str,
-                     project_id: str) -> dict | None:
+def get_version_from(
+    xsoar_admin_user: XSOARAdminUser, client_type: type[XsoarClient], host: str, key: str, project_id: str
+) -> dict | None:
     try:
-        client = client_type(xsoar_host=host,
-                             xsoar_user=xsoar_admin_user.username,
-                             xsoar_pass=xsoar_admin_user.password,
-                             tenant_name=key,
-                             project_id=project_id)
+        client = client_type(
+            xsoar_host=host,
+            xsoar_user=xsoar_admin_user.username,
+            xsoar_pass=xsoar_admin_user.password,
+            tenant_name=key,
+            project_id=project_id,
+        )
         client.login_auth(force_login=True)
         return client.get_version_info()
     except Exception as e:
@@ -208,12 +216,14 @@ def generate_cell_dict_key(record: dict, key: str, default_value: Any = NOT_AVAI
     return generate_cell(default_value, "")
 
 
-def generate_records(configuration_file_json_records: dict,
-                     xsoar_admin_user: XSOARAdminUser,
-                     client_type: type[XsoarClient],
-                     tenants: dict,
-                     without_viso: bool,
-                     current_date: datetime) -> list[dict]:
+def generate_records(
+    configuration_file_json_records: dict,
+    xsoar_admin_user: XSOARAdminUser,
+    client_type: type[XsoarClient],
+    tenants: dict,
+    without_viso: bool,
+    current_date: datetime,
+) -> list[dict]:
     records = []
     lcaas_ids = set()
     for key, value in configuration_file_json_records.items():
@@ -326,11 +336,13 @@ def main() -> None:
                 logging.debug(f"Failed to get tenants: {e}")
                 logging.error("Failed to get tenants")
                 tenants = {}
-                slack_msg_append.append({
-                    "color": "danger",
-                    "title": "Failed to get tenants",
-                    "fallback": "Failed to get tenants",
-                })
+                slack_msg_append.append(
+                    {
+                        "color": "danger",
+                        "title": "Failed to get tenants",
+                        "fallback": "Failed to get tenants",
+                    }
+                )
             try:
                 tokens_count = viso_api.get_disposable_token_count(CONTENT_TENANTS_GROUP_OWNER)
                 logging.info(f"Got disposable tenants tokens count:{tokens_count} for group owner:{CONTENT_TENANTS_GROUP_OWNER}")
@@ -338,11 +350,13 @@ def main() -> None:
                 logging.debug(f"Failed to get disposable tenants tokens count: {e}")
                 logging.error("Failed to get disposable tenants tokens count")
                 tokens_count = None
-                slack_msg_append.append({
-                    "color": "danger",
-                    "title": "Failed to get disposable tenants tokens count",
-                    "fallback": "Failed to get disposable tenants tokens count",
-                })
+                slack_msg_append.append(
+                    {
+                        "color": "danger",
+                        "title": "Failed to get disposable tenants tokens count",
+                        "fallback": "Failed to get disposable tenants tokens count",
+                    }
+                )
 
         current_date = datetime.utcnow()
         current_date_str = current_date.strftime("%Y-%m-%d")
@@ -365,10 +379,7 @@ def main() -> None:
         columns = generate_columns(args.without_viso)
         static_columns = {column["key"] for column in columns if column["key"]}
         dynamic_columns = list({key for record in records for key in record.keys() if key not in static_columns})
-        columns.extend([
-            create_column(False, key, key, False, False, False, False)
-            for key in dynamic_columns
-        ])
+        columns.extend([create_column(False, key, key, False, False, False, False) for key in dynamic_columns])
         columns_filterable = [i for i, c in enumerate(columns) if c["filterable"]]
         disabled_machines_count = set()
         non_connectable_machines_count = set()
@@ -387,9 +398,11 @@ def main() -> None:
                     non_connectable_machines_count.add(machine_name)
                 if record.get("ttl", {}).get("column_class") == generate_ttl_class(True):
                     ttl_expired_count.add(machine_name)
-                if (record.get("agent_host_name", {}).get("display") == NOT_AVAILABLE and
-                        platform_type in BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT and
-                        flow_type in BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT[platform_type]):
+                if (
+                    record.get("agent_host_name", {}).get("display") == NOT_AVAILABLE
+                    and platform_type in BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT
+                    and flow_type in BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT[platform_type]
+                ):
                     build_machines_requiring_an_agent[flow_type].add(machine_name)
             if not args.without_viso:
                 # Count the number of machines per owner per machine type, only if they don't have a flow type.
@@ -407,70 +420,61 @@ def main() -> None:
                     break
         if owners_to_notify:
             owners_to_notify_list = list(owners_to_notify)
-            owners_to_notify_str = (f"{','.join(map(lambda o: f'@{o}', owners_to_notify_list[:MAX_OWNERS_TO_NOTIFY_DISPLAY]))}"
-                                    f"{' ...' if len(owners_to_notify_list) > MAX_OWNERS_TO_NOTIFY_DISPLAY else ''}")
+            owners_to_notify_str = (
+                f"{','.join(map(lambda o: f'@{o}', owners_to_notify_list[:MAX_OWNERS_TO_NOTIFY_DISPLAY]))}"
+                f"{' ...' if len(owners_to_notify_list) > MAX_OWNERS_TO_NOTIFY_DISPLAY else ''}"
+            )
             title = f"Owners with multiple machines: {owners_to_notify_str}"
-            slack_msg_append.append({
-                "color": "warning",
-                "title": title,
-                "fallback": title,
-            })
+            slack_msg_append.append(
+                {
+                    "color": "warning",
+                    "title": title,
+                    "fallback": title,
+                }
+            )
         if non_connectable_machines_count:
             title = f"Build Machines - Non connectable:{len(non_connectable_machines_count)}"
-            slack_msg_append.append({
-                "color": "danger",
-                "title": title,
-                "fallback": title,
-                "fields": [
-                    {
-                        "title": "Machine Name(s)",
-                        "value": ", ".join(non_connectable_machines_count),
-                        "short": True
-                    }
-                ]
-            })
+            slack_msg_append.append(
+                {
+                    "color": "danger",
+                    "title": title,
+                    "fallback": title,
+                    "fields": [{"title": "Machine Name(s)", "value": ", ".join(non_connectable_machines_count), "short": True}],
+                }
+            )
         if disabled_machines_count:
             title = f"Build Machines - Disabled:{len(disabled_machines_count)}"
-            slack_msg_append.append({
-                "color": "warning",
-                "title": title,
-                "fallback": title,
-                "fields": [
-                    {
-                        "title": "Machine Name(s)",
-                        "value": ", ".join(disabled_machines_count),
-                        "short": True
-                    }
-                ]
-            })
+            slack_msg_append.append(
+                {
+                    "color": "warning",
+                    "title": title,
+                    "fallback": title,
+                    "fields": [{"title": "Machine Name(s)", "value": ", ".join(disabled_machines_count), "short": True}],
+                }
+            )
         if ttl_expired_count:
             title = f"Build Machines - With Expired TTL:{len(ttl_expired_count)}"
-            slack_msg_append.append({
-                "color": "danger",
-                "title": title,
-                "fallback": title,
-                "fields": [
-                    {
-                        "title": "Machine Name(s)",
-                        "value": ", ".join(ttl_expired_count),
-                        "short": True
-                    }
-                ]
-            })
+            slack_msg_append.append(
+                {
+                    "color": "danger",
+                    "title": title,
+                    "fallback": title,
+                    "fields": [{"title": "Machine Name(s)", "value": ", ".join(ttl_expired_count), "short": True}],
+                }
+            )
         if build_machines_requiring_an_agent:
             title = f"Build Machines - Requiring an Agent:{len(build_machines_requiring_an_agent)}"
-            slack_msg_append.append({
-                "color": "danger",
-                "title": title,
-                "fallback": title,
-                "fields": [
-                    {
-                        "title": f"Flow Type - {key}",
-                        "value": ", ".join(value),
-                        "short": True
-                    } for key, value in build_machines_requiring_an_agent.items()
-                ]
-            })
+            slack_msg_append.append(
+                {
+                    "color": "danger",
+                    "title": title,
+                    "fallback": title,
+                    "fields": [
+                        {"title": f"Flow Type - {key}", "value": ", ".join(value), "short": True}
+                        for key, value in build_machines_requiring_an_agent.items()
+                    ],
+                }
+            )
         if tokens_count is not None:
             tokens_percentage = int((len(tenants) / tokens_count) * 100)
             title = f"Disposable Tenants Tokens - Total:{tokens_count}, Used:{len(tenants)}"
@@ -479,11 +483,13 @@ def main() -> None:
                 color = "danger"
             else:
                 color = "good"
-            slack_msg_append.append({
-                "color": color,
-                "title": title,
-                "fallback": title,
-            })
+            slack_msg_append.append(
+                {
+                    "color": color,
+                    "title": title,
+                    "fallback": title,
+                }
+            )
 
         # Save the records to a json file for future use and debugging.
         with open(output_path / "records.json", "w") as f:
@@ -491,29 +497,44 @@ def main() -> None:
 
         report = create_report(current_date_str, records, columns, columns_filterable, managers)
         report_file_name = f"Report_{current_date_str}.html"
-        with open(output_path / report_file_name, 'w') as report_file:
+        with open(output_path / report_file_name, "w") as report_file:
             report_file.write(report)
 
         with open(output_path / "slack_msg.txt", "w") as slack_msg_file:
             report_url = f"{GITLAB_ARTIFACTS_URL}/{CI_JOB_ID}/artifacts/{ARTIFACTS_FOLDER}/{report_file_name}"
             title = f"Click here to view Build machines report for {current_date_str}"
-            json.dump([{
-                "color": "good",
-                "title": title,
-                "fallback": title,
-                "title_link": report_url,
-            }] + slack_msg_append, slack_msg_file, indent=4, default=str, sort_keys=True)
+            json.dump(
+                [
+                    {
+                        "color": "good",
+                        "title": title,
+                        "fallback": title,
+                        "title_link": report_url,
+                    }
+                ]
+                + slack_msg_append,
+                slack_msg_file,
+                indent=4,
+                default=str,
+                sort_keys=True,
+            )
     except Exception as e:
         logging.exception(f"Failed to create report: {e}")
         with contextlib.suppress(Exception):
             with open(output_path / "slack_msg.txt", "w") as slack_msg_file:
-                json.dump({
-                    "title": "Build Machines Report Generation Failed",
-                    "color": "danger",
-                }, slack_msg_file, indent=4, default=str, sort_keys=True)
+                json.dump(
+                    {
+                        "title": "Build Machines Report Generation Failed",
+                        "color": "danger",
+                    },
+                    slack_msg_file,
+                    indent=4,
+                    default=str,
+                    sort_keys=True,
+                )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
     logging.basicConfig(format="[%(levelname)-8s] [%(name)s] %(message)s")
     main()

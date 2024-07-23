@@ -17,9 +17,10 @@ def get_base_branch(pr_num):
 
     # Disable insecure warnings
     import urllib3
+
     urllib3.disable_warnings()
 
-    url = f'https://api.github.com/repos/demisto/content/pulls/{pr_num}'
+    url = f"https://api.github.com/repos/demisto/content/pulls/{pr_num}"
 
     try:
         res = requests.get(url, verify=False)
@@ -28,13 +29,13 @@ def get_base_branch(pr_num):
         if pr and isinstance(pr, list) and len(pr) == 1:
             # github usually returns a list of PRs, if not pr is a dict
             pr = pr[0]
-        return pr.get('base', {}).get('ref', '')
+        return pr.get("base", {}).get("ref", "")
 
     except (requests.exceptions.HTTPError, ValueError) as e:
         # If we didn't succeed to fetch pr for any http error / res.json() we raise an error
         # then we don't want the build to fail
-        print(f'Unable to fetch pull request #{pr_num}.\nError: {e!s}')
-        return ''
+        print(f"Unable to fetch pull request #{pr_num}.\nError: {e!s}")
+        return ""
 
 
 def verify_base_branch(pr_num):
@@ -47,15 +48,15 @@ def verify_base_branch(pr_num):
         True if valid, False otherwise. And attaches the appropriate message to the user.
     """
 
-    print(f'Fetching the base branch of pull request #{pr_num}.')
+    print(f"Fetching the base branch of pull request #{pr_num}.")
     base_branch = get_base_branch(pr_num)
-    if base_branch == 'master':
-        return 'Cannot merge a contribution directly to master, the pull request reviewer will handle that soon.', False
+    if base_branch == "master":
+        return "Cannot merge a contribution directly to master, the pull request reviewer will handle that soon.", False
     else:
-        return f'Verified pull request #{pr_num} base branch successfully.', True
+        return f"Verified pull request #{pr_num} base branch successfully.", True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     circle_branch = sys.argv[1]
     pr_numbers_list = re.findall(EXTERNAL_PR_REGEX, circle_branch, re.IGNORECASE)
     if pr_numbers_list:
@@ -67,4 +68,4 @@ if __name__ == '__main__':
             print(msg)
             sys.exit(1)
     else:
-        print('Unable to fetch pull request.')
+        print("Unable to fetch pull request.")

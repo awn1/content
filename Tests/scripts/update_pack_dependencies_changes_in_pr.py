@@ -38,14 +38,14 @@ install_logging("update_pack_dependencies_changes_in_pr.log", logger=logger)
 
 def parse_args() -> Namespace:
     options = ArgumentParser()
-    options.add_argument('--artifacts-folder', required=True, help='The artifacts folder')
-    options.add_argument('--github-token', required=True, help='A GitHub API token')
-    options.add_argument('--current-sha', required=True, help='Current branch commit SHA')
-    options.add_argument('--current-branch', required=True, help='Current branch name')
+    options.add_argument("--artifacts-folder", required=True, help="The artifacts folder")
+    options.add_argument("--github-token", required=True, help="A GitHub API token")
+    options.add_argument("--current-sha", required=True, help="Current branch commit SHA")
+    options.add_argument("--current-branch", required=True, help="Current branch name")
     options.add_argument(
-        '--mandatory-only',
+        "--mandatory-only",
         type=str2bool,
-        help='If true, shows only new/modified mandatory dependencies',
+        help="If true, shows only new/modified mandatory dependencies",
         default=False,
     )
     return options.parse_args()
@@ -89,11 +89,7 @@ def get_summary(diff: dict, core_packs: set, mandatory_only: bool) -> str:
     def drop_non_mandatory_dependencies(pack_data: dict[str, dict[str, dict]]) -> dict:
         return {
             change_type: {
-                dep_field: {
-                    dep_id: dep_data
-                    for dep_id, dep_data in dependencies_data.items()
-                    if dep_data["mandatory"]
-                }
+                dep_field: {dep_id: dep_data for dep_id, dep_data in dependencies_data.items() if dep_data["mandatory"]}
                 for dep_field, dependencies_data in change_data.items()
             }
             for change_type, change_data in pack_data.items()
@@ -113,12 +109,15 @@ def get_summary(diff: dict, core_packs: set, mandatory_only: bool) -> str:
                     f"{' (core pack)' if pack_id in core_packs else ''} - "
                     f"{'all' if dep_field.startswith('all') else 'first'}-level dependencies:"
                 )
-                s_lines.extend([
-                    CHANGE_TYPE_TO_TEMPLATE[change_type].safe_substitute(
-                        dep_id=dep_id,
-                        m_level=BOOL_TO_M_LEVEL[dep_data['mandatory']],
-                    ) for dep_id, dep_data in dependencies_data.items()
-                ])
+                s_lines.extend(
+                    [
+                        CHANGE_TYPE_TO_TEMPLATE[change_type].safe_substitute(
+                            dep_id=dep_id,
+                            m_level=BOOL_TO_M_LEVEL[dep_data["mandatory"]],
+                        )
+                        for dep_id, dep_data in dependencies_data.items()
+                    ]
+                )
     if s := "\n".join(s_lines):
         logger.info(s)
     return s
@@ -173,5 +172,5 @@ def main():  # pragma: no cover
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

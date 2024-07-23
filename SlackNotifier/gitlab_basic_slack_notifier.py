@@ -9,25 +9,26 @@ import requests
 from slack_sdk import WebClient
 from slack_sdk.web import SlackResponse
 
-CONTENT_CHANNEL = 'dmst-build-test'
+CONTENT_CHANNEL = "dmst-build-test"
 
-SLACK_USERNAME = 'Content GitlabCI'
+SLACK_USERNAME = "Content GitlabCI"
 
-SLACK_WORKSPACE_NAME = os.getenv('SLACK_WORKSPACE_NAME', '')
+SLACK_WORKSPACE_NAME = os.getenv("SLACK_WORKSPACE_NAME", "")
 
 
 def options_handler() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Parser for slack_notifier args')
-    parser.add_argument('-s', '--slack_token', help='The token for slack', required=True)
-    parser.add_argument('-t', '--message_text', help='The message text')
-    parser.add_argument('-f', '--file', help='File path with the text to send')
-    parser.add_argument('-gt', '--gitlab_token', help='Gitlab API token, required when using the --github_username argument')
-    parser.add_argument('-gu', '--github_username', help='Github username to tag in the message')
+    parser = argparse.ArgumentParser(description="Parser for slack_notifier args")
+    parser.add_argument("-s", "--slack_token", help="The token for slack", required=True)
+    parser.add_argument("-t", "--message_text", help="The message text")
+    parser.add_argument("-f", "--file", help="File path with the text to send")
+    parser.add_argument("-gt", "--gitlab_token", help="Gitlab API token, required when using the --github_username argument")
+    parser.add_argument("-gu", "--github_username", help="Github username to tag in the message")
     parser.add_argument(
-        '-ch', '--slack_channel', help='The slack channel in which to send the notification', default=CONTENT_CHANNEL
+        "-ch", "--slack_channel", help="The slack channel in which to send the notification", default=CONTENT_CHANNEL
     )
-    parser.add_argument('-a', '--allow-failure',
-                        help="Allow posting message to fail in case the channel doesn't exist", required=True)
+    parser.add_argument(
+        "-a", "--allow-failure", help="Allow posting message to fail in case the channel doesn't exist", required=True
+    )
     return parser.parse_args()
 
 
@@ -35,8 +36,8 @@ def build_link_to_message(response: SlackResponse) -> str:
     logging.info("Building link to message")
     if SLACK_WORKSPACE_NAME and response.status_code == requests.codes.ok:
         data: dict = response.data  # type: ignore[assignment]
-        channel_id: str = data['channel']
-        message_ts: str = data['ts'].replace('.', '')
+        channel_id: str = data["channel"]
+        message_ts: str = data["ts"].replace(".", "")
         return f"https://{SLACK_WORKSPACE_NAME}.slack.com/archives/{channel_id}/p{message_ts}"
     return ""
 
@@ -51,36 +52,33 @@ def main():
     print(f"trying to slack: {slack_channel=}, {text=}")
 
     if not text and not text_file:
-        logging.error('One of the arguments --message_text or --file must be provided, none given')
+        logging.error("One of the arguments --message_text or --file must be provided, none given")
         sys.exit(1)
     elif not text:
         # read the text from the file
         try:
             text = Path(text_file).read_text()
         except Exception as e:
-            logging.error(f'Failed to read from file {text_file}, error: {e!s}')
+            logging.error(f"Failed to read from file {text_file}, error: {e!s}")
             sys.exit(1)
 
     slack_client = WebClient(token=slack_token)
 
-    logging.info(f"Sending Slack message to slack channel:{slack_channel}, "
-                 f"allowing failure:{options.allow_failure}")
+    logging.info(f"Sending Slack message to slack channel:{slack_channel}, " f"allowing failure:{options.allow_failure}")
 
     try:
         logging.info("Building message")
 
-        response = slack_client.chat_postMessage(
-            channel=slack_channel, text=text, username=SLACK_USERNAME, link_names=True
-        )
+        response = slack_client.chat_postMessage(channel=slack_channel, text=text, username=SLACK_USERNAME, link_names=True)
         link = build_link_to_message(response)
-        logging.info(f'Successfully sent Slack message to channel {slack_channel} link: {link}')
+        logging.info(f"Successfully sent Slack message to channel {slack_channel} link: {link}")
     except Exception:
         if strtobool(options.allow_failure):
-            logging.warning(f'Failed to send Slack message to channel {slack_channel} not failing build')
+            logging.warning(f"Failed to send Slack message to channel {slack_channel} not failing build")
         else:
-            logging.exception(f'Failed to send Slack message to channel {slack_channel}')
+            logging.exception(f"Failed to send Slack message to channel {slack_channel}")
             sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

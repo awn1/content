@@ -5,14 +5,9 @@ import sys
 import yaml
 from spellchecker import SpellChecker
 
-DISPLAYABLE_LINES = [
-    "description",
-    "name",
-    "display",
-    "comment"
-]
+DISPLAYABLE_LINES = ["description", "name", "display", "comment"]
 
-SCRIPT_ARGS = 'scriptarguments'
+SCRIPT_ARGS = "scriptarguments"
 
 
 def check_yaml(spellchecker, yml_info, unknown_words):
@@ -42,7 +37,7 @@ def check_md_file(spellchecker, md_data, unknown_words):
 def spell_checker(path, is_md=False):
     unknown_words: set = set([])
     spellchecker = SpellChecker()
-    spellchecker.word_frequency.load_text_file('Tests/known_words.txt')
+    spellchecker.word_frequency.load_text_file("Tests/known_words.txt")
 
     if is_md:
         with open(path) as md_file:
@@ -56,7 +51,7 @@ def spell_checker(path, is_md=False):
         check_yaml(spellchecker, yml_info, unknown_words)
 
     if unknown_words:
-        print("Found the problematic words:\n{}".format('\n'.join(unknown_words)))
+        print("Found the problematic words:\n{}".format("\n".join(unknown_words)))
         return 1
 
     print("No problematic words found")
@@ -67,7 +62,7 @@ if __name__ == "__main__":
     description = """Run spell check on a given yml/md file. """
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-p", "--path", help="Specify path of yml/md file", required=True)
-    parser.add_argument("-i", "--isMD", help="Whether the path is to a yml file or an md.", action='store_true')
+    parser.add_argument("-i", "--isMD", help="Whether the path is to a yml file or an md.", action="store_true")
 
     args = parser.parse_args()
     sys.exit(spell_checker(args.path, args.isMD))

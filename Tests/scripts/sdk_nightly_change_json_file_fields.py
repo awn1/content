@@ -14,11 +14,11 @@ def main():
 
     file_content[field] = f"{file_content['id']}-new"
 
-    with open(file_path, 'w') as f:
+    with open(file_path, "w") as f:
         json.dump(file_content, f)
 
     print(f"Successfully changed the field {field} in file {file_path}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

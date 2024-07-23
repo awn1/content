@@ -12,14 +12,11 @@ IMAGE_LINK = "projects/{project_id}/global/images/{image_name}"
 
 class Images:
     def __init__(self, creds: str | Credentials):
-        credentials = creds if isinstance(
-            creds, Credentials) else Credentials.from_service_account_file(creds)
+        credentials = creds if isinstance(creds, Credentials) else Credentials.from_service_account_file(creds)
         self.project_id = credentials.project_id
         self.images_client = compute_v1.ImagesClient(credentials=credentials)
 
-    def images_for_server_version(
-        self, version: str
-    ) -> Iterator[compute_v1.MachineImage]:
+    def images_for_server_version(self, version: str) -> Iterator[compute_v1.MachineImage]:
         return self.images_client.list(
             request=compute_v1.ListImagesRequest(
                 project=self.project_id,
@@ -31,7 +28,6 @@ class Images:
 
 
 class Instance:
-
     def __init__(
         self,
         instance_name: str,
@@ -58,7 +54,8 @@ class Instance:
             project_id=project_id,
             image_name=source_image
             or config_dict.get(  # type: ignore
-                "imagename", f"family/xsoar-{config_dict['imagefamily']}"  # type: ignore
+                "imagename",
+                f"family/xsoar-{config_dict['imagefamily']}",  # type: ignore
             ),
         )  # type: ignore
         logging.info(f"Using {self.source_image=}")
@@ -87,17 +84,13 @@ class Instance:
 
     def get_ip_for_instance(self):
         return (
-            self.instance_client.get(
-                instance=self.instance_name, project=self.project_id, zone=self.zone
-            )
+            self.instance_client.get(instance=self.instance_name, project=self.project_id, zone=self.zone)
             .network_interfaces[0]
             .network_i_p
         )
 
     def describe(self):
-        return self.instance_client.get(
-            instance=self.instance_name, project=self.project_id, zone=self.zone
-        )
+        return self.instance_client.get(instance=self.instance_name, project=self.project_id, zone=self.zone)
 
     def instance_request(self) -> compute_v1.InsertInstanceRequest:
         return compute_v1.Instance(
@@ -115,19 +108,15 @@ class Instance:
                 compute_v1.AttachedDisk(
                     auto_delete=True,
                     boot=True,
-                    initialize_params=compute_v1.AttachedDiskInitializeParams(
-                        source_image=self.source_image
-                    ),
+                    initialize_params=compute_v1.AttachedDiskInitializeParams(source_image=self.source_image),
                 )
             ],
         )
 
 
 class InstanceService:
-
     def __init__(self, creds: str | Credentials, zone: str):
-        credentials = creds if isinstance(
-            creds, Credentials) else Credentials.from_service_account_file(creds)
+        credentials = creds if isinstance(creds, Credentials) else Credentials.from_service_account_file(creds)
 
         self.zone = zone
         self.project_id = credentials.project_id
@@ -152,8 +141,10 @@ class InstanceService:
                         project=self.project_id,
                         zone=self.zone,
                         source_instance_template=instance_obj.source_instance_template,
-                        instance_resource=instance_obj.instance_request())
-                ))
+                        instance_resource=instance_obj.instance_request(),
+                    )
+                )
+            )
             ready_instances.append(instance_obj)
 
         while insert_extended_operations:

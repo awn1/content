@@ -14,13 +14,18 @@ class PublicApiKey:
     created_by: str | None
     user_name: str | None
 
-    def __init__(self, id: str, key: str, comment: str | None = None,
-                 roles: str | list[str] | None = None,
-                 security_level: KeySecurityLevel | None = None,
-                 expiration: datetime.datetime | None = None,
-                 creation_time: datetime.datetime | None = None,
-                 created_by: str | None = None,
-                 user_name: str | None = None):
+    def __init__(
+        self,
+        id: str,
+        key: str,
+        comment: str | None = None,
+        roles: str | list[str] | None = None,
+        security_level: KeySecurityLevel | None = None,
+        expiration: datetime.datetime | None = None,
+        creation_time: datetime.datetime | None = None,
+        created_by: str | None = None,
+        user_name: str | None = None,
+    ):
         self.id = id
         self.key = key
         self.comment = comment

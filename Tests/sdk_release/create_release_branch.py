@@ -13,12 +13,17 @@ urllib3.disable_warnings()
 
 
 def options_handler():
-    parser = argparse.ArgumentParser(description='Creates release branch for demisto-sdk.')
+    parser = argparse.ArgumentParser(description="Creates release branch for demisto-sdk.")
 
-    parser.add_argument('-t', '--access_token', help='Github access token', required=True)
-    parser.add_argument('-n', '--release_branch_name', help='The name of the release branch', required=True)
-    parser.add_argument('-b', '--sdk_branch_name', help='From which branch in demisto-sdk we want to create the release',
-                        required=False, default='master')
+    parser.add_argument("-t", "--access_token", help="Github access token", required=True)
+    parser.add_argument("-n", "--release_branch_name", help="The name of the release branch", required=True)
+    parser.add_argument(
+        "-b",
+        "--sdk_branch_name",
+        help="From which branch in demisto-sdk we want to create the release",
+        required=False,
+        default="master",
+    )
 
     options = parser.parse_args()
     return options
@@ -37,27 +42,21 @@ def main():
     url = f"https://api.github.com/repos/demisto/demisto-sdk/branches/{sdk_branch_name}"
     response = requests.request("GET", url)
 
-    commit_sha = response.json().get('commit', {}).get('sha')
+    commit_sha = response.json().get("commit", {}).get("sha")
     if not commit_sha:
-        logging.error(f'Failed to retrieve demisto-sdk {sdk_branch_name} branch')
+        logging.error(f"Failed to retrieve demisto-sdk {sdk_branch_name} branch")
         logging.error(response.text)
         sys.exit(1)
 
     # create the release branch
     url = "https://api.github.com/repos/demisto/demisto-sdk/git/refs"
 
-    payload = json.dumps({
-        "ref": f"refs/heads/{release_branch_name}",
-        "sha": commit_sha
-    })
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {access_token}'
-    }
+    payload = json.dumps({"ref": f"refs/heads/{release_branch_name}", "sha": commit_sha})
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {access_token}"}
 
     response = requests.request("POST", url, headers=headers, data=payload, verify=False)
     if response.status_code != 201:
-        logging.error('failed to create the release branch')
+        logging.error("failed to create the release branch")
         logging.error(response.text)
         sys.exit(1)
 

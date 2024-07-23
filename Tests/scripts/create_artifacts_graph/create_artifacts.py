@@ -61,8 +61,10 @@ def create_packs_json(content_dto: ContentDTO, packs_output: Path):
         packs_output (Path): Output path for packs.json
     """
     packs = content_dto.packs
-    packs_json = {pack.object_id: json.loads(
-        pack.json(include={"name", "description", "author", "current_version"}, by_alias=True)) for pack in packs}
+    packs_json = {
+        pack.object_id: json.loads(pack.json(include={"name", "description", "author", "current_version"}, by_alias=True))
+        for pack in packs
+    }
     with open(packs_output, "w") as f:
         json.dump(packs_json, f, indent=4)
 
@@ -73,9 +75,7 @@ def main():
     parser.add_argument("-ao", "--artifacts-output", help="Artifacts output directory", required=True)
     parser.add_argument("-do", "--dependencies-output", help="Dependencies output file", required=True)
     parser.add_argument("-po", "--packs-output", help="Packs json output file", required=True)
-    parser.add_argument(
-        "-bu", "--bucket-upload", help="Upload to bucket", type=lambda x: str2bool(x or False), default=False
-    )
+    parser.add_argument("-bu", "--bucket-upload", help="Upload to bucket", type=lambda x: str2bool(x or False), default=False)
     parser.add_argument("--zip", default=True, action="store_true")
     parser.add_argument("--no-zip", dest="zip", action="store_false")
     args = parser.parse_args()

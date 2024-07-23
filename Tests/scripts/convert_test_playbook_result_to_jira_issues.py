@@ -50,30 +50,42 @@ from Tests.scripts.utils.log_util import install_logging
 
 urllib3.disable_warnings()  # Disable insecure warnings
 JIRA_MAX_DAYS_TO_REOPEN_DEFAULT = 30
-JIRA_MAX_DAYS_TO_REOPEN = (os.environ.get("JIRA_MAX_DAYS_TO_REOPEN", JIRA_MAX_DAYS_TO_REOPEN_DEFAULT)
-                           or JIRA_MAX_DAYS_TO_REOPEN_DEFAULT)
+JIRA_MAX_DAYS_TO_REOPEN = (
+    os.environ.get("JIRA_MAX_DAYS_TO_REOPEN", JIRA_MAX_DAYS_TO_REOPEN_DEFAULT) or JIRA_MAX_DAYS_TO_REOPEN_DEFAULT
+)
 JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE_DEFAULT = 50
-JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE = (os.environ.get("JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE",
-                                                             JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE_DEFAULT)
-                                              or JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE_DEFAULT)
+JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE = (
+    os.environ.get("JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE", JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE_DEFAULT)
+    or JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE_DEFAULT
+)
 
 
 def options_handler() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Converts Test Playbook report to Jira issues')
-    parser.add_argument("-a", "--artifacts-path", help='Artifacts path', required=True)
-    parser.add_argument('--build-number', help='CI job number where the instances were created', required=True)
-    parser.add_argument('-d', '--max-days-to-reopen', default=JIRA_MAX_DAYS_TO_REOPEN, type=int, required=False,
-                        help='The max days to reopen a closed issue')
-    parser.add_argument('-f', '--max-failures-to-handle', default=JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE,
-                        type=int, required=False, help='The max days to reopen a closed issue')
+    parser = argparse.ArgumentParser(description="Converts Test Playbook report to Jira issues")
+    parser.add_argument("-a", "--artifacts-path", help="Artifacts path", required=True)
+    parser.add_argument("--build-number", help="CI job number where the instances were created", required=True)
+    parser.add_argument(
+        "-d",
+        "--max-days-to-reopen",
+        default=JIRA_MAX_DAYS_TO_REOPEN,
+        type=int,
+        required=False,
+        help="The max days to reopen a closed issue",
+    )
+    parser.add_argument(
+        "-f",
+        "--max-failures-to-handle",
+        default=JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE,
+        type=int,
+        required=False,
+        help="The max days to reopen a closed issue",
+    )
     return parser.parse_args()
 
 
-def generate_description_for_test_playbook(playbook_id: str,
-                                           build_number: str,
-                                           junit_file_name: str,
-                                           table_data: Any,
-                                           failed: bool) -> str:
+def generate_description_for_test_playbook(
+    playbook_id: str, build_number: str, junit_file_name: str, table_data: Any, failed: bool
+) -> str:
     build_markdown_link = generate_build_markdown_link(build_number)
     table = tabulate(table_data, headers="firstrow", tablefmt="jira")
     msg = jira_color_text(FAILED_TO_MSG[failed], FAILED_TO_COLOR_NAME[failed])
@@ -86,50 +98,51 @@ def generate_description_for_test_playbook(playbook_id: str,
     return description
 
 
-def create_jira_issue(jira_ticket_info: JiraTicketInfo,
-                      jira_server: JIRA,
-                      jira_issue: Issue | None,
-                      xml: JUnitXml,
-                      playbook_id: str,
-                      build_number: str,
-                      table_data: list[list[str]],
-                      max_days_to_reopen: int,
-                      now: datetime,
-                      junit_file_name: str,
-                      failed: bool,
-                      ) -> Issue:
+def create_jira_issue(
+    jira_ticket_info: JiraTicketInfo,
+    jira_server: JIRA,
+    jira_issue: Issue | None,
+    xml: JUnitXml,
+    playbook_id: str,
+    build_number: str,
+    table_data: list[list[str]],
+    max_days_to_reopen: int,
+    now: datetime,
+    junit_file_name: str,
+    failed: bool,
+) -> Issue:
     summary = generate_ticket_summary(playbook_id)
     description = generate_description_for_test_playbook(playbook_id, build_number, junit_file_name, table_data, failed)
-    jira_issue, link_to_issue, use_existing_issue, unresolved_transition_id = find_existing_jira_ticket(jira_ticket_info,
-                                                                                                        jira_server, now,
-                                                                                                        max_days_to_reopen,
-                                                                                                        jira_issue)
+    jira_issue, link_to_issue, use_existing_issue, unresolved_transition_id = find_existing_jira_ticket(
+        jira_ticket_info, jira_server, now, max_days_to_reopen, jira_issue
+    )
 
     if jira_issue is not None:
         transition_jira_ticket_to_unresolved(jira_server, jira_issue, unresolved_transition_id)
         jira_server.add_comment(issue=jira_issue, body=description)
     else:
         jira_ticket_info = get_jira_ticket_info()
-        jira_issue = jira_server.create_issue(project=jira_ticket_info.project_id,
-                                              summary=summary,
-                                              description=description,
-                                              issuetype={'name': jira_ticket_info.issue_type},
-                                              components=[{'name': jira_ticket_info.component}],
-                                              labels=jira_ticket_info.labels,
-                                              **jira_ticket_info.additional_fields
-                                              )
+        jira_issue = jira_server.create_issue(
+            project=jira_ticket_info.project_id,
+            summary=summary,
+            description=description,
+            issuetype={"name": jira_ticket_info.issue_type},
+            components=[{"name": jira_ticket_info.component}],
+            labels=jira_ticket_info.labels,
+            **jira_ticket_info.additional_fields,
+        )
         # Create a back link to the previous issue, which is resolved.
         if link_to_issue:
-            jira_server.create_issue_link(type="Relates", inwardIssue=jira_issue.key,
-                                          outwardIssue=link_to_issue.key)
+            jira_server.create_issue_link(type="Relates", inwardIssue=jira_issue.key, outwardIssue=link_to_issue.key)
 
     with NamedTemporaryFile() as attachment_file_name:
         xml.write(attachment_file_name.name, pretty=True)
         jira_server.add_attachment(issue=jira_issue.key, attachment=attachment_file_name.name, filename=junit_file_name)
 
     back_link_to = f" with back link to {link_to_issue.key}" if link_to_issue else ""
-    logging.success(f"{'Updated' if use_existing_issue else 'Created'} Jira issue: {jira_issue.key} {back_link_to}"
-                    f"for {playbook_id}")
+    logging.success(
+        f"{'Updated' if use_existing_issue else 'Created'} Jira issue: {jira_issue.key} {back_link_to}" f"for {playbook_id}"
+    )
 
     return jira_issue
 
@@ -142,7 +155,7 @@ def get_attachment_file_name(playbook_id: str, build_number: str) -> str:
 
 def main():
     try:
-        install_logging('convert_test_playbook_result_to_jira_issues.log', logger=logging)
+        install_logging("convert_test_playbook_result_to_jira_issues.log", logger=logging)
         now = datetime.now(tz=timezone.utc)
         options = options_handler()
         artifacts_path = Path(options.artifacts_path)
@@ -161,13 +174,17 @@ def main():
         logging.info(f"\tMax failures to handle: {options.max_failures_to_handle}")
         logging.info(f"\tBuild number: {options.build_number}")
 
-        jira_server = JIRA(jira_server_info.server_url, token_auth=jira_server_info.api_key,
-                           options={'verify': jira_server_info.verify_ssl})
+        jira_server = JIRA(
+            jira_server_info.server_url, token_auth=jira_server_info.api_key, options={"verify": jira_server_info.verify_ssl}
+        )
         jira_server_info = jira_server_information(jira_server)
         server_url = jira_server_info["baseUrl"]
 
-        if not (test_playbooks_result_files_list := get_test_results_files(Path(options.artifacts_path),
-                                                                           TEST_PLAYBOOKS_REPORT_FILE_NAME)):
+        if not (
+            test_playbooks_result_files_list := get_test_results_files(
+                Path(options.artifacts_path), TEST_PLAYBOOKS_REPORT_FILE_NAME
+            )
+        ):
             logging.critical(f"Could not find any test playbook result files in {options.artifacts_path}")
             sys.exit(1)
 
@@ -184,14 +201,15 @@ def main():
         failed_playbooks = get_all_failed_results(playbooks_results)
 
         if len(failed_playbooks) >= options.max_failures_to_handle:
-            column_align, tabulate_data, _, _ = calculate_results_table(jira_tickets_for_playbooks,
-                                                                        failed_playbooks,
-                                                                        server_versions,
-                                                                        TEST_PLAYBOOKS_BASE_HEADERS)
+            column_align, tabulate_data, _, _ = calculate_results_table(
+                jira_tickets_for_playbooks, failed_playbooks, server_versions, TEST_PLAYBOOKS_BASE_HEADERS
+            )
             table = tabulate(tabulate_data, headers="firstrow", tablefmt="pretty", colalign=column_align)
             logging.info(f"Test Playbook Results: {TEST_SUITE_CELL_EXPLANATION}\n{table}")
-            logging.critical(f"Found {len(failed_playbooks)} failed test playbooks, "
-                             f"which is more than the max allowed limit of {options.max_failures_to_handle} to handle.")
+            logging.critical(
+                f"Found {len(failed_playbooks)} failed test playbooks, "
+                f"which is more than the max allowed limit of {options.max_failures_to_handle} to handle."
+            )
 
             sys.exit(1)
         for playbook_id, test_suites in playbooks_results.items():
@@ -200,19 +218,18 @@ def main():
             # The table should be created without colors, as we don't want to have them within the Jira issue.
             # We also don't want to have the total row, as we don't want to have it within the Jira issue
             # since it's a single playbook.
-            _, tabulate_data, xml, total_errors = calculate_results_table(jira_tickets_for_playbooks,
-                                                                          {
-                                                                              playbook_id: test_suites
-                                                                          },
-                                                                          server_versions,
-                                                                          TEST_PLAYBOOKS_JIRA_BASE_HEADERS,
-                                                                          add_total_row=False,
-                                                                          no_color=True,
-                                                                          without_jira=True,
-                                                                          with_skipped=True,
-                                                                          multiline_headers=False,
-                                                                          transpose=True,
-                                                                          )
+            _, tabulate_data, xml, total_errors = calculate_results_table(
+                jira_tickets_for_playbooks,
+                {playbook_id: test_suites},
+                server_versions,
+                TEST_PLAYBOOKS_JIRA_BASE_HEADERS,
+                add_total_row=False,
+                no_color=True,
+                without_jira=True,
+                with_skipped=True,
+                multiline_headers=False,
+                transpose=True,
+            )
 
             jira_ticket = jira_tickets_for_playbooks.get(playbook_id)
             if jira_ticket or total_errors:
@@ -222,9 +239,19 @@ def main():
                     logging.debug(f"Skipped updating Jira issue for resolved test playbook:{playbook_id}")
                     continue
                 junit_file_name = get_attachment_file_name(playbook_id, options.build_number)
-                jira_ticket = create_jira_issue(jira_ticket_info, jira_server, jira_ticket, xml, playbook_id,
-                                                options.build_number, tabulate_data, options.max_days_to_reopen, now,
-                                                junit_file_name, total_errors > 0)
+                jira_ticket = create_jira_issue(
+                    jira_ticket_info,
+                    jira_server,
+                    jira_ticket,
+                    xml,
+                    playbook_id,
+                    options.build_number,
+                    tabulate_data,
+                    options.max_days_to_reopen,
+                    now,
+                    junit_file_name,
+                    total_errors > 0,
+                )
                 jira_tickets_for_playbooks[playbook_id] = jira_ticket
             else:
                 logging.debug(f"Skipped creating Jira issue for successful test playbook:{playbook_id}")
@@ -234,10 +261,10 @@ def main():
         logging.info("Finished creating/updating Jira issues")
 
     except Exception as e:
-        logging.exception(f'Failed to convert Test playbook results to Jira issues, Additional info: {e}')
+        logging.exception(f"Failed to convert Test playbook results to Jira issues, Additional info: {e}")
         logging.error(traceback.format_exc())
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -24,7 +24,6 @@ E2E_BASE_HEADERS = ["Test File Name"]
 
 
 def calculate_e2e_tests_results(e2e_tests_results_files: dict[str, Path]):
-
     e2e_tests_results: dict[str, dict[str, Any]] = {}
     server_versions = set()
     for instance_role, e2e_test_result_file in e2e_tests_results_files.items():
@@ -53,11 +52,7 @@ def print_test_e2e_test_summary(artifacts_path: Path) -> bool:
     e2e_tests_results, server_versions = calculate_e2e_tests_results(e2e_tests_result_files_list)
 
     column_align, tabulate_data, xml, total_errors = calculate_results_table(
-        {},
-        e2e_tests_results,
-        server_versions,
-        E2E_BASE_HEADERS,
-        without_jira=True
+        {}, e2e_tests_results, server_versions, E2E_BASE_HEADERS, without_jira=True
     )
 
     logging.info(f"Writing e2e tests report to {e2e_tests_report}")
@@ -69,14 +64,14 @@ def print_test_e2e_test_summary(artifacts_path: Path) -> bool:
 
 
 def options_handler() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Utility for printing e2e tests summary')
-    parser.add_argument('--artifacts-path', help='Path to the artifacts directory', required=True)
+    parser = argparse.ArgumentParser(description="Utility for printing e2e tests summary")
+    parser.add_argument("--artifacts-path", help="Path to the artifacts directory", required=True)
     return parser.parse_args()
 
 
 def main():
     try:
-        install_logging('print_e2e_test_summary.log', logger=logging)
+        install_logging("print_e2e_test_summary.log", logger=logging)
         options = options_handler()
         artifacts_path = Path(options.artifacts_path)
         logging.info(f"Printing end to end test summary - artifacts path: {artifacts_path}")
@@ -87,10 +82,10 @@ def main():
 
         logging.info("end to end test summary finished successfully")
     except Exception as e:
-        logging.error(f'Failed to get the end to end test summary: {e}')
+        logging.error(f"Failed to get the end to end test summary: {e}")
         logging.error(traceback.format_exc())
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

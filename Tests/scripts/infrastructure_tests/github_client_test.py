@@ -21,7 +21,7 @@ def pull_request(requests_mock: Any) -> GithubPullRequest:
                     "body": "b",
                     "comments_url": COMMENTS_URL,
                 },
-            ]
+            ],
         },
     )
     return GithubPullRequest("mock_token", sha1=SHA, branch=BRANCH)

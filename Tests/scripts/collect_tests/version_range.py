@@ -15,9 +15,9 @@ class VersionRange:
         return self.min_version <= item <= self.max_version
 
     def __repr__(self):
-        return f'{self.min_version} -> {self.max_version}'
+        return f"{self.min_version} -> {self.max_version}"
 
-    def __or__(self, other: Optional['VersionRange']) -> 'VersionRange':
+    def __or__(self, other: Optional["VersionRange"]) -> "VersionRange":
         if other is None or other.is_default or self.is_default:
             return self
 

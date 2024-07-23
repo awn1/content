@@ -14,21 +14,25 @@ from Tests.Marketplace.upload_packs import get_packs_ids_to_upload, get_packs_id
 
 
 class TestModifiedPacks:
-    @pytest.mark.parametrize("packs_names_input, expected_result", [
-        ("pack1,pack2,pack1", {"pack1", "pack2"}),
-        ("pack1, pack2,  pack3", {"pack1", "pack2", "pack3"})
-    ])
+    @pytest.mark.parametrize(
+        "packs_names_input, expected_result",
+        [("pack1,pack2,pack1", {"pack1", "pack2"}), ("pack1, pack2,  pack3", {"pack1", "pack2", "pack3"})],
+    )
     def test_get_packs_names_specific(self, packs_names_input, expected_result):
         modified_packs = get_packs_ids_to_upload(packs_names_input)
 
         assert modified_packs == expected_result
 
-    @pytest.mark.parametrize("packs_names_input, expected_result", [
-        ('{"packs_to_upload": ["pack1", "pack2"], "packs_to_update_metadata": ["pack3"]}',
-         ({'pack1', 'pack2'}, {'pack3'})),
-        ('{"packs_to_upload": ["pack1", "pack2", "pack2"], "packs_to_update_metadata": ["pack3"]}',
-         ({'pack1', 'pack2'}, {'pack3'}))
-    ])
+    @pytest.mark.parametrize(
+        "packs_names_input, expected_result",
+        [
+            ('{"packs_to_upload": ["pack1", "pack2"], "packs_to_update_metadata": ["pack3"]}', ({"pack1", "pack2"}, {"pack3"})),
+            (
+                '{"packs_to_upload": ["pack1", "pack2", "pack2"], "packs_to_update_metadata": ["pack3"]}',
+                ({"pack1", "pack2"}, {"pack3"}),
+            ),
+        ],
+    )
     def test_get_packs_ids_to_upload_and_update(self, packs_names_input, expected_result):
         modified_packs = get_packs_ids_to_upload_and_update(packs_names_input)
 
@@ -49,18 +53,17 @@ class FakeDirEntry:
 
     @staticmethod
     def isdir(path):
-        return path == 'mock_path'
+        return path == "mock_path"
 
 
 def scan_dir(dirs=None):
     if dirs:
         return [FakeDirEntry(dir_[0], dir_[1]) for dir_ in dirs]
 
-    return [FakeDirEntry('mock_path', 'mock_dir'), FakeDirEntry('mock_path2', 'mock_file')]
+    return [FakeDirEntry("mock_path", "mock_dir"), FakeDirEntry("mock_path2", "mock_file")]
 
 
 class TestUpdateIndexAndPack:
-
     statistics_metadata = {
         Metadata.DOWNLOADS: 0,
         Metadata.SEARCH_RANK: None,
@@ -86,29 +89,38 @@ class TestUpdateIndexAndPack:
 
         from Tests.Marketplace import upload_packs
 
-        mocker.patch('shutil.copy')
-        mocker.patch('os.path.exists')
-        pack_dirs = scan_dir([('HelloWorld/metadata.json', 'metadata.json'),
-                              ('HelloWorld/changelog.json', 'changelog.json'),
-                              ('HelloWorld/README.md', 'README.md')])
-        index_dirs = scan_dir([('Index/HelloWorld/metadata-1.0.1.json', 'metadata-1.0.1.json'),
-                               ('Index/HelloWorld/metadata-1.0.0.json', 'metadata-1.0.0.json'),
-                               ('Index/HelloWorld/metadata-2.0.0.json', 'metadata-2.0.0.json'),
-                               ('Index/HelloWorld/metadata.json', 'metadata.json'),
-                               ('Index/HelloWorld/changelog.json', 'changelog.json'),
-                               ('Index/HelloWorld/README.md', 'README.md')])
+        mocker.patch("shutil.copy")
+        mocker.patch("os.path.exists")
+        pack_dirs = scan_dir(
+            [
+                ("HelloWorld/metadata.json", "metadata.json"),
+                ("HelloWorld/changelog.json", "changelog.json"),
+                ("HelloWorld/README.md", "README.md"),
+            ]
+        )
+        index_dirs = scan_dir(
+            [
+                ("Index/HelloWorld/metadata-1.0.1.json", "metadata-1.0.1.json"),
+                ("Index/HelloWorld/metadata-1.0.0.json", "metadata-1.0.0.json"),
+                ("Index/HelloWorld/metadata-2.0.0.json", "metadata-2.0.0.json"),
+                ("Index/HelloWorld/metadata.json", "metadata.json"),
+                ("Index/HelloWorld/changelog.json", "changelog.json"),
+                ("Index/HelloWorld/README.md", "README.md"),
+            ]
+        )
 
-        mocker.patch('os.scandir', side_effect=[index_dirs, pack_dirs])
+        mocker.patch("os.scandir", side_effect=[index_dirs, pack_dirs])
 
-        dummy_pack = Pack('HelloWorld', 'HelloWorld', is_modified=True)
-        dummy_pack.current_version = '2.0.1'
-        upload_packs.update_index_folder('Index', dummy_pack,
-                                         pack_versions_to_keep=['1.0.1', '1.0.0', '2.0.0'])
+        dummy_pack = Pack("HelloWorld", "HelloWorld", is_modified=True)
+        dummy_pack.current_version = "2.0.1"
+        upload_packs.update_index_folder("Index", dummy_pack, pack_versions_to_keep=["1.0.1", "1.0.0", "2.0.0"])
 
-        expected_copy_args = [('HelloWorld/metadata.json', 'Index/HelloWorld'),
-                              ('HelloWorld/metadata.json', 'Index/HelloWorld/metadata-2.0.1.json'),
-                              ('HelloWorld/changelog.json', 'Index/HelloWorld'),
-                              ('HelloWorld/README.md', 'Index/HelloWorld')]
+        expected_copy_args = [
+            ("HelloWorld/metadata.json", "Index/HelloWorld"),
+            ("HelloWorld/metadata.json", "Index/HelloWorld/metadata-2.0.1.json"),
+            ("HelloWorld/changelog.json", "Index/HelloWorld"),
+            ("HelloWorld/README.md", "Index/HelloWorld"),
+        ]
 
         copy_call_count = shutil.copy.call_count
         copy_call_args = shutil.copy.call_args_list
@@ -135,22 +147,28 @@ class TestUpdateIndexAndPack:
 
         from Tests.Marketplace import upload_packs
 
-        mocker.patch('shutil.copy')
-        mocker.patch('os.path.exists')
-        pack_dirs = scan_dir([('HelloWorld/metadata.json', 'metadata.json'),
-                              ('HelloWorld/changelog.json', 'changelog.json'),
-                              ('HelloWorld/README.md', 'README.md')])
+        mocker.patch("shutil.copy")
+        mocker.patch("os.path.exists")
+        pack_dirs = scan_dir(
+            [
+                ("HelloWorld/metadata.json", "metadata.json"),
+                ("HelloWorld/changelog.json", "changelog.json"),
+                ("HelloWorld/README.md", "README.md"),
+            ]
+        )
 
-        mocker.patch('os.scandir', return_value=pack_dirs)
+        mocker.patch("os.scandir", return_value=pack_dirs)
 
-        dummy_pack = Pack('HelloWorld', 'HelloWorld', is_modified=True)
-        dummy_pack.current_version = '1.0.0'
-        upload_packs.update_index_folder('Index', dummy_pack, pack_versions_to_keep=[])
+        dummy_pack = Pack("HelloWorld", "HelloWorld", is_modified=True)
+        dummy_pack.current_version = "1.0.0"
+        upload_packs.update_index_folder("Index", dummy_pack, pack_versions_to_keep=[])
 
-        expected_copy_args = [('HelloWorld/metadata.json', 'Index/HelloWorld'),
-                              ('HelloWorld/metadata.json', 'Index/HelloWorld/metadata-1.0.0.json'),
-                              ('HelloWorld/changelog.json', 'Index/HelloWorld'),
-                              ('HelloWorld/README.md', 'Index/HelloWorld')]
+        expected_copy_args = [
+            ("HelloWorld/metadata.json", "Index/HelloWorld"),
+            ("HelloWorld/metadata.json", "Index/HelloWorld/metadata-1.0.0.json"),
+            ("HelloWorld/changelog.json", "Index/HelloWorld"),
+            ("HelloWorld/README.md", "Index/HelloWorld"),
+        ]
 
         copy_call_count = shutil.copy.call_count
         copy_call_args = shutil.copy.call_args_list
@@ -179,26 +197,36 @@ class TestUpdateIndexAndPack:
         from Tests.Marketplace import upload_packs
 
         logging_mock = mocker.patch("Tests.Marketplace.marketplace_services.logging.debug")
-        json_write_mock = mocker.patch.object(upload_packs, 'json_write', return_value=None)
-        mocker.patch('os.path.exists')
-        pack_dirs = scan_dir([('HelloWorld/metadata.json', 'metadata.json'),
-                              ('HelloWorld/changelog.json', 'changelog.json'),
-                              ('HelloWorld/README.md', 'README.md')])
-        index_dirs = scan_dir([('Index/HelloWorld/metadata-1.0.1.json', 'metadata-1.0.1.json'),
-                               ('Index/HelloWorld/metadata-1.0.0.json', 'metadata-1.0.0.json'),
-                               ('Index/HelloWorld/metadata-2.0.0.json', 'metadata-2.0.0.json'),
-                               ('Index/HelloWorld/metadata.json', 'metadata.json'),
-                               ('Index/HelloWorld/changelog.json', 'changelog.json'),
-                               ('Index/HelloWorld/README.md', 'README.md')])
+        json_write_mock = mocker.patch.object(upload_packs, "json_write", return_value=None)
+        mocker.patch("os.path.exists")
+        pack_dirs = scan_dir(
+            [
+                ("HelloWorld/metadata.json", "metadata.json"),
+                ("HelloWorld/changelog.json", "changelog.json"),
+                ("HelloWorld/README.md", "README.md"),
+            ]
+        )
+        index_dirs = scan_dir(
+            [
+                ("Index/HelloWorld/metadata-1.0.1.json", "metadata-1.0.1.json"),
+                ("Index/HelloWorld/metadata-1.0.0.json", "metadata-1.0.0.json"),
+                ("Index/HelloWorld/metadata-2.0.0.json", "metadata-2.0.0.json"),
+                ("Index/HelloWorld/metadata.json", "metadata.json"),
+                ("Index/HelloWorld/changelog.json", "changelog.json"),
+                ("Index/HelloWorld/README.md", "README.md"),
+            ]
+        )
 
-        mocker.patch('os.scandir', side_effect=[index_dirs, pack_dirs])
+        mocker.patch("os.scandir", side_effect=[index_dirs, pack_dirs])
 
-        dummy_pack = Pack('HelloWorld', 'HelloWorld', is_modified=False, is_metadata_updated=False)
-        dummy_pack.current_version = '2.0.0'
-        upload_packs.update_index_folder('Index', dummy_pack)
+        dummy_pack = Pack("HelloWorld", "HelloWorld", is_modified=False, is_metadata_updated=False)
+        dummy_pack.current_version = "2.0.0"
+        upload_packs.update_index_folder("Index", dummy_pack)
 
-        expected_copy_args = [('Index/HelloWorld/metadata.json', self.statistics_metadata),
-                              ('Index/HelloWorld/metadata-2.0.0.json', self.statistics_metadata)]
+        expected_copy_args = [
+            ("Index/HelloWorld/metadata.json", self.statistics_metadata),
+            ("Index/HelloWorld/metadata-2.0.0.json", self.statistics_metadata),
+        ]
 
         copy_call_count = json_write_mock.call_count
         copy_call_args = json_write_mock.call_args_list
@@ -208,9 +236,13 @@ class TestUpdateIndexAndPack:
             assert call_arg[0] in expected_copy_args
 
         assert any(
-            call_args == ((
-                "Updating metadata only with statistics because self._pack_name='HelloWorld' "
-                "self.is_modified=False self.is_metadata_updated=False"),)
+            call_args
+            == (
+                (
+                    "Updating metadata only with statistics because self._pack_name='HelloWorld' "
+                    "self.is_modified=False self.is_metadata_updated=False"
+                ),
+            )
             for call_args, _ in logging_mock.call_args_list
         )
 
@@ -234,23 +266,33 @@ class TestUpdateIndexAndPack:
         from Tests.Marketplace import upload_packs
 
         logging_mock = mocker.patch("Tests.Marketplace.marketplace_services.logging.debug")
-        json_write_mock = mocker.patch.object(upload_packs, 'json_write', return_value=None)
-        mocker.patch('os.path.exists')
-        pack_dirs = scan_dir([('HelloWorld/metadata.json', 'metadata.json'),
-                              ('HelloWorld/changelog.json', 'changelog.json'),
-                              ('HelloWorld/README.md', 'README.md')])
-        index_dirs = scan_dir([('Index/HelloWorld/metadata-1.0.0.json', 'metadata-1.0.0.json'),
-                               ('Index/HelloWorld/metadata.json', 'metadata.json'),
-                               ('Index/HelloWorld/changelog.json', 'changelog.json'),
-                               ('Index/HelloWorld/README.md', 'README.md')])
-        mocker.patch('os.scandir', side_effect=[index_dirs, pack_dirs])
+        json_write_mock = mocker.patch.object(upload_packs, "json_write", return_value=None)
+        mocker.patch("os.path.exists")
+        pack_dirs = scan_dir(
+            [
+                ("HelloWorld/metadata.json", "metadata.json"),
+                ("HelloWorld/changelog.json", "changelog.json"),
+                ("HelloWorld/README.md", "README.md"),
+            ]
+        )
+        index_dirs = scan_dir(
+            [
+                ("Index/HelloWorld/metadata-1.0.0.json", "metadata-1.0.0.json"),
+                ("Index/HelloWorld/metadata.json", "metadata.json"),
+                ("Index/HelloWorld/changelog.json", "changelog.json"),
+                ("Index/HelloWorld/README.md", "README.md"),
+            ]
+        )
+        mocker.patch("os.scandir", side_effect=[index_dirs, pack_dirs])
 
-        dummy_pack = Pack('HelloWorld', 'HelloWorld', is_modified=False, is_metadata_updated=True)
-        dummy_pack.current_version = '1.0.0'
-        upload_packs.update_index_folder('Index', dummy_pack)
+        dummy_pack = Pack("HelloWorld", "HelloWorld", is_modified=False, is_metadata_updated=True)
+        dummy_pack.current_version = "1.0.0"
+        upload_packs.update_index_folder("Index", dummy_pack)
 
-        expected_copy_args = [('Index/HelloWorld/metadata.json', self.statistics_metadata),
-                              ('Index/HelloWorld/metadata-1.0.0.json', self.statistics_metadata)]
+        expected_copy_args = [
+            ("Index/HelloWorld/metadata.json", self.statistics_metadata),
+            ("Index/HelloWorld/metadata-1.0.0.json", self.statistics_metadata),
+        ]
 
         copy_call_count = json_write_mock.call_count
         copy_call_args = json_write_mock.call_args_list
@@ -260,9 +302,13 @@ class TestUpdateIndexAndPack:
             assert call_arg[0] in expected_copy_args
 
         assert any(
-            call_args == ((
-                "Updating metadata with statistics and metadata changes because self._pack_name='HelloWorld' "
-                "self.is_modified=False self.is_metadata_updated=True"),)
+            call_args
+            == (
+                (
+                    "Updating metadata with statistics and metadata changes because self._pack_name='HelloWorld' "
+                    "self.is_modified=False self.is_metadata_updated=True"
+                ),
+            )
             for call_args, _ in logging_mock.call_args_list
         )
 
@@ -283,22 +329,32 @@ class TestUpdateIndexAndPack:
         """
         from Tests.Marketplace import upload_packs
 
-        json_write_mock = mocker.patch.object(upload_packs, 'json_write', return_value=None)
-        mocker.patch('os.path.exists')
-        pack_dirs = scan_dir([('HelloWorld/metadata.json', 'metadata.json'),
-                              ('HelloWorld/changelog.json', 'changelog.json'),
-                              ('HelloWorld/README.md', 'README.md')])
-        index_dirs = scan_dir([('Index/HelloWorld/metadata.json', 'metadata.json'),
-                               ('Index/HelloWorld/changelog.json', 'changelog.json'),
-                               ('Index/HelloWorld/README.md', 'README.md')])
-        mocker.patch('os.scandir', side_effect=[index_dirs, pack_dirs])
+        json_write_mock = mocker.patch.object(upload_packs, "json_write", return_value=None)
+        mocker.patch("os.path.exists")
+        pack_dirs = scan_dir(
+            [
+                ("HelloWorld/metadata.json", "metadata.json"),
+                ("HelloWorld/changelog.json", "changelog.json"),
+                ("HelloWorld/README.md", "README.md"),
+            ]
+        )
+        index_dirs = scan_dir(
+            [
+                ("Index/HelloWorld/metadata.json", "metadata.json"),
+                ("Index/HelloWorld/changelog.json", "changelog.json"),
+                ("Index/HelloWorld/README.md", "README.md"),
+            ]
+        )
+        mocker.patch("os.scandir", side_effect=[index_dirs, pack_dirs])
 
-        dummy_pack = Pack('HelloWorld', 'HelloWorld', is_modified=False)
-        dummy_pack.current_version = '1.0.0'
-        upload_packs.update_index_folder('Index', dummy_pack)
+        dummy_pack = Pack("HelloWorld", "HelloWorld", is_modified=False)
+        dummy_pack.current_version = "1.0.0"
+        upload_packs.update_index_folder("Index", dummy_pack)
 
-        expected_copy_args = [('Index/HelloWorld/metadata.json', self.statistics_metadata),
-                              ('Index/HelloWorld/metadata-1.0.0.json', self.statistics_metadata)]
+        expected_copy_args = [
+            ("Index/HelloWorld/metadata.json", self.statistics_metadata),
+            ("Index/HelloWorld/metadata-1.0.0.json", self.statistics_metadata),
+        ]
 
         copy_call_count = json_write_mock.call_count
         copy_call_args = json_write_mock.call_args_list
@@ -309,12 +365,12 @@ class TestUpdateIndexAndPack:
 
     def test_download_and_extract_pack(self, mocker):
         """
-            Given:
-                - A pack version exists in the storage bucket.
-            When:
-                - Downloading and extracting the pack.
-            Then:
-                - Ensure the pack is downloaded and extracted successfully.
+        Given:
+            - A pack version exists in the storage bucket.
+        When:
+            - Downloading and extracting the pack.
+        Then:
+            - Ensure the pack is downloaded and extracted successfully.
         """
         from zipfile import ZipFile
 
@@ -327,28 +383,33 @@ class TestUpdateIndexAndPack:
         pack_version = "2.0.0"
         storage_base_path = GCPConfig.CONTENT_PACKS_PATH
         extract_destination_path = "/path/to/save"
-        pack_name = 'HelloWorld'
+        pack_name = "HelloWorld"
         dummy_storage_bucket = mocker.MagicMock()
 
         pack_path = os.path.join(storage_base_path, pack_name, pack_version, f"{pack_name}.zip")
-        mocker.patch.object(ZipFile, '__init__', return_value=None)
-        mocker.patch.object(ZipFile, 'extractall')
+        mocker.patch.object(ZipFile, "__init__", return_value=None)
+        mocker.patch.object(ZipFile, "extractall")
 
-        task_status = download_and_extract_pack(pack_name, pack_version, dummy_storage_bucket, extract_destination_path,
-                                                storage_base_path=GCPConfig.PRODUCTION_STORAGE_BASE_PATH)
+        task_status = download_and_extract_pack(
+            pack_name,
+            pack_version,
+            dummy_storage_bucket,
+            extract_destination_path,
+            storage_base_path=GCPConfig.PRODUCTION_STORAGE_BASE_PATH,
+        )
         assert task_status
         dummy_storage_bucket.blob.assert_called_once_with(pack_path)
         dummy_storage_bucket.blob.return_value.exists.assert_called_once()
         dummy_storage_bucket.blob.return_value.download_to_filename.assert_called_once_with(
-            os.path.join(extract_destination_path, f"{pack_name}.zip"))
+            os.path.join(extract_destination_path, f"{pack_name}.zip")
+        )
         ZipFile.extractall.assert_called_once_with(os.path.join(extract_destination_path, pack_name))
 
 
 class TestCleanPacks:
-    """ Test for clean_non_existing_packs function scenarios.
-    """
+    """Test for clean_non_existing_packs function scenarios."""
 
-    @patch.dict('os.environ', {'CI': 'true', 'CI_COMMIT_BRANCH': 'dummy_branch'})
+    @patch.dict("os.environ", {"CI": "true", "CI_COMMIT_BRANCH": "dummy_branch"})
     def test_clean_non_existing_packs_skip_non_master(self, mocker):
         """
         Scenario: running clean_non_existing_packs function on CI environment but not on master branch
@@ -370,14 +431,16 @@ class TestCleanPacks:
         dummy_storage_bucket = mocker.MagicMock()
         dummy_storage_bucket.name = GCPConfig.PRODUCTION_BUCKET
 
-        skipped_cleanup = clean_non_existing_packs(index_folder_path="dummy_index_path",
-                                                   storage_bucket=dummy_storage_bucket,
-                                                   storage_base_path=GCPConfig.PRODUCTION_STORAGE_BASE_PATH,
-                                                   content_packs=[])
+        skipped_cleanup = clean_non_existing_packs(
+            index_folder_path="dummy_index_path",
+            storage_bucket=dummy_storage_bucket,
+            storage_base_path=GCPConfig.PRODUCTION_STORAGE_BASE_PATH,
+            content_packs=[],
+        )
 
         assert skipped_cleanup
 
-    @patch.dict('os.environ', {'CI': 'true', 'CI_COMMIT_BRANCH': 'master'})
+    @patch.dict("os.environ", {"CI": "true", "CI_COMMIT_BRANCH": "master"})
     def test_clean_non_existing_packs_skip_non_production_bucket(self, mocker):
         """
         Scenario: running clean_non_existing_packs function on CI environment on master branch but not on production
@@ -400,29 +463,31 @@ class TestCleanPacks:
         dummy_storage_bucket = mocker.MagicMock()
         dummy_storage_bucket.name = "dummy_bucket"
 
-        skipped_cleanup = clean_non_existing_packs(index_folder_path="dummy_index_path",
-                                                   storage_bucket=dummy_storage_bucket,
-                                                   storage_base_path=GCPConfig.PRODUCTION_STORAGE_BASE_PATH,
-                                                   content_packs=[])
+        skipped_cleanup = clean_non_existing_packs(
+            index_folder_path="dummy_index_path",
+            storage_bucket=dummy_storage_bucket,
+            storage_base_path=GCPConfig.PRODUCTION_STORAGE_BASE_PATH,
+            content_packs=[],
+        )
 
         assert skipped_cleanup
 
-    @patch.dict('os.environ', {'CI': 'true', 'CI_COMMIT_BRANCH': 'master'})
+    @patch.dict("os.environ", {"CI": "true", "CI_COMMIT_BRANCH": "master"})
     def test_clean_non_existing_packs(self, mocker):
         """
-         Scenario: deleting pack that is not part of content repo or paid packs from index
+        Scenario: deleting pack that is not part of content repo or paid packs from index
 
-         Given
-         - valid pack from content repo
-         - valid pack from private bucket
-         - not valid pack that may be located in bucket and in the index
+        Given
+        - valid pack from content repo
+        - valid pack from private bucket
+        - not valid pack that may be located in bucket and in the index
 
-         When
-         - pack was deleted from content repo
+        When
+        - pack was deleted from content repo
 
-         Then
-         - Ensure that not valid pack is deleted from index
-         """
+        Then
+        - Ensure that not valid pack is deleted from index
+        """
         import os
         import shutil
 
@@ -436,22 +501,23 @@ class TestCleanPacks:
         public_pack = "public_pack"
         invalid_pack = "invalid_pack"
 
-        dirs = scan_dir([
-            (os.path.join(index_folder_path, public_pack), public_pack, True),
-            (os.path.join(index_folder_path, invalid_pack), invalid_pack, True)
-        ])
+        dirs = scan_dir(
+            [
+                (os.path.join(index_folder_path, public_pack), public_pack, True),
+                (os.path.join(index_folder_path, invalid_pack), invalid_pack, True),
+            ]
+        )
 
         mocker.patch("Tests.Marketplace.upload_packs.os.listdir", return_value=[public_pack])
         mocker.patch("Tests.Marketplace.upload_packs.os.scandir", return_value=dirs)
-        mocker.patch('Tests.Marketplace.upload_packs.shutil.rmtree')
+        mocker.patch("Tests.Marketplace.upload_packs.shutil.rmtree")
         mocker.patch("Tests.Marketplace.upload_packs.logging.warning")
 
         skipped_cleanup = clean_non_existing_packs(
             index_folder_path=index_folder_path,
             storage_bucket=dummy_storage_bucket,
             storage_base_path=GCPConfig.PRODUCTION_STORAGE_BASE_PATH,
-            content_packs=[Pack("public_pack", "/dummy_path"), Pack("private_pack",
-                                                                    "/dummy_path")]
+            content_packs=[Pack("public_pack", "/dummy_path"), Pack("private_pack", "/dummy_path")],
         )
 
         assert not skipped_cleanup
@@ -471,27 +537,31 @@ class TestCorepacksFiles:
 
         dummy_storage_bucket = mocker.MagicMock()
         dummy_storage_bucket.name = GCPConfig.CI_BUILD_BUCKET
-        index_folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_data')
+        index_folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data")
 
-        build_number = '123456'
-        corepacks_version = 'corepacks-8.3.0.json'
-        pack1 = 'pack_1'
-        pack2 = 'pack_2'
+        build_number = "123456"
+        corepacks_version = "corepacks-8.3.0.json"
+        pack1 = "pack_1"
+        pack2 = "pack_2"
 
         # Create a temp artifacts dir for the corepacks files:
-        artifacts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tmp')
+        artifacts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp")
         os.makedirs(artifacts_dir, exist_ok=True)
 
         corepacks_list = [pack1, pack2]
         mocker.patch("Tests.Marketplace.marketplace_constants.GCPConfig.get_core_packs", return_value=corepacks_list)
-        mocker.patch("Tests.Marketplace.marketplace_constants.GCPConfig.get_core_packs_to_upgrade",
-                     return_value=[pack1])
-        mocker.patch("Tests.Marketplace.marketplace_constants.GCPConfig.get_core_packs_unlocked_files",
-                     return_value=[corepacks_version])
+        mocker.patch("Tests.Marketplace.marketplace_constants.GCPConfig.get_core_packs_to_upgrade", return_value=[pack1])
+        mocker.patch(
+            "Tests.Marketplace.marketplace_constants.GCPConfig.get_core_packs_unlocked_files", return_value=[corepacks_version]
+        )
 
-        create_corepacks_config(storage_bucket=dummy_storage_bucket, build_number=build_number,
-                                index_folder_path=index_folder_path, artifacts_dir=artifacts_dir,
-                                storage_base_path=GCPConfig.PRODUCTION_STORAGE_BASE_PATH)
+        create_corepacks_config(
+            storage_bucket=dummy_storage_bucket,
+            build_number=build_number,
+            index_folder_path=index_folder_path,
+            artifacts_dir=artifacts_dir,
+            storage_base_path=GCPConfig.PRODUCTION_STORAGE_BASE_PATH,
+        )
 
         # Assert that the required files were created:
         assert set(os.listdir(artifacts_dir)) == {corepacks_version, GCPConfig.CORE_PACK_FILE_NAME}
@@ -499,27 +569,26 @@ class TestCorepacksFiles:
         # Assert that the paths in the corepacks.json file are the full paths:
         with open(os.path.join(artifacts_dir, GCPConfig.CORE_PACK_FILE_NAME)) as corepacks_file:
             corepacks_file_contents = json.load(corepacks_file)
-            pack_paths = corepacks_file_contents.get('corePacks')
-            assert set(pack_paths) == {'https://storage.googleapis.com/marketplace-ci-build/content/packs'
-                                       '/pack_1/1.4.0/pack_1.zip',
-                                       'https://storage.googleapis.com/marketplace-ci-build/content/packs'
-                                       '/pack_2/2.2.3/pack_2.zip'}
+            pack_paths = corepacks_file_contents.get("corePacks")
+            assert set(pack_paths) == {
+                "https://storage.googleapis.com/marketplace-ci-build/content/packs" "/pack_1/1.4.0/pack_1.zip",
+                "https://storage.googleapis.com/marketplace-ci-build/content/packs" "/pack_2/2.2.3/pack_2.zip",
+            }
 
         # Assert that the paths in the versioned corepacks file are relative paths:
         with open(os.path.join(artifacts_dir, corepacks_version)) as corepacks_file:
             corepacks_file_contents = json.load(corepacks_file)
-            pack_paths = corepacks_file_contents.get('corePacks')
-            assert set(pack_paths) == {'pack_1/1.4.0/pack_1.zip', 'pack_2/2.2.3/pack_2.zip'}
+            pack_paths = corepacks_file_contents.get("corePacks")
+            assert set(pack_paths) == {"pack_1/1.4.0/pack_1.zip", "pack_2/2.2.3/pack_2.zip"}
 
         # Remove the temp artifacts dir that was created for testing:
         shutil.rmtree(artifacts_dir)
 
 
 class TestUpdatedPrivatePacks:
-
     @staticmethod
     def get_pack_metadata():
-        metadata_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_data', 'metadata.json')
+        metadata_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data", "metadata.json")
         with open(metadata_path) as metadata_file:
             pack_metadata = json.load(metadata_file)
 
@@ -527,5 +596,5 @@ class TestUpdatedPrivatePacks:
 
     @staticmethod
     def get_index_folder_path():
-        index_json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_data')
+        index_json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data")
         return index_json_path

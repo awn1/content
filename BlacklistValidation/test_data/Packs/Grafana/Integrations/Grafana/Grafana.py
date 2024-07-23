@@ -1,30 +1,34 @@
 import demistomock as demisto  # noqa: F401
-from CommonServerPython import *
+from CommonServerPython import *  # noqa: F401
 
-''' CONSTANTS '''
+""" CONSTANTS """
 
-DATE_FORMAT = '%Y-%m-%dT%H:%M:%SZ'  # ISO8601 format with UTC, default in XSOAR
+DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"  # ISO8601 format with UTC, default in XSOAR
 
 
-''' HELPER FUNCTIONS '''
+""" HELPER FUNCTIONS """
 
 
 def paging_heading(page_number: str = None, page_size: str = None):
     if page_number or page_size:
-        return 'Showing' + (f' {page_size}' if page_size else '') + ' results' + \
-               (f' from page {page_number}' if page_number else '') + ':\n'
-    return ''
+        return (
+            "Showing"
+            + (f" {page_size}" if page_size else "")
+            + " results"
+            + (f" from page {page_number}" if page_number else "")
+            + ":\n"
+        )
+    return ""
 
 
-''' MAIN FUNCTION '''
+""" MAIN FUNCTION """
 
 
 def main():
-    """main function, parses params and runs command functions
-    """
+    """main function, parses params and runs command functions"""
 
 
-''' ENTRY POINT '''
+""" ENTRY POINT """
 
-if __name__ in ['__main__', 'builtin', 'builtins']:
+if __name__ in ["__main__", "builtin", "builtins"]:
     main()

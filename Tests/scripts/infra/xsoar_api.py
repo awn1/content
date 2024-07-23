@@ -73,14 +73,14 @@ logger = logging.getLogger(__name__)
 
 class XsoarOnPremClient:
     XSRF_TOKEN_HEADER = "X-XSRF-TOKEN"
-    CSRF_TOKEN_NAME = 'XSRF-TOKEN'
-    ABOUT_PATH = 'about'
-    PLATFORM_TYPE = 'xsoar'
-    PRODUCT_TYPE = 'XSOAR'
+    CSRF_TOKEN_NAME = "XSRF-TOKEN"
+    ABOUT_PATH = "about"
+    PLATFORM_TYPE = "xsoar"
+    PRODUCT_TYPE = "XSOAR"
 
     def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, cache: Cache | None = None):
         retry_strategy = Retry(
-            #allowed_methods=frozenset(["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE", "POST"]),
+            # allowed_methods=frozenset(["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE", "POST"]),
             total=5,
             connect=3,
             backoff_factor=0.5,
@@ -89,10 +89,10 @@ class XsoarOnPremClient:
         self.login_timout = 60  # 1 minute timeout to quickly fail on initial communication issues
         self.session_timout = 600  # default 10 minutes timeout for all API calls
         self.session = requests.Session()
-        self.session.mount(prefix='https://', adapter=TimeoutHTTPAdapter(timeout=self.session_timout, max_retries=retry_strategy))
-        self.session.headers['User-Agent'] = DEFAULT_USER_AGENT
+        self.session.mount(prefix="https://", adapter=TimeoutHTTPAdapter(timeout=self.session_timout, max_retries=retry_strategy))
+        self.session.headers["User-Agent"] = DEFAULT_USER_AGENT
         self.session.verify = False  # Disable SSL verification since we're working with self-signed certs here.
-        self.xsoar_base_url = f'https://{xsoar_host}:443'
+        self.xsoar_base_url = f"https://{xsoar_host}:443"
         self.xsoar_webapp_url: str | None = None
         self.xsoar_user = xsoar_user
         self.xsoar_pass = xsoar_pass
@@ -106,7 +106,7 @@ class XsoarOnPremClient:
         self.session.headers[self.XSRF_TOKEN_HEADER] = xsrf_token
 
     def login_auth(self, **kwargs):
-        tries = kwargs.get('tries', 10)
+        tries = kwargs.get("tries", 10)
 
         @retry(
             (ConnectionError, RemoteDisconnected, HTTPException, Exception, IOError),
@@ -117,11 +117,11 @@ class XsoarOnPremClient:
         )
         # As OnPrem tenant can be "under upgrade condition" on nightlys (and we don't have pods to check) - timeout set to ±19min
         def login_auth_with_retry():
-            #self.inc_metric('login')
+            # self.inc_metric('login')
             self.session.get(self.xsoar_base_url, timeout=self.login_timout)
             self._set_xsrf_header()
             login_res = self.session.post(
-                f'{self.xsoar_base_url}/login',
+                f"{self.xsoar_base_url}/login",
                 timeout=self.login_timout,
                 json={"user": self.xsoar_user, "password": self.xsoar_pass},
             )
@@ -130,15 +130,15 @@ class XsoarOnPremClient:
         login_auth_with_retry()
 
     def logout_auth(self):
-        #self.inc_metric('logout')
-        logout_res = self.session.post(f'{self.xsoar_base_url}/logout')
+        # self.inc_metric('logout')
+        logout_res = self.session.post(f"{self.xsoar_base_url}/logout")
         raise_for_status(logout_res)
 
     def search_api_keys(self) -> list[PublicApiKey]:
         """Search for API keys"""
-        res = self.session.get(url=f'{self.xsoar_base_url}/apikeys')
+        res = self.session.get(url=f"{self.xsoar_base_url}/apikeys")
         raise_for_status(res)
-        keys = [PublicApiKey(id=key['id'], key='cant see real key') for key in res.json()]
+        keys = [PublicApiKey(id=key["id"], key="cant see real key") for key in res.json()]
         return keys
 
     # def create_api_key(self, key_name: str, key_value: str, **kwargs) -> PublicApiKey:
@@ -155,27 +155,27 @@ class XsoarOnPremClient:
 
     def revoke_api_key(self, key_id: str):
         """Call XSOAR API to revoke an API key"""
-        res = self.session.delete(url=f'{self.xsoar_base_url}/apikeys/{key_id}')
+        res = self.session.delete(url=f"{self.xsoar_base_url}/apikeys/{key_id}")
         raise_for_status(res)
-        if first([key['id'] for key in res.json() if key.get('id') == key_id], default=None):
-            raise Exception(f'api key {key_id=} revoke action failed, the response was {res.text}')
+        if first([key["id"] for key in res.json() if key.get("id") == key_id], default=None):
+            raise Exception(f"api key {key_id=} revoke action failed, the response was {res.text}")
 
     def edit_api_key(self, comment: str, new_roles: list[str], key_id: int):
         """Edit API key"""
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
 
     def get_version_info(self) -> dict:
         """Call XSOAR /about endpoint to fetch version info"""
-        #self.inc_metric('get_version_info')
-        res = self.session.get(url=f'{self.xsoar_base_url}/{self.ABOUT_PATH}')
+        # self.inc_metric('get_version_info')
+        res = self.session.get(url=f"{self.xsoar_base_url}/{self.ABOUT_PATH}")
         raise_for_status(res)
         return res.json()
 
-    def set_log_level(self, xsoar_log_level: str = 'debug'):
+    def set_log_level(self, xsoar_log_level: str = "debug"):
         """Set XSOAR server log level"""
-        #self.inc_metric('set_log_level')
-        params = {'level': xsoar_log_level}
-        res = self.session.post(f'{self.xsoar_base_url}/log', params=params)
+        # self.inc_metric('set_log_level')
+        params = {"level": xsoar_log_level}
+        res = self.session.post(f"{self.xsoar_base_url}/log", params=params)
         raise_for_status(res)
 
     # def get_invited_users(self) -> list[User]:
@@ -225,15 +225,15 @@ class XsoarOnPremClient:
 
     def send_invitation_only(self, data: dict) -> dict:
         """Invite user to XSOAR"""
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
 
     def send_forgot_my_password(self, email: str):
         """Send Forgot My Password"""
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
 
     def reset_password_confirm(self, email: str, reset_link: str, password: str):
         """Reset Password Confirm"""
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
 
     # def invite_user(self, user_data: NewUserData) -> str:
     #     """Invite user to XSOAR"""
@@ -298,44 +298,45 @@ class XsoarOnPremClient:
 
     def delete_user_role(self, user_name: str):
         """Delete roles from user"""
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
 
     def sync_user_permission(self, user_name: str) -> dict:  # type:ignore[empty-body]
         pass
 
     def add_role(self, data: dict):
         """Add new role"""
-        res = self.session.post(f'{self.xsoar_base_url}/roles/update', json=data)
+        res = self.session.post(f"{self.xsoar_base_url}/roles/update", json=data)
         raise_for_status(res)
 
     def edit_role(self, data: dict):
         """Edit role"""
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
 
     def delete_role(self, role_id: str):
         """Delete role"""
-        res = self.session.delete(f'{self.xsoar_base_url}/roles/{role_id}')
+        res = self.session.delete(f"{self.xsoar_base_url}/roles/{role_id}")
         raise_for_status(res)
 
     def get_permissions(self) -> dict:
         """Get existing permissions"""
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
 
     def add_group(self, data: dict) -> dict:
         """Add user group"""
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
 
     def update_group(self, data: dict) -> dict:
         """Update user group"""
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
 
     def delete_group(self, group_id: str):
         """Delete user group"""
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
 
     def get_user_groups(self) -> dict:
         """Get all user groups"""
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
+
     #
     # def get_roles(self) -> list[XsoarRole]:
     #     """Call XSOAR roles API to get info about user roles"""
@@ -347,8 +348,9 @@ class XsoarOnPremClient:
 
     def update_user_data(self, body: dict):
         """Set user data"""
-        res = self.session.post(f'{self.xsoar_base_url}/user/update', json=body)
+        res = self.session.post(f"{self.xsoar_base_url}/user/update", json=body)
         raise_for_status(res)
+
     #
     # def load_incident(self, incident_id: str, account: str = None, **kwargs) -> Incident:
     #     """
@@ -380,6 +382,7 @@ class XsoarOnPremClient:
         rsp = self.session.post(f"{self.xsoar_base_url}/incident/investigate", json={"id": incident_id, "version": version})
         raise_for_status(rsp)
         return rsp.json()
+
     #
     # def find_incidents_by_name(self, name: str, query_size: int = 100) -> list[Incident]:
     #     """Find incidents by name"""
@@ -404,6 +407,7 @@ class XsoarOnPremClient:
         res = self.session.post(f"{self.xsoar_base_url}/search", json=find_filter)
         raise_for_status(res)
         return res.json()
+
     #
     # def find_incidents_using_query_raw(self, query: dict) -> list[dict]:
     #     """
@@ -455,28 +459,29 @@ class XsoarOnPremClient:
 
     def get_all_reports(self) -> list[dict]:
         """Get all reports"""
-        rsp = self.session.get(f'{self.xsoar_base_url}/reports')
+        rsp = self.session.get(f"{self.xsoar_base_url}/reports")
         raise_for_status(rsp)
         return rsp.json()
-    #
-    # def get_all_report_templates(self) -> list[Report]:
-    #     """Get all report templates"""
-    #     rsp = self.get_all_reports()  # on OnPrem/NG reports and templates located at the same place
-    #     return parse_obj_as(list[Report], rsp)
-    #
-    # def get_audit_trail(self, description: Optional[str] = None,
+        #
+        # def get_all_report_templates(self) -> list[Report]:
+        #     """Get all report templates"""
+        #     rsp = self.get_all_reports()  # on OnPrem/NG reports and templates located at the same place
+        #     return parse_obj_as(list[Report], rsp)
+        #
+        # def get_audit_trail(self, description: Optional[str] = None,
         # audit_email: Optional[str] = None, **kwargs) -> list[AuditTrail]:
-    #     """Get audit trail"""
-    #     user_query = f'user:{audit_email}' if audit_email else ''
-    #     query = f'{description} and {user_query}'.strip() if (description and audit_email) else description or user_query
-    #     body = {"page": 0, "size": 200, "query": query}
-    #     rsp = self.session.post(f'{self.xsoar_base_url}/settings/audits', json=body)
-    #     raise_for_status(rsp)
-    #     data = rsp.json()['audits']
-    #     return parse_obj_as(list[AuditTrail], data)
-    #
-    # def export_data(self, **kwargs) -> str:
-        raise NotImplementedError('Export data is not implemented at this env yet')
+        #     """Get audit trail"""
+        #     user_query = f'user:{audit_email}' if audit_email else ''
+        #     query = f'{description} and {user_query}'.strip() if (description and audit_email) else description or user_query
+        #     body = {"page": 0, "size": 200, "query": query}
+        #     rsp = self.session.post(f'{self.xsoar_base_url}/settings/audits', json=body)
+        #     raise_for_status(rsp)
+        #     data = rsp.json()['audits']
+        #     return parse_obj_as(list[AuditTrail], data)
+        #
+        # def export_data(self, **kwargs) -> str:
+        raise NotImplementedError("Export data is not implemented at this env yet")
+
     #
     # def get_all_layouts(self, **kwargs) -> list[Layout]:
     #     """
@@ -489,45 +494,46 @@ class XsoarOnPremClient:
     #     return layouts
 
     def get_all_layout_rules(self) -> dict:
-        raise NotImplementedError('Layout rules is not implemented at this env')
+        raise NotImplementedError("Layout rules is not implemented at this env")
 
 
 class XsoarClient(XsoarOnPremClient):
     XSRF_TOKEN_HEADER = "X-CSRF-TOKEN"
     CSRF_TOKEN_NAME = "csrf_token"
-    PLATFORM_TYPE = 'xsoar-ng'
-    PRODUCT_TYPE = 'XSOAR'
+    PLATFORM_TYPE = "xsoar-ng"
+    PRODUCT_TYPE = "XSOAR"
 
-    def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, project_id: str,
-                 cache: Cache | None = None):
+    def __init__(
+        self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, project_id: str, cache: Cache | None = None
+    ):
         super().__init__(xsoar_host, xsoar_user, xsoar_pass, tenant_name, cache)
-        self.xsoar_host_base = xsoar_host.replace('https://', '').replace('http://', '').replace('/', '')
+        self.xsoar_host_base = xsoar_host.replace("https://", "").replace("http://", "").replace("/", "")
 
-        self.xsoar_host_url = f'https://{self.xsoar_host_base}'
-        self.xsoar_base_url = f'https://{self.xsoar_host_base}/xsoar'
-        self.xsoar_api_url = f'https://{self.xsoar_host_base}/api'
-        self.xsoar_webapp_url = f'https://{self.xsoar_host_base}/api/webapp'
+        self.xsoar_host_url = f"https://{self.xsoar_host_base}"
+        self.xsoar_base_url = f"https://{self.xsoar_host_base}/xsoar"
+        self.xsoar_api_url = f"https://{self.xsoar_host_base}/api"
+        self.xsoar_webapp_url = f"https://{self.xsoar_host_base}/api/webapp"
         self.token_cache = Firestore(project_id)
 
     def update_user_data(self):
-        raise NotImplementedError('Update user data is not implemented at this env')
+        raise NotImplementedError("Update user data is not implemented at this env")
 
     def login_via_okta(self, is_prod: bool):
-        #self.inc_metric('login')
+        # self.inc_metric('login')
 
         self.session.cookies.clear()
         # Get SSO details
         res = self.session.get(url=self.xsoar_host_url)
-        if 'CSP credentials' in res.text:  # workaround for production CSP login
-            logger.info('login using CSP credentials')
-            logger.debug(f'{res.url=}\n{self.session.cookies=}\n{self.session.headers=}')
-            res = self.session.post(res.url, data=dict(sso_type='csp'))
+        if "CSP credentials" in res.text:  # workaround for production CSP login
+            logger.info("login using CSP credentials")
+            logger.debug(f"{res.url=}\n{self.session.cookies=}\n{self.session.headers=}")
+            res = self.session.post(res.url, data=dict(sso_type="csp"))
 
         # Extract token
         pattern = re.compile(r'"stateToken":"(.*?)"')
         login_page = res.text.replace("\\x", "%")  # JS escape sequences interfere with regex parsing of the contents
         if not (matches := re.findall(pattern, login_page)):
-            raise Exception(f'Failed extracting stateToken for {self.xsoar_user=} on {self.xsoar_base_url}\n{res.text}')
+            raise Exception(f"Failed extracting stateToken for {self.xsoar_user=} on {self.xsoar_base_url}\n{res.text}")
         state_token = unquote(matches[0])  # Replace %xx escapes by their single-character equivalent
 
         # Do login
@@ -541,33 +547,36 @@ class XsoarClient(XsoarOnPremClient):
         okta_res = self.session.post(url=okta_path, json=okta_params, headers=OKTA_HEADERS)
         raise_for_status(okta_res)
         if not (okta_redirect := okta_res.json().get("_links", {}).get("next", {}).get("href")):
-            raise Exception(f'Failed extracting okta redirect link from {okta_res.json()}')
+            raise Exception(f"Failed extracting okta redirect link from {okta_res.json()}")
 
         # Follow redirect
         res = self.session.get(okta_redirect)
         raise_for_status(res)
-        tenant_url = find_html_attribute(res.text, name='RelayState')
-        saml_request = find_html_attribute(res.text, name='SAMLResponse')
+        tenant_url = find_html_attribute(res.text, name="RelayState")
+        saml_request = find_html_attribute(res.text, name="SAMLResponse")
         proxy_url = find_html_form_action(res.text)
-        params = {'RelayState': tenant_url, 'SAMLResponse': saml_request}
+        params = {"RelayState": tenant_url, "SAMLResponse": saml_request}
 
         # Complete login by sending SAML response to proxy url
         res = self.session.post(url=proxy_url, data=params, verify=False)  # type: ignore[arg-type]
         raise_for_status(res)
 
         # Imitate request sent by UI, to get csrf_token cookie
-        res = self.session.get(f'{self.xsoar_api_url}/jwt/')
+        res = self.session.get(f"{self.xsoar_api_url}/jwt/")
         raise_for_status(res)
         self._set_xsrf_header()
 
     def _cache_cookies(self):
         """Caches user's cookies in pytest.Cache object only"""
         if isinstance(self.cache, Cache):
-            self.cache.set('cached_cookies', {self.xsoar_user: self.session.cookies.get_dict()})
+            self.cache.set("cached_cookies", {self.xsoar_user: self.session.cookies.get_dict()})
 
     @retry(
         (ConnectionError, RemoteDisconnected, HTTPException, Exception, IOError),
-        delay=3, tries=2, backoff=2, raise_original_exception=True
+        delay=3,
+        tries=2,
+        backoff=2,
+        raise_original_exception=True,
     )
     def login_auth(self, force_login=False, **kwargs):
         """Try using cached login cookies to reduce amount of logins into the test systems"""
@@ -577,34 +586,37 @@ class XsoarClient(XsoarOnPremClient):
             return
 
         collection = TokenCache.TOKEN_MGMT
-        region = self.xsoar_base_url.split('.')[2] if is_prod else None
-        document = f'{TokenCache.PROD_DOCUMENT}_{region}' if is_prod else TokenCache.DOCUMENT
+        region = self.xsoar_base_url.split(".")[2] if is_prod else None
+        document = f"{TokenCache.PROD_DOCUMENT}_{region}" if is_prod else TokenCache.DOCUMENT
 
         # lock to reduce race condition of several sessions running via xdist
-        with FileLock(f'{self.xsoar_user}.lock', timeout=300):
-            cached_cookies = self.cache.get('cached_cookies', {}) if isinstance(self.cache, Cache) else {}
+        with FileLock(f"{self.xsoar_user}.lock", timeout=300):
+            cached_cookies = self.cache.get("cached_cookies", {}) if isinstance(self.cache, Cache) else {}
             if cached_cookie := cached_cookies.get(self.xsoar_user):
                 if self.is_cached_cookies_valid(cookies=cached_cookie):
                     return
             # lock to reduce race condition of several tenants running in parallel
-            with lock_and_read(fs_client=self.token_cache, collection=collection, document=document,
-                               field=self.xsoar_user) as cookies:
+            with lock_and_read(
+                fs_client=self.token_cache, collection=collection, document=document, field=self.xsoar_user
+            ) as cookies:
                 # Check validity of received cookies
                 if self.is_cached_cookies_valid(cookies=cookies):
                     self._cache_cookies()
                     return
-                logger.info('Cached login cookies are not valid. Going to execute the login and update cache.')
+                logger.info("Cached login cookies are not valid. Going to execute the login and update cache.")
                 self.login_via_okta(is_prod=is_prod)
 
                 # Add ttl info to newly generated cookies
                 new_ttl = str(time_now().add(hours=TokenCache.MAX_TTL_HOURS).timestamp())
-                logger.debug(f'Updating cookies with {new_ttl=}')
-                self.session.cookies.update({'ttl': new_ttl})
+                logger.debug(f"Updating cookies with {new_ttl=}")
+                self.session.cookies.update({"ttl": new_ttl})
 
                 # Update the cookies in firestore - for other test runs to use
                 self.token_cache.update_document_field(
-                    collection=collection, document=document, field_name=self.xsoar_user,
-                    field_value=self.session.cookies.get_dict()
+                    collection=collection,
+                    document=document,
+                    field_name=self.xsoar_user,
+                    field_value=self.session.cookies.get_dict(),
                 )
                 self._cache_cookies()
 
@@ -614,7 +626,7 @@ class XsoarClient(XsoarOnPremClient):
 
     def is_cached_cookies_valid(self, cookies: dict) -> bool:
         """Check whether current cookies are valid to use for test session by calling get versions api"""
-        cookies_ttl = pendulum.from_timestamp(float(cookies.get('ttl', "0")))
+        cookies_ttl = pendulum.from_timestamp(float(cookies.get("ttl", "0")))
         cookies_ttl_str = cookies_ttl.to_iso8601_string()
         logger.debug(
             f"Verify cookies ttl is far enough in the future (more than {TokenCache.MIN_TTL_ALLOWED} hours). {cookies_ttl_str=}"
@@ -624,9 +636,9 @@ class XsoarClient(XsoarOnPremClient):
             self._set_xsrf_header()
             with contextlib.suppress(JSONDecodeError, HTTPError, TooManyRedirects):
                 self.get_version_info()
-                logger.info(f'Using cached login cookies (valid until {cookies_ttl_str})')
+                logger.info(f"Using cached login cookies (valid until {cookies_ttl_str})")
                 return True
-            logger.info('Existing cookies are invalid')
+            logger.info("Existing cookies are invalid")
         return False
 
     def logout_auth(self):
@@ -634,16 +646,16 @@ class XsoarClient(XsoarOnPremClient):
         pass
 
     def get_version_info(self) -> dict:
-        #self.inc_metric('get_version_info')
-        response = self.session.get(f'{self.xsoar_webapp_url}/version/')
+        # self.inc_metric('get_version_info')
+        response = self.session.get(f"{self.xsoar_webapp_url}/version/")
         raise_for_status(response)
         versions = response.json()
-        demisto_version = versions.pop('automation')
+        demisto_version = versions.pop("automation")
         versions.update(demisto_version)
         return versions
 
     def set_log_level(self, xsoar_log_level: str | None = None):
-        logger.debug('Not setting log level for XSOAR NG environment.')
+        logger.debug("Not setting log level for XSOAR NG environment.")
 
     # def search_api_keys(self) -> list[PublicApiKey]:
     #     """Search for API keys"""
@@ -670,7 +682,7 @@ class XsoarClient(XsoarOnPremClient):
         """
         Calls XSOAR API to create an API key
         """
-        rbac_roles = rbac_roles or ['app_superuser']
+        rbac_roles = rbac_roles or ["app_superuser"]
         expiration = expiration or time_now().add(days=1)
         timestamp = to_epoch_timestamp(expiration)
         data = {
@@ -680,15 +692,15 @@ class XsoarClient(XsoarOnPremClient):
             "rbac_permissions": None,
             "expiration": timestamp,
         }
-        res = self.session.post(url=f'{self.xsoar_webapp_url}/api_keys/generate', json=data)
+        res = self.session.post(url=f"{self.xsoar_webapp_url}/api_keys/generate", json=data)
         raise_for_status(res)
-        key = res.json()['reply']
-        return PublicApiKey(id=key['id'], key=key['key'])
+        key = res.json()["reply"]
+        return PublicApiKey(id=key["id"], key=key["key"])
 
     def revoke_api_key(self, key_id: str):
         """Call XSOAR API to revoke an API key"""
         data = {"filter_data": {"filter": {"OR": [SearchTableField.API_KEY_ID.create_search_filter(search_value=key_id)]}}}
-        res = self.session.post(url=f'{self.xsoar_webapp_url}/api_keys/delete', json=data)
+        res = self.session.post(url=f"{self.xsoar_webapp_url}/api_keys/delete", json=data)
         raise_for_status(res)
 
     def edit_api_key(self, comment: str, new_roles: list[str], key_id: int):
@@ -703,7 +715,7 @@ class XsoarClient(XsoarOnPremClient):
                 "API_KEY_EXPIRATION_TIME": None,
             },
         }
-        res = self.session.post(url=f'{self.xsoar_webapp_url}/api_keys/edit', json=body)
+        res = self.session.post(url=f"{self.xsoar_webapp_url}/api_keys/edit", json=body)
         raise_for_status(res)
 
     # def get_users(self, additional_extra_data: Optional[dict] = None, show_invites: bool = False) -> list[User]:
@@ -760,16 +772,16 @@ class XsoarClient(XsoarOnPremClient):
 
     def activate_user(self, email: str):
         data = {"user_emails": to_list(email)}
-        rsp = self.session.post(f'{self.xsoar_webapp_url}/rbac/activate_users', json=data)
+        rsp = self.session.post(f"{self.xsoar_webapp_url}/rbac/activate_users", json=data)
         raise_for_status(rsp)
 
     def deactivate_user(self, email: str):
         data = {"user_emails": to_list(email)}
-        rsp = self.session.post(f'{self.xsoar_webapp_url}/rbac/inactivate_users', json=data)
+        rsp = self.session.post(f"{self.xsoar_webapp_url}/rbac/inactivate_users", json=data)
         raise_for_status(rsp)
 
     def delete_users(self, emails: list[str]):
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
 
     def delete_user_role(self, user_name: str):
         """Delete roles from user"""
@@ -780,7 +792,7 @@ class XsoarClient(XsoarOnPremClient):
     def sync_user_permission(self, user_name: str):
         """Immediately sync user permission, GENERIC_ALLOW_EXTERNAL_CONFIG_SETTING flag is required"""
         data = {"username": user_name}
-        rsp = self.session.post(f'{self.xsoar_webapp_url}/rbac/reset_user_permissions', json=data)
+        rsp = self.session.post(f"{self.xsoar_webapp_url}/rbac/reset_user_permissions", json=data)
         raise_for_status(rsp)
 
     def add_role(self, data: dict):
@@ -804,7 +816,7 @@ class XsoarClient(XsoarOnPremClient):
         data = {"include_roles": False}
         rsp = self.session.post(f"{self.xsoar_webapp_url}/rbac/get_permissions", json=data)
         raise_for_status(rsp)
-        return rsp.json()['reply']
+        return rsp.json()["reply"]
 
     def add_group(self, data: dict):
         """Add user group"""
@@ -821,6 +833,7 @@ class XsoarClient(XsoarOnPremClient):
         data = {"group_ids": [group_id]}
         rsp = self.session.post(f"{self.xsoar_webapp_url}/rbac/groups/delete", json=data)
         raise_for_status(rsp)
+
     #
     # def get_user_groups(self) -> dict:
     #     """Get all user groups"""
@@ -848,20 +861,23 @@ class XsoarClient(XsoarOnPremClient):
     def get_table_data(self, table_name: XdrTables, table_filter: dict | None = None) -> dict:
         """Fetch table data from XDR/XSIAM/XSOAR-NG"""
         table_filter = table_filter or {"filter_data": {}}
-        #self.inc_metric('get_table_data', table_name)
-        params = {'type': 'grid', 'table_name': table_name.value}
-        res = self.session.post(url=f'{self.xsoar_webapp_url}/get_data', json=table_filter, params=params)
+        # self.inc_metric('get_table_data', table_name)
+        params = {"type": "grid", "table_name": table_name.value}
+        res = self.session.post(url=f"{self.xsoar_webapp_url}/get_data", json=table_filter, params=params)
         raise_for_status(res)
         try:
-            result = res.json()['reply']
+            result = res.json()["reply"]
         except JSONDecodeError as e:
             raise Exception(
-                f'Failed parsing get_table_data response: {e.msg}\n{table_name=}, {table_filter=}\nRaw response: {res.text}'
+                f"Failed parsing get_table_data response: {e.msg}\n{table_name=}, {table_filter=}\nRaw response: {res.text}"
             )
-        if (count := result.get('FILTER_COUNT')) and count < len(result['DATA']):
-            logger.warning(f"Not all results were returned - {len(result['DATA'])} "
-                           f"instead of {result['FILTER_COUNT']}. Consider pagination.")
+        if (count := result.get("FILTER_COUNT")) and count < len(result["DATA"]):
+            logger.warning(
+                f"Not all results were returned - {len(result['DATA'])} "
+                f"instead of {result['FILTER_COUNT']}. Consider pagination."
+            )
         return result
+
     #
     # def get_audit_trail(
     #     self, description: Optional[str] = None, audit_email: Optional[str] = None, sort_descending: bool = True
@@ -890,12 +906,13 @@ class XsoarClient(XsoarOnPremClient):
 
     def export_data(self, body: dict, table_name: str) -> str:
         """Export data"""
-        rsp = self.session.post(f'{self.xsoar_webapp_url}/prepare_link?type=grid&table_name={table_name}', json=body)
+        rsp = self.session.post(f"{self.xsoar_webapp_url}/prepare_link?type=grid&table_name={table_name}", json=body)
         raise_for_status(rsp)
-        key_uuid = rsp.json()['reply']
-        download_rsp = self.session.get(f'{self.xsoar_webapp_url}/get_data_by_key?key_uuid={key_uuid}')
+        key_uuid = rsp.json()["reply"]
+        download_rsp = self.session.get(f"{self.xsoar_webapp_url}/get_data_by_key?key_uuid={key_uuid}")
         raise_for_status(download_rsp)
         return download_rsp.content.decode("utf-8")
+
     #
     # def get_all_layouts(self, object_type: LayoutObjectType) -> list[Layout]:
     #     """Get all layouts"""
@@ -944,15 +961,15 @@ class XsoarClient(XsoarOnPremClient):
 
 class OppClient(XsoarClient):
     XSRF_TOKEN_HEADER = "Cookie"
-    PLATFORM_TYPE = 'opp'
-    PRODUCT_TYPE = 'XSOAR'
+    PLATFORM_TYPE = "opp"
+    PRODUCT_TYPE = "XSOAR"
 
     def _set_xsrf_header(self):
-        auth_headers = "; ".join(f'{k}={v}' for k, v in self.session.cookies.get_dict().items())
+        auth_headers = "; ".join(f"{k}={v}" for k, v in self.session.cookies.get_dict().items())
         self.session.headers[self.XSRF_TOKEN_HEADER] = auth_headers
 
     def login_auth(self, **kwargs):
-        tries = kwargs.get('tries', 2)
+        tries = kwargs.get("tries", 2)
 
         @retry(
             (ConnectionError, RemoteDisconnected, HTTPException, Exception, IOError),
@@ -962,10 +979,10 @@ class OppClient(XsoarClient):
             raise_original_exception=True,
         )
         def login_auth_with_retry():
-            #self.inc_metric('login')
-            self.session.get(f'{self.xsoar_base_url}/login', timeout=self.login_timout)
+            # self.inc_metric('login')
+            self.session.get(f"{self.xsoar_base_url}/login", timeout=self.login_timout)
             login_res = self.session.post(
-                f'{self.xsoar_api_url}/users/public/login',
+                f"{self.xsoar_api_url}/users/public/login",
                 timeout=self.login_timout,
                 json={"email": self.xsoar_user, "password": self.xsoar_pass},
             )
@@ -973,7 +990,7 @@ class OppClient(XsoarClient):
             if not (token := login_res.json()):
                 raise KeyError("Failed to extract token from login request")
             self._set_xsrf_header()
-            callback_rsp = self.session.post(f'{self.xsoar_host_url}/login/local/callback', data=token)
+            callback_rsp = self.session.post(f"{self.xsoar_host_url}/login/local/callback", data=token)
             raise_for_status(callback_rsp)
 
         login_auth_with_retry()
@@ -981,21 +998,21 @@ class OppClient(XsoarClient):
     def unlock_user(self, emails: list[str]):
         """Unlock locked users"""
         data = {"user_emails": emails}
-        rsp = self.session.post(f'{self.xsoar_webapp_url}/users/local/unlock', json=data)
+        rsp = self.session.post(f"{self.xsoar_webapp_url}/users/local/unlock", json=data)
         raise_for_status(rsp)
 
     def send_invitation_only(self, data: dict) -> dict:
         """
         Send invitation to users
         """
-        res = self.session.post(f'{self.xsoar_webapp_url}/users/invite_users', json=data)
+        res = self.session.post(f"{self.xsoar_webapp_url}/users/invite_users", json=data)
         raise_for_status(res)
-        return res.json()['reply']
+        return res.json()["reply"]
 
     def send_forgot_my_password(self, email: str):
         """Send Forgot My Password"""
         data = {"email": email}
-        res = requests.post(f'{self.xsoar_api_url}/users/public/password/reset', json=data, verify=False)
+        res = requests.post(f"{self.xsoar_api_url}/users/public/password/reset", json=data, verify=False)
         raise_for_status(res)
 
     # def reset_password_confirm(self, email: str, reset_link: str, password: str):
@@ -1087,13 +1104,14 @@ class OppClient(XsoarClient):
 
 
 class XsiamClient(XsoarClient):
-    PLATFORM_TYPE = 'xsiam'
-    PRODUCT_TYPE = 'XSIAM'
+    PLATFORM_TYPE = "xsiam"
+    PRODUCT_TYPE = "XSIAM"
 
-    def __init__(self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, project_id: str,
-                 cache: Cache | None = None):
+    def __init__(
+        self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, project_id: str, cache: Cache | None = None
+    ):
         super().__init__(xsoar_host, xsoar_user, xsoar_pass, tenant_name, project_id, cache)
-        self.public_api_url_prefix = f'https://api-{self.xsoar_host_base}/public_api/v1'
+        self.public_api_url_prefix = f"https://api-{self.xsoar_host_base}/public_api/v1"
         self._public_api_key = None
 
     def logout_auth(self):
@@ -1104,8 +1122,9 @@ class XsiamClient(XsoarClient):
 
     @cached_property
     def public_api_key(self):
-        self._public_api_key = self.create_api_key(comment='Session key')  # type: ignore[assignment]
+        self._public_api_key = self.create_api_key(comment="Session key")  # type: ignore[assignment]
         return self._public_api_key
+
     #
     # def load_incident(self, incident_id: str, direct_load_from_xsoar: bool = False, **kwargs) -> Incident:
     #     """
@@ -1141,7 +1160,8 @@ class XsiamClient(XsoarClient):
 
     def search_in_incident(self, query: str, query_size: int = 50, last_days: int = 2) -> dict:
         """Search data IN incidents"""
-        raise NotImplementedError('Not implemented by rocket on this env')
+        raise NotImplementedError("Not implemented by rocket on this env")
+
     #
     # def find_incidents_using_query_raw(self, query: dict) -> list[dict]:
     #     """
@@ -1269,7 +1289,8 @@ class XsiamClient(XsoarClient):
     #     return [parse_dashboard(dashboard) for dashboard in raw_data]
 
     def get_all_reports(self) -> list[dict]:
-        raise NotImplementedError('Reports response was not modeled yet')
+        raise NotImplementedError("Reports response was not modeled yet")
+
     #
     # def get_all_report_templates(self) -> list[Report]:
     #     """Get all report templates"""

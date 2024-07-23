@@ -22,7 +22,7 @@ def mock_artifacts_api_response(
     data: dict | None = None,
 ) -> bytes:
     mock_bytes = io.BytesIO()
-    with zipfile.ZipFile(mock_bytes, 'w') as zipf:
+    with zipfile.ZipFile(mock_bytes, "w") as zipf:
         if data is not None:
             zipf.writestr(
                 PACKS_DEPENDENCIES_FILEPATH.as_posix(),
@@ -38,14 +38,14 @@ def test_get_artifact_file(
     requests_mock,
 ) -> None:
     """
-        Given:
-            - A Gitlab Client
-            - A Commit SHA
-            - The job name in which a packs_dependencies.json file should be stored as an artifact
-        When:
-            - Calling get_artifact_file()
-        Then:
-            - Ensure the response is the expected data.
+    Given:
+        - A Gitlab Client
+        - A Commit SHA
+        - The job name in which a packs_dependencies.json file should be stored as an artifact
+    When:
+        - Calling get_artifact_file()
+    Then:
+        - Ensure the response is the expected data.
     """
     packs_dependencies_json: dict = {}
     requests_mock.get(
@@ -60,15 +60,20 @@ def test_get_artifact_file(
         f"{client.base_url}/jobs/mock_job_id/artifacts",
         content=mock_artifacts_api_response(packs_dependencies_json),
     )
-    assert json.loads(client.get_artifact_file(
-        SHA,
-        JOB_NAME,
-        PACKS_DEPENDENCIES_FILEPATH,
-    )) == packs_dependencies_json
+    assert (
+        json.loads(
+            client.get_artifact_file(
+                SHA,
+                JOB_NAME,
+                PACKS_DEPENDENCIES_FILEPATH,
+            )
+        )
+        == packs_dependencies_json
+    )
 
 
 @pytest.mark.parametrize(
-    'pipelines_mock_response, jobs_mock_response, artifacts_mock_repsonse, expected_err',
+    "pipelines_mock_response, jobs_mock_response, artifacts_mock_repsonse, expected_err",
     [
         pytest.param(
             [],
@@ -98,7 +103,7 @@ def test_get_artifact_file(
             "does not exist in the artifacts",
             id="No pack_dependencies.json file in artifacts",
         ),
-    ]
+    ],
 )
 def test_get_artifact_file_bad(
     client: GitlabClient,
@@ -109,16 +114,16 @@ def test_get_artifact_file_bad(
     expected_err: str,
 ) -> None:
     """
-        Given:
-            - A Gitlab Client
-            - A Commit SHA
-            - The job name in which a packs_dependencies.json file should be stored as an artifact
-            - A marketplace version
-            - Test cases for different Gitlab API responses.
-        When:
-            - Calling get_artifact_file()
-        Then:
-            - Ensure an exception is raised for all test cases.
+    Given:
+        - A Gitlab Client
+        - A Commit SHA
+        - The job name in which a packs_dependencies.json file should be stored as an artifact
+        - A marketplace version
+        - Test cases for different Gitlab API responses.
+    When:
+        - Calling get_artifact_file()
+    Then:
+        - Ensure an exception is raised for all test cases.
     """
     requests_mock.get(
         f"{client.base_url}/pipelines",

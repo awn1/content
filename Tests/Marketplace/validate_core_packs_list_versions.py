@@ -28,6 +28,7 @@ LATEST_ZIP_REGEX = re.compile(
 )
 PACK_REGEX = re.compile(r"([A-Za-z0-9-_.]+)/(\d+\.\d+\.\d+)/([A-Za-z0-9-_.]+)\.zip$")
 
+
 def option_handler():
     """Validates and parses script arguments.
 
@@ -153,7 +154,7 @@ def verify_all_mandatory_dependencies_are_in_corepack_list(
     file_to_check: str,
     marketplace: str,
     zip_or_index_file: str,
-    log_aggregator: LogAggregator
+    log_aggregator: LogAggregator,
 ) -> None:
     """Verify all mandatory dependencies are in corepack list.
     Args:
@@ -181,22 +182,29 @@ def verify_all_mandatory_dependencies_are_in_corepack_list(
                             f"for the {file_to_check} list."
                         )
                     else:
-                        log_aggregator.add_log(f"The dependency {dependency_name}/{min_version} "
+                        log_aggregator.add_log(
+                            f"The dependency {dependency_name}/{min_version} "
                             f"of the pack {pack_name}/{pack_version} in the {zip_or_index_file} "
                             f"does not meet the conditions for {dependency_name}/{core_pack.get('version')} "
-                            f"in the {file_to_check} list.")
+                            f"in the {file_to_check} list."
+                        )
                 else:
-                    log_aggregator.add_log(f"No minVersion or version for pack dependency"
-                        f" {dependency_name=} for pack {pack_name} version {pack_version}.")
+                    log_aggregator.add_log(
+                        f"No minVersion or version for pack dependency"
+                        f" {dependency_name=} for pack {pack_name} version {pack_version}."
+                    )
             else:
-                logging.debug(f"The dependency {dependency_name} with min version number {min_version} "
-                                f"of the pack {pack_name}/{pack_version} "
-                                f"Does not exists in core pack list. - check_if_test_dependency.")
-                if not (check_if_test_dependency(dependency_name,pack_name, marketplace)):
-                    log_aggregator.add_log(f"The dependency {dependency_name} with min version number {min_version} "
-                                            f"of the pack {pack_name}/{pack_version} "
-                                            f"Does not exists in core pack list {file_to_check}.")
-
+                logging.debug(
+                    f"The dependency {dependency_name} with min version number {min_version} "
+                    f"of the pack {pack_name}/{pack_version} "
+                    f"Does not exists in core pack list. - check_if_test_dependency."
+                )
+                if not (check_if_test_dependency(dependency_name, pack_name, marketplace)):
+                    log_aggregator.add_log(
+                        f"The dependency {dependency_name} with min version number {min_version} "
+                        f"of the pack {pack_name}/{pack_version} "
+                        f"Does not exists in core pack list {file_to_check}."
+                    )
 
 
 def extract_pack_name_from_path(path_of_the_pack: str) -> str:
@@ -239,7 +247,7 @@ def extract_pack_version_from_pack_path(path_of_the_pack: str, pack_name: str) -
         pack_verison = pack_path_extraction[0][1]
         pack_version_regex = re.findall(VERSION_FORMAT_REGEX, pack_verison)
     else:
-         pack_version_regex = re.findall(VERSION_FORMAT_REGEX, path_of_the_pack)
+        pack_version_regex = re.findall(VERSION_FORMAT_REGEX, path_of_the_pack)
     if pack_version_regex:
         pack_version = pack_version_regex[0]
         return pack_version
@@ -261,14 +269,15 @@ def check_if_test_dependency(dependency_name: str, pack_name: str, marketplace: 
         logging.debug(f"Content type for {pack_name} result is {bool(res)}")
         for node in res:
             for dependency in node.relationships_data[RelationshipType.DEPENDS_ON]:
-                if (dependency.content_item_to.database_id == dependency.target_id and
-                    dependency.is_test and dependency.content_item_to.object_id == dependency_name):
-                        logging.debug(
-                            f"The dependency {dependency_name} "
-                            f"of the pack {pack_name} is a test dependency"
-                        )
-                        return True
+                if (
+                    dependency.content_item_to.database_id == dependency.target_id
+                    and dependency.is_test
+                    and dependency.content_item_to.object_id == dependency_name
+                ):
+                    logging.debug(f"The dependency {dependency_name} " f"of the pack {pack_name} is a test dependency")
+                    return True
         return False
+
 
 def main():
     install_logging("validate_core_pack_list.log", logger=logging)
@@ -315,23 +324,30 @@ def main():
                     build_bucket_base_path,
                 ):
                     metadata_zip_index = get_dependencies_from_pack_meta_data(pack_data.get("index_zip_path"), index_folder_path)
-                    metadata_zip_pack = get_dependencies_from_pack_meta_data("/metadata.json",
-                                                                            pack_path_after_extraction)  # type: ignore[arg-type]
+                    metadata_zip_pack = get_dependencies_from_pack_meta_data("/metadata.json", pack_path_after_extraction)  # type: ignore[arg-type]
 
-                    for dependencies, zip_or_index_file in \
-                    [(metadata_zip_index,"index.zip"), (metadata_zip_pack,f"{pack_name}.zip")]:
+                    for dependencies, zip_or_index_file in [
+                        (metadata_zip_index, "index.zip"),
+                        (metadata_zip_pack, f"{pack_name}.zip"),
+                    ]:
                         verify_all_mandatory_dependencies_are_in_corepack_list(
-                            pack_name, pack_version, dependencies, core_packs,
-                            corepacks_file_name, marketplace, zip_or_index_file,
-                            log_aggregator
+                            pack_name,
+                            pack_version,
+                            dependencies,
+                            core_packs,
+                            corepacks_file_name,
+                            marketplace,
+                            zip_or_index_file,
+                            log_aggregator,
                         )
                     if isinstance(pack_path_after_extraction, str):
                         shutil.rmtree(pack_path_after_extraction)
                 else:
-                    log_aggregator.add_log(f"pack {pack_name=} version from core pack "
-                                           f"{pack_data.get('version')=} not in the bucket")
+                    log_aggregator.add_log(
+                        f"pack {pack_name=} version from core pack " f"{pack_data.get('version')=} not in the bucket"
+                    )
         shutil.rmtree(index_folder_path)
 
 
 if __name__ == "__main__":
-        main()
+    main()

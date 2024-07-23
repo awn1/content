@@ -1,4 +1,3 @@
-
 import datetime
 import json
 import logging
@@ -29,16 +28,18 @@ urllib3.disable_warnings()
 SERVER_URL = "https://{}"
 INTEGRATIONS_CONF = "./Tests/integrations_file.txt"
 
-FAILED_MATCH_INSTANCE_MSG = "{} Failed to run.\n There are {} instances of {}, please select one of them by using " \
-                            "the instance_name argument in conf.json. The options are:\n{}"
+FAILED_MATCH_INSTANCE_MSG = (
+    "{} Failed to run.\n There are {} instances of {}, please select one of them by using "
+    "the instance_name argument in conf.json. The options are:\n{}"
+)
 
-LOCKS_PATH = 'content-locks'
-BUCKET_NAME = os.environ.get('GCS_ARTIFACTS_BUCKET')
-BUILD_NUM = os.environ.get('CI_JOB_ID')
-WORKFLOW_ID = os.environ.get('CI_PIPELINE_ID')
-CIRCLE_STATUS_TOKEN = os.environ.get('CIRCLECI_STATUS_TOKEN')
-ARTIFACTS_FOLDER_SERVER_TYPE = os.getenv('ARTIFACTS_FOLDER_SERVER_TYPE')
-ENV_RESULTS_PATH = os.getenv('ENV_RESULTS_PATH', f'{ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json')
+LOCKS_PATH = "content-locks"
+BUCKET_NAME = os.environ.get("GCS_ARTIFACTS_BUCKET")
+BUILD_NUM = os.environ.get("CI_JOB_ID")
+WORKFLOW_ID = os.environ.get("CI_PIPELINE_ID")
+CIRCLE_STATUS_TOKEN = os.environ.get("CIRCLECI_STATUS_TOKEN")
+ARTIFACTS_FOLDER_SERVER_TYPE = os.getenv("ARTIFACTS_FOLDER_SERVER_TYPE")
+ENV_RESULTS_PATH = os.getenv("ENV_RESULTS_PATH", f"{ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json")
 
 MAX_ON_PREM_SERVER_VERSION = "6.99.99"
 
@@ -58,7 +59,7 @@ class SettingsTester:
         self.memCheck = options.memCheck
         self.serverVersion = options.serverVersion
         self.specific_tests_to_run = self.parse_tests_list_arg(options.testsList)
-        self.is_local_run = (self.server is not None)
+        self.is_local_run = self.server is not None
 
     @staticmethod
     def parse_tests_list_arg(tests_list: str):
@@ -73,7 +74,6 @@ class SettingsTester:
 
 
 class DataKeeperTester:
-
     def __init__(self):
         self.succeeded_playbooks = []
         self.failed_playbooks = []
@@ -83,8 +83,7 @@ class DataKeeperTester:
         self.empty_files = []
         self.unmockable_integrations = {}
 
-    def add_tests_data(self, succeed_playbooks, failed_playbooks, skipped_tests, skipped_integration,
-                       unmockable_integrations):
+    def add_tests_data(self, succeed_playbooks, failed_playbooks, skipped_tests, skipped_integration, unmockable_integrations):
         # Using multiple appends and not extend since append is guaranteed to be thread safe
         for playbook in succeed_playbooks:
             self.succeeded_playbooks.append(playbook)
@@ -105,9 +104,9 @@ class DataKeeperTester:
             self.empty_files.append(playbook_id)
 
 
-def print_test_summary(tests_data_keeper: DataKeeperTester,
-                       is_ami: bool = True,
-                       logging_module: Any | ParallelLoggingManager = logging) -> None:
+def print_test_summary(
+    tests_data_keeper: DataKeeperTester, is_ami: bool = True, logging_module: Any | ParallelLoggingManager = logging
+) -> None:
     """
     Takes the information stored in the tests_data_keeper and prints it in a human readable way.
     Args:
@@ -131,54 +130,69 @@ def print_test_summary(tests_data_keeper: DataKeeperTester,
     rerecorded_count = len(rerecorded_tests) if is_ami else 0
     empty_mocks_count = len(empty_files) if is_ami else 0
     unmocklable_integrations_count = len(unmocklable_integrations)
-    logging_module.info('TEST RESULTS:')
-    logging_module.info(f'Number of playbooks tested - {succeed_count + failed_count}')
+    logging_module.info("TEST RESULTS:")
+    logging_module.info(f"Number of playbooks tested - {succeed_count + failed_count}")
     if failed_count:
-        logging_module.error(f'Number of failed tests - {failed_count}:')
-        logging_module.error('Failed Tests: {}'.format(
-            ''.join([f'\n\t\t\t\t\t\t\t - {playbook_id}' for playbook_id in failed_playbooks])))
+        logging_module.error(f"Number of failed tests - {failed_count}:")
+        logging_module.error(
+            "Failed Tests: {}".format("".join([f"\n\t\t\t\t\t\t\t - {playbook_id}" for playbook_id in failed_playbooks]))
+        )
     if succeed_count:
-        logging_module.success(f'Number of succeeded tests - {succeed_count}')
-        logging_module.success('Successful Tests: {}'.format(
-            ''.join([f'\n\t\t\t\t\t\t\t - {playbook_id}' for playbook_id in succeed_playbooks])))
+        logging_module.success(f"Number of succeeded tests - {succeed_count}")
+        logging_module.success(
+            "Successful Tests: {}".format("".join([f"\n\t\t\t\t\t\t\t - {playbook_id}" for playbook_id in succeed_playbooks]))
+        )
     if rerecorded_count > 0:
-        logging_module.warning(f'Number of tests with failed playback and successful re-recording - {rerecorded_count}')
-        logging_module.warning('Tests with failed playback and successful re-recording: {}'.format(
-            ''.join([f'\n\t\t\t\t\t\t\t - {playbook_id}' for playbook_id in rerecorded_tests])))
+        logging_module.warning(f"Number of tests with failed playback and successful re-recording - {rerecorded_count}")
+        logging_module.warning(
+            "Tests with failed playback and successful re-recording: {}".format(
+                "".join([f"\n\t\t\t\t\t\t\t - {playbook_id}" for playbook_id in rerecorded_tests])
+            )
+        )
 
     if empty_mocks_count > 0:
-        logging_module.info(f'Successful tests with empty mock files count- {empty_mocks_count}:\n')
-        proxy_explanation = \
-            '\t\t\t\t\t\t\t (either there were no http requests or no traffic is passed through the proxy.\n' \
-            '\t\t\t\t\t\t\t Investigate the playbook and the integrations.\n' \
-            '\t\t\t\t\t\t\t If the integration has no http traffic, add to unmockable_integrations in conf.json)'
+        logging_module.info(f"Successful tests with empty mock files count- {empty_mocks_count}:\n")
+        proxy_explanation = (
+            "\t\t\t\t\t\t\t (either there were no http requests or no traffic is passed through the proxy.\n"
+            "\t\t\t\t\t\t\t Investigate the playbook and the integrations.\n"
+            "\t\t\t\t\t\t\t If the integration has no http traffic, add to unmockable_integrations in conf.json)"
+        )
         logging_module.info(proxy_explanation)
-        logging_module.info('Successful tests with empty mock files: {}'.format(
-            ''.join([f'\n\t\t\t\t\t\t\t - {playbook_id}' for playbook_id in empty_files])))
+        logging_module.info(
+            "Successful tests with empty mock files: {}".format(
+                "".join([f"\n\t\t\t\t\t\t\t - {playbook_id}" for playbook_id in empty_files])
+            )
+        )
 
     if len(skipped_integration) > 0:
-        logging_module.warning(f'Number of skipped integration - {len(skipped_integration):}')
-        logging_module.warning('Skipped integration: {}'.format(
-            ''.join([f'\n\t\t\t\t\t\t\t - {playbook_id}' for playbook_id in skipped_integration])))
+        logging_module.warning(f"Number of skipped integration - {len(skipped_integration):}")
+        logging_module.warning(
+            "Skipped integration: {}".format(
+                "".join([f"\n\t\t\t\t\t\t\t - {playbook_id}" for playbook_id in skipped_integration])
+            )
+        )
 
     if skipped_count > 0:
-        logging_module.warning(f'Number of skipped tests - {skipped_count}:')
-        logging_module.warning('Skipped tests: {}'.format(
-            ''.join([f'\n\t\t\t\t\t\t\t - {playbook_id}' for playbook_id in skipped_tests])))
+        logging_module.warning(f"Number of skipped tests - {skipped_count}:")
+        logging_module.warning(
+            "Skipped tests: {}".format("".join([f"\n\t\t\t\t\t\t\t - {playbook_id}" for playbook_id in skipped_tests]))
+        )
 
     if unmocklable_integrations_count > 0:
-        logging_module.warning(f'Number of unmockable integrations - {unmocklable_integrations_count}:')
-        logging_module.warning('Unmockable integrations: {}'.format(
-            ''.join([f'\n\t\t\t\t\t\t\t - {playbook_id} - {reason}' for playbook_id, reason in
-                     unmocklable_integrations.items()])))
+        logging_module.warning(f"Number of unmockable integrations - {unmocklable_integrations_count}:")
+        logging_module.warning(
+            "Unmockable integrations: {}".format(
+                "".join(
+                    [f"\n\t\t\t\t\t\t\t - {playbook_id} - {reason}" for playbook_id, reason in unmocklable_integrations.items()]
+                )
+            )
+        )
 
 
 def update_test_msg(integrations, test_message):
     if integrations:
-        integrations_names = [integration['name'] for integration in
-                              integrations]
-        test_message = test_message + ' with integration(s): ' + ','.join(
-            integrations_names)
+        integrations_names = [integration["name"] for integration in integrations]
+        test_message = test_message + " with integration(s): " + ",".join(integrations_names)
 
     return test_message
 
@@ -191,12 +205,12 @@ def turn_off_telemetry(xsoar_client):
     :return: None
     """
 
-    body, status_code, _ = demisto_client.generic_request_func(self=xsoar_client, method='POST',
-                                                               path='/telemetry?status=notelemetry')
+    body, status_code, _ = demisto_client.generic_request_func(
+        self=xsoar_client, method="POST", path="/telemetry?status=notelemetry"
+    )
 
     if status_code != 200:
-        logging_manager.critical(f'Request to turn off telemetry failed with status code "{status_code}"\n{body}',
-                                 real_time=True)
+        logging_manager.critical(f'Request to turn off telemetry failed with status code "{status_code}"\n{body}', real_time=True)
         sys.exit(1)
 
 
@@ -205,11 +219,11 @@ def create_result_files(tests_data_keeper):
     skipped_integration = tests_data_keeper.skipped_integrations
     skipped_tests = tests_data_keeper.skipped_tests
     with open("./Tests/failed_tests.txt", "w") as failed_tests_file:
-        failed_tests_file.write('\n'.join(failed_playbooks))
-    with open('./Tests/skipped_tests.txt', "w") as skipped_tests_file:
-        skipped_tests_file.write('\n'.join(skipped_tests))
-    with open('./Tests/skipped_integrations.txt', "w") as skipped_integrations_file:
-        skipped_integrations_file.write('\n'.join(skipped_integration))
+        failed_tests_file.write("\n".join(failed_playbooks))
+    with open("./Tests/skipped_tests.txt", "w") as skipped_tests_file:
+        skipped_tests_file.write("\n".join(skipped_tests))
+    with open("./Tests/skipped_integrations.txt", "w") as skipped_integrations_file:
+        skipped_integrations_file.write("\n".join(skipped_integration))
 
 
 def change_placeholders_to_values(placeholders_map, config_item):
@@ -232,36 +246,38 @@ def change_placeholders_to_values(placeholders_map, config_item):
 
 def set_integration_params(demisto_api_key, integrations, secret_params, instance_names, playbook_id, placeholders_map):
     for integration in integrations:
-        integration_params = [change_placeholders_to_values(placeholders_map, item) for item
-                              in secret_params if item['name'] == integration['name']]
+        integration_params = [
+            change_placeholders_to_values(placeholders_map, item) for item in secret_params if item["name"] == integration["name"]
+        ]
 
         if integration_params:
             matched_integration_params = integration_params[0]
             if len(integration_params) != 1:
                 found_matching_instance = False
                 for item in integration_params:
-                    if item.get('instance_name', 'Not Found') in instance_names:
+                    if item.get("instance_name", "Not Found") in instance_names:
                         matched_integration_params = item
                         found_matching_instance = True
 
                 if not found_matching_instance:
-                    optional_instance_names = [optional_integration.get('instance_name', 'None')
-                                               for optional_integration in integration_params]
-                    error_msg = FAILED_MATCH_INSTANCE_MSG.format(playbook_id, len(integration_params),
-                                                                 integration['name'],
-                                                                 '\n'.join(optional_instance_names))
+                    optional_instance_names = [
+                        optional_integration.get("instance_name", "None") for optional_integration in integration_params
+                    ]
+                    error_msg = FAILED_MATCH_INSTANCE_MSG.format(
+                        playbook_id, len(integration_params), integration["name"], "\n".join(optional_instance_names)
+                    )
                     logging_manager.error(error_msg)
                     return False
 
-            integration['params'] = matched_integration_params.get('params', {})
-            integration['byoi'] = matched_integration_params.get('byoi', True)
-            integration['instance_name'] = matched_integration_params.get('instance_name', integration['name'])
-            integration['validate_test'] = matched_integration_params.get('validate_test', True)
-        elif integration['name'] == 'Demisto REST API':
-            integration['params'] = {
-                'url': 'https://localhost',
-                'apikey': demisto_api_key,
-                'insecure': True,
+            integration["params"] = matched_integration_params.get("params", {})
+            integration["byoi"] = matched_integration_params.get("byoi", True)
+            integration["instance_name"] = matched_integration_params.get("instance_name", integration["name"])
+            integration["validate_test"] = matched_integration_params.get("validate_test", True)
+        elif integration["name"] == "Demisto REST API":
+            integration["params"] = {
+                "url": "https://localhost",
+                "apikey": demisto_api_key,
+                "insecure": True,
             }
 
     return True
@@ -276,10 +292,7 @@ def collect_integrations(integrations_conf, skipped_integration, skipped_integra
             test_skipped_integration.append(integration)
 
         # string description
-        integrations.append({
-            'name': integration,
-            'params': {}
-        })
+        integrations.append({"name": integration, "params": {}})
 
     return test_skipped_integration, integrations
 
@@ -317,7 +330,7 @@ def get_server_numeric_version(client: DemistoClient, is_local_run=False) -> str
     """
     default_version = MAX_ON_PREM_SERVER_VERSION
     if is_local_run:
-        logging.info(f'Local run, assuming server version is {default_version}')
+        logging.info(f"Local run, assuming server version is {default_version}")
         return default_version
 
     return str(get_demisto_version(client))
@@ -327,13 +340,13 @@ def get_instances_ips_and_names(tests_settings):
     if tests_settings.server:
         return [tests_settings.server]
     env_json = load_env_results_json()
-    instances_ips = [(env.get('Role'), env.get('InstanceDNS', '')) for env in env_json]
+    instances_ips = [(env.get("Role"), env.get("InstanceDNS", "")) for env in env_json]
     return instances_ips
 
 
 def get_test_records_of_given_test_names(tests_settings, tests_names_to_search):
     conf, secret_conf = load_conf_files(tests_settings.conf_path, tests_settings.secret_conf_path)
-    tests_records = conf['tests']
+    tests_records = conf["tests"]
     test_records_with_supplied_names = []
     for test_record in tests_records:
         test_name = test_record.get("playbookID")
@@ -352,14 +365,15 @@ def initialize_queue_and_executed_tests_set(tests):
 
 def get_unmockable_tests(tests_settings):
     conf, _ = load_conf_files(tests_settings.conf_path, tests_settings.secret_conf_path)
-    unmockable_integrations = conf['unmockable_integrations']
-    tests = conf['tests']
+    unmockable_integrations = conf["unmockable_integrations"]
+    tests = conf["tests"]
     unmockable_tests = []
     for test_record in tests:
         test_name = test_record.get("playbookID")
         integrations_used_in_test = get_used_integrations(test_record)
-        unmockable_integrations_used = [integration_name for integration_name in integrations_used_in_test if
-                                        integration_name in unmockable_integrations]
+        unmockable_integrations_used = [
+            integration_name for integration_name in integrations_used_in_test if integration_name in unmockable_integrations
+        ]
         if test_name and (not integrations_used_in_test or unmockable_integrations_used):
             unmockable_tests.append(test_name)
     return unmockable_tests
@@ -367,7 +381,7 @@ def get_unmockable_tests(tests_settings):
 
 def get_all_tests(tests_settings):
     conf, _ = load_conf_files(tests_settings.conf_path, tests_settings.secret_conf_path)
-    tests_records = conf['tests']
+    tests_records = conf["tests"]
     all_tests = []
     for test_record in tests_records:
         test_name = test_record.get("playbookID")
@@ -377,27 +391,29 @@ def get_all_tests(tests_settings):
 
 
 def add_pr_comment(comment):
-    token = os.environ['CONTENT_GITHUB_TOKEN']
-    branch_name = os.environ['CI_COMMIT_BRANCH']
-    sha1 = os.environ['CI_COMMIT_SHA']
+    token = os.environ["CONTENT_GITHUB_TOKEN"]
+    branch_name = os.environ["CI_COMMIT_BRANCH"]
+    sha1 = os.environ["CI_COMMIT_SHA"]
 
-    query = f'?q={sha1}+repo:demisto/content+org:demisto+is:pr+is:open+head:{branch_name}+is:open'
-    url = 'https://api.github.com/search/issues'
-    headers = {'Authorization': 'Bearer ' + token}
+    query = f"?q={sha1}+repo:demisto/content+org:demisto+is:pr+is:open+head:{branch_name}+is:open"
+    url = "https://api.github.com/search/issues"
+    headers = {"Authorization": "Bearer " + token}
     try:
         res = requests.get(url + query, headers=headers, verify=False)
         res_dict = handle_github_response(res)
 
-        if res_dict and res_dict.get('total_count', 0) == 1:
-            issue_url = res_dict['items'][0].get('comments_url') if res_dict.get('items', []) else None
+        if res_dict and res_dict.get("total_count", 0) == 1:
+            issue_url = res_dict["items"][0].get("comments_url") if res_dict.get("items", []) else None
             if issue_url:
-                res = requests.post(issue_url, json={'body': comment}, headers=headers, verify=False)
+                res = requests.post(issue_url, json={"body": comment}, headers=headers, verify=False)
                 handle_github_response(res)
         else:
-            logging_manager.warning('Add pull request comment failed: There is more then one open pull '
-                                    f'request for branch {branch_name}.', real_time=True)
+            logging_manager.warning(
+                "Add pull request comment failed: There is more then one open pull " f"request for branch {branch_name}.",
+                real_time=True,
+            )
     except Exception:
-        logging_manager.exception('Add pull request comment failed')
+        logging_manager.exception("Add pull request comment failed")
 
 
 def handle_github_response(response):
@@ -408,9 +424,7 @@ def handle_github_response(response):
 
 
 @contextmanager
-def acquire_test_lock(integrations_details: list,
-                      test_timeout: int,
-                      conf_json_path: str) -> Generator:
+def acquire_test_lock(integrations_details: list, test_timeout: int, conf_json_path: str) -> Generator:
     """
     This is a context manager that handles all the locking and unlocking of integrations.
     Execution is as following:
@@ -424,13 +438,11 @@ def acquire_test_lock(integrations_details: list,
     Yields:
         A boolean indicating the lock attempt result
     """
-    locked = safe_lock_integrations(test_timeout,
-                                    integrations_details,
-                                    conf_json_path)
+    locked = safe_lock_integrations(test_timeout, integrations_details, conf_json_path)
     try:
         yield locked
     except Exception:
-        logging_manager.exception('Failed with test lock')
+        logging_manager.exception("Failed with test lock")
     finally:
         if not locked:
             return
@@ -449,12 +461,10 @@ def safe_unlock_integrations(integrations_details: list):
         storage_client = storage.Client()
         unlock_integrations(integrations_details, storage_client)
     except Exception:
-        logging_manager.exception('attempt to unlock integration failed for unknown reason.')
+        logging_manager.exception("attempt to unlock integration failed for unknown reason.")
 
 
-def safe_lock_integrations(test_timeout: int,
-                           integrations_details: list,
-                           conf_json_path: str) -> bool:
+def safe_lock_integrations(test_timeout: int, integrations_details: list, conf_json_path: str) -> bool:
     """
     This integration safely locks the test's integrations and return it's result
     If an unexpected error occurs - this method will log it's details and return False
@@ -467,20 +477,21 @@ def safe_lock_integrations(test_timeout: int,
         A boolean indicating the lock attempt result
     """
     conf, _ = load_conf_files(conf_json_path, None)
-    parallel_integrations_names = conf['parallel_integrations']
-    filtered_integrations_details = [integration for integration in integrations_details if
-                                     integration['name'] not in parallel_integrations_names]
+    parallel_integrations_names = conf["parallel_integrations"]
+    filtered_integrations_details = [
+        integration for integration in integrations_details if integration["name"] not in parallel_integrations_names
+    ]
     integration_names = get_integrations_list(filtered_integrations_details)
     if integration_names:
-        print_msg = f'Attempting to lock integrations {integration_names}, with timeout {test_timeout}'
+        print_msg = f"Attempting to lock integrations {integration_names}, with timeout {test_timeout}"
     else:
-        print_msg = 'No integrations to lock'
+        print_msg = "No integrations to lock"
     logging_manager.debug(print_msg)
     try:
         storage_client = storage.Client()
         locked = lock_integrations(filtered_integrations_details, test_timeout, storage_client)
     except Exception:
-        logging_manager.exception('attempt to lock integration failed for unknown reason.')
+        logging_manager.exception("attempt to lock integration failed for unknown reason.")
         locked = False
     return locked
 
@@ -501,19 +512,19 @@ def workflow_still_running(workflow_id: str) -> bool:
         return True
     else:
         try:
-            workflow_details_response = requests.get(f'https://circleci.com/api/v2/workflow/{workflow_id}',
-                                                     headers={'Accept': 'application/json'},
-                                                     auth=(CIRCLE_STATUS_TOKEN, ''))  # type: ignore[arg-type]
+            workflow_details_response = requests.get(
+                f"https://circleci.com/api/v2/workflow/{workflow_id}",
+                headers={"Accept": "application/json"},
+                auth=(CIRCLE_STATUS_TOKEN, ""),
+            )  # type: ignore[arg-type]
             workflow_details_response.raise_for_status()
         except Exception:
-            logging_manager.exception(f'Failed to get circleci response about workflow with id {workflow_id}.')
+            logging_manager.exception(f"Failed to get circleci response about workflow with id {workflow_id}.")
             return True
-        return workflow_details_response.json().get('status') not in ('canceled', 'success', 'failed')
+        return workflow_details_response.json().get("status") not in ("canceled", "success", "failed")
 
 
-def lock_integrations(integrations_details: list,
-                      test_timeout: int,
-                      storage_client: storage.Client) -> bool:
+def lock_integrations(integrations_details: list, test_timeout: int, storage_client: storage.Client) -> bool:
     """
     Locks all the test's integrations
     Args:
@@ -531,13 +542,14 @@ def lock_integrations(integrations_details: list,
     for integration, lock_file in existing_integrations_lock_files.items():
         # Each file has content in the form of <circleci-build-number>:<timeout in seconds>
         # If it has not expired - it means the integration is currently locked by another test.
-        workflow_id, build_number, lock_timeout = lock_file.download_as_string().decode().split(':')
+        workflow_id, build_number, lock_timeout = lock_file.download_as_string().decode().split(":")
         if not lock_expired(lock_file, lock_timeout) and workflow_still_running(workflow_id):
             # there is a locked integration for which the lock is not expired - test cannot be executed at the moment
             logging_manager.warning(
-                f'Could not lock integration {integration}, another lock file was exist with '
-                f'build number: {build_number}, timeout: {lock_timeout}, last update at {lock_file.updated}.\n'
-                f'Delaying test execution')
+                f"Could not lock integration {integration}, another lock file was exist with "
+                f"build number: {build_number}, timeout: {lock_timeout}, last update at {lock_file.updated}.\n"
+                f"Delaying test execution"
+            )
             return False
     integrations_generation_number = {}
     # Gathering generation number with which the new file will be created,
@@ -560,13 +572,12 @@ def get_integrations_list(test_integrations: list) -> list:
         the integration names in a list for all the integrations that takes place in the test
         specified in test details.
     """
-    return [integration['name'] for integration in test_integrations]
+    return [integration["name"] for integration in test_integrations]
 
 
-def create_lock_files(integrations_generation_number: dict,
-                      storage_client: storage.Client,
-                      integrations_details: list,
-                      test_timeout: int) -> bool:
+def create_lock_files(
+    integrations_generation_number: dict, storage_client: storage.Client, integrations_details: list, test_timeout: int
+) -> bool:
     """
     This method tries to create a lock files for all integrations specified in 'integrations_generation_number'.
     Each file should contain <circle-ci-build-number>:<test-timeout>
@@ -585,26 +596,24 @@ def create_lock_files(integrations_generation_number: dict,
     locked_integrations = []
     bucket = storage_client.bucket(BUCKET_NAME)
     for integration, generation_number in integrations_generation_number.items():
-        blob = bucket.blob(f'{LOCKS_PATH}/{integration}')
+        blob = bucket.blob(f"{LOCKS_PATH}/{integration}")
         try:
-            blob.upload_from_string(f'{WORKFLOW_ID}:{BUILD_NUM}:{test_timeout + 30}',
-                                    if_generation_match=generation_number)
-            logging_manager.debug(f'integration {integration} locked')
+            blob.upload_from_string(f"{WORKFLOW_ID}:{BUILD_NUM}:{test_timeout + 30}", if_generation_match=generation_number)
+            logging_manager.debug(f"integration {integration} locked")
             locked_integrations.append(integration)
         except PreconditionFailed:
             # if this exception occurs it means that another build has locked this integration
             # before this build managed to do it.
             # we need to unlock all the integrations we have already locked and try again later
             logging_manager.warning(
-                f'Could not lock integration {integration}, Create file with precondition failed.'
-                f'delaying test execution.')
+                f"Could not lock integration {integration}, Create file with precondition failed." f"delaying test execution."
+            )
             unlock_integrations(integrations_details, storage_client)
             return False
     return True
 
 
-def unlock_integrations(integrations_details: list,
-                        storage_client: storage.Client) -> None:
+def unlock_integrations(integrations_details: list, storage_client: storage.Client) -> None:
     """
     Delete all integration lock files for integrations specified in 'locked_integrations'
     Args:
@@ -616,13 +625,12 @@ def unlock_integrations(integrations_details: list,
     for integration, lock_file in locked_integration_blobs.items():
         try:
             # Verifying build number is the same as current build number to avoid deleting other tests lock files
-            _, build_number, _ = lock_file.download_as_string().decode().split(':')
+            _, build_number, _ = lock_file.download_as_string().decode().split(":")
             if build_number == BUILD_NUM:
                 lock_file.delete(if_generation_match=lock_file.generation)
-                logging_manager.debug(
-                    f'Integration {integration} unlocked')
+                logging_manager.debug(f"Integration {integration} unlocked")
         except PreconditionFailed:
-            logging_manager.error(f'Could not unlock integration {integration} precondition failure')
+            logging_manager.error(f"Could not unlock integration {integration} precondition failure")
 
 
 def get_locked_integrations(integrations: list, storage_client: storage.Client) -> dict:
@@ -637,15 +645,21 @@ def get_locked_integrations(integrations: list, storage_client: storage.Client) 
     """
     # Listing all files in lock folder
     # Wrapping in 'list' operator because list_blobs return a generator which can only be iterated once
-    lock_files_ls = list(storage_client.list_blobs(BUCKET_NAME, prefix=f'{LOCKS_PATH}'))
+    lock_files_ls = list(storage_client.list_blobs(BUCKET_NAME, prefix=f"{LOCKS_PATH}"))
     current_integrations_lock_files = {}
     # Getting all existing files details for integrations that we want to lock
     for integration in integrations:
-        current_integrations_lock_files.update({integration: [lock_file_blob for lock_file_blob in lock_files_ls if
-                                                              lock_file_blob.name == f'{LOCKS_PATH}/{integration}']})
+        current_integrations_lock_files.update(
+            {
+                integration: [
+                    lock_file_blob for lock_file_blob in lock_files_ls if lock_file_blob.name == f"{LOCKS_PATH}/{integration}"
+                ]
+            }
+        )
     # Filtering 'current_integrations_lock_files' from integrations with no files
-    current_integrations_lock_files = {integration: blob_files[0] for integration, blob_files in
-                                       current_integrations_lock_files.items() if blob_files}
+    current_integrations_lock_files = {
+        integration: blob_files[0] for integration, blob_files in current_integrations_lock_files.items() if blob_files
+    }
     return current_integrations_lock_files
 
 

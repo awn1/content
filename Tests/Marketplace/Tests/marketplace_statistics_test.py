@@ -9,10 +9,8 @@ from Tests.Marketplace.marketplace_statistics import PackStatisticsHandler
 
 @pytest.fixture(scope="module")
 def dummy_pack_metadata():
-    """ Fixture for dummy pack_metadata.json file that is part of pack folder in content repo.
-    """
-    dummy_pack_metadata_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data",
-                                            "user_pack_metadata.json")
+    """Fixture for dummy pack_metadata.json file that is part of pack folder in content repo."""
+    dummy_pack_metadata_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data", "user_pack_metadata.json")
     pack_metadata = load_json(dummy_pack_metadata_path)
     return pack_metadata
 
@@ -20,8 +18,7 @@ def dummy_pack_metadata():
 class TestPackStatisticsHandler:
     @pytest.fixture(scope="function", autouse=True)
     def dummy_pack(self):
-        """ dummy pack fixture
-        """
+        """dummy pack fixture"""
         return Pack(pack_name="Test Pack Name", pack_path="dummy_path")
 
     def test_search_rank_new_tag(self, dummy_pack_metadata, dummy_pack):
@@ -56,20 +53,10 @@ class TestPackStatisticsHandler:
                     "name": "packname (Deprecated)",
                     "description": "packs description",
                     "category": "Endpoint",
-                    "commands": [
-                        {
-                            "name": "command1",
-                            "description": "command 1 description"
-                        }
-                    ]
+                    "commands": [{"name": "command1", "description": "command 1 description"}],
                 }
             ],
-            "playbook": [
-                {
-                    "name": "test plakbook",
-                    "description": "test playbook description"
-                }
-            ]
+            "playbook": [{"name": "test plakbook", "description": "test playbook description"}],
         }
         search_rank = PackStatisticsHandler.calculate_search_rank(set(), Metadata.CERTIFIED, content_items)
         assert search_rank == -40
@@ -86,32 +73,16 @@ class TestPackStatisticsHandler:
                     "name": "packname (Deprecated)",
                     "description": "packs description",
                     "category": "Endpoint",
-                    "commands": [
-                        {
-                            "name": "command1",
-                            "description": "command 1 description"
-                        }
-                    ]
+                    "commands": [{"name": "command1", "description": "command 1 description"}],
                 },
                 {
                     "name": "packname2",
                     "description": "packs description",
                     "category": "Endpoint",
-                    "commands": [
-                        {
-                            "name": "command1",
-                            "description": "command 1 description"
-                        }
-                    ]
+                    "commands": [{"name": "command1", "description": "command 1 description"}],
                 },
-
             ],
-            "playbook": [
-                {
-                    "name": "test plakbook",
-                    "description": "test playbook description"
-                }
-            ]
+            "playbook": [{"name": "test plakbook", "description": "test playbook description"}],
         }
         search_rank = PackStatisticsHandler.calculate_search_rank(set(), Metadata.CERTIFIED, content_items)
         assert search_rank == 10

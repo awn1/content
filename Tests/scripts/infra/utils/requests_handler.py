@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 def raise_for_status(response):
     """Pretty format and log the HTTP Error if it happens"""
     try:
-        truncated_text = f'{response.text[:200]}...' if len(response.text) > 200 else response.text
-        logger.debug(f'Response {response.status_code=} text: {truncated_text.strip()}')
+        truncated_text = f"{response.text[:200]}..." if len(response.text) > 200 else response.text
+        logger.debug(f"Response {response.status_code=} text: {truncated_text.strip()}")
         response.raise_for_status()
     except HTTPError as e:
         msg = get_http_error_text(e)
@@ -29,6 +29,6 @@ class TimeoutHTTPAdapter(HTTPAdapter):
 
     def send(self, request, **kwargs):
         timeout = kwargs.get("timeout")
-        if not timeout and hasattr(self, 'timeout'):
+        if not timeout and hasattr(self, "timeout"):
             kwargs["timeout"] = self.timeout
         return super().send(request, **kwargs)

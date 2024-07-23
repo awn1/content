@@ -21,23 +21,18 @@ urllib3.disable_warnings(InsecureRequestWarning)
 yaml = YAML()
 
 GITLAB_SERVER_URL = os.getenv(
-    "CI_SERVER_URL", "https://gitlab.xdr.pan.local"  # disable-secrets-detection
+    "CI_SERVER_URL",
+    "https://gitlab.xdr.pan.local",  # disable-secrets-detection
 )
 GITLAB_CONTENT_PROJECT_ID = "1061"
-GITLAB_CONTENT_TRIGGER_URL = (
-    f"{GITLAB_SERVER_URL}/api/v4/projects/{GITLAB_CONTENT_PROJECT_ID}/trigger/pipeline"
-)
-GITLAB_CONTENT_REPO_URL = (
-    f"{GITLAB_SERVER_URL}/api/v4/projects/{GITLAB_CONTENT_PROJECT_ID}/repository/branches/"
-)
-GITLAB_CONTENT_PIPELINES_BASE_URL = (
-    f"{GITLAB_SERVER_URL}/api/v4/projects/{GITLAB_CONTENT_PROJECT_ID}/pipelines/"
-)
+GITLAB_CONTENT_TRIGGER_URL = f"{GITLAB_SERVER_URL}/api/v4/projects/{GITLAB_CONTENT_PROJECT_ID}/trigger/pipeline"
+GITLAB_CONTENT_REPO_URL = f"{GITLAB_SERVER_URL}/api/v4/projects/{GITLAB_CONTENT_PROJECT_ID}/repository/branches/"
+GITLAB_CONTENT_PIPELINES_BASE_URL = f"{GITLAB_SERVER_URL}/api/v4/projects/{GITLAB_CONTENT_PROJECT_ID}/pipelines/"
 TIMEOUT = 60 * 60 * 6  # 6 hours
-ARTIFACTS_FOLDER = Path(os.getenv('ARTIFACTS_FOLDER', '.'))
+ARTIFACTS_FOLDER = Path(os.getenv("ARTIFACTS_FOLDER", "."))
 
 GITLAB_CI_PATH = Path("./content/.gitlab/ci/.gitlab-ci.yml")
-SLACK_CHANNEL = os.environ.get('SLACK_CHANNEL', 'dmst-build-test')
+SLACK_CHANNEL = os.environ.get("SLACK_CHANNEL", "dmst-build-test")
 
 
 class ExitCode:
@@ -143,10 +138,7 @@ class TestBranch:
 
         """
         if self.is_there_pr_in_github():
-            print(
-                "There is a PR in GitHub that belong to "
-                f"the {self.branch_name} branch, no need to create a new branch"
-            )
+            print("There is a PR in GitHub that belong to " f"the {self.branch_name} branch, no need to create a new branch")
             return
 
         self.clone(self.url)
@@ -159,24 +151,30 @@ class TestBranch:
         self.create_branch()
 
         self.repo.git.add(".")
-        self.repo.git.commit(
-            "--allow-empty", "-m", "Test build for infra files", no_verify=True
-        )
+        self.repo.git.commit("--allow-empty", "-m", "Test build for infra files", no_verify=True)
 
         # Push changes to the remote repository, skipping CI pipelines
-        self.repo.git.push(
-            "--set-upstream", self.url, self.branch_name, push_option="ci.skip"
-        )
+        self.repo.git.push("--set-upstream", self.url, self.branch_name, push_option="ci.skip")
 
         print("Sleeping after pushing 10 seconds")
         time.sleep(10.0)
+
 
 # Trigger the test build in Content
 
 
 class PipelineManager:
-    def __init__(self, trigger_url, gl_trigger_token, gl_info_token, gl_cancel_token, branch_name, is_nightly, is_sdk_nightly,
-                 slack_channel):
+    def __init__(
+        self,
+        trigger_url,
+        gl_trigger_token,
+        gl_info_token,
+        gl_cancel_token,
+        branch_name,
+        is_nightly,
+        is_sdk_nightly,
+        slack_channel,
+    ):
         self.pipeline_id = None
         self.trigger_url = trigger_url
         self.trigger_token = gl_trigger_token
@@ -194,9 +192,7 @@ class PipelineManager:
         }
         params = {"ref": self.branch_name}
         try:
-            response = requests.get(
-                GITLAB_CONTENT_PIPELINES_BASE_URL, params=params, headers=headers
-            ).json()
+            response = requests.get(GITLAB_CONTENT_PIPELINES_BASE_URL, params=params, headers=headers).json()
         except Exception as e:
             logging.info(f"Error: {e}")
             exit(ExitCode.FAILED)
@@ -255,24 +251,38 @@ class PipelineManager:
             self.pipeline_id = str(res["id"])
             if output_file:
                 with open(output_file, "w") as f:
-                    title = (f"{build_type} - pipeline has been triggered. "
-                             f"See pipeline {common.slack_link(res['web_url'], 'here')}")
-                    f.write(json.dumps([{
-                        'color': 'good',
-                        'fallback': title,
-                        'title': title,
-                    }]))
+                    title = (
+                        f"{build_type} - pipeline has been triggered. "
+                        f"See pipeline {common.slack_link(res['web_url'], 'here')}"
+                    )
+                    f.write(
+                        json.dumps(
+                            [
+                                {
+                                    "color": "good",
+                                    "fallback": title,
+                                    "title": title,
+                                }
+                            ]
+                        )
+                    )
             return ExitCode.SUCCESS
         except Exception as e:
             logging.exception(f"Error: {e!s}")
             if output_file:
                 with open(output_file, "w") as f:
                     title = f"Failed to trigger build type: {build_type}"
-                    f.write(json.dumps([{
-                        'color': 'danger',
-                        'fallback': title,
-                        'title': title,
-                    }]))
+                    f.write(
+                        json.dumps(
+                            [
+                                {
+                                    "color": "danger",
+                                    "fallback": title,
+                                    "title": title,
+                                }
+                            ]
+                        )
+                    )
 
         return ExitCode.FAILED
 
@@ -299,7 +309,6 @@ class PipelineManager:
             return jobs_info.get("web_url")
 
     def wait_for_pipeline_completion(self, sleep_time: int = 600):
-
         # initialize timer
         start = time.time()
 
@@ -309,9 +318,7 @@ class PipelineManager:
                 break
             elapsed = time.time() - start
             if elapsed >= TIMEOUT:
-                logging.info(
-                    f"Timeout reached while waiting for upload to complete, pipeline number: {self.pipeline_id}"
-                )
+                logging.info(f"Timeout reached while waiting for upload to complete, pipeline number: {self.pipeline_id}")
                 return ExitCode.FAILED
             logging.info(f"Pipeline {self.pipeline_id} status is {pipeline_status}, sleeping for {sleep_time} seconds")
             time.sleep(sleep_time)
@@ -331,22 +338,18 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("-gt", "--gitlab-token", help="Gitlab Content token.")  #
     parser.add_argument("-gct", "--gitlab-cancel-token", help="Gitlab Content token.")
     parser.add_argument("-gtt", "--gitlab-token-trigger")
-    parser.add_argument(
-        "-un", "--username", help="Gitlab username.", default="gitlab-ci-token"
-    )
-    parser.add_argument(
-        "-sh", "--server-host", help="A server host", default="gitlab.xdr.pan.local"
-    )
+    parser.add_argument("-un", "--username", help="Gitlab username.", default="gitlab-ci-token")
+    parser.add_argument("-sh", "--server-host", help="A server host", default="gitlab.xdr.pan.local")
     parser.add_argument("-pn", "--project-name", help="A project name")
     parser.add_argument("-bn", "--branch-name", help="Current branch name")
     parser.add_argument("-ght", "--github-token", help="GitHub token")
-    parser.add_argument('-n', '--is-nightly', type=common.string_to_bool, help='Is nightly build')
-    parser.add_argument('-sn', '--sdk-nightly', type=common.string_to_bool, help='Is SDK nightly build')
+    parser.add_argument("-n", "--is-nightly", type=common.string_to_bool, help="Is nightly build")
+    parser.add_argument("-sn", "--sdk-nightly", type=common.string_to_bool, help="Is SDK nightly build")
     parser.add_argument(
-        '-ch', '--slack-channel', help='The slack channel in which to send the notification', default=SLACK_CHANNEL
+        "-ch", "--slack-channel", help="The slack channel in which to send the notification", default=SLACK_CHANNEL
     )
-    parser.add_argument('-w', '--wait', help='Wait for the pipeline to finish', action='store_true', default=False)
-    parser.add_argument('-o', '--output', help='Output file for the slack message', default=None)
+    parser.add_argument("-w", "--wait", help="Wait for the pipeline to finish", action="store_true", default=False)
+    parser.add_argument("-o", "--output", help="Output file for the slack message", default=None)
     return parser.parse_args()
 
 

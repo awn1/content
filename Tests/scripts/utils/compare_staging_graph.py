@@ -78,9 +78,7 @@ def compare_zips(zip1: Path, zip2: Path, output_path: Path) -> list[str]:
     return compare_dirs(zip1_files, zip2_files, output_path)
 
 
-def compare_files(
-    dir_compare: filecmp.dircmp[str], zip1_files: str, zip2_files: str, output_path: Path, diff_files: list[str]
-):
+def compare_files(dir_compare: filecmp.dircmp[str], zip1_files: str, zip2_files: str, output_path: Path, diff_files: list[str]):
     for file in dir_compare.common_files:
         if file not in dir_compare.same_files and file not in SKIPPED_FILES:
             file_diff(output_path, zip1_files, zip2_files, file, diff_files)

@@ -18,13 +18,19 @@ def run_with_proxy_configured(function: Callable) -> Callable:
 
     @wraps(function)
     def decorated(server, *args, **kwargs):
-        server.build.proxy.configure_proxy_in_demisto(proxy=server.build.servers[0].internal_ip + ':' + MITMProxy.PROXY_PORT,
-                                               username=server.build.username, password=server.build.password,
-                                               server=f'https://{server.build.servers[0].internal_ip}')
+        server.build.proxy.configure_proxy_in_demisto(
+            proxy=server.build.servers[0].internal_ip + ":" + MITMProxy.PROXY_PORT,
+            username=server.build.username,
+            password=server.build.password,
+            server=f"https://{server.build.servers[0].internal_ip}",
+        )
         result = function(server, *args, **kwargs)
-        server.build.proxy.configure_proxy_in_demisto(proxy='',
-                                               username=server.build.username, password=server.build.password,
-                                               server=f'https://{server.build.servers[0].internal_ip}')
+        server.build.proxy.configure_proxy_in_demisto(
+            proxy="",
+            username=server.build.username,
+            password=server.build.password,
+            server=f"https://{server.build.servers[0].internal_ip}",
+        )
         return result
 
     return decorated
@@ -47,11 +53,11 @@ def get_integration_params(options: argparse.Namespace, instance_name: str) -> d
         if integration_instance.get("instance_name") == instance_name or integration_instance.get("name") == instance_name:
             return integration_instance.get("params")
 
-    raise ValueError(f'Could not find integration parameters for {instance_name}')
+    raise ValueError(f"Could not find integration parameters for {instance_name}")
 
 
 def get_json_response(_response: requests.Response) -> dict:
     try:
         return _response.json()
     except ValueError as e:
-        raise ValueError(f'Could not parse {_response.text}, error: {e}')
+        raise ValueError(f"Could not parse {_response.text}, error: {e}")

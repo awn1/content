@@ -4,7 +4,6 @@ from Tests.scripts.utils import logging_wrapper as logging
 
 
 class LogAggregator:
-
     def __init__(self):
         self.logs = []
 

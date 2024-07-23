@@ -30,8 +30,9 @@ from Tests.Marketplace.upload_packs import extract_packs_artifacts, get_packs_su
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 
-LATEST_ZIP_REGEX = re.compile(fr'^{GCPConfig.GCS_PUBLIC_URL}/[\w./-]+/content/packs/([A-Za-z0-9-_.]+/\d+\.\d+\.\d+/'
-                              r'[A-Za-z0-9-_.]+\.zip$)')
+LATEST_ZIP_REGEX = re.compile(
+    rf"^{GCPConfig.GCS_PUBLIC_URL}/[\w./-]+/content/packs/([A-Za-z0-9-_.]+/\d+\.\d+\.\d+/" r"[A-Za-z0-9-_.]+\.zip$)"
+)
 
 
 def get_pack_names(target_packs: str) -> set:
@@ -54,7 +55,7 @@ def get_pack_names(target_packs: str) -> set:
             logging.error(f"Folder {PACKS_FOLDER} was not found at the following path: {PACKS_FULL_PATH}")
             sys.exit(1)
     elif target_packs and isinstance(target_packs, str):
-        modified_packs = {p.strip() for p in target_packs.split(',') if p not in IGNORED_FILES}
+        modified_packs = {p.strip() for p in target_packs.split(",") if p not in IGNORED_FILES}
         logging.info(f"Number of selected packs to upload is: {len(modified_packs)}")
         # return only packs from csv list
         return modified_packs
@@ -63,9 +64,16 @@ def get_pack_names(target_packs: str) -> set:
         sys.exit(1)
 
 
-def copy_index(index_folder_path: str, build_index_blob: Blob, build_index_generation: str, production_bucket: Bucket,
-               build_bucket: Bucket, storage_base_path: str, build_bucket_base_path: str):
-    """ Copies the build bucket index to the production bucket index path.
+def copy_index(
+    index_folder_path: str,
+    build_index_blob: Blob,
+    build_index_generation: str,
+    production_bucket: Bucket,
+    build_bucket: Bucket,
+    storage_base_path: str,
+    build_bucket_base_path: str,
+):
+    """Copies the build bucket index to the production bucket index path.
 
     Args:
         index_folder_path (str): index folder full path.
@@ -76,30 +84,38 @@ def copy_index(index_folder_path: str, build_index_blob: Blob, build_index_gener
         storage_base_path (str): the path to upload the index to.
         build_bucket_base_path (str): the path in the build bucket of the index.
     """
-    logging.info('Starting the copy index function')
+    logging.info("Starting the copy index function")
     try:
         build_index_blob.reload()
         build_current_index_generation = build_index_blob.generation
 
         if build_current_index_generation == build_index_generation:
             # copy index.zip from build to prod
-            index_name = f'{GCPConfig.INDEX_NAME}.zip'
-            prod_index_storage_path = init_index_prod_bucket(storage_base_path=storage_base_path,
-                                                             production_bucket=production_bucket,
-                                                             index_name=index_name)
-            copy_from_build_to_prod(build_bucket=build_bucket, build_index_blob=build_index_blob,
-                                    production_bucket=production_bucket, prod_index_storage_path=prod_index_storage_path,
-                                    index_name=index_name)
+            index_name = f"{GCPConfig.INDEX_NAME}.zip"
+            prod_index_storage_path = init_index_prod_bucket(
+                storage_base_path=storage_base_path, production_bucket=production_bucket, index_name=index_name
+            )
+            copy_from_build_to_prod(
+                build_bucket=build_bucket,
+                build_index_blob=build_index_blob,
+                production_bucket=production_bucket,
+                prod_index_storage_path=prod_index_storage_path,
+                index_name=index_name,
+            )
 
             # copy index.json from build to prod
             index_json_name = f"{GCPConfig.INDEX_NAME}.json"
-            prod_index_storage_path = init_index_prod_bucket(storage_base_path=storage_base_path,
-                                                             production_bucket=production_bucket,
-                                                             index_name=index_json_name)
+            prod_index_storage_path = init_index_prod_bucket(
+                storage_base_path=storage_base_path, production_bucket=production_bucket, index_name=index_json_name
+            )
             build_index_json_blob = build_bucket.blob(os.path.join(build_bucket_base_path, index_json_name))
-            copy_from_build_to_prod(build_bucket=build_bucket, build_index_blob=build_index_json_blob,
-                                    production_bucket=production_bucket, prod_index_storage_path=prod_index_storage_path,
-                                    index_name=index_json_name)
+            copy_from_build_to_prod(
+                build_bucket=build_bucket,
+                build_index_blob=build_index_json_blob,
+                production_bucket=production_bucket,
+                prod_index_storage_path=prod_index_storage_path,
+                index_name=index_json_name,
+            )
 
         else:
             logging.error(f"Failed in uploading {GCPConfig.INDEX_NAME}, mismatch in index file generation")
@@ -118,7 +134,7 @@ def init_index_prod_bucket(storage_base_path, production_bucket, index_name):
     prod_index_storage_path = os.path.join(storage_base_path, index_name)
     prod_index_blob = production_bucket.blob(prod_index_storage_path)
     prod_index_blob.cache_control = "no-cache,max-age=0"
-    logging.info(f'Init prod bucket at {prod_index_storage_path}')
+    logging.info(f"Init prod bucket at {prod_index_storage_path}")
     return prod_index_storage_path
 
 
@@ -133,20 +149,26 @@ def copy_from_build_to_prod(build_bucket, build_index_blob, production_bucket, p
         sys.exit(1)
 
 
-def upload_core_packs_config(production_bucket: Bucket, build_number: str, extract_destination_path: str,
-                             build_bucket: Bucket, storage_base_path: str, build_bucket_base_path: str,
-                             marketplace: str = 'xsoar'):
+def upload_core_packs_config(
+    production_bucket: Bucket,
+    build_number: str,
+    extract_destination_path: str,
+    build_bucket: Bucket,
+    storage_base_path: str,
+    build_bucket_base_path: str,
+    marketplace: str = "xsoar",
+):
     """Uploads the corepacks.json file to the target bucket. This files contains all of the server's core packs, under
-     the key corepacks, and specifies which core packs should be upgraded upon XSOAR upgrade, under the key upgradeCorePacks.
+    the key corepacks, and specifies which core packs should be upgraded upon XSOAR upgrade, under the key upgradeCorePacks.
 
-     Args:
-        production_bucket (google.cloud.storage.bucket.Bucket): gcs bucket where core packs config is uploaded.
-        build_number (str): CircleCI build number.
-        extract_destination_path (str): Full path of folder to extract the corepacks file
-        build_bucket (google.cloud.storage.bucket.Bucket): gcs bucket where core packs config is downloaded from.
-        storage_base_path (str): the path to upload the corepacks.json to.
-        build_bucket_base_path (str): the path in the build bucket of the corepacks.json.
-        marketplace (str): the marketplace type of the bucket. possible options: xsoar, marketplace_v2 or xpanse
+    Args:
+       production_bucket (google.cloud.storage.bucket.Bucket): gcs bucket where core packs config is uploaded.
+       build_number (str): CircleCI build number.
+       extract_destination_path (str): Full path of folder to extract the corepacks file
+       build_bucket (google.cloud.storage.bucket.Bucket): gcs bucket where core packs config is downloaded from.
+       storage_base_path (str): the path to upload the corepacks.json to.
+       build_bucket_base_path (str): the path in the build bucket of the corepacks.json.
+       marketplace (str): the marketplace type of the bucket. possible options: xsoar, marketplace_v2 or xpanse
 
     """
     corepacks_files = [GCPConfig.CORE_PACK_FILE_NAME]
@@ -168,23 +190,31 @@ def upload_core_packs_config(production_bucket: Bucket, build_number: str, extra
             build_corepacks_blob.download_to_filename(temp_corepacks_file_path)
             corepacks_file_content = load_json(temp_corepacks_file_path)
 
-            corepacks_list = corepacks_file_content.get('corePacks', [])
+            corepacks_list = corepacks_file_content.get("corePacks", [])
             try:
-                bucket_corepacks_list = [os.path.join(GCPConfig.GCS_PUBLIC_URL, production_bucket.name, storage_base_path,
-                                                      LATEST_ZIP_REGEX.findall(corepack_path)[0]) for corepack_path in
-                                         corepacks_list]
+                bucket_corepacks_list = [
+                    os.path.join(
+                        GCPConfig.GCS_PUBLIC_URL,
+                        production_bucket.name,
+                        storage_base_path,
+                        LATEST_ZIP_REGEX.findall(corepack_path)[0],
+                    )
+                    for corepack_path in corepacks_list
+                ]
             except IndexError:
-                corepacks_list_str = '\n'.join(corepacks_list)
-                logging.exception(f"GCS paths in build bucket corepacks.json file are not of format: "
-                                  f"{GCPConfig.GCS_PUBLIC_URL}/<BUCKET_NAME>/.../content/packs/...\n"
-                                  f"List of build bucket corepacks paths:\n{corepacks_list_str}, exiting...")
+                corepacks_list_str = "\n".join(corepacks_list)
+                logging.exception(
+                    f"GCS paths in build bucket corepacks.json file are not of format: "
+                    f"{GCPConfig.GCS_PUBLIC_URL}/<BUCKET_NAME>/.../content/packs/...\n"
+                    f"List of build bucket corepacks paths:\n{corepacks_list_str}, exiting..."
+                )
                 sys.exit(1)
 
             # construct core pack data with public gcs urls
             core_packs_data = {
-                'corePacks': bucket_corepacks_list,
-                'upgradeCorePacks': corepacks_file_content.get('upgradeCorePacks', []),
-                'buildNumber': build_number,
+                "corePacks": bucket_corepacks_list,
+                "upgradeCorePacks": corepacks_file_content.get("upgradeCorePacks", []),
+                "buildNumber": build_number,
             }
 
             # upload core pack json file to gcs
@@ -198,14 +228,17 @@ def upload_core_packs_config(production_bucket: Bucket, build_number: str, extra
                 blob=build_corepacks_blob, destination_bucket=production_bucket, new_name=prod_corepacks_storage_path
             )
             if not copied_corepacks_file.exists():
-                logging.error(f"Failed copying {corepacks_file} from build bucket to production bucket - blob"
-                              f" does not exist, exiting...")
+                logging.error(
+                    f"Failed copying {corepacks_file} from build bucket to production bucket - blob"
+                    f" does not exist, exiting..."
+                )
                 sys.exit(1)
         logging.success(f"Finished uploading {corepacks_file} to bucket.")
 
 
-def upload_versions_metadata(production_bucket: Bucket, build_bucket: Bucket, storage_base_path: str,
-                             build_bucket_base_path: str):
+def upload_versions_metadata(
+    production_bucket: Bucket, build_bucket: Bucket, storage_base_path: str, build_bucket_base_path: str
+):
     """Uploads the versions-metadata.json file to the target bucket. This file contains information related to
     different server versions, such as a mapping between server versions and the matching corepacks files.
 
@@ -266,7 +299,7 @@ def download_and_extract_index(build_bucket: Bucket, extract_destination_path: s
     build_index_blob.download_to_filename(download_build_index_path, if_generation_match=build_index_generation)
 
     if os.path.exists(download_build_index_path):
-        with ZipFile(download_build_index_path, 'r') as index_zip:
+        with ZipFile(download_build_index_path, "r") as index_zip:
             index_zip.extractall(extract_destination_path)
 
         if not os.path.exists(build_index_folder_path):
@@ -274,8 +307,9 @@ def download_and_extract_index(build_bucket: Bucket, extract_destination_path: s
             sys.exit(1)
 
         os.remove(download_build_index_path)
-        logging.success(f"Finished downloading and extracting build {GCPConfig.INDEX_NAME} file to "
-                        f"{extract_destination_path}")
+        logging.success(
+            f"Finished downloading and extracting build {GCPConfig.INDEX_NAME} file to " f"{extract_destination_path}"
+        )
 
         return build_index_folder_path, build_index_blob, build_index_generation
     else:
@@ -284,7 +318,7 @@ def download_and_extract_index(build_bucket: Bucket, extract_destination_path: s
 
 
 def copy_id_set(production_bucket: Bucket, build_bucket: Bucket, storage_base_path: str, build_bucket_base_path: str):
-    """ Copies the id_set.json artifact from the build bucket to the production bucket.
+    """Copies the id_set.json artifact from the build bucket to the production bucket.
 
     Args:
         production_bucket (google.cloud.storage.bucket.Bucket): gcs bucket where id_set is copied to.
@@ -293,14 +327,14 @@ def copy_id_set(production_bucket: Bucket, build_bucket: Bucket, storage_base_pa
         build_bucket_base_path (str): the path in the build bucket of the id_set.json.
     """
 
-    build_id_set_path = os.path.join(os.path.dirname(build_bucket_base_path), 'id_set.json')
+    build_id_set_path = os.path.join(os.path.dirname(build_bucket_base_path), "id_set.json")
     build_id_set_blob = build_bucket.blob(build_id_set_path)
 
     if not build_id_set_blob.exists():
         logging.error(f"id_set.json file does not exists in build bucket in path: {build_id_set_path}")
         sys.exit(1)
 
-    prod_id_set_path = os.path.join(os.path.dirname(storage_base_path), 'id_set.json')
+    prod_id_set_path = os.path.join(os.path.dirname(storage_base_path), "id_set.json")
     try:
         copied_blob = build_bucket.copy_blob(
             blob=build_id_set_blob, destination_bucket=production_bucket, new_name=prod_id_set_path
@@ -316,7 +350,7 @@ def copy_id_set(production_bucket: Bucket, build_bucket: Bucket, storage_base_pa
 
 
 def verify_copy(successful_packs: list, pc_successful_packs_dict: dict):
-    """ Verify that all uploaded packs from Prepare were copied & verify that no packs were mistakenly copied
+    """Verify that all uploaded packs from Prepare were copied & verify that no packs were mistakenly copied
 
     Args:
         successful_packs: The packs that were copied successfully
@@ -335,7 +369,7 @@ def verify_copy(successful_packs: list, pc_successful_packs_dict: dict):
 
 
 def check_if_need_to_upload(pc_successful_packs_dict: dict, pc_failed_packs_dict: dict, pc_uploaded_images: dict):
-    """ If the three dicts are empty then no upload was done in Prepare Content step, so we need to skip uploading
+    """If the three dicts are empty then no upload was done in Prepare Content step, so we need to skip uploading
 
     Args:
         pc_successful_packs_dict: The successful packs dict
@@ -343,15 +377,14 @@ def check_if_need_to_upload(pc_successful_packs_dict: dict, pc_failed_packs_dict
         pc_uploaded_images: The image data dict
 
     """
-    if not pc_successful_packs_dict and not pc_failed_packs_dict and not \
-            pc_uploaded_images:
+    if not pc_successful_packs_dict and not pc_failed_packs_dict and not pc_uploaded_images:
         logging.warning("Production bucket is updated with origin/master.")
         logging.warning("Skipping Upload To Marketplace Storage Step.")
         sys.exit(0)
 
 
 def options_handler():
-    """ Validates and parses script arguments.
+    """Validates and parses script arguments.
 
     Returns:
         Namespace: Parsed arguments object.
@@ -359,36 +392,44 @@ def options_handler():
     """
     parser = argparse.ArgumentParser(description="Store packs in cloud storage.")
     # disable-secrets-detection-start
-    parser.add_argument('-a', '--artifacts_path', help="The full path of packs artifacts", required=True)
-    parser.add_argument('-e', '--extract_path', help="Full path of folder to extract wanted packs", required=True)
-    parser.add_argument('-pb', '--production_bucket_name', help="Production bucket name", required=True)
-    parser.add_argument('-bb', '--build_bucket_name', help="CircleCI Build bucket name", required=True)
-    parser.add_argument('-s', '--service_account',
-                        help=("Path to gcloud service account, is for circleCI usage. "
-                              "For local development use your personal account and "
-                              "authenticate using Google Cloud SDK by running: "
-                              "`gcloud auth application-default login` and leave this parameter blank. "
-                              "For more information go to: "
-                              "https://googleapis.dev/python/google-api-core/latest/auth.html"),
-                        required=False)
-    parser.add_argument('-p', '--pack_names',
-                        help=("Target packs to upload to gcs. Optional values are: `All`"
-                              " or csv list of packs "
-                              "Default is set to `All`"),
-                        required=False, default="All")
-    parser.add_argument('-n', '--ci_build_number',
-                        help="CircleCi build number (will be used as hash revision at index file)", required=True)
-    parser.add_argument('-c', '--circle_branch',
-                        help="CircleCi branch of current build", required=True)
-    parser.add_argument('-pbp', '--production_base_path', help="Production base path of the directory to upload to.",
-                        required=False)
-    parser.add_argument('-mp', '--marketplace', help='marketplace version.', default='xsoar')
+    parser.add_argument("-a", "--artifacts_path", help="The full path of packs artifacts", required=True)
+    parser.add_argument("-e", "--extract_path", help="Full path of folder to extract wanted packs", required=True)
+    parser.add_argument("-pb", "--production_bucket_name", help="Production bucket name", required=True)
+    parser.add_argument("-bb", "--build_bucket_name", help="CircleCI Build bucket name", required=True)
+    parser.add_argument(
+        "-s",
+        "--service_account",
+        help=(
+            "Path to gcloud service account, is for circleCI usage. "
+            "For local development use your personal account and "
+            "authenticate using Google Cloud SDK by running: "
+            "`gcloud auth application-default login` and leave this parameter blank. "
+            "For more information go to: "
+            "https://googleapis.dev/python/google-api-core/latest/auth.html"
+        ),
+        required=False,
+    )
+    parser.add_argument(
+        "-p",
+        "--pack_names",
+        help=("Target packs to upload to gcs. Optional values are: `All`" " or csv list of packs " "Default is set to `All`"),
+        required=False,
+        default="All",
+    )
+    parser.add_argument(
+        "-n", "--ci_build_number", help="CircleCi build number (will be used as hash revision at index file)", required=True
+    )
+    parser.add_argument("-c", "--circle_branch", help="CircleCi branch of current build", required=True)
+    parser.add_argument(
+        "-pbp", "--production_base_path", help="Production base path of the directory to upload to.", required=False
+    )
+    parser.add_argument("-mp", "--marketplace", help="marketplace version.", default="xsoar")
     # disable-secrets-detection-end
     return parser.parse_args()
 
 
 def main():
-    install_logging('Copy_and_Upload_Packs.log', logger=logging)
+    install_logging("Copy_and_Upload_Packs.log", logger=logging)
     options = options_handler()
     packs_artifacts_path = options.artifacts_path
     extract_destination_path = options.extract_path
@@ -415,17 +456,21 @@ def main():
         GCPConfig.PRODUCTION_BUCKET = production_bucket_name
 
     # Download and extract build index from build and prod buckets
-    build_index_folder_path, build_index_blob, build_index_generation = \
-        download_and_extract_index(build_bucket, extract_destination_path, build_bucket_base_path)
+    build_index_folder_path, build_index_blob, build_index_generation = download_and_extract_index(
+        build_bucket, extract_destination_path, build_bucket_base_path
+    )
 
     # Get the successful and failed packs file from Prepare Content step in Create Instances job if there are
     packs_results_file_path = os.path.join(os.path.dirname(packs_artifacts_path), BucketUploadFlow.PACKS_RESULTS_FILE)
-    pc_successful_packs_dict, pc_successful_uploaded_dependencies_zip_packs_dict, pc_failed_packs_dict, \
-        pc_uploaded_images = get_upload_data(packs_results_file_path, BucketUploadFlow.PREPARE_CONTENT_FOR_TESTING)
+    pc_successful_packs_dict, pc_successful_uploaded_dependencies_zip_packs_dict, pc_failed_packs_dict, pc_uploaded_images = (
+        get_upload_data(packs_results_file_path, BucketUploadFlow.PREPARE_CONTENT_FOR_TESTING)
+    )
 
     logging.debug(f"Successful packs from Prepare Content: {pc_successful_packs_dict}")
-    logging.debug(f"Successful uploaded dependencies zip packs from Prepare Content: "
-                  f"{pc_successful_uploaded_dependencies_zip_packs_dict}")
+    logging.debug(
+        f"Successful uploaded dependencies zip packs from Prepare Content: "
+        f"{pc_successful_uploaded_dependencies_zip_packs_dict}"
+    )
     logging.debug(f"Failed packs from Prepare Content: {pc_failed_packs_dict}")
     logging.debug(f"Images from Prepare Content: {pc_uploaded_images}")
 
@@ -435,8 +480,11 @@ def main():
     # Detect packs to upload
     pack_names = get_pack_names(target_packs)
     extract_packs_artifacts(packs_artifacts_path, extract_destination_path)
-    packs_list = [Pack(pack_name, os.path.join(extract_destination_path, pack_name)) for pack_name in pack_names
-                  if os.path.exists(os.path.join(extract_destination_path, pack_name))]
+    packs_list = [
+        Pack(pack_name, os.path.join(extract_destination_path, pack_name))
+        for pack_name in pack_names
+        if os.path.exists(os.path.join(extract_destination_path, pack_name))
+    ]
 
     packs_for_current_marketplace = []
 
@@ -466,21 +514,24 @@ def main():
             continue
 
         task_status = pack.copy_integration_images(
-            production_bucket, build_bucket, pc_uploaded_images, production_base_path, build_bucket_base_path)
+            production_bucket, build_bucket, pc_uploaded_images, production_base_path, build_bucket_base_path
+        )
         if not task_status:
             pack.status = PackStatus.FAILED_IMAGES_UPLOAD.name  # type: ignore[misc]
             pack.cleanup()
             continue
 
         task_status = pack.copy_author_image(
-            production_bucket, build_bucket, pc_uploaded_images, production_base_path, build_bucket_base_path)
+            production_bucket, build_bucket, pc_uploaded_images, production_base_path, build_bucket_base_path
+        )
         if not task_status:
             pack.status = PackStatus.FAILED_AUTHOR_IMAGE_UPLOAD.name  # type: ignore[misc]
             pack.cleanup()
             continue
 
         task_status = pack.copy_preview_images(
-            production_bucket, build_bucket, pc_uploaded_images, production_base_path, build_bucket_base_path)
+            production_bucket, build_bucket, pc_uploaded_images, production_base_path, build_bucket_base_path
+        )
         if not task_status:
             pack.status = PackStatus.FAILED_PREVIEW_IMAGES_UPLOAD.name  # type: ignore[misc]
             pack.cleanup()
@@ -488,15 +539,21 @@ def main():
 
         if marketplace == XSIAM_MP:
             task_status = pack.copy_dynamic_dashboard_images(
-                production_bucket, build_bucket, pc_uploaded_images, production_base_path)
+                production_bucket, build_bucket, pc_uploaded_images, production_base_path
+            )
             if not task_status:
                 pack.status = PackStatus.FAILED_DYNAMIC_DASHBOARD_IMAGES_UPLOAD.name  # type: ignore[misc]
                 pack.cleanup()
                 continue
 
         task_status, skipped_pack_uploading = pack.copy_and_upload_to_storage(
-            production_bucket, build_bucket, pc_successful_packs_dict, pc_successful_uploaded_dependencies_zip_packs_dict,
-            production_base_path, build_bucket_base_path)
+            production_bucket,
+            build_bucket,
+            pc_successful_packs_dict,
+            pc_successful_uploaded_dependencies_zip_packs_dict,
+            production_base_path,
+            build_bucket_base_path,
+        )
         if skipped_pack_uploading:
             pack.status = PackStatus.PACK_ALREADY_EXISTS.name  # type: ignore[misc]
             pack.cleanup()
@@ -514,15 +571,23 @@ def main():
 
     copy_markdown_images(production_bucket, build_bucket, pc_uploaded_images, production_base_path, build_bucket_base_path)
     # upload core packs json to bucket
-    upload_core_packs_config(production_bucket, build_number, extract_destination_path, build_bucket,
-                             production_base_path, build_bucket_base_path)
+    upload_core_packs_config(
+        production_bucket, build_number, extract_destination_path, build_bucket, production_base_path, build_bucket_base_path
+    )
 
     # copy versions-metadata from build bucket to prod bucket
     upload_versions_metadata(production_bucket, build_bucket, production_base_path, build_bucket_base_path)
 
     # finished iteration over content packs
-    copy_index(build_index_folder_path, build_index_blob, build_index_generation, production_bucket,
-               build_bucket, production_base_path, build_bucket_base_path)
+    copy_index(
+        build_index_folder_path,
+        build_index_blob,
+        build_index_generation,
+        production_bucket,
+        build_bucket,
+        production_base_path,
+        build_bucket_base_path,
+    )
 
     # upload id_set.json to bucket
     copy_id_set(production_bucket, build_bucket, production_base_path, build_bucket_base_path)
@@ -532,8 +597,11 @@ def main():
 
     # Store successful and failed packs list in CircleCI artifacts
     store_successful_and_failed_packs_in_ci_artifacts(
-        packs_results_file_path, BucketUploadFlow.UPLOAD_PACKS_TO_MARKETPLACE_STORAGE, successful_packs,
-        successful_uploaded_dependencies_zip_packs, failed_packs
+        packs_results_file_path,
+        BucketUploadFlow.UPLOAD_PACKS_TO_MARKETPLACE_STORAGE,
+        successful_packs,
+        successful_uploaded_dependencies_zip_packs,
+        failed_packs,
     )
 
     # verify that the successful from Prepare content and are the ones that were copied
@@ -546,5 +614,5 @@ def main():
     print_packs_summary(successful_packs, skipped_packs, failed_packs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -6,6 +6,7 @@ repos:
     args:
     - --fix
     exclude: CommonServerPython.py
+  - id: ruff-format
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.6.0
   hooks:
