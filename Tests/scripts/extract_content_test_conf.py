@@ -1,5 +1,3 @@
-
-
 import argparse
 from pathlib import Path
 import logging as logger
@@ -7,7 +5,7 @@ import shutil
 
 from Tests.scripts.utils.log_util import install_logging
 
-install_logging('extract_test_conf.log', logger=logger)
+install_logging("extract_test_conf.log", logger=logger)
 
 
 def extract(
@@ -30,12 +28,15 @@ def extract(
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Compare content and content-test-conf')
-    parser.add_argument('--content-path', required=True, help='Path to content repo')
-    parser.add_argument('--content-test-conf-path', required=True, help='Path to content-test-conf repo')
-    parser.add_argument('--missing-content-packs-test-conf', required=True,
-                        default="missing_content_packs_test_conf.txt",
-                        help='Path to missing_content_packs_test_conf.txt output file')
+    parser = argparse.ArgumentParser(description="Compare content and content-test-conf")
+    parser.add_argument("--content-path", required=True, help="Path to content repo")
+    parser.add_argument("--content-test-conf-path", required=True, help="Path to content-test-conf repo")
+    parser.add_argument(
+        "--missing-content-packs-test-conf",
+        required=True,
+        default="missing_content_packs_test_conf.txt",
+        help="Path to missing_content_packs_test_conf.txt output file",
+    )
     args = parser.parse_args()
 
     extract(Path(args.content_path), Path(args.content_test_conf_path), Path(args.missing_content_packs_test_conf))

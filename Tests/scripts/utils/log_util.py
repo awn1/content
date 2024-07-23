@@ -43,11 +43,11 @@ def _add_logging_level(level_name: str, level_num: int, method_name: str | None 
         method_name = level_name.lower()
 
     if hasattr(logger, level_name):
-        raise AttributeError(f'{level_name} already defined in `logging` module')
+        raise AttributeError(f"{level_name} already defined in `logging` module")
     if hasattr(logger, method_name):
-        raise AttributeError(f'{method_name} already defined in `logging` module')
+        raise AttributeError(f"{method_name} already defined in `logging` module")
     if hasattr(logger.getLoggerClass(), method_name):
-        raise AttributeError(f'{method_name} already defined in logger class')
+        raise AttributeError(f"{method_name} already defined in logger class")
 
     # This method was inspired by the answers to Stack Overflow post
     # http://stackoverflow.com/q/2183233/2988730, especially
@@ -75,17 +75,19 @@ def install_logging(log_file_name: str, include_process_name=False, logger=loggi
         log_file_name: The name of the file in which the debug logs will be saved
         logger: the logger to be configured, default are the `logging` module
     """
-    if not hasattr(logger, 'success'):
-        _add_logging_level('SUCCESS', 25, logger=logger)
+    if not hasattr(logger, "success"):
+        _add_logging_level("SUCCESS", 25, logger=logger)
     logging_format = LOGGING_FORMAT
     if include_process_name:
-        logging_format = '[%(asctime)s] - [%(processName)s] - [%(threadName)s] - [%(levelname)s] - %(message)s'
-    formatter = coloredlogs.ColoredFormatter(fmt=logging_format,
-                                             level_styles=LEVEL_STYLES)
+        logging_format = "[%(asctime)s] - [%(processName)s] - [%(threadName)s] - [%(levelname)s] - %(message)s"
+    formatter = coloredlogs.ColoredFormatter(fmt=logging_format, level_styles=LEVEL_STYLES)
     ch = logger.StreamHandler(sys.stdout)
     ch.setFormatter(formatter)
-    log_file_path = os.path.join(ARTIFACTS_PATH, 'logs', log_file_name) if os.path.exists(
-        os.path.join(ARTIFACTS_PATH, 'logs')) else os.path.join(ARTIFACTS_PATH, log_file_name)
+    log_file_path = (
+        os.path.join(ARTIFACTS_PATH, "logs", log_file_name)
+        if os.path.exists(os.path.join(ARTIFACTS_PATH, "logs"))
+        else os.path.join(ARTIFACTS_PATH, log_file_name)
+    )
     fh = logger.FileHandler(log_file_path)
     fh.setFormatter(formatter)
     ch.setLevel(logger.INFO)
@@ -119,7 +121,6 @@ def install_simple_logging(logger=logging):
     Args:
         logger: The logger, default are the `logging` module
     """
-    if not hasattr(logger, 'success'):
-        _add_logging_level('SUCCESS', 25)
-    coloredlogs.install(fmt='%(message)s',
-                        level_styles=LEVEL_STYLES)
+    if not hasattr(logger, "success"):
+        _add_logging_level("SUCCESS", 25)
+    coloredlogs.install(fmt="%(message)s", level_styles=LEVEL_STYLES)

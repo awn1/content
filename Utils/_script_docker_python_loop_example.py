@@ -27,7 +27,7 @@ else:
 __read_thread = None
 __input_queue = None
 
-win = sys.platform.startswith('win')
+win = sys.platform.startswith("win")
 if win:
     __input_queue = queue.Queue()
 
@@ -37,7 +37,7 @@ def read_input_loop():
     while True:
         line = sys.stdin.readline()
         __input_queue.put(line)
-        if line == '':
+        if line == "":
             break
 
 
@@ -50,7 +50,7 @@ def __readWhileAvailable():
             __read_thread = threading.Thread(target=read_input_loop)
             __read_thread.daemon = True
             __read_thread.start()
-        buff = ''
+        buff = ""
         # Now, read from the queue. First read we block and wait and then wait for timeout.
         buff += __input_queue.get()
         return buff
@@ -410,24 +410,24 @@ print = demisto_print
 # notifies demisto server that the current executed script is completed
 # and the process is ready to execute the next script
 def send_script_completed():
-    json.dump({'type': 'completed'}, sys.stdout)
-    sys.stdout.write('\n')
+    json.dump({"type": "completed"}, sys.stdout)
+    sys.stdout.write("\n")
     sys.stdout.flush()
 
 
 def send_script_exception(exc_type, exc_value, exc_traceback):
     ex_string = traceback.format_exception(exc_type, exc_value, exc_traceback)
-    if ex_string == 'None\n':
+    if ex_string == "None\n":
         ex_string = str(exc_value)  # type: ignore[assignment]
 
-    json.dump({'type': 'exception', 'args': {'exception': ex_string}}, sys.stdout)
-    sys.stdout.write('\n')
+    json.dump({"type": "exception", "args": {"exception": ex_string}}, sys.stdout)
+    sys.stdout.write("\n")
     sys.stdout.flush()
 
 
 def send_pong():
-    json.dump({'type': 'pong'}, sys.stdout)
-    sys.stdout.write('\n')
+    json.dump({"type": "pong"}, sys.stdout)
+    sys.stdout.write("\n")
     sys.stdout.flush()
 
 
@@ -436,7 +436,7 @@ def send_pong():
 def do_ping_pong():
     while True:
         ping = __readWhileAvailable()
-        if ping == 'ping\n':
+        if ping == "ping\n":
             send_pong()  # return pong to server to indicate that everything is fine
         else:
             return ping
@@ -455,30 +455,26 @@ def rollback_system():
 
 while True:
     contextString = do_ping_pong()
-    if contextString == '':
+    if contextString == "":
         # finish executing python
         break
 
     contextJSON = json.loads(contextString)
 
-    code_string = contextJSON['script']
-    contextJSON.pop('script', None)
+    code_string = contextJSON["script"]
+    contextJSON.pop("script", None)
 
-    is_integ_script = contextJSON['integration']
-    complete_code = ''
+    is_integ_script = contextJSON["integration"]
+    complete_code = ""
     if is_integ_script:
-        complete_code = integ_template_code.replace('###CODE_HERE###', code_string)
+        complete_code = integ_template_code.replace("###CODE_HERE###", code_string)
     else:
-        complete_code = template_code.replace('###CODE_HERE###', code_string)
+        complete_code = template_code.replace("###CODE_HERE###", code_string)
 
     try:
-        code = compile(complete_code, '<string>', 'exec')
+        code = compile(complete_code, "<string>", "exec")
 
-        sub_globals = {
-            '__readWhileAvailable': __readWhileAvailable,
-            'context': contextJSON,
-            'win': win
-        }
+        sub_globals = {"__readWhileAvailable": __readWhileAvailable, "context": contextJSON, "win": win}
 
         exec(code, sub_globals, sub_globals)  # guardrails-disable-line  # pylint: disable=W0122 # noqa: S102
 
@@ -495,7 +491,7 @@ while True:
     send_script_completed()
 
     # if the script running on native python then terminate the process after finished the script
-    is_python_native = contextJSON['native']
+    is_python_native = contextJSON["native"]
     if is_python_native:
         break
 

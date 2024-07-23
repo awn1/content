@@ -10,8 +10,9 @@ from Tests.scripts.collect_tests.utils import find_pack_folder
 from SecretActions.google_secret_manager_handler import get_secrets_from_gsm
 from Tests.scripts.utils import logging_wrapper as logging
 from pathlib import Path
+
 # The default previous commit branch to check for when getting the difference from master using git
-PREVIOUS_COMMIT = 'origin/master'
+PREVIOUS_COMMIT = "origin/master"
 
 
 def get_changed_files(branch_name: str, repo) -> list[str]:
@@ -25,11 +26,10 @@ def get_changed_files(branch_name: str, repo) -> list[str]:
     previous_commit = PREVIOUS_COMMIT
     current_commit = branch_name
 
-    if branch_name == 'master':
+    if branch_name == "master":
         current_commit, previous_commit = tuple(repo.iter_commits(max_count=2))
 
-    diff = repo.git.diff(
-        f'{previous_commit}...{current_commit}', '--name-status')
+    diff = repo.git.diff(f"{previous_commit}...{current_commit}", "--name-status")
 
     return find_files_diff(diff)
 
@@ -43,24 +43,29 @@ def find_files_diff(diff: str) -> list[str]:
     changed_files: list[str] = []
     # diff is formatted as `M  foo.json\n A  bar.py\n ...`, turning it into ('foo.json', 'bar.py', ...).
     for line in diff.splitlines():
-        match len(parts := line.split('\t')):
+        match len(parts := line.split("\t")):
             case 2:
                 git_status, file_path = parts
             case 3:
                 git_status, old_file_path, file_path = parts  # R <old location> <new location>
 
-                if git_status.startswith('R'):
-                    git_status = 'M'
+                if git_status.startswith("R"):
+                    git_status = "M"
 
             case _:
-                logging.error(f'unexpected line format '
-                              f'(expected `<modifier>\t<file>` or `<modifier>\t<old_location>\t<new_location>`'
-                              f', got {line}')
+                logging.error(
+                    f"unexpected line format "
+                    f"(expected `<modifier>\t<file>` or `<modifier>\t<old_location>\t<new_location>`"
+                    f", got {line}"
+                )
                 continue
 
-        if git_status not in {'A', 'M', 'D', }:
-            logging.error(
-                f'unexpected {git_status=}, considering it as <M>odified')
+        if git_status not in {
+            "A",
+            "M",
+            "D",
+        }:
+            logging.error(f"unexpected {git_status=}, considering it as <M>odified")
 
         changed_files.append(file_path)
     return changed_files
@@ -72,13 +77,12 @@ def write_secrets_to_file(options: argparse.Namespace, secrets: dict):
     :param options: the parsed parameter for the script
     :param secrets: a list of secrets to be used in the build
     """
-    with open(options.json_path_file, 'w') as secrets_out_file:
+    with open(options.json_path_file, "w") as secrets_out_file:
         try:
             secrets_out_file.write(json5.dumps(secrets, quote_keys=True))
         except Exception as e:
-            logging.error(
-                f'Could not save secrets file, malformed json5 format, the error is: {e}')
-    logging.info(f'saved the json file to: {options.json_path_file}')
+            logging.error(f"Could not save secrets file, malformed json5 format, the error is: {e}")
+    logging.info(f"saved the json file to: {options.json_path_file}")
 
 
 def get_yml_pack_ids(changed_packs: list[str]) -> list[str]:
@@ -91,16 +95,14 @@ def get_yml_pack_ids(changed_packs: list[str]) -> list[str]:
     for changed_pack in changed_packs:
         root_dir = Path(changed_pack)
         root_dir_instance = pathlib.Path(root_dir)
-        yml_files = [item.name for item in root_dir_instance.glob(
-            "*") if str(item.name).endswith('yml')]
+        yml_files = [item.name for item in root_dir_instance.glob("*") if str(item.name).endswith("yml")]
         for yml_file in yml_files:
-            with open(f'{changed_pack}/{yml_file}', "r") as stream:
+            with open(f"{changed_pack}/{yml_file}", "r") as stream:
                 try:
                     yml_obj = yaml.safe_load(stream)
-                    yml_ids.append(yml_obj['commonfields']['id'])
+                    yml_ids.append(yml_obj["commonfields"]["id"])
                 except yaml.YAMLError as exc:
-                    logging.error(
-                        f'Could not extract ID from {yml_file}: {exc}')
+                    logging.error(f"Could not extract ID from {yml_file}: {exc}")
     return yml_ids
 
 
@@ -119,22 +121,19 @@ def get_changed_packs(changed_files: list[str]) -> list[str]:
         # If not a pack find_pack_folder throws an exception
         try:
             changed = find_pack_folder(path)
-            test_changed.add(
-                f'{Path(__file__).absolute().parents[2]}/{changed}')
+            test_changed.add(f"{Path(__file__).absolute().parents[2]}/{changed}")
         except Exception as exc:
-            logging.info(f'Skipped {path}, got error: {exc}')
+            logging.info(f"Skipped {path}, got error: {exc}")
             continue
     # create a list of all the changed integrations
 
     for changed_pack_path in test_changed:
-        if 'Integrations' in os.listdir(changed_pack_path):
-            integrations_path = f'{changed_pack_path}/Integrations'
+        if "Integrations" in os.listdir(changed_pack_path):
+            integrations_path = f"{changed_pack_path}/Integrations"
             integrations = os.listdir(integrations_path)
-            changed_integrations.extend(
-                [f'{integrations_path}/{i}' for i in integrations])
+            changed_integrations.extend([f"{integrations_path}/{i}" for i in integrations])
         else:
-            logging.info(
-                f'Skipped {path}, there is no integration in pack, cant get the secret ID')
+            logging.info(f"Skipped {path}, there is no integration in pack, cant get the secret ID")
     return changed_integrations
 
 
@@ -144,15 +143,14 @@ def get_test_integrations_ids(ids: list[str]) -> list[str]:
     try:
         with open(conf_path, "r") as file:
             data = json5.load(file)
-            tests = data['tests']
+            tests = data["tests"]
             for test in tests:
-                if 'integrations' in test and isinstance(test['integrations'], list) and len(test['integrations']) > 1:
-                    test_ids = test['integrations']
+                if "integrations" in test and isinstance(test["integrations"], list) and len(test["integrations"]) > 1:
+                    test_ids = test["integrations"]
                     if any([i in ids for i in test_ids]):
                         ids_to_add |= set(test_ids)
     except Exception as exc:
-        logging.error(
-            f'Could not get additional IDs from conf.json, encountered an error: {exc}')
+        logging.error(f"Could not get additional IDs from conf.json, encountered an error: {exc}")
         return ids
     return list(ids_to_add)
 
@@ -165,20 +163,21 @@ def run(options: argparse.Namespace):
     # Don't get specific secrets for a branch, but the build won't fail and secrets from the main store will be used
     try:
         changed_files = get_changed_files(branch_name, paths.content_repo)
-        logging.info(f'Changed files from git = {changed_files}')
+        logging.info(f"Changed files from git = {changed_files}")
         changed_packs.extend(get_changed_packs(changed_files))
-        logging.info(f'Changed packs from changed_files = {changed_packs}')
+        logging.info(f"Changed packs from changed_files = {changed_packs}")
         yml_pack_ids.extend(get_yml_pack_ids(changed_packs))
         yml_pack_ids = get_test_integrations_ids(yml_pack_ids)
-        logging.info(f'Changed integrations IDs = {yml_pack_ids}')
+        logging.info(f"Changed integrations IDs = {yml_pack_ids}")
     except Exception as e:
         logging.info(
-            f'Could not get specific dev secrets for the branch {branch_name}, \
-            received the error {e}, using main store secrets')
+            f"Could not get specific dev secrets for the branch {branch_name}, \
+            received the error {e}, using main store secrets"
+        )
     secrets_file = get_secrets_from_gsm(options, branch_name)
     logging.info(f'Using {len(secrets_file["integrations"])} secrets')
-    names = [s.get('name') for s in secrets_file["integrations"]]
-    logging.info(f'the names: {names}')
+    names = [s.get("name") for s in secrets_file["integrations"]]
+    logging.info(f"the names: {names}")
     write_secrets_to_file(options, secrets_file)
 
 
@@ -188,31 +187,32 @@ def options_handler(args=None) -> argparse.Namespace:
     :param args: a list of arguments to add
     :return: the parsed arguments that were passed to the script
     """
-    parser = argparse.ArgumentParser(
-        description='Utility for Importing secrets from Google Secret Manager.')
-    parser.add_argument('-gpidd', '--gsm_project_id_dev',
-                        help='The project id for the GSM dev.')
-    parser.add_argument('-gpidp', '--gsm_project_id_prod',
-                        help='The project id for the GSM prod.')
-    parser.add_argument('-u', '--user', help='the user name for our build.')
-    parser.add_argument('-p', '--password', help='The password for our build.')
-    parser.add_argument('-sf', '--json_path_file',
-                        help='Path to the secret json file.')
-    parser.add_argument('-gt', '--github_token', help='the github token.')
+    parser = argparse.ArgumentParser(description="Utility for Importing secrets from Google Secret Manager.")
+    parser.add_argument("-gpidd", "--gsm_project_id_dev", help="The project id for the GSM dev.")
+    parser.add_argument("-gpidp", "--gsm_project_id_prod", help="The project id for the GSM prod.")
+    parser.add_argument("-u", "--user", help="the user name for our build.")
+    parser.add_argument("-p", "--password", help="The password for our build.")
+    parser.add_argument("-sf", "--json_path_file", help="Path to the secret json file.")
+    parser.add_argument("-gt", "--github_token", help="the github token.")
     # disable-secrets-detection-start
-    parser.add_argument('-gsa', '--gsm_service_account',
-                        help=("Path to gcloud service account, for circleCI usage. "
-                              "For local development use your personal account and "
-                              "authenticate using Google Cloud SDK by running: "
-                              "`gcloud auth application-default login` and leave this parameter blank. "
-                              "For more information see: "
-                              "https://googleapis.dev/python/google-api-core/latest/auth.html"))
+    parser.add_argument(
+        "-gsa",
+        "--gsm_service_account",
+        help=(
+            "Path to gcloud service account, for circleCI usage. "
+            "For local development use your personal account and "
+            "authenticate using Google Cloud SDK by running: "
+            "`gcloud auth application-default login` and leave this parameter blank. "
+            "For more information see: "
+            "https://googleapis.dev/python/google-api-core/latest/auth.html"
+        ),
+    )
     # disable-secrets-detection-end
     options = parser.parse_args(args)
 
     return options
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     options = options_handler()
     run(options)

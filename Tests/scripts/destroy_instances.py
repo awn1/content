@@ -22,15 +22,15 @@ urllib3.disable_warnings()  # Disable insecure warnings
 DEFAULT_TTL = "300"
 SERVER_LOG_DIRECTORY = "/var/log/demisto"
 SERVER_LOG_FILE_PATH = f"{SERVER_LOG_DIRECTORY}/server.log"
-ARTIFACTS_FOLDER_SERVER_TYPE = os.getenv('ARTIFACTS_FOLDER_SERVER_TYPE')
-ENV_RESULTS_PATH = os.getenv('ENV_RESULTS_PATH', f'{ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json')
+ARTIFACTS_FOLDER_SERVER_TYPE = os.getenv("ARTIFACTS_FOLDER_SERVER_TYPE")
+ENV_RESULTS_PATH = os.getenv("ENV_RESULTS_PATH", f"{ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json")
 
 
 def options_handler() -> Namespace:
-    parser = ArgumentParser(description='Utility for destroying integration test instances')
-    parser.add_argument('--artifacts-dir', help='Path to the artifacts directory', required=True)
-    parser.add_argument('--instance-role', help='The instance role', required=True)
-    parser.add_argument('--env-file', help='The env_results.json file', default=ENV_RESULTS_PATH, required=False)
+    parser = ArgumentParser(description="Utility for destroying integration test instances")
+    parser.add_argument("--artifacts-dir", help="Path to the artifacts directory", required=True)
+    parser.add_argument("--instance-role", help="The instance role", required=True)
+    parser.add_argument("--env-file", help="The env_results.json file", default=ENV_RESULTS_PATH, required=False)
     return parser.parse_args()
 
 
@@ -38,37 +38,41 @@ def execute_ssh_command(ssh: SSHClient, shutdown_command: str) -> tuple[int, str
     _, stdout, stderr = ssh.exec_command(shutdown_command)
     # Wait for the command to exit.
     exit_code = stdout.channel.recv_exit_status()
-    stdout_lines_output = '\n'.join(stdout.readlines())
-    stderr_lines_output = '\n'.join(stderr.readlines())
+    stdout_lines_output = "\n".join(stdout.readlines())
+    stderr_lines_output = "\n".join(stderr.readlines())
     return exit_code, stderr_lines_output, stdout_lines_output
 
 
 def chmod_logs(ssh: SSHClient, server_ip: str) -> bool:
     try:
-        logging.info(f'Changing permissions of folder {SERVER_LOG_DIRECTORY} on server {server_ip}')
-        exit_code, stderr_lines_output, stdout_lines_output = execute_ssh_command(ssh,
-                                                                                  f"sudo chmod -R 755 {SERVER_LOG_DIRECTORY}")
-        logging.info(f"Running chmod finished.\nstdout:\n{stdout_lines_output}\nstderr:\n{stderr_lines_output}\n"
-                     f"exit code:{exit_code}")
+        logging.info(f"Changing permissions of folder {SERVER_LOG_DIRECTORY} on server {server_ip}")
+        exit_code, stderr_lines_output, stdout_lines_output = execute_ssh_command(
+            ssh, f"sudo chmod -R 755 {SERVER_LOG_DIRECTORY}"
+        )
+        logging.info(
+            f"Running chmod finished.\nstdout:\n{stdout_lines_output}\nstderr:\n{stderr_lines_output}\n" f"exit code:{exit_code}"
+        )
 
         return not stderr_lines_output and exit_code == 0
     except SSHException:
-        logging.exception(f'Failed changing permissions of folder {SERVER_LOG_DIRECTORY} on server {server_ip}')
+        logging.exception(f"Failed changing permissions of folder {SERVER_LOG_DIRECTORY} on server {server_ip}")
     return False
 
 
 def shutdown(ssh: SSHClient, server_ip: str, ttl: int | None = None) -> bool:
     try:
-        shutdown_command = f'sudo shutdown +{ttl}' if ttl else 'sudo shutdown'
+        shutdown_command = f"sudo shutdown +{ttl}" if ttl else "sudo shutdown"
         logging.info(f"Destroying instance with IP {server_ip}, with command: '{shutdown_command}'")
         exit_code, stderr_lines_output, stdout_lines_output = execute_ssh_command(ssh, shutdown_command)
         # not checking stderr, as shutdown command on success writes it's output to it, so we can only verify the exit code.
-        logging.info(f"Running shutdown finished.\nstdout:\n{stdout_lines_output}\nstderr:\n{stderr_lines_output}\n"
-                     f"exit code: {exit_code}")
+        logging.info(
+            f"Running shutdown finished.\nstdout:\n{stdout_lines_output}\nstderr:\n{stderr_lines_output}\n"
+            f"exit code: {exit_code}"
+        )
 
         return exit_code == 0
     except SSHException:
-        logging.exception(f'Failed shutting down server {server_ip}')
+        logging.exception(f"Failed shutting down server {server_ip}")
     return False
 
 
@@ -84,10 +88,12 @@ def tqdm_progress4_update(tqdm_progress: tqdm) -> Callable[[bytes, int, int, tup
         last_bytes[0] = sent
         if datetime.utcnow() - last_time[0] > timedelta(seconds=1) or sent == size:
             last_time[0] = datetime.utcnow()
-            logging.info(f"Downloading from {peer_name[0]}:{peer_name[1]} {filename!r} "
-                         f"progress: {float(sent) / float(size) * 100:.2f}% "
-                         f"({humanize.naturalsize(sent, binary=True, gnu=True)}/"
-                         f"{humanize.naturalsize(size, binary=True, gnu=True)})")
+            logging.info(
+                f"Downloading from {peer_name[0]}:{peer_name[1]} {filename!r} "
+                f"progress: {float(sent) / float(size) * 100:.2f}% "
+                f"({humanize.naturalsize(sent, binary=True, gnu=True)}/"
+                f"{humanize.naturalsize(size, binary=True, gnu=True)})"
+            )
 
     return update_to
 
@@ -95,14 +101,23 @@ def tqdm_progress4_update(tqdm_progress: tqdm) -> Callable[[bytes, int, int, tup
 def download_logs(ssh: SSHClient, server_ip: str, artifacts_dir: str, readable_role: str, role: str) -> bool:
     try:
         download_path = (Path(artifacts_dir) / f"instance_{readable_role}" / f"server_{role}_{server_ip}.log").as_posix()
-        logging.info(f'Downloading server logs from server {server_ip} from:{SERVER_LOG_FILE_PATH} to {download_path}')
-        with (tqdm(unit='B', unit_scale=True, unit_divisor=1024, desc='Downloading server logs', mininterval=1.0, leave=True,
-                   colour='green') as tqdm_progress,
-              SCPClient(ssh.get_transport(), progress4=tqdm_progress4_update(tqdm_progress)) as scp):
+        logging.info(f"Downloading server logs from server {server_ip} from:{SERVER_LOG_FILE_PATH} to {download_path}")
+        with (
+            tqdm(
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+                desc="Downloading server logs",
+                mininterval=1.0,
+                leave=True,
+                colour="green",
+            ) as tqdm_progress,
+            SCPClient(ssh.get_transport(), progress4=tqdm_progress4_update(tqdm_progress)) as scp,
+        ):
             scp.get(SERVER_LOG_FILE_PATH, download_path)
         return True
     except SCPException:
-        logging.exception(f'Failed downloading server logs from server {server_ip}')
+        logging.exception(f"Failed downloading server logs from server {server_ip}")
     return False
 
 
@@ -120,17 +135,19 @@ def destroy_server(artifacts_dir: str, readable_role: str, role: str, server_ip:
             success &= chmod_logs(ssh, server_ip)
             success &= download_logs(ssh, server_ip, artifacts_dir, readable_role, role)
 
-            if (Path(artifacts_dir) / f'is_build_passed_{role}.txt').exists() and \
-                    (Path(artifacts_dir) / f'is_post_update_passed_{role}.txt').exists():
+            if (Path(artifacts_dir) / f"is_build_passed_{role}.txt").exists() and (
+                Path(artifacts_dir) / f"is_post_update_passed_{role}.txt"
+            ).exists():
                 success &= shutdown(ssh, server_ip)
-                logging.warning(f'Tests passed on {readable_role}, shutting down instance.')
+                logging.warning(f"Tests passed on {readable_role}, shutting down instance.")
             elif time_to_live:
                 time_to_live_str = "{time_to_live} minutes" if time_to_live else "No TTL"
-                logging.info(f'Time to live:{time_to_live_str} for server {server_ip}')
+                logging.info(f"Time to live:{time_to_live_str} for server {server_ip}")
                 success &= shutdown(ssh, server_ip, time_to_live)
             else:
-                logging.warning(f'Tests for some integration failed on {readable_role}, keeping instance alive, '
-                                f'until server default TTL')
+                logging.warning(
+                    f"Tests for some integration failed on {readable_role}, keeping instance alive, " f"until server default TTL"
+                )
         except SSHException:
             logging.exception(f"Unable to SSH to server {server_ip}")
             success = False
@@ -138,15 +155,17 @@ def destroy_server(artifacts_dir: str, readable_role: str, role: str, server_ip:
 
 
 def main():
-    install_logging('Destroy_instances.log')
+    install_logging("Destroy_instances.log")
     options = options_handler()
     start_time = datetime.utcnow()
     # if no TTL is set, the default TTL is to shut down the server immediately.
-    env_ttl = os.getenv('TIME_TO_LIVE')
-    time_to_live = None if env_ttl == '' else int(env_ttl or DEFAULT_TTL)  # type: ignore[arg-type]
+    env_ttl = os.getenv("TIME_TO_LIVE")
+    time_to_live = None if env_ttl == "" else int(env_ttl or DEFAULT_TTL)  # type: ignore[arg-type]
     time_to_live_str = f"{time_to_live} minutes" if time_to_live else "No TTL"
-    logging.info(f"Starting destroy instances - environment from {options.env_file}, TTL:{time_to_live_str}, "
-                 f"Artifacts dir: {options.artifacts_dir}")
+    logging.info(
+        f"Starting destroy instances - environment from {options.env_file}, TTL:{time_to_live_str}, "
+        f"Artifacts dir: {options.artifacts_dir}"
+    )
 
     with open(options.env_file) as json_file:
         env_results = json.load(json_file)
@@ -156,16 +175,16 @@ def main():
     success = True
     for i, env in enumerate(servers_list, 1):
         readable_role = env["Role"]
-        role = readable_role.replace(' ', '')
+        role = readable_role.replace(" ", "")
         server_ip = env["InstanceDNS"]
-        logging.info(f'{i}/{len(servers_list)} {server_ip} - Downloading server log from {readable_role}, and destroying it')
+        logging.info(f"{i}/{len(servers_list)} {server_ip} - Downloading server log from {readable_role}, and destroying it")
 
         success &= destroy_server(options.artifacts_dir, readable_role, role, server_ip, time_to_live)
 
     duration = humanize.naturaldelta(datetime.utcnow() - start_time, minimum_unit="milliseconds")
     logging.info(f"Finished destroying instances - success:{success} took:{duration}")
     if not success:
-        logging.error('Exiting with error, see reasons above.')
+        logging.error("Exiting with error, see reasons above.")
         sys.exit(1)
 
 

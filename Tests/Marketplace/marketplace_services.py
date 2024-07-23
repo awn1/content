@@ -17,7 +17,9 @@ from packaging.version import Version
 from pathlib import Path
 from typing import Any
 from zipfile import ZipFile, ZIP_DEFLATED
-from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
+from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import (
+    Neo4jContentGraphInterface,
+)
 
 import git
 import google.auth
@@ -26,23 +28,46 @@ import yaml
 from google.cloud import storage
 
 import Tests.Marketplace.marketplace_statistics as mp_statistics
-from Tests.Marketplace.marketplace_constants import MARKDOWN_IMAGES_RELATIVE_PATH_IMAGE_KEYS, XSOAR_ON_PREM_MP, \
-    XSOAR_SAAS_MP, PackFolders, Metadata, GCPConfig, \
-    BucketUploadFlow, PACKS_FOLDER, PackTags, PackIgnored, Changelog, PackStatus, CONTENT_ROOT_PATH, XSOAR_MP, \
-    XSIAM_MP, XPANSE_MP, TAGS_BY_MP, RN_HEADER_TO_ID_SET_KEYS
-from demisto_sdk.commands.common.constants import (MarketplaceVersions, MarketplaceVersionToMarketplaceName,
-                                                   PACK_METADATA_REQUIRE_RN_FIELDS)
-from Utils.release_notes_generator import aggregate_release_notes_for_marketplace, merge_version_blocks, construct_entities_block
+from Tests.Marketplace.marketplace_constants import (
+    MARKDOWN_IMAGES_RELATIVE_PATH_IMAGE_KEYS,
+    XSOAR_ON_PREM_MP,
+    XSOAR_SAAS_MP,
+    PackFolders,
+    Metadata,
+    GCPConfig,
+    BucketUploadFlow,
+    PACKS_FOLDER,
+    PackTags,
+    PackIgnored,
+    Changelog,
+    PackStatus,
+    CONTENT_ROOT_PATH,
+    XSOAR_MP,
+    XSIAM_MP,
+    XPANSE_MP,
+    TAGS_BY_MP,
+    RN_HEADER_TO_ID_SET_KEYS,
+)
+from demisto_sdk.commands.common.constants import (
+    MarketplaceVersions,
+    MarketplaceVersionToMarketplaceName,
+    PACK_METADATA_REQUIRE_RN_FIELDS,
+)
+from Utils.release_notes_generator import (
+    aggregate_release_notes_for_marketplace,
+    merge_version_blocks,
+    construct_entities_block,
+)
 from Tests.scripts.utils import logging_wrapper as logging
 
-PULL_REQUEST_PATTERN = '\(#(\d+)\)'
-TAGS_SECTION_PATTERN = '(.|\s)+?'
-SPECIAL_DISPLAY_NAMES_PATTERN = re.compile(r'- \*\*(.+?)\*\*')
-MAX_TOVERSION = '99.99.99'
+PULL_REQUEST_PATTERN = "\(#(\d+)\)"
+TAGS_SECTION_PATTERN = "(.|\s)+?"
+SPECIAL_DISPLAY_NAMES_PATTERN = re.compile(r"- \*\*(.+?)\*\*")
+MAX_TOVERSION = "99.99.99"
 
 
 class Pack:
-    """ Class that manipulates and manages the upload of pack's artifact and metadata to cloud storage.
+    """Class that manipulates and manages the upload of pack's artifact and metadata to cloud storage.
 
     Args:
         pack_name (str): Pack root folder name.
@@ -59,6 +84,7 @@ class Pack:
         RELEASE_NOTES (str): release notes folder name.
 
     """
+
     PACK_INITIAL_VERSION = "1.0.0"
     CHANGELOG_JSON = "changelog.json"
     README = "README.md"
@@ -141,25 +167,21 @@ class Pack:
 
     @property
     def name(self):
-        """ str: pack name.
-        """
+        """str: pack name."""
         return self._pack_name
 
     def id(self):
-        """ str: pack root folder name.
-                """
+        """str: pack root folder name."""
         return self._pack_name
 
     @property
     def path(self):
-        """ str: pack folder full path.
-        """
+        """str: pack folder full path."""
         return self._pack_path
 
     @property
     def status(self):
-        """ str: current status of the packs.
-        """
+        """str: current status of the packs."""
         return self._status
 
     @property
@@ -171,8 +193,7 @@ class Pack:
 
     @is_feed.setter
     def is_feed(self, is_feed):
-        """ setter of is_feed
-        """
+        """setter of is_feed"""
         self._is_feed = is_feed
 
     @property
@@ -184,8 +205,7 @@ class Pack:
 
     @is_siem.setter
     def is_siem(self, is_siem):
-        """ setter of is_siem
-        """
+        """setter of is_siem"""
         self._is_siem = is_siem
 
     @property
@@ -197,93 +217,78 @@ class Pack:
 
     @status.setter  # type: ignore[attr-defined,no-redef]
     def status(self, status_value):
-        """ setter of pack current status.
-        """
+        """setter of pack current status."""
         logging.info(f"Pack '{self.name}' status is set to '{status_value}'")
         self._status = status_value
 
     @property
     def public_storage_path(self):
-        """ str: public gcs path of uploaded pack.
-        """
+        """str: public gcs path of uploaded pack."""
         return self._public_storage_path
 
     @public_storage_path.setter
     def public_storage_path(self, path_value):
-        """ setter of public gcs path of uploaded pack.
-        """
+        """setter of public gcs path of uploaded pack."""
         self._public_storage_path = path_value
 
     @property
     def support_type(self):
-        """ str: support type of the pack.
-        """
+        """str: support type of the pack."""
         return self._support_type
 
     @support_type.setter
     def support_type(self, support_value):
-        """ setter of support type of the pack.
-        """
+        """setter of support type of the pack."""
         self._support_type = support_value
 
     @property
     def current_version(self):
-        """ str: current version of the pack.
-        """
+        """str: current version of the pack."""
         return self._current_version
 
     @current_version.setter
     def current_version(self, current_version_value):
-        """ setter of current version of the pack.
-        """
+        """setter of current version of the pack."""
         self._current_version = current_version_value
 
     @property
     def hidden(self):
-        """ bool: internal content field for preventing pack from being displayed.
-        """
+        """bool: internal content field for preventing pack from being displayed."""
         return self._hidden
 
     @hidden.setter
     def hidden(self, hidden_value):
-        """ setter of hidden property of the pack.
-        """
+        """setter of hidden property of the pack."""
         self._hidden = hidden_value
 
     @property
     def description(self):
-        """ str: Description of the pack (found in pack_metadata.json).
-        """
+        """str: Description of the pack (found in pack_metadata.json)."""
         return self._description
 
     @description.setter
     def description(self, description_value):
-        """ setter of description property of the pack.
-        """
+        """setter of description property of the pack."""
         self._description = description_value
 
     @property
     def display_name(self):
-        """ str: Display name of the pack (found in pack_metadata.json).
-        """
+        """str: Display name of the pack (found in pack_metadata.json)."""
         return self._display_name
 
     @property
     def pack_metadata(self):
-        """ dict: the pack_metadata.
-        """
+        """dict: the pack_metadata."""
         return self._pack_metadata
 
     @display_name.setter  # type: ignore[attr-defined,no-redef]
     def display_name(self, display_name_value):
-        """ setter of display name property of the pack.
-        """
+        """setter of display name property of the pack."""
         self._display_name = display_name_value
 
     @property
     def server_min_version(self):
-        """ str: server min version according to collected items.
-        """
+        """str: server min version according to collected items."""
         if not self._server_min_version or self._server_min_version == "99.99.99":
             return Metadata.SERVER_DEFAULT_MIN_VERSION
         else:
@@ -291,44 +296,37 @@ class Pack:
 
     @property
     def downloads_count(self):
-        """ str: packs downloads count.
-        """
+        """str: packs downloads count."""
         return self._downloads_count
 
     @downloads_count.setter
     def downloads_count(self, download_count_value):
-        """ setter of downloads count property of the pack.
-        """
+        """setter of downloads count property of the pack."""
         self._downloads_count = download_count_value
 
     @property
     def bucket_url(self):
-        """ str: pack bucket_url.
-        """
+        """str: pack bucket_url."""
         return self._bucket_url
 
     @bucket_url.setter
     def bucket_url(self, bucket_url):
-        """ str: pack bucket_url.
-        """
+        """str: pack bucket_url."""
         self._bucket_url = bucket_url
 
     @property
     def aggregated(self):
-        """ str: pack aggregated release notes or not.
-        """
+        """str: pack aggregated release notes or not."""
         return self._aggregated
 
     @property
     def aggregation_str(self):
-        """ str: pack aggregated release notes or not.
-        """
+        """str: pack aggregated release notes or not."""
         return self._aggregation_str
 
     @property
     def create_date(self):
-        """ str: pack create date.
-        """
+        """str: pack create date."""
         return self._create_date
 
     @create_date.setter
@@ -337,8 +335,7 @@ class Pack:
 
     @property
     def update_date(self):
-        """ str: pack update date.
-        """
+        """str: pack update date."""
         return self._update_date
 
     @update_date.setter
@@ -347,32 +344,27 @@ class Pack:
 
     @property
     def uploaded_author_image(self):
-        """ bool: whether the pack author image was uploaded or not.
-        """
+        """bool: whether the pack author image was uploaded or not."""
         return self._uploaded_author_image
 
     @uploaded_author_image.setter
     def uploaded_author_image(self, uploaded_author_image):
-        """ bool: whether the pack author image was uploaded or not.
-        """
+        """bool: whether the pack author image was uploaded or not."""
         self._uploaded_author_image = uploaded_author_image
 
     @property
     def uploaded_integration_images(self):
-        """ str: the list of uploaded integration images
-        """
+        """str: the list of uploaded integration images"""
         return self._uploaded_integration_images
 
     @property
     def uploaded_preview_images(self):
-        """ str: the list of uploaded preview images
-        """
+        """str: the list of uploaded preview images"""
         return self._uploaded_preview_images
 
     @property
     def uploaded_dynamic_dashboard_images(self):
-        """ str: the list of uploaded integration svg images for the dynamic dashboard
-        """
+        """str: the list of uploaded integration svg images for the dynamic dashboard"""
         return self._uploaded_dynamic_dashboard_images
 
     @property
@@ -413,29 +405,40 @@ class Pack:
 
         update_metadata_fields = {}
         if self.is_metadata_updated:
-            update_metadata_fields = {f: self.pack_metadata.get(f) for f in self.pack_metadata
-                                      if f not in PACK_METADATA_REQUIRE_RN_FIELDS}
+            update_metadata_fields = {
+                f: self.pack_metadata.get(f) for f in self.pack_metadata if f not in PACK_METADATA_REQUIRE_RN_FIELDS
+            }
             logging.debug(
                 f"Updating metadata with statistics and metadata changes because {self._pack_name=} "
-                f"{self.is_modified=} {self.is_metadata_updated=}")
+                f"{self.is_modified=} {self.is_metadata_updated=}"
+            )
         elif self.is_modified:
-            update_metadata_fields = {Metadata.CREATED: self._create_date, Metadata.UPDATED: self._update_date}
+            update_metadata_fields = {
+                Metadata.CREATED: self._create_date,
+                Metadata.UPDATED: self._update_date,
+            }
             logging.debug(
                 f"Updating metadata with statistics, created, updated fields because {self._pack_name=} "
-                f"{self.is_modified=} {self.is_metadata_updated=}")
+                f"{self.is_modified=} {self.is_metadata_updated=}"
+            )
         else:
             logging.debug(
                 f"Updating metadata only with statistics because {self._pack_name=} {self.is_modified=} "
-                f"{self.is_metadata_updated=}")
+                f"{self.is_metadata_updated=}"
+            )
 
         updated_metadata = update_metadata_fields | update_statistics_metadata
         logging.debug(f"Updating the following metadata fields: {updated_metadata}")
         return updated_metadata
 
     @staticmethod
-    def organize_integration_images(pack_integration_images: list, pack_dependencies_integration_images_dict: dict,
-                                    pack_dependencies_by_download_count: list, default_data_source: dict):
-        """ By Issue #32038
+    def organize_integration_images(
+        pack_integration_images: list,
+        pack_dependencies_integration_images_dict: dict,
+        pack_dependencies_by_download_count: list,
+        default_data_source: dict,
+    ):
+        """By Issue #32038
         1. Sort pack integration images by alphabetical order
         2. Sort pack dependencies by download count
         Pack integration images are shown before pack dependencies integration images
@@ -452,13 +455,14 @@ class Pack:
         """
 
         def sort_by_name(integration_image: dict):
-            return integration_image.get('name', '')
+            return integration_image.get("name", "")
 
         # data source should be first in the list
-        data_source_integration = ([integration
-                                    for integration in pack_integration_images
-                                    if integration.get('name') == default_data_source.get('name')]
-                                   if default_data_source else [])
+        data_source_integration = (
+            [integration for integration in pack_integration_images if integration.get("name") == default_data_source.get("name")]
+            if default_data_source
+            else []
+        )
         if data_source_integration:
             pack_integration_images.remove(data_source_integration[0])
 
@@ -469,8 +473,11 @@ class Pack:
         all_dep_int_imgs = data_source_integration + pack_integration_images
         for dep_pack_name in pack_dependencies_by_download_count:
             if dep_pack_name in pack_dependencies_integration_images_dict:
-                logging.debug(f'Adding {dep_pack_name} to deps int imgs')
-                dep_int_imgs = sorted(pack_dependencies_integration_images_dict[dep_pack_name], key=sort_by_name)
+                logging.debug(f"Adding {dep_pack_name} to deps int imgs")
+                dep_int_imgs = sorted(
+                    pack_dependencies_integration_images_dict[dep_pack_name],
+                    key=sort_by_name,
+                )
                 for dep_int_img in dep_int_imgs:
                     if dep_int_img not in all_dep_int_imgs:  # avoid duplicates
                         all_dep_int_imgs.append(dep_int_img)
@@ -478,9 +485,14 @@ class Pack:
         return all_dep_int_imgs
 
     @staticmethod
-    def _get_all_pack_images(index_folder_path, pack_integration_images: list, display_dependencies_images: list,
-                             pack_dependencies_by_download_count, default_data_source: dict):
-        """ Returns data of uploaded pack integration images and it's path in gcs. Pack dependencies integration images
+    def _get_all_pack_images(
+        index_folder_path,
+        pack_integration_images: list,
+        display_dependencies_images: list,
+        pack_dependencies_by_download_count,
+        default_data_source: dict,
+    ):
+        """Returns data of uploaded pack integration images and it's path in gcs. Pack dependencies integration images
         are added to that result as well.
 
         Args:
@@ -498,9 +510,9 @@ class Pack:
 
         for pack_id in display_dependencies_images:
             dependency_metadata = load_json(f"{index_folder_path}/{pack_id}/metadata.json")
-            for dep_int_img in dependency_metadata.get('integrations', []):
-                dep_int_img_gcs_path = dep_int_img.get('imagePath', '')  # image public url
-                dep_int_img['name'] = Pack.remove_contrib_suffix_from_name(dep_int_img.get('name', ''))
+            for dep_int_img in dependency_metadata.get("integrations", []):
+                dep_int_img_gcs_path = dep_int_img.get("imagePath", "")  # image public url
+                dep_int_img["name"] = Pack.remove_contrib_suffix_from_name(dep_int_img.get("name", ""))
                 dep_pack_name = os.path.basename(os.path.dirname(dep_int_img_gcs_path))
 
                 if dep_pack_name not in display_dependencies_images:
@@ -513,16 +525,18 @@ class Pack:
                         dependencies_integration_images_dict[dep_pack_name] = [dep_int_img]
 
         return Pack.organize_integration_images(
-            pack_integration_images, dependencies_integration_images_dict, pack_dependencies_by_download_count,
-            default_data_source
+            pack_integration_images,
+            dependencies_integration_images_dict,
+            pack_dependencies_by_download_count,
+            default_data_source,
         )
 
     @staticmethod
     def _clean_release_notes(release_notes_lines):
-        return re.sub(r'<\!--.*?-->', '', release_notes_lines, flags=re.DOTALL)
+        return re.sub(r"<\!--.*?-->", "", release_notes_lines, flags=re.DOTALL)
 
     def _parse_pack_metadata(self, parse_dependencies: bool = False):
-        """ Parses pack metadata according to issue #19786 and #20091. Part of field may change over the time.
+        """Parses pack metadata according to issue #19786 and #20091. Part of field may change over the time.
 
         Args:
             parse_dependencies (bool): Whether to parse dependencies in metadata as well.
@@ -536,10 +550,18 @@ class Pack:
 
         return pack_metadata
 
-    def _get_updated_changelog_entry(self, changelog: dict, version: str, release_notes: str | None = None,
-                                     version_display_name: str | None = None, build_number_with_prefix: str | None = None,
-                                     released_time: str | None = None, pull_request_numbers=None, marketplace: str = 'xsoar',
-                                     id_set: dict | None = None):
+    def _get_updated_changelog_entry(
+        self,
+        changelog: dict,
+        version: str,
+        release_notes: str | None = None,
+        version_display_name: str | None = None,
+        build_number_with_prefix: str | None = None,
+        released_time: str | None = None,
+        pull_request_numbers=None,
+        marketplace: str = "xsoar",
+        id_set: dict | None = None,
+    ):
         """
         Args:
             changelog (dict): The changelog from the production bucket.
@@ -555,29 +577,39 @@ class Pack:
 
         changelog_entry = changelog.get(version)
         if not changelog_entry:
-            raise Exception('The given version is not a key in the changelog')
-        version_display_name = \
-            version_display_name if version_display_name else changelog_entry[Changelog.DISPLAY_NAME].split('-')[0]
-        build_number_with_prefix = \
-            build_number_with_prefix if build_number_with_prefix else \
-            changelog_entry[Changelog.DISPLAY_NAME].split('-')[1]
+            raise Exception("The given version is not a key in the changelog")
+        version_display_name = (
+            version_display_name if version_display_name else changelog_entry[Changelog.DISPLAY_NAME].split("-")[0]
+        )
+        build_number_with_prefix = (
+            build_number_with_prefix if build_number_with_prefix else changelog_entry[Changelog.DISPLAY_NAME].split("-")[1]
+        )
 
         changelog_entry[Changelog.RELEASE_NOTES] = release_notes
         changelog_entry, _ = self.filter_changelog_entries(
             changelog_entry=changelog_entry,
             version=version,
             marketplace=marketplace,
-            id_set=id_set
+            id_set=id_set,
         )
-        changelog_entry[Changelog.DISPLAY_NAME] = f'{version_display_name} - {build_number_with_prefix}'
+        changelog_entry[Changelog.DISPLAY_NAME] = f"{version_display_name} - {build_number_with_prefix}"
         changelog_entry[Changelog.RELEASED] = released_time if released_time else changelog_entry[Changelog.RELEASED]
         changelog_entry[Changelog.PULL_REQUEST_NUMBERS] = pull_request_numbers
         return changelog_entry
 
-    def _create_changelog_entry(self, release_notes, version_display_name, build_number,
-                                new_version=True, initial_release=False, pull_request_numbers=None,
-                                marketplace='xsoar', id_set=None, is_override=False):
-        """ Creates dictionary entry for changelog.
+    def _create_changelog_entry(
+        self,
+        release_notes,
+        version_display_name,
+        build_number,
+        new_version=True,
+        initial_release=False,
+        pull_request_numbers=None,
+        marketplace="xsoar",
+        id_set=None,
+        is_override=False,
+    ):
+        """Creates dictionary entry for changelog.
 
         Args:
             release_notes (str): release notes md.
@@ -598,39 +630,43 @@ class Pack:
         if new_version:
             logging.debug(f"Creating changelog entry for a new version for pack {self.name} and version {version_display_name}")
             pull_request_numbers = self.get_pr_numbers_for_version(version_display_name)
-            entry_result = {Changelog.RELEASE_NOTES: release_notes,
-                            Changelog.DISPLAY_NAME: f'{version_display_name} - {build_number}',
-                            Changelog.RELEASED: datetime.utcnow().strftime(Metadata.DATE_FORMAT),
-                            Changelog.PULL_REQUEST_NUMBERS: pull_request_numbers}
+            entry_result = {
+                Changelog.RELEASE_NOTES: release_notes,
+                Changelog.DISPLAY_NAME: f"{version_display_name} - {build_number}",
+                Changelog.RELEASED: datetime.utcnow().strftime(Metadata.DATE_FORMAT),
+                Changelog.PULL_REQUEST_NUMBERS: pull_request_numbers,
+            }
 
         elif initial_release:
             logging.debug(
-                f"Creating changelog entry for an initial version for pack {self.name} and version {version_display_name}")
-            entry_result = {Changelog.RELEASE_NOTES: release_notes,
-                            Changelog.DISPLAY_NAME: f'{version_display_name} - {build_number}',
-                            Changelog.RELEASED: self._create_date,
-                            Changelog.PULL_REQUEST_NUMBERS: pull_request_numbers}
+                f"Creating changelog entry for an initial version for pack {self.name} and version {version_display_name}"
+            )
+            entry_result = {
+                Changelog.RELEASE_NOTES: release_notes,
+                Changelog.DISPLAY_NAME: f"{version_display_name} - {build_number}",
+                Changelog.RELEASED: self._create_date,
+                Changelog.PULL_REQUEST_NUMBERS: pull_request_numbers,
+            }
 
         elif self.is_modified and not is_override:
             logging.debug(
-                f"Creating changelog entry for an existing version for pack {self.name} and version {version_display_name}")
-            entry_result = {Changelog.RELEASE_NOTES: release_notes,
-                            Changelog.DISPLAY_NAME: f'{version_display_name} - R{build_number}',
-                            Changelog.RELEASED: datetime.utcnow().strftime(Metadata.DATE_FORMAT),
-                            Changelog.PULL_REQUEST_NUMBERS: pull_request_numbers}
+                f"Creating changelog entry for an existing version for pack {self.name} and version {version_display_name}"
+            )
+            entry_result = {
+                Changelog.RELEASE_NOTES: release_notes,
+                Changelog.DISPLAY_NAME: f"{version_display_name} - R{build_number}",
+                Changelog.RELEASED: datetime.utcnow().strftime(Metadata.DATE_FORMAT),
+                Changelog.PULL_REQUEST_NUMBERS: pull_request_numbers,
+            }
 
         if entry_result and new_version:
             logging.debug(f"Starting filtering entry for pack {self._pack_name} with version {version_display_name}")
-            return self.filter_changelog_entries(
-                entry_result,
-                version_display_name,
-                marketplace, id_set
-            )
+            return self.filter_changelog_entries(entry_result, version_display_name, marketplace, id_set)
 
         return entry_result, False
 
     def remove_unwanted_files(self):
-        """ Iterates over pack folder and removes hidden files and unwanted folders.
+        """Iterates over pack folder and removes hidden files and unwanted folders.
 
         Returns:
             bool: whether the operation succeeded.
@@ -638,17 +674,19 @@ class Pack:
         task_status = True
         try:
             for directory in Pack.EXCLUDE_DIRECTORIES:
-                if os.path.isdir(f'{self._pack_path}/{directory}'):
-                    shutil.rmtree(f'{self._pack_path}/{directory}')
+                if os.path.isdir(f"{self._pack_path}/{directory}"):
+                    shutil.rmtree(f"{self._pack_path}/{directory}")
                     logging.debug(f"Deleted {directory} directory from {self._pack_name} pack")
 
             for root, _dirs, files in os.walk(self._pack_path, topdown=True):
                 for pack_file in files:
                     full_file_path = os.path.join(root, pack_file)
                     # removing unwanted files
-                    if pack_file.startswith('.') \
-                            or pack_file in [Pack.AUTHOR_IMAGE_NAME, Pack.PACK_METADATA] \
-                            or pack_file in self._remove_files_list:
+                    if (
+                        pack_file.startswith(".")
+                        or pack_file in [Pack.AUTHOR_IMAGE_NAME, Pack.PACK_METADATA]
+                        or pack_file in self._remove_files_list
+                    ):
                         os.remove(full_file_path)
                         logging.debug(f"Deleted pack {pack_file} file for {self._pack_name} pack")
                         continue
@@ -660,7 +698,7 @@ class Pack:
             return task_status
 
     def sign_pack(self, signature_string=None):
-        """ Signs pack folder and creates signature file.
+        """Signs pack folder and creates signature file.
 
         Args:
             signature_string (str): Base64 encoded string used to sign the pack.
@@ -674,7 +712,7 @@ class Pack:
             if signature_string:
                 with open("keyfile", "wb") as keyfile:
                     keyfile.write(signature_string.encode())
-                arg = f'./signDirectory {self._pack_path} keyfile base64'
+                arg = f"./signDirectory {self._pack_path} keyfile base64"
                 signing_process = subprocess.Popen(arg, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)  # noqa: S602
                 output, err = signing_process.communicate()
 
@@ -702,7 +740,7 @@ class Pack:
         """
         task_status = False
         try:
-            with ZipFile(zip_pack_path, 'w', ZIP_DEFLATED) as pack_zip:
+            with ZipFile(zip_pack_path, "w", ZIP_DEFLATED) as pack_zip:
                 for root, _dirs, files in os.walk(source_path, topdown=True):
                     for f in files:
                         full_file_path = os.path.join(root, f)
@@ -717,9 +755,15 @@ class Pack:
             return task_status
 
     @staticmethod
-    def encrypt_pack(zip_pack_path, pack_name, encryption_key, extract_destination_path,
-                     private_artifacts_dir, secondary_encryption_key):
-        """ decrypt the pack in order to see that the pack was encrypted in the first place.
+    def encrypt_pack(
+        zip_pack_path,
+        pack_name,
+        encryption_key,
+        extract_destination_path,
+        private_artifacts_dir,
+        secondary_encryption_key,
+    ):
+        """decrypt the pack in order to see that the pack was encrypted in the first place.
 
         Args:
             zip_pack_path (str): The path to the encrypted zip pack.
@@ -731,35 +775,40 @@ class Pack:
         """
         try:
             current_working_dir = os.getcwd()
-            shutil.copy('./encryptor', os.path.join(extract_destination_path, 'encryptor'))
-            os.chmod(os.path.join(extract_destination_path, 'encryptor'), stat.S_IXOTH)
+            shutil.copy("./encryptor", os.path.join(extract_destination_path, "encryptor"))
+            os.chmod(os.path.join(extract_destination_path, "encryptor"), stat.S_IXOTH)
             os.chdir(extract_destination_path)
 
-            subprocess.call('chmod +x ./encryptor', shell=True)  # noqa: S602
+            subprocess.call("chmod +x ./encryptor", shell=True)  # noqa: S602
 
             output_file = zip_pack_path.replace("_not_encrypted.zip", ".zip")
             full_command = f'./encryptor ./{pack_name}_not_encrypted.zip {output_file} "{encryption_key}"'
             subprocess.call(full_command, shell=True)  # noqa: S602
 
             secondary_encryption_key_output_file = zip_pack_path.replace("_not_encrypted.zip", ".enc2.zip")
-            full_command_with_secondary_encryption = f'./encryptor ./{pack_name}_not_encrypted.zip ' \
-                                                     f'{secondary_encryption_key_output_file}' \
-                                                     f' "{secondary_encryption_key}"'
+            full_command_with_secondary_encryption = (
+                f"./encryptor ./{pack_name}_not_encrypted.zip "
+                f"{secondary_encryption_key_output_file}"
+                f' "{secondary_encryption_key}"'
+            )
             subprocess.call(full_command_with_secondary_encryption, shell=True)  # noqa: S602
 
             new_artefacts = Path(current_working_dir, private_artifacts_dir)
             if new_artefacts.exists():
                 shutil.rmtree(new_artefacts)
             new_artefacts.mkdir(parents=True, exist_ok=True)
-            shutil.copy(zip_pack_path, new_artefacts / f'{pack_name}_not_encrypted.zip')
-            shutil.copy(output_file, new_artefacts / f'{pack_name}.zip')
-            shutil.copy(secondary_encryption_key_output_file, new_artefacts / f'{pack_name}.enc2.zip')
+            shutil.copy(zip_pack_path, new_artefacts / f"{pack_name}_not_encrypted.zip")
+            shutil.copy(output_file, new_artefacts / f"{pack_name}.zip")
+            shutil.copy(
+                secondary_encryption_key_output_file,
+                new_artefacts / f"{pack_name}.enc2.zip",
+            )
             os.chdir(current_working_dir)
         except (subprocess.CalledProcessError, shutil.Error) as error:
             logging.error(f"Error while trying to encrypt pack. {error}")
 
     def decrypt_pack(self, encrypted_zip_pack_path, decryption_key):
-        """ decrypt the pack in order to see that the pack was encrypted in the first place.
+        """decrypt the pack in order to see that the pack was encrypted in the first place.
 
         Args:
             encrypted_zip_pack_path (str): The path for the encrypted zip pack.
@@ -770,17 +819,17 @@ class Pack:
         """
         try:
             current_working_dir = os.getcwd()
-            extract_destination_path = f'{current_working_dir}/decrypt_pack_dir'
+            extract_destination_path = f"{current_working_dir}/decrypt_pack_dir"
             Path(extract_destination_path).mkdir(parents=True, exist_ok=True)
 
-            shutil.copy('./decryptor', os.path.join(extract_destination_path, 'decryptor'))
-            secondary_encrypted_pack_path = os.path.join(extract_destination_path, 'encrypted_zip_pack.zip')
+            shutil.copy("./decryptor", os.path.join(extract_destination_path, "decryptor"))
+            secondary_encrypted_pack_path = os.path.join(extract_destination_path, "encrypted_zip_pack.zip")
             shutil.copy(encrypted_zip_pack_path, secondary_encrypted_pack_path)
-            os.chmod(os.path.join(extract_destination_path, 'decryptor'), stat.S_IXOTH)
+            os.chmod(os.path.join(extract_destination_path, "decryptor"), stat.S_IXOTH)
             output_decrypt_file_path = f"{extract_destination_path}/decrypt_pack.zip"
             os.chdir(extract_destination_path)
 
-            subprocess.call('chmod +x ./decryptor', shell=True)  # noqa: S602
+            subprocess.call("chmod +x ./decryptor", shell=True)  # noqa: S602
             full_command = f'./decryptor {secondary_encrypted_pack_path} {output_decrypt_file_path} "{decryption_key}"'
             process = subprocess.Popen(full_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)  # noqa: S602
             stdout, stderr = process.communicate()
@@ -798,7 +847,7 @@ class Pack:
             return False
 
     def is_pack_encrypted(self, encrypted_zip_pack_path, decryption_key):
-        """ Checks if the pack is encrypted by trying to decrypt it.
+        """Checks if the pack is encrypted by trying to decrypt it.
 
         Args:
             encrypted_zip_pack_path (str): The path for the encrypted zip pack.
@@ -809,9 +858,14 @@ class Pack:
         """
         return self.decrypt_pack(encrypted_zip_pack_path, decryption_key)
 
-    def zip_pack(self, extract_destination_path="", encryption_key="",
-                 private_artifacts_dir='private_artifacts', secondary_encryption_key=""):
-        """ Zips pack folder.
+    def zip_pack(
+        self,
+        extract_destination_path="",
+        encryption_key="",
+        private_artifacts_dir="private_artifacts",
+        secondary_encryption_key="",
+    ):
+        """Zips pack folder.
 
         Returns:
             bool: whether the operation succeeded.
@@ -824,8 +878,14 @@ class Pack:
         # if failed to zip, skip encryption
         if task_status and encryption_key:
             try:
-                Pack.encrypt_pack(self._zip_path, source_name, encryption_key, extract_destination_path,
-                                  private_artifacts_dir, secondary_encryption_key)
+                Pack.encrypt_pack(
+                    self._zip_path,
+                    source_name,
+                    encryption_key,
+                    extract_destination_path,
+                    private_artifacts_dir,
+                    secondary_encryption_key,
+                )
                 # If the pack needs to be encrypted, it is initially at a different location than this final path
             except Exception:
                 task_status = False
@@ -876,17 +936,20 @@ class Pack:
             pack_artifacts_path (str): Path to where we are saving pack artifacts.
         """
         secondary_encryption_key_pack_name = f"{self._pack_name}.enc2.zip"
-        secondary_encryption_key_bucket_path = os.path.join(storage_base_path, self.name, self.current_version,
-                                                            secondary_encryption_key_pack_name)
+        secondary_encryption_key_bucket_path = os.path.join(
+            storage_base_path,
+            self.name,
+            self.current_version,
+            secondary_encryption_key_pack_name,
+        )
 
         #  In some cases the path given is actually a zip.
-        if isinstance(pack_artifacts_path, str) and pack_artifacts_path.endswith('content_packs.zip'):
-            _pack_artifacts_path = pack_artifacts_path.replace('/content_packs.zip', '')
+        if isinstance(pack_artifacts_path, str) and pack_artifacts_path.endswith("content_packs.zip"):
+            _pack_artifacts_path = pack_artifacts_path.replace("/content_packs.zip", "")
         else:
             _pack_artifacts_path = pack_artifacts_path
 
-        secondary_encryption_key_artifacts_path = self.zip_path.replace(f'{self._pack_name}',
-                                                                        f'{self._pack_name}.enc2')
+        secondary_encryption_key_artifacts_path = self.zip_path.replace(f"{self._pack_name}", f"{self._pack_name}.enc2")
 
         blob = storage_bucket.blob(secondary_encryption_key_bucket_path)
         blob.cache_control = "no-cache,max-age=0"  # disabling caching for pack blob
@@ -894,14 +957,23 @@ class Pack:
             blob.upload_from_file(pack_zip)
 
         logging.debug(
-            f"Copying {secondary_encryption_key_artifacts_path} to {_pack_artifacts_path}/"
-            f"packs/{self._pack_name}.zip")
-        shutil.copy(secondary_encryption_key_artifacts_path,
-                    f'{_pack_artifacts_path}/packs/{self._pack_name}.zip')
+            f"Copying {secondary_encryption_key_artifacts_path} to {_pack_artifacts_path}/" f"packs/{self._pack_name}.zip"
+        )
+        shutil.copy(
+            secondary_encryption_key_artifacts_path,
+            f"{_pack_artifacts_path}/packs/{self._pack_name}.zip",
+        )
 
-    def upload_to_storage(self, zip_pack_path, storage_bucket, storage_base_path,
-                          private_content=False, pack_artifacts_path=None, with_dependencies_path=None):
-        """ Manages the upload of pack zip artifact to correct path in cloud storage.
+    def upload_to_storage(
+        self,
+        zip_pack_path,
+        storage_bucket,
+        storage_base_path,
+        private_content=False,
+        pack_artifacts_path=None,
+        with_dependencies_path=None,
+    ):
+        """Manages the upload of pack zip artifact to correct path in cloud storage.
         The zip pack will be uploaded by default to following path: /content/packs/pack_name/pack_current_version.
         If with_dependencies_path is provided it will override said path, and will save the item to that destination.
 
@@ -948,9 +1020,16 @@ class Pack:
             logging.exception(f"Failed in uploading {self._pack_name} pack to gcs.")
             return task_status
 
-    def copy_and_upload_to_storage(self, production_bucket, build_bucket, successful_packs_dict,
-                                   successful_uploaded_dependencies_zip_packs_dict, storage_base_path, build_bucket_base_path):
-        """ Manages the copy of pack zip artifact from the build bucket to the production bucket.
+    def copy_and_upload_to_storage(
+        self,
+        production_bucket,
+        build_bucket,
+        successful_packs_dict,
+        successful_uploaded_dependencies_zip_packs_dict,
+        storage_base_path,
+        build_bucket_base_path,
+    ):
+        """Manages the copy of pack zip artifact from the build bucket to the production bucket.
         The zip pack will be copied to following path: /content/packs/pack_name/pack_current_version if
         the pack exists in the successful_packs_dict from Prepare content step in Create Instances job.
 
@@ -977,7 +1056,6 @@ class Pack:
             return True, True
 
         elif pack_was_uploaded_in_prepare_content:
-
             latest_pack_version = successful_packs_dict[self._pack_name][BucketUploadFlow.LATEST_VERSION]
 
             build_version_pack_path = os.path.join(build_bucket_base_path, self._pack_name, latest_pack_version)
@@ -985,25 +1063,29 @@ class Pack:
             # Verifying that the latest version of the pack has been uploaded to the build bucket
             existing_bucket_version_files = [f.name for f in build_bucket.list_blobs(prefix=build_version_pack_path)]
             if not existing_bucket_version_files:
-                logging.error(f"{self._pack_name} latest version ({latest_pack_version}) was not found on build bucket at "
-                              f"path {build_version_pack_path}.")
+                logging.error(
+                    f"{self._pack_name} latest version ({latest_pack_version}) was not found on build bucket at "
+                    f"path {build_version_pack_path}."
+                )
                 return False, False
 
             # We upload the pack zip object taken from the build bucket into the production bucket
             prod_version_pack_path = os.path.join(storage_base_path, self._pack_name, latest_pack_version)
-            prod_pack_zip_path = os.path.join(prod_version_pack_path, f'{self._pack_name}.zip')
-            build_pack_zip_path = os.path.join(build_version_pack_path, f'{self._pack_name}.zip')
+            prod_pack_zip_path = os.path.join(prod_version_pack_path, f"{self._pack_name}.zip")
+            build_pack_zip_path = os.path.join(build_version_pack_path, f"{self._pack_name}.zip")
             build_pack_zip_blob = build_bucket.blob(build_pack_zip_path)
 
             try:
                 copied_blob = build_bucket.copy_blob(
-                    blob=build_pack_zip_blob, destination_bucket=production_bucket, new_name=prod_pack_zip_path
+                    blob=build_pack_zip_blob,
+                    destination_bucket=production_bucket,
+                    new_name=prod_pack_zip_path,
                 )
                 copied_blob.cache_control = "no-cache,max-age=0"  # disabling caching for pack blob
                 self.public_storage_path = copied_blob.public_url
                 task_status = copied_blob.exists()
             except Exception as e:
-                pack_suffix = os.path.join(self._pack_name, latest_pack_version, f'{self._pack_name}.zip')
+                pack_suffix = os.path.join(self._pack_name, latest_pack_version, f"{self._pack_name}.zip")
                 logging.exception(f"Failed copying {pack_suffix}. Additional Info: {str(e)}")
                 return False, False
 
@@ -1011,7 +1093,7 @@ class Pack:
                 logging.error(f"Failed in uploading {self._pack_name} pack to production gcs.")
             else:
                 # Determine if pack versions were aggregated during upload
-                agg_str = successful_packs_dict[self._pack_name].get('aggregated')
+                agg_str = successful_packs_dict[self._pack_name].get("aggregated")
                 if agg_str:
                     self._aggregated = True
                     self._aggregation_str = agg_str
@@ -1019,17 +1101,15 @@ class Pack:
 
         # handle dependenices zip upload when found in build bucket
         self.copy_and_upload_dependencies_zip_to_storage(
-            build_bucket,
-            build_bucket_base_path,
-            production_bucket,
-            storage_base_path
+            build_bucket, build_bucket_base_path, production_bucket, storage_base_path
         )
 
         return task_status, False
 
-    def copy_and_upload_dependencies_zip_to_storage(self, build_bucket, build_bucket_base_path, production_bucket,
-                                                    storage_base_path):
-        pack_with_deps_name = f'{self._pack_name}_with_dependencies.zip'
+    def copy_and_upload_dependencies_zip_to_storage(
+        self, build_bucket, build_bucket_base_path, production_bucket, storage_base_path
+    ):
+        pack_with_deps_name = f"{self._pack_name}_with_dependencies.zip"
         build_pack_with_deps_path = os.path.join(build_bucket_base_path, self._pack_name, pack_with_deps_name)
         existing_bucket_deps_files = [f.name for f in build_bucket.list_blobs(prefix=build_pack_with_deps_path)]
         if existing_bucket_deps_files:
@@ -1043,7 +1123,7 @@ class Pack:
                 copied_blob = build_bucket.copy_blob(
                     blob=build_pack_deps_zip_blob,
                     destination_bucket=production_bucket,
-                    new_name=prod_version_pack_deps_zip_path
+                    new_name=prod_version_pack_deps_zip_path,
                 )
                 copied_blob.cache_control = "no-cache,max-age=0"  # disabling caching for pack blob
                 self.public_storage_path = copied_blob.public_url
@@ -1080,8 +1160,13 @@ class Pack:
 
         return changelog, changelog_latest_rn_version, changelog_latest_rn
 
-    def get_modified_release_notes_lines(self, release_notes_dir: str, new_release_notes_versions: list,
-                                         changelog: dict, modified_rn_files: list):
+    def get_modified_release_notes_lines(
+        self,
+        release_notes_dir: str,
+        new_release_notes_versions: list,
+        changelog: dict,
+        modified_rn_files: list,
+    ):
         """
         In the case where an rn file was changed, this function returns the new content
         of the release note in the format suitable for the changelog file.
@@ -1123,12 +1208,13 @@ class Pack:
                 logging.debug(f"Cleaned release notes from: {rn_lines} to: {modified_versions_dict[version]}")
             # The case where the version is not a key in the changelog file or it is a key of aggregated content
             else:
-                logging.debug(f'The "{version}" version is not a key in the changelog file or it is a key of'
-                              f' aggregated content')
+                logging.debug(
+                    f'The "{version}" version is not a key in the changelog file or it is a key of' f" aggregated content"
+                )
                 same_block_versions_dict, higher_nearest_version = self.get_same_block_versions(
-                    release_notes_dir, version, changelog)
-                modified_versions_dict[higher_nearest_version] = aggregate_release_notes_for_marketplace(
-                    same_block_versions_dict)
+                    release_notes_dir, version, changelog
+                )
+                modified_versions_dict[higher_nearest_version] = aggregate_release_notes_for_marketplace(same_block_versions_dict)
 
         return modified_versions_dict
 
@@ -1156,7 +1242,7 @@ class Pack:
         higher_nearest_version = min(higher_versions)
         lower_versions = lower_versions + lowest_version  # if the version is 1.0.0, ensure lower_versions is not empty
         lower_nearest_version = max(lower_versions)
-        for rn_filename in filter_dir_files_by_extension(release_notes_dir, '.md'):
+        for rn_filename in filter_dir_files_by_extension(release_notes_dir, ".md"):
             current_version = underscore_file_name_to_dotted_version(rn_filename)
             # Catch all versions that are in the same block
             if lower_nearest_version < Version(current_version) <= higher_nearest_version:
@@ -1165,8 +1251,12 @@ class Pack:
                 same_block_versions_dict[current_version] = self._clean_release_notes(rn_lines).strip()
         return same_block_versions_dict, str(higher_nearest_version)
 
-    def get_release_notes_lines(self, release_notes_dir: str, changelog_latest_rn_version: Version,
-                                changelog_latest_rn: str) -> tuple[str, str, list]:
+    def get_release_notes_lines(
+        self,
+        release_notes_dir: str,
+        changelog_latest_rn_version: Version,
+        changelog_latest_rn: str,
+    ) -> tuple[str, str, list]:
         """
         Prepares the release notes contents for the new release notes entry
         Args:
@@ -1180,7 +1270,7 @@ class Pack:
         """
         found_versions: list = []
         pack_versions_dict: dict = {}
-        for filename in sorted(filter_dir_files_by_extension(release_notes_dir, '.md')):
+        for filename in sorted(filter_dir_files_by_extension(release_notes_dir, ".md")):
             version = underscore_file_name_to_dotted_version(filename)
 
             # Aggregate all rn files that are bigger than what we have in the changelog file
@@ -1198,8 +1288,10 @@ class Pack:
         if len(pack_versions_dict) > 1:
             # In case that there is more than 1 new release notes file, wrap all release notes together for one
             # changelog entry
-            aggregation_str = f"[{', '.join(str(lv) for lv in found_versions if lv > changelog_latest_rn_version)}]" \
-                              f" => {latest_release_notes_version_str}"
+            aggregation_str = (
+                f"[{', '.join(str(lv) for lv in found_versions if lv > changelog_latest_rn_version)}]"
+                f" => {latest_release_notes_version_str}"
+            )
             logging.debug(f"Aggregating ReleaseNotes versions: {aggregation_str}")
             release_notes_lines = aggregate_release_notes_for_marketplace(pack_versions_dict)
             self._aggregated = True
@@ -1210,15 +1302,17 @@ class Pack:
         else:
             # In case where the pack is up to date, i.e. latest changelog is latest rn file
             # We should take the release notes from the index as it has might been aggregated
-            logging.debug(f'No new RN file was detected for pack {self._pack_name}, taking latest RN from the index')
+            logging.debug(f"No new RN file was detected for pack {self._pack_name}, taking latest RN from the index")
             release_notes_lines = changelog_latest_rn
         new_release_notes_versions = list(pack_versions_dict.keys())
 
-        return release_notes_lines, latest_release_notes_version_str, new_release_notes_versions
+        return (
+            release_notes_lines,
+            latest_release_notes_version_str,
+            new_release_notes_versions,
+        )
 
-    def assert_upload_bucket_version_matches_release_notes_version(self,
-                                                                   changelog: dict,
-                                                                   latest_release_notes: str) -> None:
+    def assert_upload_bucket_version_matches_release_notes_version(self, changelog: dict, latest_release_notes: str) -> None:
         """
         Sometimes there is a the current bucket is not merged from master there could be another version in the upload
         bucket, that does not exist in the current branch.
@@ -1230,11 +1324,12 @@ class Pack:
             latest_release_notes: The latest release notes version string in the current branch
         """
         changelog_latest_release_notes = max(changelog, key=lambda k: Version(k))  # pylint: disable=W0108
-        assert Version(latest_release_notes) >= Version(changelog_latest_release_notes), \
-            f'{self._pack_name}: Version mismatch detected between upload bucket and current branch\n' \
-            f'Upload bucket version: {changelog_latest_release_notes}\n' \
-            f'current branch version: {latest_release_notes}\n' \
-            'Please Merge from master and rebuild'
+        assert Version(latest_release_notes) >= Version(changelog_latest_release_notes), (
+            f"{self._pack_name}: Version mismatch detected between upload bucket and current branch\n"
+            f"Upload bucket version: {changelog_latest_release_notes}\n"
+            f"current branch version: {latest_release_notes}\n"
+            "Please Merge from master and rebuild"
+        )
 
     def get_rn_files_names(self, diff_files_list):
         """
@@ -1256,20 +1351,29 @@ class Pack:
         return modified_rn_files
 
     def is_pack_release_notes_file(self, file_path: str):
-        """ Indicates whether a file_path is an MD release notes file of the pack or not
+        """Indicates whether a file_path is an MD release notes file of the pack or not
         Args:
             file_path (str): The file path.
         Returns:
             bool: True if the file is a release notes file or False otherwise
         """
-        return all([
-            file_path.startswith(os.path.join(PACKS_FOLDER, self._pack_name, self.RELEASE_NOTES)),
-            os.path.basename(os.path.dirname(file_path)) == self.RELEASE_NOTES,
-            os.path.basename(file_path).endswith('.md')
-        ])
+        return all(
+            [
+                file_path.startswith(os.path.join(PACKS_FOLDER, self._pack_name, self.RELEASE_NOTES)),
+                os.path.basename(os.path.dirname(file_path)) == self.RELEASE_NOTES,
+                os.path.basename(file_path).endswith(".md"),
+            ]
+        )
 
-    def prepare_release_notes(self, index_folder_path, build_number, diff_files_list=None,
-                              marketplace='xsoar', id_set=None, is_override=False):
+    def prepare_release_notes(
+        self,
+        index_folder_path,
+        build_number,
+        diff_files_list=None,
+        marketplace="xsoar",
+        id_set=None,
+        is_override=False,
+    ):
         """
         Handles the creation and update of the changelog.json files.
         Args:
@@ -1297,25 +1401,36 @@ class Pack:
 
             changelog: dict = {}
             if os.path.exists(changelog_index_path):
-                changelog, changelog_latest_rn_version, changelog_latest_rn = \
-                    self.get_changelog_latest_rn(changelog_index_path)
+                changelog, changelog_latest_rn_version, changelog_latest_rn = self.get_changelog_latest_rn(changelog_index_path)
 
                 if os.path.exists(release_notes_dir):
                     # Handling latest release notes files
-                    release_notes_lines, latest_release_notes, new_release_notes_versions = \
-                        self.get_release_notes_lines(
-                            release_notes_dir, changelog_latest_rn_version, changelog_latest_rn)
+                    (
+                        release_notes_lines,
+                        latest_release_notes,
+                        new_release_notes_versions,
+                    ) = self.get_release_notes_lines(
+                        release_notes_dir,
+                        changelog_latest_rn_version,
+                        changelog_latest_rn,
+                    )
                     self.assert_upload_bucket_version_matches_release_notes_version(changelog, latest_release_notes)
 
                     # Handling modified old release notes files, if there are any
                     rn_files_names = self.get_rn_files_names(diff_files_list)
                     modified_release_notes_lines_dict = self.get_modified_release_notes_lines(
-                        release_notes_dir, new_release_notes_versions, changelog, rn_files_names)
+                        release_notes_dir,
+                        new_release_notes_versions,
+                        changelog,
+                        rn_files_names,
+                    )
 
                     if self._current_version != latest_release_notes:
-                        logging.error(f"Version mismatch detected between the pack's current version in "
-                                      f"pack_metadata.json: {self._current_version} and latest release notes "
-                                      f"version: {latest_release_notes}.")
+                        logging.error(
+                            f"Version mismatch detected between the pack's current version in "
+                            f"pack_metadata.json: {self._current_version} and latest release notes "
+                            f"version: {latest_release_notes}."
+                        )
                         task_status = False
                         return task_status, not_updated_build, pack_versions_to_keep
                     else:
@@ -1326,11 +1441,12 @@ class Pack:
                                 version_display_name=latest_release_notes,
                                 build_number=build_number,
                                 new_version=False,
-                                pull_request_numbers=changelog.get(latest_release_notes,
-                                                                   {}).get(Changelog.PULL_REQUEST_NUMBERS, []),
+                                pull_request_numbers=changelog.get(latest_release_notes, {}).get(
+                                    Changelog.PULL_REQUEST_NUMBERS, []
+                                ),
                                 marketplace=marketplace,
                                 id_set=id_set,
-                                is_override=is_override
+                                is_override=is_override,
                             )
 
                         else:
@@ -1348,19 +1464,24 @@ class Pack:
                             changelog[latest_release_notes] = version_changelog
 
                         if modified_release_notes_lines_dict:
-                            logging.debug(f"Updating changelog entries for modified release notes: "
-                                          f"{modified_release_notes_lines_dict}")
-                            for version, modified_release_notes_lines in modified_release_notes_lines_dict.items():
+                            logging.debug(
+                                f"Updating changelog entries for modified release notes: " f"{modified_release_notes_lines_dict}"
+                            )
+                            for (
+                                version,
+                                modified_release_notes_lines,
+                            ) in modified_release_notes_lines_dict.items():
                                 versions, _ = self.get_same_block_versions(release_notes_dir, version, changelog)
-                                all_relevant_pr_nums_for_unified = list({pr_num for _version in versions
-                                                                        for pr_num in self.get_pr_numbers_for_version(_version)})
+                                all_relevant_pr_nums_for_unified = list(
+                                    {pr_num for _version in versions for pr_num in self.get_pr_numbers_for_version(_version)}
+                                )
                                 updated_entry = self._get_updated_changelog_entry(
                                     changelog=changelog,
                                     version=version,
                                     release_notes=modified_release_notes_lines,
                                     pull_request_numbers=all_relevant_pr_nums_for_unified,
                                     marketplace=marketplace,
-                                    id_set=id_set
+                                    id_set=id_set,
                                 )
                                 changelog[version] = updated_entry
 
@@ -1368,8 +1489,7 @@ class Pack:
                     if len(changelog.keys()) > 1:
                         # If there is no release notes dir but the changelog has a few entries in it,
                         # there is a mismatch
-                        logging.warning(
-                            f"{self._pack_name} pack mismatch between {Pack.CHANGELOG_JSON} and {Pack.RELEASE_NOTES}")
+                        logging.warning(f"{self._pack_name} pack mismatch between {Pack.CHANGELOG_JSON} and {Pack.RELEASE_NOTES}")
                         task_status, not_updated_build = True, True
 
                     else:
@@ -1382,14 +1502,17 @@ class Pack:
                             initial_release=True,
                             new_version=False,
                             marketplace=marketplace,
-                            id_set=id_set)
+                            id_set=id_set,
+                        )
 
                         if version_changelog:
                             changelog[first_key_in_changelog] = version_changelog
 
-                        logging.debug(f"Found existing release notes in {Pack.CHANGELOG_JSON} for version: "
-                                      f"{first_key_in_changelog} of pack {self._pack_name}. Modifying this version in "
-                                      f"{Pack.CHANGELOG_JSON}")
+                        logging.debug(
+                            f"Found existing release notes in {Pack.CHANGELOG_JSON} for version: "
+                            f"{first_key_in_changelog} of pack {self._pack_name}. Modifying this version in "
+                            f"{Pack.CHANGELOG_JSON}"
+                        )
 
             elif self._hidden:
                 logging.warning(f"Pack {self._pack_name} is hidden. Skipping release notes handling.")
@@ -1400,8 +1523,8 @@ class Pack:
             else:
                 # if there is no changelog file for the pack, this is a new pack, and we start it's changelog at it's
                 # current version
-                first_pack_release_notes = ''
-                first_release_notes_path = os.path.join(release_notes_dir, '1_0_0.md')
+                first_pack_release_notes = ""
+                first_release_notes_path = os.path.join(release_notes_dir, "1_0_0.md")
 
                 # If an 1_0_0.md release notes file exist then add it to the changelog, otherwise take the pack description
                 if os.path.exists(first_release_notes_path):
@@ -1417,16 +1540,15 @@ class Pack:
                     new_version=True,
                     initial_release=True,
                     marketplace=marketplace,
-                    id_set=id_set
+                    id_set=id_set,
                 )
 
                 if version_changelog:
-                    changelog = {
-                        self._current_version: version_changelog
-                    }
+                    changelog = {self._current_version: version_changelog}
 
-                logging.debug(f'Created {Pack.CHANGELOG_JSON} for pack {self._pack_name} starting at version'
-                              f' {self._current_version}')
+                logging.debug(
+                    f"Created {Pack.CHANGELOG_JSON} for pack {self._pack_name} starting at version" f" {self._current_version}"
+                )
 
             # Update change log entries with BC flag.
             self.add_bc_entries_if_needed(release_notes_dir, changelog)
@@ -1434,7 +1556,7 @@ class Pack:
             # Remove old entries from change log
             pack_versions_to_keep = remove_old_versions_from_changelog(changelog)
 
-            logging.debug(f'Versions to keep for pack: {self._pack_name} = {pack_versions_to_keep}')
+            logging.debug(f"Versions to keep for pack: {self._pack_name} = {pack_versions_to_keep}")
             # write back changelog with changes to pack folder
             with open(os.path.join(self._pack_path, Pack.CHANGELOG_JSON), "w") as pack_changelog:
                 json.dump(changelog, pack_changelog, indent=4)
@@ -1442,8 +1564,7 @@ class Pack:
             task_status = True
             logging.debug(f"Finished creating {Pack.CHANGELOG_JSON} for {self._pack_name}")
         except Exception as e:
-            logging.error(f"Failed creating {Pack.CHANGELOG_JSON} file for {self._pack_name}.\n "
-                          f"Additional info: {e}")
+            logging.error(f"Failed creating {Pack.CHANGELOG_JSON} file for {self._pack_name}.\n " f"Additional info: {e}")
         finally:
             return task_status, not_updated_build, pack_versions_to_keep
 
@@ -1468,8 +1589,10 @@ class Pack:
             (dict) The filtered changelog entry.
             (bool) Whether the pack is not updated because the entries are not relevant to the current marketplace.
         """
-        logging.debug(f"Starting to filter changelog entries by the entities that are given from id-set for pack "
-                      f"{self._pack_name} and marketplace {marketplace}")
+        logging.debug(
+            f"Starting to filter changelog entries by the entities that are given from id-set for pack "
+            f"{self._pack_name} and marketplace {marketplace}"
+        )
 
         release_notes = self.filter_release_notes_by_tags(changelog_entry.get(Changelog.RELEASE_NOTES), marketplace)
 
@@ -1477,8 +1600,9 @@ class Pack:
         release_notes_dict = self.get_release_notes_dict(version, release_notes)
         logging.debug(f"Release notes entries in dict - {release_notes_dict}")
 
-        if self.release_notes_dont_contain_entities_sections(release_notes_str=release_notes,
-                                                             release_notes_dict=release_notes_dict):
+        if self.release_notes_dont_contain_entities_sections(
+            release_notes_str=release_notes, release_notes_dict=release_notes_dict
+        ):
             logging.debug(f"The pack {self._pack_name} release notes does not contain any entities")
             return changelog_entry, False
 
@@ -1488,8 +1612,10 @@ class Pack:
         # Convert the RN dict to string
         final_release_notes = construct_entities_block(filtered_release_notes).strip()
         if not final_release_notes:
-            final_release_notes = f"Changes are not relevant for " \
-                                  f"{'XSIAM' if marketplace == 'marketplacev2' else marketplace.upper()} marketplace."
+            final_release_notes = (
+                f"Changes are not relevant for "
+                f"{'XSIAM' if marketplace == 'marketplacev2' else marketplace.upper()} marketplace."
+            )
 
         changelog_entry[Changelog.RELEASE_NOTES] = final_release_notes
         logging.debug(f"Finall release notes - \n{changelog_entry[Changelog.RELEASE_NOTES]}")
@@ -1512,20 +1638,27 @@ class Pack:
         for content_type, content_type_rn_entries in release_notes.items():
             content_type_to_filtered_entries: dict = {}
 
-            for content_item_display_name, content_item_rn_notes in content_type_rn_entries.items():
-
-                logging.debug(f"Searching display name '{content_item_display_name}' with rn header "
-                              f"'{content_type}' in in id set.")
-                if content_item_display_name != '[special_msg]' and not is_content_item_in_id_set(
-                        content_item_display_name.replace("New: ", ""), content_type, id_set, marketplace):
+            for (
+                content_item_display_name,
+                content_item_rn_notes,
+            ) in content_type_rn_entries.items():
+                logging.debug(
+                    f"Searching display name '{content_item_display_name}' with rn header " f"'{content_type}' in in id set."
+                )
+                if content_item_display_name != "[special_msg]" and not is_content_item_in_id_set(
+                    content_item_display_name.replace("New: ", ""),
+                    content_type,
+                    id_set,
+                    marketplace,
+                ):
                     continue
 
-                if content_item_display_name == '[special_msg]':
+                if content_item_display_name == "[special_msg]":
                     extracted_names_from_rn = SPECIAL_DISPLAY_NAMES_PATTERN.findall(content_item_rn_notes)
 
                     for name in extracted_names_from_rn:
                         if not is_content_item_in_id_set(name.replace("New: ", ""), content_type, id_set, marketplace):
-                            content_item_rn_notes = content_item_rn_notes.replace(f'- **{name}**', '').strip()
+                            content_item_rn_notes = content_item_rn_notes.replace(f"- **{name}**", "").strip()
 
                     if not content_item_rn_notes:
                         continue
@@ -1538,8 +1671,10 @@ class Pack:
         logging.debug(f"Release notes after filtering by display -\n{filtered_release_notes}")
 
         if not filtered_release_notes:
-            logging.debug(f"Didn't find relevant release notes entries after filtering by display name.\n \
-                            Release notes: {release_notes}")
+            logging.debug(
+                f"Didn't find relevant release notes entries after filtering by display name.\n \
+                            Release notes: {release_notes}"
+            )
 
         return filtered_release_notes
 
@@ -1556,9 +1691,9 @@ class Pack:
         """
         new_release_notes_dict: dict = {}
         for entity_header, entity_entry in release_notes_dict.items():
-
-            new_entity_entry = {name: entry.replace('\n\n', '\n') for name, entry in entity_entry.items()
-                                if entry.strip() not in ['', '\n']}
+            new_entity_entry = {
+                name: entry.replace("\n\n", "\n") for name, entry in entity_entry.items() if entry.strip() not in ["", "\n"]
+            }
 
             if new_entity_entry:
                 new_release_notes_dict[entity_header] = new_entity_entry
@@ -1596,19 +1731,24 @@ class Pack:
 
         def remove_tags_section_from_rn(release_notes, marketplace, upload_marketplace):
             start_tag, end_tag = TAGS_BY_MP[marketplace]
-            if ((start_tag in release_notes and end_tag in release_notes) and (
+            if (start_tag in release_notes and end_tag in release_notes) and (
                 ((upload_marketplace in [XSIAM_MP, XPANSE_MP]) and marketplace != upload_marketplace)
                 or (upload_marketplace == XSOAR_SAAS_MP and marketplace not in [XSOAR_SAAS_MP, XSOAR_MP])
                 or (upload_marketplace == XSOAR_MP and marketplace not in [XSOAR_MP, XSOAR_ON_PREM_MP])
-            )):
-                logging.debug(f"Filtering irrelevant release notes by tags of marketplace "
-                              f"{marketplace} for pack {self._pack_name} when uploading to marketplace "
-                              f"{upload_marketplace}.")
-                return re.sub(fr'{start_tag}{TAGS_SECTION_PATTERN}{end_tag}[\n]*', '', release_notes)
+            ):
+                logging.debug(
+                    f"Filtering irrelevant release notes by tags of marketplace "
+                    f"{marketplace} for pack {self._pack_name} when uploading to marketplace "
+                    f"{upload_marketplace}."
+                )
+                return re.sub(
+                    rf"{start_tag}{TAGS_SECTION_PATTERN}{end_tag}[\n]*",
+                    "",
+                    release_notes,
+                )
             else:
-                logging.debug(f"Removing only the tags since the RN entry is relevant "
-                              f"to marketplace {upload_marketplace}")
-                return release_notes.replace(f"{start_tag}", '').replace(f"{end_tag}", '')
+                logging.debug(f"Removing only the tags since the RN entry is relevant " f"to marketplace {upload_marketplace}")
+                return release_notes.replace(f"{start_tag}", "").replace(f"{end_tag}", "")
 
         # Filters out for XSIAM tags
         release_notes = remove_tags_section_from_rn(release_notes, XSIAM_MP, upload_marketplace)
@@ -1625,8 +1765,9 @@ class Pack:
         # Filters out for XPANSE tags
         release_notes = remove_tags_section_from_rn(release_notes, XPANSE_MP, upload_marketplace)
 
-        logging.debug(f"RN result after filtering for pack {self._pack_name} in marketplace "
-                      f"{upload_marketplace} -\n {release_notes}")
+        logging.debug(
+            f"RN result after filtering for pack {self._pack_name} in marketplace " f"{upload_marketplace} -\n {release_notes}"
+        )
 
         return release_notes
 
@@ -1648,7 +1789,7 @@ class Pack:
         return release_notes_dict
 
     def create_local_changelog(self, build_index_folder_path):
-        """ Copies the pack index changelog.json file to the pack path
+        """Copies the pack index changelog.json file to the pack path
 
         Args:
             build_index_folder_path: The path to the build index folder
@@ -1665,24 +1806,30 @@ class Pack:
         if os.path.exists(build_changelog_index_path):
             try:
                 shutil.copyfile(src=build_changelog_index_path, dst=pack_changelog_path)
-                logging.success(f"Successfully copied pack index changelog.json file from {build_changelog_index_path}"
-                                f" to {pack_changelog_path}.")
+                logging.success(
+                    f"Successfully copied pack index changelog.json file from {build_changelog_index_path}"
+                    f" to {pack_changelog_path}."
+                )
             except shutil.Error as e:
                 task_status = False
-                logging.error(f"Failed copying changelog.json file from {build_changelog_index_path} to "
-                              f"{pack_changelog_path}. Additional info: {str(e)}")
+                logging.error(
+                    f"Failed copying changelog.json file from {build_changelog_index_path} to "
+                    f"{pack_changelog_path}. Additional info: {str(e)}"
+                )
                 return task_status
         else:
             task_status = False
-            logging.error(
-                f"{self._pack_name} index changelog file is missing in build bucket path: {build_changelog_index_path}")
+            logging.error(f"{self._pack_name} index changelog file is missing in build bucket path: {build_changelog_index_path}")
 
         return task_status and self.is_changelog_exists()
 
-    def is_replace_item_in_folder_collected_list(self, content_item: dict,
-                                                 content_items_to_version_map: dict,
-                                                 content_item_id: str):
-        """ Checks the fromversion and toversion in the content_item with
+    def is_replace_item_in_folder_collected_list(
+        self,
+        content_item: dict,
+        content_items_to_version_map: dict,
+        content_item_id: str,
+    ):
+        """Checks the fromversion and toversion in the content_item with
             the fromversion toversion in content_items_to_version_map
             If the content_item has a more up to date toversion and fromversion will
             replace it in the map and metadata list
@@ -1690,40 +1837,40 @@ class Pack:
              A boolean whether the version in the list posted to metadata should be
              replaced with the current version from the content item.
         """
-        content_item_fromversion = content_item.get('fromversion') or content_item.get('fromVersion') or ''
-        content_item_toversion = content_item.get(
-            'toversion') or content_item.get('toVersion') or MAX_TOVERSION
+        content_item_fromversion = content_item.get("fromversion") or content_item.get("fromVersion") or ""
+        content_item_toversion = content_item.get("toversion") or content_item.get("toVersion") or MAX_TOVERSION
         content_item_latest_version = content_items_to_version_map.setdefault(
             content_item_id,
-            {'fromversion': content_item_fromversion,
-             'toversion': content_item_toversion,
-             'added_to_metadata_list': False,
-             })
-        if (replace_old_playbook := content_item_latest_version.get('toversion') < content_item_fromversion):
+            {
+                "fromversion": content_item_fromversion,
+                "toversion": content_item_toversion,
+                "added_to_metadata_list": False,
+            },
+        )
+        if replace_old_playbook := content_item_latest_version.get("toversion") < content_item_fromversion:
             content_items_to_version_map[content_item_id] = {
-                'fromversion': content_item_fromversion,
-                'toversion': content_item_toversion,
-                'added_to_metadata_list': True,
+                "fromversion": content_item_fromversion,
+                "toversion": content_item_toversion,
+                "added_to_metadata_list": True,
             }
         return replace_old_playbook
 
     def get_latest_versions(self, content_items_id_to_version_map: dict, content_item_id: str):
-        """ Get the latest fromversion and toversion of a content item.
+        """Get the latest fromversion and toversion of a content item.
         Returns:
              A tuple containing the latest fromversion and toversion.
         """
-        if (curr_content_item := content_items_id_to_version_map.get(
-                content_item_id)):
-            latest_fromversion = curr_content_item.get('fromversion', '')
-            latest_toversion = curr_content_item.get('toversion', '')
+        if curr_content_item := content_items_id_to_version_map.get(content_item_id):
+            latest_fromversion = curr_content_item.get("fromversion", "")
+            latest_toversion = curr_content_item.get("toversion", "")
         else:
-            latest_fromversion = ''
-            latest_toversion = ''
-        latest_toversion = latest_toversion if latest_toversion != MAX_TOVERSION else ''
+            latest_fromversion = ""
+            latest_toversion = ""
+        latest_toversion = latest_toversion if latest_toversion != MAX_TOVERSION else ""
         return latest_fromversion, latest_toversion
 
     def load_pack_metadata(self):
-        """ Loads user defined metadata and stores part of it's data in defined properties fields.
+        """Loads user defined metadata and stores part of it's data in defined properties fields.
 
         Returns:
             bool: whether the operation succeeded.
@@ -1746,22 +1893,22 @@ class Pack:
 
             # store important user metadata fields
             self.support_type = pack_metadata.get(Metadata.SUPPORT, Metadata.XSOAR_SUPPORT)
-            self.current_version = pack_metadata.get(Metadata.CURRENT_VERSION, '')
+            self.current_version = pack_metadata.get(Metadata.CURRENT_VERSION, "")
             self.hidden = pack_metadata.get(Metadata.HIDDEN, False)
             self.description = pack_metadata.get(Metadata.DESCRIPTION, False)
-            self.display_name = pack_metadata.get(Metadata.NAME, '')  # type: ignore[misc]
+            self.display_name = pack_metadata.get(Metadata.NAME, "")  # type: ignore[misc]
             self._pack_metadata = pack_metadata
             self._content_items = pack_metadata.get(Metadata.CONTENT_ITEMS, {})
             self._default_data_source = pack_metadata.get(Metadata.DEFAULT_DATA_SOURCE) or {}
             self._eula_link = pack_metadata.get(Metadata.EULA_LINK, Metadata.EULA_URL)
-            self._marketplaces = pack_metadata.get(Metadata.MARKETPLACES, ['xsoar', 'marketplacev2'])
+            self._marketplaces = pack_metadata.get(Metadata.MARKETPLACES, ["xsoar", "marketplacev2"])
             self._modules = pack_metadata.get(Metadata.MODULES, [])
             self._tags = set(pack_metadata.get(Metadata.TAGS) or [])
             self._dependencies = pack_metadata.get(Metadata.DEPENDENCIES, {})
             self._certification = pack_metadata.get(Metadata.CERTIFICATION, "")
 
-            if 'xsoar' in self.marketplaces:
-                self.marketplaces.append('xsoar_saas')
+            if "xsoar" in self.marketplaces:
+                self.marketplaces.append("xsoar_saas")
 
             logging.debug(f"Finished loading {self._pack_name} pack user metadata")
             task_status = True
@@ -1771,7 +1918,6 @@ class Pack:
             return task_status
 
     def _collect_pack_tags_by_statistics(self, trending_packs):
-
         days_since_creation = (datetime.utcnow() - datetime.strptime(self._create_date, Metadata.DATE_FORMAT)).days
         if days_since_creation <= 30:
             self._tags |= {PackTags.NEW}
@@ -1786,15 +1932,24 @@ class Pack:
     def remove_test_dependencies(self):
         """Removes test dependencies from pack dependencies property"""
 
-        pack_dependencies = [dep_id for dep_id in self._first_level_dependencies
-                             if not self._first_level_dependencies[dep_id].get("is_test", False)]
+        pack_dependencies = [
+            dep_id
+            for dep_id in self._first_level_dependencies
+            if not self._first_level_dependencies[dep_id].get("is_test", False)
+        ]
 
         self._dependencies = {k: v for k, v in self._dependencies.items() if k in pack_dependencies}
         removed_test_deps = [dep_id for dep_id in self._first_level_dependencies if dep_id not in self._dependencies]
         logging.debug(f"Removed the following test dependencies for pack '{self._pack_name}': {removed_test_deps}")
 
-    def enhance_pack_attributes(self, index_folder_path, packs_dependencies_mapping, marketplace='xsoar',
-                                statistics_handler=None, remove_test_deps=False):
+    def enhance_pack_attributes(
+        self,
+        index_folder_path,
+        packs_dependencies_mapping,
+        marketplace="xsoar",
+        statistics_handler=None,
+        remove_test_deps=False,
+    ):
         """
         Enhances the pack object attributes for the metadata file.
 
@@ -1819,8 +1974,10 @@ class Pack:
 
             if statistics_handler:
                 self._pack_statistics_handler = mp_statistics.PackStatisticsHandler(
-                    self._pack_name, statistics_handler.packs_statistics_df, statistics_handler.packs_download_count_desc,
-                    self._displayed_images_dependent_on_packs
+                    self._pack_name,
+                    statistics_handler.packs_statistics_df,
+                    statistics_handler.packs_download_count_desc,
+                    self._displayed_images_dependent_on_packs,
                 )
                 self._downloads_count = self._pack_statistics_handler.download_count
                 trending_packs = statistics_handler.trending_packs
@@ -1828,12 +1985,17 @@ class Pack:
 
             self._collect_pack_tags_by_statistics(trending_packs)
             self._search_rank = mp_statistics.PackStatisticsHandler.calculate_search_rank(
-                tags=self._tags, certification=self._certification, content_items=self._content_items
+                tags=self._tags,
+                certification=self._certification,
+                content_items=self._content_items,
             )
             self._displayed_integration_images = self.build_integration_images_metadata()
             self._related_integration_images = self._get_all_pack_images(
-                index_folder_path, self._displayed_integration_images, self._displayed_images_dependent_on_packs,
-                pack_dependencies_by_download_count, self._default_data_source
+                index_folder_path,
+                self._displayed_integration_images,
+                self._displayed_images_dependent_on_packs,
+                pack_dependencies_by_download_count,
+                self._default_data_source,
             )
             logging.debug(f"Finished enhancing pack's object attributes for pack '{self.name}'")
             task_status = True
@@ -1888,7 +2050,7 @@ class Pack:
 
     @staticmethod
     def _calculate_pack_creation_date(pack_name, index_folder_path):
-        """ Gets the pack created date.
+        """Gets the pack created date.
         Args:
             index_folder_path (str): downloaded index folder directory path.
         Returns:
@@ -1899,14 +2061,14 @@ class Pack:
 
         if metadata:
             if metadata.get(Metadata.CREATED):
-                created_time = metadata.get(Metadata.CREATED, '')
+                created_time = metadata.get(Metadata.CREATED, "")
             else:
                 raise Exception(f'The metadata file of the {pack_name} pack does not contain "{Metadata.CREATED}" time')
 
         return created_time
 
     def _get_pack_update_date(self, index_folder_path):
-        """ Gets the pack update date.
+        """Gets the pack update date.
         Args:
             index_folder_path (str): downloaded index folder directory path.
         Returns:
@@ -1918,11 +2080,11 @@ class Pack:
         if changelog and not self.is_modified:
             packs_latest_release_notes = max(Version(ver) for ver in changelog)
             latest_changelog_version = changelog.get(str(packs_latest_release_notes), {})
-            latest_changelog_released_date = latest_changelog_version.get('released')
+            latest_changelog_released_date = latest_changelog_version.get("released")
 
         return latest_changelog_released_date
 
-    def set_pack_dependencies(self, packs_dependencies_mapping, marketplace='xsoar'):
+    def set_pack_dependencies(self, packs_dependencies_mapping, marketplace="xsoar"):
         """
         Retrieve all pack's dependencies by merging the calculated dependencies from pack_dependencies.json file, given
         as input priorly, and the hard coded dependencies featured in the pack_metadata.json file.
@@ -1935,28 +2097,32 @@ class Pack:
         self._first_level_dependencies = pack_dependencies_mapping.get(Metadata.DEPENDENCIES, {})
         self._all_levels_dependencies = list(pack_dependencies_mapping.get(Metadata.ALL_LEVELS_DEPENDENCIES, {}))
         self._displayed_images_dependent_on_packs = pack_dependencies_mapping.get(Metadata.DISPLAYED_IMAGES, [])
-        logging.debug(f'(0) {self._first_level_dependencies=}')
-        logging.debug(f'(0) {self._all_levels_dependencies=}')
+        logging.debug(f"(0) {self._first_level_dependencies=}")
+        logging.debug(f"(0) {self._all_levels_dependencies=}")
 
         # If it is a core pack, check that no new mandatory packs (that are not core packs) were added
         # They can be overridden in the user metadata to be not mandatory so we need to check there as well
         core_packs = GCPConfig.get_core_packs(marketplace)
-        logging.debug(f'{core_packs=}')
+        logging.debug(f"{core_packs=}")
 
         if self._pack_name in core_packs:
-            mandatory_dependencies = [k for k, v in self._first_level_dependencies.items()
-                                      if v.get(Metadata.MANDATORY, False) is True
-                                      and not v.get("is_test", False)
-                                      and k not in core_packs
-                                      and k not in self.pack_metadata[Metadata.DEPENDENCIES].keys()
-                                      and k not in self.pack_metadata.get(Metadata.EXCLUDED_DEPENDENCIES, [])]
+            mandatory_dependencies = [
+                k
+                for k, v in self._first_level_dependencies.items()
+                if v.get(Metadata.MANDATORY, False) is True
+                and not v.get("is_test", False)
+                and k not in core_packs
+                and k not in self.pack_metadata[Metadata.DEPENDENCIES].keys()
+                and k not in self.pack_metadata.get(Metadata.EXCLUDED_DEPENDENCIES, [])
+            ]
             if mandatory_dependencies:
-                raise Exception(f'New mandatory dependencies {mandatory_dependencies} were '
-                                f'found in the core pack {self._pack_name}')
+                raise Exception(
+                    f"New mandatory dependencies {mandatory_dependencies} were " f"found in the core pack {self._pack_name}"
+                )
 
     @staticmethod
     def _get_spitted_yml_image_data(root, target_folder_files):
-        """ Retrieves pack integration image and integration display name and returns binding image data.
+        """Retrieves pack integration image and integration display name and returns binding image data.
 
         Args:
             root (str): full path to the target folder to search integration image.
@@ -1969,19 +2135,19 @@ class Pack:
         image_data = {}
 
         for pack_file in target_folder_files:
-            if pack_file.startswith('.'):
+            if pack_file.startswith("."):
                 continue
-            if pack_file.endswith('_image.png'):
-                image_data['repo_image_path'] = os.path.join(root, pack_file)
-            elif pack_file.endswith('.yml'):
+            if pack_file.endswith("_image.png"):
+                image_data["repo_image_path"] = os.path.join(root, pack_file)
+            elif pack_file.endswith(".yml"):
                 with open(os.path.join(root, pack_file)) as integration_file:
                     integration_yml = yaml.safe_load(integration_file)
-                    image_data['display_name'] = integration_yml.get('display', '')
+                    image_data["display_name"] = integration_yml.get("display", "")
 
         return image_data
 
     def _get_image_data_from_yml(self, pack_file_path):
-        """ Creates temporary image file and retrieves integration display name.
+        """Creates temporary image file and retrieves integration display name.
 
         Args:
             pack_file_path (str): full path to the target yml_path integration yml to search integration image.
@@ -1993,14 +2159,14 @@ class Pack:
         """
         image_data = {}
 
-        if pack_file_path.endswith('.yml'):
+        if pack_file_path.endswith(".yml"):
             with open(pack_file_path) as integration_file:
                 integration_yml = yaml.safe_load(integration_file)
 
-            image_data['display_name'] = integration_yml.get('display', '')
+            image_data["display_name"] = integration_yml.get("display", "")
             # create temporary file of base64 decoded data
-            integration_name = integration_yml.get('name', '')
-            base64_image = integration_yml['image'].split(',')[1] if integration_yml.get('image') else None
+            integration_name = integration_yml.get("name", "")
+            base64_image = integration_yml["image"].split(",")[1] if integration_yml.get("image") else None
 
             if not base64_image:
                 logging.warning(f"{integration_name} integration image was not found in {self._pack_name} pack")
@@ -2009,19 +2175,19 @@ class Pack:
             temp_image_name = f'{integration_name.replace(" ", "")}_image.png'
             temp_image_path = os.path.join(self._pack_path, temp_image_name)
 
-            with open(temp_image_path, 'wb') as image_file:
+            with open(temp_image_path, "wb") as image_file:
                 image_file.write(base64.b64decode(base64_image))
 
             self._remove_files_list.append(temp_image_name)  # add temporary file to tracking list
-            image_data['image_path'] = temp_image_path
-            image_data['integration_path_basename'] = os.path.basename(pack_file_path)
+            image_data["image_path"] = temp_image_path
+            image_data["integration_path_basename"] = os.path.basename(pack_file_path)
 
             logging.debug(f"Created temporary integration {image_data['display_name']} image for {self._pack_name} pack")
 
         return image_data
 
     def _search_for_images(self, target_folder):
-        """ Searches for png files in targeted folder.
+        """Searches for png files in targeted folder.
         Args:
             target_folder (str): full path to directory to search.
         Returns:
@@ -2041,7 +2207,7 @@ class Pack:
         return images_list
 
     def check_if_exists_in_index(self, index_folder_path):
-        """ Checks if pack is sub-folder of downloaded index.
+        """Checks if pack is sub-folder of downloaded index.
 
         Args:
             index_folder_path (str): index folder full path.
@@ -2067,7 +2233,7 @@ class Pack:
 
     @staticmethod
     def remove_contrib_suffix_from_name(display_name: str) -> str:
-        """ Removes the contribution details suffix from the integration's display name
+        """Removes the contribution details suffix from the integration's display name
         Args:
             display_name (str): The integration display name.
 
@@ -2075,17 +2241,21 @@ class Pack:
             str: The display name without the contrib details suffix
 
         """
-        contribution_suffixes = ('(Partner Contribution)', '(Developer Contribution)', '(Community Contribution)')
+        contribution_suffixes = (
+            "(Partner Contribution)",
+            "(Developer Contribution)",
+            "(Community Contribution)",
+        )
         for suffix in contribution_suffixes:
             index = display_name.find(suffix)
             if index != -1:
-                display_name = display_name[:index].rstrip(' ')
+                display_name = display_name[:index].rstrip(" ")
                 break
         return display_name
 
     @staticmethod
     def need_to_upload_integration_image(image_data: dict, integration_dirs: list, unified_integrations: list):
-        """ Checks whether needs to upload the integration image or not.
+        """Checks whether needs to upload the integration image or not.
         We upload in one of the two cases:
         1. The integration_path_basename is one of the integration dirs detected
         2. The integration_path_basename is one of the added/modified unified integrations
@@ -2099,11 +2269,13 @@ class Pack:
         Returns:
             bool: True if we need to upload the image or not
         """
-        integration_path_basename = image_data['integration_path_basename']
-        return any([
-            re.findall(BucketUploadFlow.INTEGRATION_DIR_REGEX, integration_path_basename)[0] in integration_dirs,
-            integration_path_basename in unified_integrations
-        ])
+        integration_path_basename = image_data["integration_path_basename"]
+        return any(
+            [
+                re.findall(BucketUploadFlow.INTEGRATION_DIR_REGEX, integration_path_basename)[0] in integration_dirs,
+                integration_path_basename in unified_integrations,
+            ]
+        )
 
     def build_integration_images_metadata(self) -> list[dict]:
         """Collects the integration images metadata to be added in pack's metadata.json
@@ -2112,10 +2284,19 @@ class Pack:
             list[dict]: List of objects with the integration image data
         """
         integration_images_data = self._search_for_images(target_folder=PackFolders.INTEGRATIONS.value)
-        return [{'name': self.remove_contrib_suffix_from_name(image_data.get('display_name')),
-                 'imagePath': urllib.parse.quote(os.path.join(GCPConfig.IMAGES_BASE_PATH, self._pack_name,
-                                                              os.path.basename(image_data.get('image_path'))))}
-                for image_data in integration_images_data]
+        return [
+            {
+                "name": self.remove_contrib_suffix_from_name(image_data.get("display_name")),
+                "imagePath": urllib.parse.quote(
+                    os.path.join(
+                        GCPConfig.IMAGES_BASE_PATH,
+                        self._pack_name,
+                        os.path.basename(image_data.get("image_path")),
+                    )
+                ),
+            }
+            for image_data in integration_images_data
+        ]
 
     def upload_integration_images(self, storage_bucket, storage_base_path):
         """Searches for integration images and uploads them to gcs.
@@ -2137,14 +2318,14 @@ class Pack:
                 return task_status
 
             for image_data in pack_local_images:
-                integration_name = image_data.get('display_name', '')
+                integration_name = image_data.get("display_name", "")
 
-                image_name = os.path.basename(image_data.get('image_path'))
+                image_name = os.path.basename(image_data.get("image_path"))
                 image_storage_path = os.path.join(storage_base_path, self.name, image_name)
                 pack_image_blob = storage_bucket.blob(image_storage_path)
 
                 logging.debug(f"Uploading image for integration: {integration_name} from pack: {self.name}")
-                with open(image_data.get('image_path'), "rb") as image_file:
+                with open(image_data.get("image_path"), "rb") as image_file:
                     pack_image_blob.upload_from_file(image_file)
                 self._uploaded_integration_images.append(image_name)
 
@@ -2158,9 +2339,15 @@ class Pack:
             logging.exception(f"Failed to upload {self._pack_name} pack integration images. Additional Info: {str(e)}")
         return task_status
 
-    def copy_integration_images(self, production_bucket, build_bucket, images_data, storage_base_path,
-                                build_bucket_base_path):
-        """ Copies all pack's integration images from the build bucket to the production bucket
+    def copy_integration_images(
+        self,
+        production_bucket,
+        build_bucket,
+        images_data,
+        storage_base_path,
+        build_bucket_base_path,
+    ):
+        """Copies all pack's integration images from the build bucket to the production bucket
 
         Args:
             production_bucket (google.cloud.storage.bucket.Bucket): The production bucket
@@ -2182,19 +2369,24 @@ class Pack:
             build_bucket_image_blob = build_bucket.blob(build_bucket_image_path)
 
             if not build_bucket_image_blob.exists():
-                logging.error(f"Found changed/added integration image {image_name} in content repo but "
-                              f"{build_bucket_image_path} does not exist in build bucket")
+                logging.error(
+                    f"Found changed/added integration image {image_name} in content repo but "
+                    f"{build_bucket_image_path} does not exist in build bucket"
+                )
                 task_status = False
             else:
                 logging.debug(f"Copying {self._pack_name} pack integration image: {image_name}")
                 try:
                     copied_blob = build_bucket.copy_blob(
-                        blob=build_bucket_image_blob, destination_bucket=production_bucket,
-                        new_name=os.path.join(storage_base_path, self._pack_name, image_name)
+                        blob=build_bucket_image_blob,
+                        destination_bucket=production_bucket,
+                        new_name=os.path.join(storage_base_path, self._pack_name, image_name),
                     )
                     if not copied_blob.exists():
-                        logging.error(f"Copy {self._pack_name} integration image: {build_bucket_image_blob.name} "
-                                      f"blob to {copied_blob.name} blob failed.")
+                        logging.error(
+                            f"Copy {self._pack_name} integration image: {build_bucket_image_blob.name} "
+                            f"blob to {copied_blob.name} blob failed."
+                        )
                         task_status = False
                     else:
                         num_copied_images += 1
@@ -2230,8 +2422,7 @@ class Pack:
             author_image_path = os.path.join(self.path, Pack.AUTHOR_IMAGE_NAME)  # disable-secrets-detection
 
             if os.path.exists(author_image_path):
-                storage_image_path = os.path.join(storage_base_path, self.name,
-                                                  Pack.AUTHOR_IMAGE_NAME)
+                storage_image_path = os.path.join(storage_base_path, self.name, Pack.AUTHOR_IMAGE_NAME)
                 pack_author_image_blob = storage_bucket.blob(storage_image_path)
 
                 with open(author_image_path, "rb") as author_image_file:
@@ -2240,8 +2431,10 @@ class Pack:
                 logging.debug(f"Uploaded successfully pack author image for pack '{self.name}'")
 
             else:
-                logging.debug(f"Skipping uploading of {self.name} pack author image. "
-                              f"The pack is defined as {self.support_type} support type")
+                logging.debug(
+                    f"Skipping uploading of {self.name} pack author image. "
+                    f"The pack is defined as {self.support_type} support type"
+                )
 
         except Exception:
             logging.exception(f"Failed uploading {self.name} pack author image.")
@@ -2249,10 +2442,7 @@ class Pack:
         finally:
             return task_status
 
-
-    def upload_relative_path_markdown_images(
-        self, markdown_relative_paths_data_dict: dict, storage_bucket
-        ):
+    def upload_relative_path_markdown_images(self, markdown_relative_paths_data_dict: dict, storage_bucket):
         """
         Iterates over the markdown_url_data_list and calls the download_markdown_image_from_url_and_upload_to_gcs
         Args:
@@ -2284,8 +2474,7 @@ class Pack:
         """
         final_dst_image_path = str(image.get("final_dst_image_path"))
         image_name = str(image.get("image_name"))
-        logging.debug(f"preparing to upload image {image_name} "
-                        "to image_final_storage_des ={final_dst_image_path}")
+        logging.debug(f"preparing to upload image {image_name} " "to image_final_storage_des ={final_dst_image_path}")
         logging.debug(f"Uploading markdown relative path image for pack '{self.name}'")
         image_path = os.path.join(self.path, "doc_files", f"{image_name}.png")  # disable-secrets-detection
 
@@ -2296,12 +2485,20 @@ class Pack:
             logging.debug(f"Uploaded successfully markdown relative path image for pack '{self.name}'")
 
         else:
-            logging.debug(f"Skipping uploading of {self.name} pack author image. "
-                        f"The pack is defined as {self.support_type} support type")
+            logging.debug(
+                f"Skipping uploading of {self.name} pack author image. "
+                f"The pack is defined as {self.support_type} support type"
+            )
 
-    def copy_author_image(self, production_bucket, build_bucket, images_data, storage_base_path,
-                          build_bucket_base_path):
-        """ Copies pack's author image from the build bucket to the production bucket
+    def copy_author_image(
+        self,
+        production_bucket,
+        build_bucket,
+        images_data,
+        storage_base_path,
+        build_bucket_base_path,
+    ):
+        """Copies pack's author image from the build bucket to the production bucket
 
         Searches for `Author_image.png`, In case no such image was found, default Base pack image path is used and
         it's gcp path is returned.
@@ -2317,16 +2514,16 @@ class Pack:
 
         """
         if images_data.get(self._pack_name, {}).get(BucketUploadFlow.AUTHOR, False):
-
             build_author_image_path = os.path.join(build_bucket_base_path, self._pack_name, Pack.AUTHOR_IMAGE_NAME)
             build_author_image_blob = build_bucket.blob(build_author_image_path)
 
             if build_author_image_blob.exists():
                 try:
                     copied_blob = build_bucket.copy_blob(
-                        blob=build_author_image_blob, destination_bucket=production_bucket,
-                        new_name=os.path.join(storage_base_path, self._pack_name,
-                                              Pack.AUTHOR_IMAGE_NAME))
+                        blob=build_author_image_blob,
+                        destination_bucket=production_bucket,
+                        new_name=os.path.join(storage_base_path, self._pack_name, Pack.AUTHOR_IMAGE_NAME),
+                    )
                     if not copied_blob.exists():
                         logging.error(f"Failed copying {self._pack_name} pack author image.")
                         return False
@@ -2335,20 +2532,29 @@ class Pack:
                         return True
 
                 except Exception as e:
-                    logging.exception(f"Failed copying {Pack.AUTHOR_IMAGE_NAME} for {self._pack_name} pack. "
-                                      f"Additional Info: {str(e)}")
+                    logging.exception(
+                        f"Failed copying {Pack.AUTHOR_IMAGE_NAME} for {self._pack_name} pack. " f"Additional Info: {str(e)}"
+                    )
                     return False
 
             else:
-                logging.error(f"Found changed/added author image in content repo for {self._pack_name} pack but "
-                              f"image does not exist in build bucket in path {build_author_image_path}.")
+                logging.error(
+                    f"Found changed/added author image in content repo for {self._pack_name} pack but "
+                    f"image does not exist in build bucket in path {build_author_image_path}."
+                )
                 return False
 
         else:
             logging.debug(f"No added/modified author image was detected in {self._pack_name} pack.")
             return True
 
-    def upload_images(self, storage_bucket, storage_base_path, marketplace, markdown_relative_path_data_dict):
+    def upload_images(
+        self,
+        storage_bucket,
+        storage_base_path,
+        marketplace,
+        markdown_relative_path_data_dict,
+    ):
         """
         Upload the images related to the pack.
         The image is uploaded in the case it was modified, OR if this is the first time the current pack is being
@@ -2395,15 +2601,13 @@ class Pack:
         return True
 
     def cleanup(self):
-        """ Finalization action, removes extracted pack folder.
-
-        """
+        """Finalization action, removes extracted pack folder."""
         if os.path.exists(self._pack_path):
             shutil.rmtree(self._pack_path)
             logging.debug(f"Cleanup {self._pack_name} pack from: {self._pack_path}")
 
     def is_changelog_exists(self):
-        """ Indicates whether the local changelog of a given pack exists or not
+        """Indicates whether the local changelog of a given pack exists or not
 
         Returns:
             bool: The answer
@@ -2423,26 +2627,28 @@ class Pack:
 
         """
         if self._pack_name in failed_packs_dict:
-            return True, failed_packs_dict[self._pack_name].get('status')
+            return True, failed_packs_dict[self._pack_name].get("status")
         else:
-            return False, ''
+            return False, ""
 
     def is_integration_image(self, file_path: str):
-        """ Indicates whether a file_path is an integration image or not
+        """Indicates whether a file_path is an integration image or not
         Args:
             file_path (str): The file path
         Returns:
             bool: True if the file is an integration image or False otherwise
         """
-        return all([
-            file_path.startswith(os.path.join(PACKS_FOLDER, self._pack_name)),
-            file_path.endswith('.png'),
-            'image' in os.path.basename(file_path.lower()),
-            os.path.basename(file_path) != Pack.AUTHOR_IMAGE_NAME
-        ])
+        return all(
+            [
+                file_path.startswith(os.path.join(PACKS_FOLDER, self._pack_name)),
+                file_path.endswith(".png"),
+                "image" in os.path.basename(file_path.lower()),
+                os.path.basename(file_path) != Pack.AUTHOR_IMAGE_NAME,
+            ]
+        )
 
     def is_author_image(self, file_path: str):
-        """ Indicates whether a file_path is an author image or not
+        """Indicates whether a file_path is an author image or not
         Args:
             file_path (str): The file path
         Returns:
@@ -2451,7 +2657,7 @@ class Pack:
         return file_path == os.path.join(PACKS_FOLDER, self._pack_name, Pack.AUTHOR_IMAGE_NAME)
 
     def is_raedme_file(self, file_path: str):
-        """ Indicates whether a file_path is an pack readme
+        """Indicates whether a file_path is an pack readme
         Args:
             file_path (str): The file path
         Returns:
@@ -2460,18 +2666,20 @@ class Pack:
         return file_path == os.path.join(PACKS_FOLDER, self._pack_name, Pack.README)
 
     def is_unified_integration(self, file_path: str):
-        """ Indicates whether a file_path is a unified integration yml file or not
+        """Indicates whether a file_path is a unified integration yml file or not
         Args:
             file_path (str): The file path
         Returns:
             bool: True if the file is a unified integration or False otherwise
         """
-        return all([
-            file_path.startswith(os.path.join(PACKS_FOLDER, self._pack_name, PackFolders.INTEGRATIONS.value)),
-            os.path.basename(os.path.dirname(file_path)) == PackFolders.INTEGRATIONS.value,
-            os.path.basename(file_path).startswith('integration'),
-            os.path.basename(file_path).endswith('.yml')
-        ])
+        return all(
+            [
+                file_path.startswith(os.path.join(PACKS_FOLDER, self._pack_name, PackFolders.INTEGRATIONS.value)),
+                os.path.basename(os.path.dirname(file_path)) == PackFolders.INTEGRATIONS.value,
+                os.path.basename(file_path).startswith("integration"),
+                os.path.basename(file_path).endswith(".yml"),
+            ]
+        )
 
     def add_bc_entries_if_needed(self, release_notes_dir: str, changelog: dict[str, Any]) -> None:
         """
@@ -2502,19 +2710,23 @@ class Pack:
             return
         bc_version_to_text: dict[str, str | None] = self._breaking_changes_versions_to_text(release_notes_dir)
         loose_versions: list[Version] = [Version(bc_ver) for bc_ver in bc_version_to_text]
-        predecessor_version: Version = Version('0.0.0')
+        predecessor_version: Version = Version("0.0.0")
         for changelog_entry in sorted(changelog.keys(), key=Version):
             rn_loose_version: Version = Version(changelog_entry)
-            if bc_versions := self._changelog_entry_bc_versions(predecessor_version, rn_loose_version, loose_versions,
-                                                                bc_version_to_text):
-                logging.debug(f'Changelog entry {changelog_entry} contains BC versions')
-                changelog[changelog_entry]['breakingChanges'] = True
+            if bc_versions := self._changelog_entry_bc_versions(
+                predecessor_version,
+                rn_loose_version,
+                loose_versions,
+                bc_version_to_text,
+            ):
+                logging.debug(f"Changelog entry {changelog_entry} contains BC versions")
+                changelog[changelog_entry]["breakingChanges"] = True
                 if bc_text := self._calculate_bc_text(release_notes_dir, bc_versions):
-                    changelog[changelog_entry]['breakingChangesNotes'] = bc_text
+                    changelog[changelog_entry]["breakingChangesNotes"] = bc_text
                 else:
-                    changelog[changelog_entry].pop('breakingChangesNotes', None)
+                    changelog[changelog_entry].pop("breakingChangesNotes", None)
             else:
-                changelog[changelog_entry].pop('breakingChanges', None)
+                changelog[changelog_entry].pop("breakingChanges", None)
             predecessor_version = rn_loose_version
 
     def _calculate_bc_text(self, release_notes_dir: str, bc_version_to_text: dict[str, str | None]) -> str | None:
@@ -2546,10 +2758,14 @@ class Pack:
             # Case 3: All BC versions contains text.
             # Important: Currently, implementation of aggregating BCs was decided to concat between them
             # In the future this might be needed to re-thought.
-            return '\n'.join(bc_version_to_text.values())  # type: ignore[arg-type]
+            return "\n".join(bc_version_to_text.values())  # type: ignore[arg-type]
 
-    def _handle_many_bc_versions_some_with_text(self, release_notes_dir: str, text_of_bc_versions: list[str],
-                                                bc_versions_without_text: list[str], ) -> str:
+    def _handle_many_bc_versions_some_with_text(
+        self,
+        release_notes_dir: str,
+        text_of_bc_versions: list[str],
+        bc_versions_without_text: list[str],
+    ) -> str:
         """
         Calculates text for changelog entry where some BC versions contain text and some don't.
         Important: Currently, implementation of aggregating BCs was decided to concat between them (and if BC version
@@ -2562,14 +2778,12 @@ class Pack:
         Returns:
             (str): Text for BC entry.
         """
-        bc_with_text_str = '\n'.join(text_of_bc_versions)
-        rn_file_names_without_text = [f'''{bc_version.replace('.', '_')}.md''' for
-                                      bc_version in bc_versions_without_text]
+        bc_with_text_str = "\n".join(text_of_bc_versions)
+        rn_file_names_without_text = [f"""{bc_version.replace('.', '_')}.md""" for bc_version in bc_versions_without_text]
         other_rn_text: str = self._get_release_notes_concat_str(release_notes_dir, rn_file_names_without_text)
         if not other_rn_text:
-            logging.error('No RN text, although text was expected to be found for versions'
-                          f' {rn_file_names_without_text}.')
-        return f'{bc_with_text_str}{other_rn_text}'
+            logging.error("No RN text, although text was expected to be found for versions" f" {rn_file_names_without_text}.")
+        return f"{bc_with_text_str}{other_rn_text}"
 
     @staticmethod
     def _get_release_notes_concat_str(release_notes_dir: str, rn_file_names: list[str]) -> str:
@@ -2582,12 +2796,12 @@ class Pack:
         Returns:
             (str): Concat RN data
         """
-        concat_str: str = ''
+        concat_str: str = ""
         for rn_file_name in rn_file_names:
             rn_file_path = os.path.join(release_notes_dir, rn_file_name)
             with open(rn_file_path) as f:
                 # Will make the concat string start with new line on purpose.
-                concat_str = f'{concat_str}\n{f.read()}'
+                concat_str = f"{concat_str}\n{f.read()}"
         return concat_str
 
     @staticmethod
@@ -2610,7 +2824,9 @@ class Pack:
         return text_of_bc_versions_with_tests, bc_versions_without_text
 
     @staticmethod
-    def _breaking_changes_versions_to_text(release_notes_dir: str) -> dict[str, str | None]:
+    def _breaking_changes_versions_to_text(
+        release_notes_dir: str,
+    ) -> dict[str, str | None]:
         """
         Calculates every BC version in given RN dir and maps it to text if exists.
         Currently, text from a BC version is calculated in the following way:
@@ -2625,21 +2841,24 @@ class Pack:
         """
         bc_version_to_text: dict[str, str | None] = {}
         # Get all config files in RN dir
-        rn_config_file_names = filter_dir_files_by_extension(release_notes_dir, '.json')
+        rn_config_file_names = filter_dir_files_by_extension(release_notes_dir, ".json")
 
         for file_name in rn_config_file_names:
             file_data: dict = load_json(os.path.join(release_notes_dir, file_name))
             # Check if version is BC
-            if file_data.get('breakingChanges'):
+            if file_data.get("breakingChanges"):
                 # Processing name for easier calculations later on
                 processed_name: str = underscore_file_name_to_dotted_version(file_name)
-                bc_version_to_text[processed_name] = file_data.get('breakingChangesNotes')
+                bc_version_to_text[processed_name] = file_data.get("breakingChangesNotes")
         return bc_version_to_text
 
     @staticmethod
-    def _changelog_entry_bc_versions(predecessor_version: Version, rn_version: Version,
-                                     breaking_changes_versions: list[Version],
-                                     bc_version_to_text: dict[str, str | None]) -> dict[str, str | None]:
+    def _changelog_entry_bc_versions(
+        predecessor_version: Version,
+        rn_version: Version,
+        breaking_changes_versions: list[Version],
+        bc_version_to_text: dict[str, str | None],
+    ) -> dict[str, str | None]:
         """
         Gets all BC versions of given changelog entry, every BC s.t predecessor_version < BC version <= rn_version.
         Args:
@@ -2652,8 +2871,11 @@ class Pack:
             Dict[str, Optional[str]]: Partial list of `bc_version_to_text`, containing only relevant versions between
                                       given versions.
         """
-        return {str(bc_ver): bc_version_to_text.get(str(bc_ver)) for bc_ver in breaking_changes_versions if
-                predecessor_version < bc_ver <= rn_version}
+        return {
+            str(bc_ver): bc_version_to_text.get(str(bc_ver))
+            for bc_ver in breaking_changes_versions
+            if predecessor_version < bc_ver <= rn_version
+        }
 
     def get_pr_numbers_for_version(self, version: str) -> list[int]:
         """
@@ -2673,7 +2895,7 @@ class Pack:
         return packs_version_pr_numbers
 
     def get_preview_image_gcp_path(self, pack_file_name: str, folder_name: str) -> str | None:
-        """ Genrate the preview image path as it stored in the gcp
+        """Genrate the preview image path as it stored in the gcp
         Args:
             pack_file_name: File name.
             folder_name: Folder name.
@@ -2686,15 +2908,22 @@ class Pack:
             preview_image_path = os.path.join(self.path, folder_name, preview_image_name)  # disable-secrets-detection
             if os.path.exists(preview_image_path):
                 if not self._current_version:
-                    self._current_version = ''
-                return urllib.parse.quote(os.path.join(GCPConfig.CONTENT_PACKS_PATH, self.name,
-                                                       self.current_version, folder_name, preview_image_name))
+                    self._current_version = ""
+                return urllib.parse.quote(
+                    os.path.join(
+                        GCPConfig.CONTENT_PACKS_PATH,
+                        self.name,
+                        self.current_version,
+                        folder_name,
+                        preview_image_name,
+                    )
+                )
         except Exception:
             logging.exception(f"Failed uploading {self.name} pack preview image.")
         return None
 
     def upload_preview_images(self, storage_bucket, storage_base_path):
-        """ Uploads pack preview images to gcs.
+        """Uploads pack preview images to gcs.
         Args:
             storage_bucket (google.cloud.storage.bucket.Bucket): google storage bucket where image will be uploaded.
             storage_base_path (str): The target destination of the upload in the target bucket.
@@ -2704,13 +2933,16 @@ class Pack:
         logging.debug(f"Uploading preview images for pack '{self.name}'")
         pack_storage_root_path = os.path.join(storage_base_path, self.name, self.current_version)
 
-        for _dir in [PackFolders.XSIAM_REPORTS.value, PackFolders.XSIAM_DASHBOARDS.value]:
+        for _dir in [
+            PackFolders.XSIAM_REPORTS.value,
+            PackFolders.XSIAM_DASHBOARDS.value,
+        ]:
             local_preview_image_dir = os.path.join(PACKS_FOLDER, self.name, _dir)
             if not os.path.isdir(local_preview_image_dir):
                 logging.debug(f"Could not find content items with preview images for pack {self.name}")
                 continue
 
-            preview_image_relative_paths = glob.glob(os.path.join(local_preview_image_dir, '*.png'))
+            preview_image_relative_paths = glob.glob(os.path.join(local_preview_image_dir, "*.png"))
             if not preview_image_relative_paths:
                 logging.debug(f"Could not find preview images in pack {local_preview_image_dir}")
                 continue
@@ -2734,14 +2966,14 @@ class Pack:
         return True
 
     def upload_dynamic_dashboard_images(self, storage_bucket, storage_base_path):
-        """ Uploads pack dynamic dashboard images to gcs.
+        """Uploads pack dynamic dashboard images to gcs.
         Args:
             storage_bucket (google.cloud.storage.bucket.Bucket): google storage bucket where image will be uploaded.
             storage_base_path (str): The target destination of the upload in the target bucket.
         Returns:
             bool: whether the operation succeeded.
         """
-        pack_storage_root_path = os.path.join(storage_base_path, 'images').replace("packs/", "")
+        pack_storage_root_path = os.path.join(storage_base_path, "images").replace("packs/", "")
         logging.debug(f"Uploading dynamic dashboard to folder in path: {pack_storage_root_path} for pack '{self.name}'")
 
         local_dynamic_dashboard_image_dir = os.path.join(PACKS_FOLDER, self.name, PackFolders.INTEGRATIONS.value)
@@ -2749,7 +2981,7 @@ class Pack:
             logging.debug(f"Could not find dynamic dashboard images for pack {self.name}")
             return True
 
-        dynamic_dashboard_image_relative_paths = glob.glob(os.path.join(local_dynamic_dashboard_image_dir, '*/*.svg'))
+        dynamic_dashboard_image_relative_paths = glob.glob(os.path.join(local_dynamic_dashboard_image_dir, "*/*.svg"))
         if not dynamic_dashboard_image_relative_paths:
             logging.debug(f"Could not find dynamic dashboard images in pack {local_dynamic_dashboard_image_dir}")
             return True
@@ -2757,18 +2989,26 @@ class Pack:
         logging.debug(f"Found dynamic dashboard image: {dynamic_dashboard_image_relative_paths}")
         for dynamic_dashboard_image in dynamic_dashboard_image_relative_paths:
             integration_dir = Path(dynamic_dashboard_image).parts[:-1]
-            integration_yaml_path = glob.glob(os.path.join(*integration_dir, '*.yml'))
+            integration_yaml_path = glob.glob(os.path.join(*integration_dir, "*.yml"))
 
             with open(integration_yaml_path[0]) as pack_file:
                 integration_yaml_content = yaml.safe_load(pack_file)
 
-            image_background: list[str] = re.findall(r'_([^_]+)\.svg$', dynamic_dashboard_image)
-            if not image_background or image_background[0].lower() not in ['dark', 'light']:
-                raise BaseException(f"Could not find background for image in path {dynamic_dashboard_image}.\nThe svg image "
-                                    "file should be named either as `<ImageName>_dark.svg` or `<ImageName>_light.svg`")
+            image_background: list[str] = re.findall(r"_([^_]+)\.svg$", dynamic_dashboard_image)
+            if not image_background or image_background[0].lower() not in [
+                "dark",
+                "light",
+            ]:
+                raise BaseException(
+                    f"Could not find background for image in path {dynamic_dashboard_image}.\nThe svg image "
+                    "file should be named either as `<ImageName>_dark.svg` or `<ImageName>_light.svg`"
+                )
 
-            image_storage_path = os.path.join(pack_storage_root_path, image_background[0].lower(),
-                                              f"{integration_yaml_content.get('commonfields', {}).get('id', '')}.svg")
+            image_storage_path = os.path.join(
+                pack_storage_root_path,
+                image_background[0].lower(),
+                f"{integration_yaml_content.get('commonfields', {}).get('id', '')}.svg",
+            )
             logging.debug(f"Uploading image in path '{dynamic_dashboard_image}' to bucket directory '{image_storage_path}'")
             pack_image_blob = storage_bucket.blob(image_storage_path)
 
@@ -2784,8 +3024,15 @@ class Pack:
 
         return True
 
-    def copy_preview_images(self, production_bucket, build_bucket, images_data, storage_base_path, build_bucket_base_path):
-        """ Copies pack's preview image from the build bucket to the production bucket
+    def copy_preview_images(
+        self,
+        production_bucket,
+        build_bucket,
+        images_data,
+        storage_base_path,
+        build_bucket_base_path,
+    ):
+        """Copies pack's preview image from the build bucket to the production bucket
 
         Args:
             production_bucket (google.cloud.storage.bucket.Bucket): The production bucket
@@ -2804,25 +3051,38 @@ class Pack:
 
         for image_name in pc_uploaded_preview_images:
             image_pack_path = Path(image_name).parts[-2:]
-            build_bucket_image_path = os.path.join(build_bucket_base_path, self._pack_name,
-                                                   self.current_version, *image_pack_path)
+            build_bucket_image_path = os.path.join(
+                build_bucket_base_path,
+                self._pack_name,
+                self.current_version,
+                *image_pack_path,
+            )
             build_bucket_image_blob = build_bucket.blob(build_bucket_image_path)
 
             if not build_bucket_image_blob.exists():
-                logging.error(f"Found changed/added preview image {image_name} in content repo but "
-                              f"{build_bucket_image_path} does not exist in build bucket")
+                logging.error(
+                    f"Found changed/added preview image {image_name} in content repo but "
+                    f"{build_bucket_image_path} does not exist in build bucket"
+                )
                 task_status = False
             else:
                 logging.debug(f"Copying {self._pack_name} pack preview image: {image_name}")
                 try:
                     copied_blob = build_bucket.copy_blob(
-                        blob=build_bucket_image_blob, destination_bucket=production_bucket,
-                        new_name=os.path.join(storage_base_path, self._pack_name, self.current_version,
-                                              *image_pack_path)
+                        blob=build_bucket_image_blob,
+                        destination_bucket=production_bucket,
+                        new_name=os.path.join(
+                            storage_base_path,
+                            self._pack_name,
+                            self.current_version,
+                            *image_pack_path,
+                        ),
                     )
                     if not copied_blob.exists():
-                        logging.error(f"Copy {self._pack_name} preview image: {build_bucket_image_blob.name} "
-                                      f"blob to {copied_blob.name} blob failed.")
+                        logging.error(
+                            f"Copy {self._pack_name} preview image: {build_bucket_image_blob.name} "
+                            f"blob to {copied_blob.name} blob failed."
+                        )
                         task_status = False
                     else:
                         num_copied_images += 1
@@ -2842,7 +3102,7 @@ class Pack:
         return task_status
 
     def copy_dynamic_dashboard_images(self, production_bucket, build_bucket, images_data, storage_base_path):
-        """ Copies pack's dynamic dashboard image from the build bucket to the production bucket
+        """Copies pack's dynamic dashboard image from the build bucket to the production bucket
 
         Args:
             production_bucket (google.cloud.storage.bucket.Bucket): The production bucket
@@ -2856,29 +3116,37 @@ class Pack:
         task_status = True
         num_copied_images = 0
         err_msg = f"Failed copying {self._pack_name} pack dynamic dashboard images."
-        pc_uploaded_dynamic_dashboard_images = images_data.get(self._pack_name,
-                                                               {}).get(BucketUploadFlow.DYNAMIC_DASHBOARD_IMAGES, [])
+        pc_uploaded_dynamic_dashboard_images = images_data.get(self._pack_name, {}).get(
+            BucketUploadFlow.DYNAMIC_DASHBOARD_IMAGES, []
+        )
 
         for build_bucket_image_path in pc_uploaded_dynamic_dashboard_images:
             logging.debug(f"Found uploaded dynamic dashboard image in build bucket path: {build_bucket_image_path}")
             build_bucket_image_blob = build_bucket.blob(build_bucket_image_path)
 
             if not build_bucket_image_blob.exists():
-                logging.error(f"Found changed/added dynamic dashboard image in content repo but "
-                              f"'{build_bucket_image_path}' does not exist in build bucket")
+                logging.error(
+                    f"Found changed/added dynamic dashboard image in content repo but "
+                    f"'{build_bucket_image_path}' does not exist in build bucket"
+                )
                 task_status = False
             else:
                 logging.debug(f"Copying {self._pack_name} pack dynamic dashboard image: {build_bucket_image_path}")
                 try:
                     copied_blob = build_bucket.copy_blob(
-                        blob=build_bucket_image_blob, destination_bucket=production_bucket,
-                        new_name=os.path.join(os.path.dirname(storage_base_path),
-                                              build_bucket_image_path.split("content/")[-1])
+                        blob=build_bucket_image_blob,
+                        destination_bucket=production_bucket,
+                        new_name=os.path.join(
+                            os.path.dirname(storage_base_path),
+                            build_bucket_image_path.split("content/")[-1],
+                        ),
                     )
                     sleep(1)
                     if not copied_blob.exists():
-                        logging.error(f"Failed to copy {self._pack_name} dynamic dashboard image: {build_bucket_image_blob.name} "
-                                      f"blob to {copied_blob.name} blob.")
+                        logging.error(
+                            f"Failed to copy {self._pack_name} dynamic dashboard image: {build_bucket_image_blob.name} "
+                            f"blob to {copied_blob.name} blob."
+                        )
                         task_status = False
                     else:
                         num_copied_images += 1
@@ -2898,7 +3166,7 @@ class Pack:
         return task_status
 
     def does_preview_image_exist(self, file_path: str) -> bool:
-        """ Indicates whether a file_path is a valid preview image or not:
+        """Indicates whether a file_path is a valid preview image or not:
             - The file exists (is not removed in the latest upload)
             - Belong to the current pack
             - Id of type png
@@ -2909,37 +3177,39 @@ class Pack:
         Returns:
             bool: True if the file is a preview image or False otherwise
         """
-        valid_image = all([
-            file_path.startswith(os.path.join(PACKS_FOLDER, self.name)),
-            file_path.endswith('.png'),
-            '_image' in os.path.basename(file_path.lower()),
-            (PackFolders.XSIAM_DASHBOARDS.value in file_path or PackFolders.XSIAM_REPORTS.value in file_path)
-        ])
+        valid_image = all(
+            [
+                file_path.startswith(os.path.join(PACKS_FOLDER, self.name)),
+                file_path.endswith(".png"),
+                "_image" in os.path.basename(file_path.lower()),
+                (PackFolders.XSIAM_DASHBOARDS.value in file_path or PackFolders.XSIAM_REPORTS.value in file_path),
+            ]
+        )
         if not valid_image:
             return False
 
         # In cases where a preview image was deleted valid_image will be true but we don't want to upload it as it does
         # not exist anymore
         elif not os.path.exists(file_path):
-            logging.warning(f'Image: {file_path} was deleted and therefore will not be uploaded')
+            logging.warning(f"Image: {file_path} was deleted and therefore will not be uploaded")
             return False
 
         return True
 
     @staticmethod
     def find_preview_image_path(file_name: str) -> str:
-        """ Generate preview image file name according to related file.
+        """Generate preview image file name according to related file.
         Args:
             file_name: File name.
 
         Returns:
             Preview image file path.
         """
-        prefixes = ['xsiamdashboard', 'xsiamreport']
-        file_name = file_name.replace('external-', '')
+        prefixes = ["xsiamdashboard", "xsiamreport"]
+        file_name = file_name.replace("external-", "")
         for prefix in prefixes:
-            file_name = file_name.replace(f'{prefix}-', '')
-        image_file_name = os.path.splitext(file_name)[0] + '_image.png'
+            file_name = file_name.replace(f"{prefix}-", "")
+        image_file_name = os.path.splitext(file_name)[0] + "_image.png"
         return image_file_name
 
 
@@ -2960,7 +3230,7 @@ def get_pull_request_numbers_from_file(file_path) -> list[int]:
 
 
 def get_upload_data(packs_results_file_path: str, stage: str) -> tuple[dict, dict, dict, dict]:
-    """ Loads the packs_results.json file to get the successful and failed packs together with uploaded images dicts
+    """Loads the packs_results.json file to get the successful and failed packs together with uploaded images dicts
 
     Args:
         packs_results_file_path (str): The path to the file
@@ -2978,21 +3248,31 @@ def get_upload_data(packs_results_file_path: str, stage: str) -> tuple[dict, dic
         packs_results_file = load_json(packs_results_file_path)
         stage_data: dict = packs_results_file.get(stage, {})
         successful_packs_dict = stage_data.get(BucketUploadFlow.SUCCESSFUL_PACKS, {})
-        successful_uploaded_dependencies_zip_packs_dict = \
-            stage_data.get(BucketUploadFlow.SUCCESSFUL_UPLOADED_DEPENDENCIES_ZIP_PACKS, {})
+        successful_uploaded_dependencies_zip_packs_dict = stage_data.get(
+            BucketUploadFlow.SUCCESSFUL_UPLOADED_DEPENDENCIES_ZIP_PACKS, {}
+        )
         failed_packs_dict = stage_data.get(BucketUploadFlow.FAILED_PACKS, {})
         images_data_dict = stage_data.get(BucketUploadFlow.IMAGES, {})
-        return successful_packs_dict, successful_uploaded_dependencies_zip_packs_dict, failed_packs_dict, images_data_dict
+        return (
+            successful_packs_dict,
+            successful_uploaded_dependencies_zip_packs_dict,
+            failed_packs_dict,
+            images_data_dict,
+        )
 
-    logging.debug(f'{packs_results_file_path} does not exist in artifacts')
+    logging.debug(f"{packs_results_file_path} does not exist in artifacts")
     return {}, {}, {}, {}
 
 
-def store_successful_and_failed_packs_in_ci_artifacts(packs_results_file_path: str, stage: str, successful_packs: list,
-                                                      successful_uploaded_dependencies_zip_packs: list,
-                                                      failed_packs: list,
-                                                      images_data: dict = {}):
-    """ Write the successful, successful_uploaded_dependencies_zip_packs and failed packs to the correct section in the
+def store_successful_and_failed_packs_in_ci_artifacts(
+    packs_results_file_path: str,
+    stage: str,
+    successful_packs: list,
+    successful_uploaded_dependencies_zip_packs: list,
+    failed_packs: list,
+    images_data: dict = {},
+):
+    """Write the successful, successful_uploaded_dependencies_zip_packs and failed packs to the correct section in the
         packs_results.json file
 
     Args:
@@ -3014,9 +3294,9 @@ def store_successful_and_failed_packs_in_ci_artifacts(packs_results_file_path: s
             BucketUploadFlow.FAILED_PACKS: {
                 pack.name: {
                     BucketUploadFlow.STATUS: pack.status,
-                    BucketUploadFlow.AGGREGATED: pack.aggregation_str if pack.aggregated and pack.aggregation_str
-                    else "False"
-                } for pack in failed_packs
+                    BucketUploadFlow.AGGREGATED: (pack.aggregation_str if pack.aggregated and pack.aggregation_str else "False"),
+                }
+                for pack in failed_packs
             }
         }
         packs_results[stage].update(failed_packs_dict)
@@ -3027,10 +3307,10 @@ def store_successful_and_failed_packs_in_ci_artifacts(packs_results_file_path: s
             BucketUploadFlow.SUCCESSFUL_PACKS: {
                 pack.name: {
                     BucketUploadFlow.STATUS: pack.status,
-                    BucketUploadFlow.AGGREGATED: pack.aggregation_str if pack.aggregated and pack.aggregation_str
-                    else "False",
-                    BucketUploadFlow.LATEST_VERSION: pack.current_version
-                } for pack in successful_packs
+                    BucketUploadFlow.AGGREGATED: (pack.aggregation_str if pack.aggregated and pack.aggregation_str else "False"),
+                    BucketUploadFlow.LATEST_VERSION: pack.current_version,
+                }
+                for pack in successful_packs
             }
         }
         packs_results[stage].update(successful_packs_dict)
@@ -3041,8 +3321,9 @@ def store_successful_and_failed_packs_in_ci_artifacts(packs_results_file_path: s
             BucketUploadFlow.SUCCESSFUL_UPLOADED_DEPENDENCIES_ZIP_PACKS: {
                 pack.name: {
                     BucketUploadFlow.STATUS: pack.status,
-                    BucketUploadFlow.LATEST_VERSION: pack.current_version
-                } for pack in successful_uploaded_dependencies_zip_packs
+                    BucketUploadFlow.LATEST_VERSION: pack.current_version,
+                }
+                for pack in successful_uploaded_dependencies_zip_packs
             }
         }
 
@@ -3062,12 +3343,13 @@ def store_successful_and_failed_packs_in_ci_artifacts(packs_results_file_path: s
             # write to another file
             packs_results_file_path = Path(packs_results_file_path)  # type: ignore[assignment]
             packs_results_file_path = packs_results_file_path.with_name(  # type: ignore[attr-defined]
-                f"{packs_results_file_path.stem}_upload.json")  # type: ignore[attr-defined]
+                f"{packs_results_file_path.stem}_upload.json"  # type: ignore[attr-defined]
+            )
             json_write(str(packs_results_file_path), packs_results)
 
 
 def load_json(file_path: str) -> dict:
-    """ Reads and loads json file.
+    """Reads and loads json file.
 
     Args:
         file_path (str): full path to json file.
@@ -3088,7 +3370,7 @@ def load_json(file_path: str) -> dict:
 
 
 def json_write(file_path: str, data: dict, update: bool = False):
-    """ Writes given data to a json file
+    """Writes given data to a json file
     Args:
         file_path: The file path
         data: The data to write
@@ -3133,7 +3415,7 @@ def init_storage_client(service_account=None):
 
 
 def input_to_list(input_data, capitalize_input=False):
-    """ Helper function for handling input list or str from the user.
+    """Helper function for handling input list or str from the user.
 
     Args:
         input_data (list or str): input from the user to handle.
@@ -3144,7 +3426,7 @@ def input_to_list(input_data, capitalize_input=False):
 
     """
     input_data = input_data if input_data else []
-    input_data = input_data if isinstance(input_data, list) else [s for s in input_data.split(',') if s]
+    input_data = input_data if isinstance(input_data, list) else [s for s in input_data.split(",") if s]
 
     if capitalize_input:
         return [" ".join([w.title() if w.islower() else w for w in i.split()]) for i in input_data]
@@ -3153,7 +3435,7 @@ def input_to_list(input_data, capitalize_input=False):
 
 
 def get_valid_bool(bool_input):
-    """ Converts and returns valid bool.
+    """Converts and returns valid bool.
 
     Returns:
         bool: converted bool input.
@@ -3162,7 +3444,7 @@ def get_valid_bool(bool_input):
 
 
 def convert_price(pack_id, price_value_input=None):
-    """ Converts to integer value price input. In case no price input provided, return zero as price.
+    """Converts to integer value price input. In case no price input provided, return zero as price.
 
     Args:
         pack_id (str): pack unique identifier.
@@ -3183,7 +3465,7 @@ def convert_price(pack_id, price_value_input=None):
 
 
 def get_updated_server_version(current_string_version, compared_content_item, pack_name):
-    """ Compares two semantic server versions and returns the higher version between them.
+    """Compares two semantic server versions and returns the higher version between them.
 
     Args:
          current_string_version (str): current string version.
@@ -3196,22 +3478,27 @@ def get_updated_server_version(current_string_version, compared_content_item, pa
     lower_version_result = current_string_version
 
     try:
-        compared_string_version = compared_content_item.get('fromversion') or compared_content_item.get(
-            'fromVersion') or "99.99.99"
+        compared_string_version = (
+            compared_content_item.get("fromversion") or compared_content_item.get("fromVersion") or "99.99.99"
+        )
         current_version, compared_version = Version(current_string_version), Version(compared_string_version)
 
         if current_version > compared_version:
             lower_version_result = compared_string_version
     except Exception:
-        content_item_name = compared_content_item.get('name') or compared_content_item.get(
-            'display') or compared_content_item.get('id') or compared_content_item.get('details', '')
+        content_item_name = (
+            compared_content_item.get("name")
+            or compared_content_item.get("display")
+            or compared_content_item.get("id")
+            or compared_content_item.get("details", "")
+        )
         logging.exception(f"{pack_name} failed in version comparison of content item {content_item_name}.")
     finally:
         return lower_version_result
 
 
 def get_content_git_client(content_repo_path: str):
-    """ Initializes content repo client.
+    """Initializes content repo client.
 
     Args:
         content_repo_path (str): content repo full path
@@ -3223,9 +3510,13 @@ def get_content_git_client(content_repo_path: str):
     return git.Repo(content_repo_path)
 
 
-def get_recent_commits_data(content_repo: Any, index_folder_path: str,
-                            is_bucket_upload_flow: bool, circle_branch: str = "master"):
-    """ Returns recent commits hashes (of head and remote master)
+def get_recent_commits_data(
+    content_repo: Any,
+    index_folder_path: str,
+    is_bucket_upload_flow: bool,
+    circle_branch: str = "master",
+):
+    """Returns recent commits hashes (of head and remote master)
 
     Args:
         content_repo (git.repo.base.Repo): content repo object.
@@ -3238,12 +3529,13 @@ def get_recent_commits_data(content_repo: Any, index_folder_path: str,
         str: last commit hash of head.
         str: previous commit depending on the flow the script is running
     """
-    return content_repo.head.commit.hexsha, get_previous_commit(content_repo, index_folder_path,
-                                                                is_bucket_upload_flow, circle_branch)
+    return content_repo.head.commit.hexsha, get_previous_commit(
+        content_repo, index_folder_path, is_bucket_upload_flow, circle_branch
+    )
 
 
 def get_previous_commit(content_repo, index_folder_path, is_bucket_upload_flow, circle_branch):
-    """ If running in bucket upload workflow we want to get the commit in the index which is the index
+    """If running in bucket upload workflow we want to get the commit in the index which is the index
     We've last uploaded to production bucket. Otherwise, we are in a commit workflow and the diff should be from the
     head of origin/master
 
@@ -3261,14 +3553,14 @@ def get_previous_commit(content_repo, index_folder_path, is_bucket_upload_flow, 
     if is_bucket_upload_flow:
         return get_last_upload_commit_hash(content_repo, index_folder_path)
     else:
-        if circle_branch == 'master':
+        if circle_branch == "master":
             head_str = "HEAD~1"
             # if circle branch is master than current commit is origin/master HEAD, so we need to diff with HEAD~1
-            previous_master_head_commit = content_repo.commit('origin/master~1').hexsha
+            previous_master_head_commit = content_repo.commit("origin/master~1").hexsha
         else:
             head_str = "HEAD"
             # else we are on a regular branch and the diff should be done with origin/master HEAD
-            previous_master_head_commit = content_repo.commit('origin/master').hexsha
+            previous_master_head_commit = content_repo.commit("origin/master").hexsha
         logging.debug(f"Using origin/master {head_str} commit hash {previous_master_head_commit} to diff with.")
         return previous_master_head_commit
 
@@ -3284,14 +3576,14 @@ def get_last_upload_commit_hash(content_repo, index_folder_path):
         The commit hash
     """
 
-    inner_index_json_path = os.path.join(index_folder_path, f'{GCPConfig.INDEX_NAME}.json')
+    inner_index_json_path = os.path.join(index_folder_path, f"{GCPConfig.INDEX_NAME}.json")
     if not os.path.exists(inner_index_json_path):
         logging.critical(f"{GCPConfig.INDEX_NAME}.json not found in {GCPConfig.INDEX_NAME} folder")
         sys.exit(1)
     else:
         inner_index_json_file = load_json(inner_index_json_path)
-        if 'commit' in inner_index_json_file:
-            last_upload_commit_hash = inner_index_json_file['commit']
+        if "commit" in inner_index_json_file:
+            last_upload_commit_hash = inner_index_json_file["commit"]
             logging.debug(f"Retrieved the last commit that was uploaded to production: {last_upload_commit_hash}")
         else:
             logging.critical(f"No commit field in {GCPConfig.INDEX_NAME}.json, content: {str(inner_index_json_file)}")
@@ -3302,13 +3594,15 @@ def get_last_upload_commit_hash(content_repo, index_folder_path):
         logging.debug(f"Using commit hash {last_upload_commit} from index.json to diff with.")
         return last_upload_commit
     except Exception as e:
-        logging.critical(f'Commit {last_upload_commit_hash} in {GCPConfig.INDEX_NAME}.json does not exist in content '
-                         f'repo. Additional info:\n {e}')
+        logging.critical(
+            f"Commit {last_upload_commit_hash} in {GCPConfig.INDEX_NAME}.json does not exist in content "
+            f"repo. Additional info:\n {e}"
+        )
         sys.exit(1)
 
 
 def is_ignored_pack_file(modified_file_path_parts):
-    """ Indicates whether a pack file needs to be ignored or not.
+    """Indicates whether a pack file needs to be ignored or not.
 
     Args:
         modified_file_path_parts: The modified file parts, e.g. if file path is "a/b/c" then the
@@ -3333,9 +3627,9 @@ def is_ignored_pack_file(modified_file_path_parts):
 
     for pack_folder in PackIgnored.NESTED_DIRS:
         if pack_folder in modified_file_path_parts:
-            pack_folder_path = os.sep.join(modified_file_path_parts[:modified_file_path_parts.index(pack_folder) + 1])
+            pack_folder_path = os.sep.join(modified_file_path_parts[: modified_file_path_parts.index(pack_folder) + 1])
             file_path = os.sep.join(modified_file_path_parts)
-            for folder_path in [f for f in glob.glob(os.path.join(pack_folder_path, '*/*')) if os.path.isdir(f)]:
+            for folder_path in [f for f in glob.glob(os.path.join(pack_folder_path, "*/*")) if os.path.isdir(f)]:
                 # Checking for all 2nd level directories. e.g. test_data directory
                 if file_path.startswith(folder_path):
                     return True
@@ -3385,13 +3679,12 @@ def is_the_only_rn_in_block(release_notes_dir: str, version: str, changelog: dic
     if not changelog.get(version):
         return False
     all_rn_versions = []
-    lowest_version = [Version('1.0.0')]
-    for filename in filter_dir_files_by_extension(release_notes_dir, '.md'):
+    lowest_version = [Version("1.0.0")]
+    for filename in filter_dir_files_by_extension(release_notes_dir, ".md"):
         current_version = underscore_file_name_to_dotted_version(filename)
         all_rn_versions.append(Version(current_version))
     lower_versions_all_versions = [item for item in all_rn_versions if item < Version(version)] + lowest_version
-    lower_versions_in_changelog = [Version(item) for item in changelog if
-                                   Version(item) < Version(version)] + lowest_version
+    lower_versions_in_changelog = [Version(item) for item in changelog if Version(item) < Version(version)] + lowest_version
     return max(lower_versions_all_versions) == max(lower_versions_in_changelog)
 
 
@@ -3407,11 +3700,11 @@ def underscore_file_name_to_dotted_version(file_name: str) -> str:
     Returns:
         (str): Dotted version of file name
     """
-    return os.path.splitext(file_name)[0].replace('_', '.')
+    return os.path.splitext(file_name)[0].replace("_", ".")
 
 
 def get_last_commit_from_index(service_account, marketplace=MarketplaceVersions.XSOAR):
-    """ Downloading index.json from GCP and extract last upload commit.
+    """Downloading index.json from GCP and extract last upload commit.
 
     Args:
         marketplace: the marketplace to extract from
@@ -3423,15 +3716,15 @@ def get_last_commit_from_index(service_account, marketplace=MarketplaceVersions.
     production_bucket_name = MarketplaceVersionToMarketplaceName.get(marketplace)
     storage_client = init_storage_client(service_account)
     storage_bucket = storage_client.bucket(production_bucket_name)
-    index_storage_path = os.path.join('content/packs/', f"{GCPConfig.INDEX_NAME}.json")
+    index_storage_path = os.path.join("content/packs/", f"{GCPConfig.INDEX_NAME}.json")
     index_blob = storage_bucket.blob(index_storage_path)
     index_string = index_blob.download_as_string()
     index_json = json.loads(index_string)
-    return index_json.get('commit')
+    return index_json.get("commit")
 
 
 def get_failed_packs_from_previous_upload(service_account: str, marketplace=MarketplaceVersions.XSOAR) -> dict | None:
-    """ Download content_status.json from GCP and extract the failed packs from the previous upload.
+    """Download content_status.json from GCP and extract the failed packs from the previous upload.
 
     Args:
         marketplace: the marketplace to extract from
@@ -3448,7 +3741,7 @@ def get_failed_packs_from_previous_upload(service_account: str, marketplace=Mark
         production_bucket_name = MarketplaceVersionToMarketplaceName.get(marketplace)
         storage_client = init_storage_client(service_account)
         storage_bucket = storage_client.bucket(production_bucket_name)
-        content_status_storage_path = os.path.join('content/packs/', f"{GCPConfig.CONTENT_STATUS}.json")
+        content_status_storage_path = os.path.join("content/packs/", f"{GCPConfig.CONTENT_STATUS}.json")
         content_status_blob = storage_bucket.blob(content_status_storage_path)
         content_status_string = content_status_blob.download_as_string()
         return json.loads(content_status_string)
@@ -3459,8 +3752,12 @@ def get_failed_packs_from_previous_upload(service_account: str, marketplace=Mark
 
 def is_content_item_in_graph(display_name: str, content_type, marketplace) -> bool:
     with Neo4jContentGraphInterface() as interface:
-        res = interface.search(content_type=content_type, marketplace=marketplace, display_name=display_name)
-        logging.debug(f'Content type for {display_name} is {content_type}, result is {bool(res)}')
+        res = interface.search(
+            content_type=content_type,
+            marketplace=marketplace,
+            display_name=display_name,
+        )
+        logging.debug(f"Content type for {display_name} is {content_type}, result is {bool(res)}")
         return bool(res)
 
 
@@ -3481,18 +3778,21 @@ def is_content_item_in_id_set(display_name: str, rn_header: str, id_set: dict, m
 
     if not id_set:
         logging.debug("id_set does not exist, searching in graph")
-        content_type = rn_header.replace(' ', '')[:-1]
+        content_type = rn_header.replace(" ", "")[:-1]
 
-        if not is_content_item_in_graph(display_name=display_name,
-                                        content_type=content_type,
-                                        marketplace=marketplace):
-            logging.debug(f"Could not find the content entity of type {content_type} with display name "
-                          f"'{display_name}' in the graph")
+        if not is_content_item_in_graph(
+            display_name=display_name,
+            content_type=content_type,
+            marketplace=marketplace,
+        ):
+            logging.debug(
+                f"Could not find the content entity of type {content_type} with display name " f"'{display_name}' in the graph"
+            )
             return False
         return True
 
     for id_set_entity in id_set[RN_HEADER_TO_ID_SET_KEYS[rn_header]]:
-        if list(id_set_entity.values())[0]['display_name'] == display_name:
+        if list(id_set_entity.values())[0]["display_name"] == display_name:
             return True
 
     logging.debug(f"Could not find the entity with display name {display_name} in id_set.")
@@ -3534,8 +3834,11 @@ def remove_old_versions_from_changelog(changelog: dict):
                 last_year_versions.append(version)
 
         # get versions with same minor version
-        if save_last_minor_versions and Version(version).minor == last_version.minor \
-                and Version(version).major == last_version.major:
+        if (
+            save_last_minor_versions
+            and Version(version).minor == last_version.minor
+            and Version(version).major == last_version.major
+        ):
             last_same_minor_versions.append(version)
             if prev_version and prev_version not in last_same_minor_versions:
                 last_same_minor_versions.append(prev_version)

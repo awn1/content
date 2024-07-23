@@ -1,7 +1,8 @@
 from Tests.scripts.utils import logging_wrapper as logging
 import sys
-class LogAggregator():
 
+
+class LogAggregator:
     def __init__(self):
         self.logs = []
 

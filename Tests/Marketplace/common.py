@@ -25,22 +25,24 @@ def get_json_file(path):
         return json.loads(json_file.read())
 
 
-def generic_request_with_retries(client: DemistoClient,
-                                 retries_message: str,
-                                 exception_message: str,
-                                 prior_message: str,
-                                 path: str,
-                                 method: str,
-                                 request_timeout: int | None = None,
-                                 accept: str = 'application/json',
-                                 body: Any | None = None,
-                                 response_type: str | None = 'str',
-                                 attempts_count: int = 5,
-                                 sleep_interval: int = 60,
-                                 should_try_handler: Callable[[], bool] | None = None,
-                                 success_handler: Callable[[Any], Any] | None = None,
-                                 api_exception_handler: Callable[[ApiException, int], Any] | None = None,
-                                 http_exception_handler: Callable[[HTTPError | HTTPWarning], Any] | None = None):
+def generic_request_with_retries(
+    client: DemistoClient,
+    retries_message: str,
+    exception_message: str,
+    prior_message: str,
+    path: str,
+    method: str,
+    request_timeout: int | None = None,
+    accept: str = "application/json",
+    body: Any | None = None,
+    response_type: str | None = "str",
+    attempts_count: int = 5,
+    sleep_interval: int = 60,
+    should_try_handler: Callable[[], bool] | None = None,
+    success_handler: Callable[[Any], Any] | None = None,
+    api_exception_handler: Callable[[ApiException, int], Any] | None = None,
+    http_exception_handler: Callable[[HTTPError | HTTPWarning], Any] | None = None,
+):
     """
 
     Args:
@@ -73,13 +75,15 @@ def generic_request_with_retries(client: DemistoClient,
 
                 # should_try_handler return True, we are trying to send request.
                 logging.info(f"{prior_message}, attempt: {attempts_count - attempts_left}/{attempts_count}")
-                response, status_code, headers = demisto_client.generic_request_func(client,
-                                                                                     path=path,
-                                                                                     method=method,
-                                                                                     accept=accept,
-                                                                                     body=body,
-                                                                                     response_type=response_type,
-                                                                                     _request_timeout=request_timeout)
+                response, status_code, headers = demisto_client.generic_request_func(
+                    client,
+                    path=path,
+                    method=method,
+                    accept=accept,
+                    body=body,
+                    response_type=response_type,
+                    _request_timeout=request_timeout,
+                )
 
                 if 200 <= status_code < 300 and status_code != 204:
                     if success_handler:
@@ -115,39 +119,41 @@ def generic_request_with_retries(client: DemistoClient,
             logging.debug(f"{retries_message}, sleeping for {sleep_interval} seconds.")
             time.sleep(sleep_interval)
     except Exception as e:
-        logging.exception(f'{exception_message}. Additional info: {str(e)}')
+        logging.exception(f"{exception_message}. Additional info: {str(e)}")
     return False, None
 
 
-def get_updating_status(client: DemistoClient,
-                        attempts_count: int = 5,
-                        sleep_interval: int = 60,
-                        request_timeout: int = 300,
-                        ) -> tuple[bool, bool | None]:
-
+def get_updating_status(
+    client: DemistoClient,
+    attempts_count: int = 5,
+    sleep_interval: int = 60,
+    request_timeout: int = 300,
+) -> tuple[bool, bool | None]:
     def success_handler(response):
-        updating_status = 'true' in str(response).lower()
+        updating_status = "true" in str(response).lower()
         logging.info(f"Got updating status: {updating_status}")
         return True, updating_status
 
-    return generic_request_with_retries(client=client,
-                                        success_handler=success_handler,
-                                        retries_message="Failed to get installation/update status",
-                                        exception_message="The request to get update status has failed",
-                                        prior_message="Getting installation/update status",
-                                        path='/content/updating',
-                                        method='GET',
-                                        attempts_count=attempts_count,
-                                        sleep_interval=sleep_interval,
-                                        request_timeout=request_timeout,
-                                        )
+    return generic_request_with_retries(
+        client=client,
+        success_handler=success_handler,
+        retries_message="Failed to get installation/update status",
+        exception_message="The request to get update status has failed",
+        prior_message="Getting installation/update status",
+        path="/content/updating",
+        method="GET",
+        attempts_count=attempts_count,
+        sleep_interval=sleep_interval,
+        request_timeout=request_timeout,
+    )
 
 
-def wait_until_not_updating(client: DemistoClient,
-                            attempts_count: int = 2,
-                            sleep_interval: int = 30,
-                            maximum_time_to_wait: int = 600,
-                            ) -> bool:
+def wait_until_not_updating(
+    client: DemistoClient,
+    attempts_count: int = 2,
+    sleep_interval: int = 30,
+    maximum_time_to_wait: int = 600,
+) -> bool:
     """
 
     Args:
@@ -189,14 +195,14 @@ def send_api_request_with_retries(
     params: dict | None = None,
     headers: dict | None = None,
     request_timeout: int | None = None,
-    accept: str = 'application/json',
+    accept: str = "application/json",
     body: Any | None = None,
     attempts_count: int = 5,
     sleep_interval: int = 60,
     should_try_handler: Callable[[Any], bool] | None = None,
     success_handler: Callable[[Any], Any] | None = None,
     api_exception_handler: Callable[[ApiException, int], Any] | None = None,
-    http_exception_handler: Callable[[HTTPError | HTTPWarning], Any] | None = None
+    http_exception_handler: Callable[[HTTPError | HTTPWarning], Any] | None = None,
 ):
     """
     Args:
@@ -223,7 +229,7 @@ def send_api_request_with_retries(
 
     """
     headers = headers if headers else {}
-    headers['Accept'] = accept
+    headers["Accept"] = accept
     response = None
     url_path = urljoin(base_url, endpoint)
     try:
@@ -275,7 +281,7 @@ def send_api_request_with_retries(
             logging.debug(f"{retries_message}, sleeping for {sleep_interval} seconds.")
             time.sleep(sleep_interval)
     except Exception as e:
-        logging.exception(f'{exception_message}. Additional info: {str(e)}')
+        logging.exception(f"{exception_message}. Additional info: {str(e)}")
     return False
 
 
@@ -297,9 +303,9 @@ def fetch_pack_ids_to_install(packs_to_install_path: str) -> list[str]:
     return packs_to_install
 
 
-def get_packs_with_higher_min_version(packs_names: set[str],
-                                      server_numeric_version: str,
-                                      extract_content_packs_path: str | None = None) -> set[str]:
+def get_packs_with_higher_min_version(
+    packs_names: set[str], server_numeric_version: str, extract_content_packs_path: str | None = None
+) -> set[str]:
     """
     Return a set of packs that have higher min version than the server version.
 
@@ -313,20 +319,23 @@ def get_packs_with_higher_min_version(packs_names: set[str],
                     their min version is greater than the server version.
     """
     if not extract_content_packs_path:
-        artifacts_folder_server_type = os.getenv('ARTIFACTS_FOLDER_SERVER_TYPE')
+        artifacts_folder_server_type = os.getenv("ARTIFACTS_FOLDER_SERVER_TYPE")
         extract_content_packs_path = mkdtemp()
-        packs_artifacts_path = f'{artifacts_folder_server_type}/content_packs.zip'
+        packs_artifacts_path = f"{artifacts_folder_server_type}/content_packs.zip"
         extract_packs_artifacts(packs_artifacts_path, extract_content_packs_path)
 
     packs_with_higher_version = set()
     for pack_name in packs_names:
         pack_metadata = get_json_file(f"{extract_content_packs_path}/{pack_name}/metadata.json")
-        server_min_version = pack_metadata.get(Metadata.SERVER_MIN_VERSION,
-                                               pack_metadata.get('server_min_version', Metadata.SERVER_DEFAULT_MIN_VERSION))
+        server_min_version = pack_metadata.get(
+            Metadata.SERVER_MIN_VERSION, pack_metadata.get("server_min_version", Metadata.SERVER_DEFAULT_MIN_VERSION)
+        )
 
-        if 'Master' not in server_numeric_version and Version(server_numeric_version) < Version(server_min_version):
+        if "Master" not in server_numeric_version and Version(server_numeric_version) < Version(server_min_version):
             packs_with_higher_version.add(pack_name)
-            logging.info(f"Found pack '{pack_name}' with min version {server_min_version} that is "
-                         f"higher than server version {server_numeric_version}")
+            logging.info(
+                f"Found pack '{pack_name}' with min version {server_min_version} that is "
+                f"higher than server version {server_numeric_version}"
+            )
 
     return packs_with_higher_version

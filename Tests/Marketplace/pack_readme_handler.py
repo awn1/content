@@ -8,9 +8,7 @@ from Tests.Marketplace.marketplace_constants import BucketUploadFlow, ImagesFold
 from Tests.scripts.utils import logging_wrapper as logging
 
 
-def download_markdown_images_from_artifacts(
-    markdown_urls_data_dict_path: Path, storage_bucket, storage_base_path: str
-):
+def download_markdown_images_from_artifacts(markdown_urls_data_dict_path: Path, storage_bucket, storage_base_path: str):
     """
     Iterates over the markdown_url_data_list and calls the download_markdown_image_from_url_and_upload_to_gcs
     Args:
@@ -48,7 +46,7 @@ def download_markdown_images_from_artifacts(
                 decode_before_upload(image_name.get("image_name")) for image_name in images_data
             ]
 
-    logging.debug(f'{pack_images_names=}')
+    logging.debug(f"{pack_images_names=}")
     return pack_images_names
 
 
@@ -108,9 +106,7 @@ def download_markdown_image_from_url_and_upload_to_gcs(
             logging.debug(f"Image sucessfully Downloaded: {image_name}")
             return True
 
-        logging.error(
-            f"Image {image_name} could not be retreived status code {r.status_code} reason {r.reason}"
-        )
+        logging.error(f"Image {image_name} could not be retreived status code {r.status_code} reason {r.reason}")
         return False
     except Exception as e:
         logging.error(
@@ -149,14 +145,12 @@ def copy_markdown_images(
                 pc_uploaded_markdown_images = images_names_list
 
                 if not pc_uploaded_markdown_images:
-                    logging.debug(
-                        f"No added/modified {readme_desc_folder} were detected in {pack_name} pack."
-                    )
+                    logging.debug(f"No added/modified {readme_desc_folder} were detected in {pack_name} pack.")
                     continue
 
                 folder_names = [member.value for member in ImagesFolderNames]
                 if readme_desc_folder not in folder_names:
-                    logging.error(f'The folder is not one of {folder_names}')
+                    logging.error(f"The folder is not one of {folder_names}")
                     continue
 
                 for image_name in pc_uploaded_markdown_images:
@@ -167,9 +161,7 @@ def copy_markdown_images(
                         readme_desc_folder,
                         image_name,
                     )
-                    build_bucket_image_blob = build_bucket.blob(
-                        build_bucket_markdown_image_path
-                    )
+                    build_bucket_image_blob = build_bucket.blob(build_bucket_markdown_image_path)
 
                     if not build_bucket_image_blob.exists():
                         logging.error(
@@ -178,9 +170,7 @@ def copy_markdown_images(
                         )
                         task_status = False
                     else:
-                        logging.debug(
-                            f"Copying {pack_name=} {readme_desc_folder} {image_name=}"
-                        )
+                        logging.debug(f"Copying {pack_name=} {readme_desc_folder} {image_name=}")
                         try:
                             copied_blob = build_bucket.copy_blob(
                                 blob=build_bucket_image_blob,

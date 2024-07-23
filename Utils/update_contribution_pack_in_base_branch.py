@@ -10,11 +10,11 @@ PER_PAGE = 100  # value of `per_page` request parameter
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Deploy a pack from a contribution PR to a branch')
-    parser.add_argument('-p', '--pr_number', help='Contrib PR number')
-    parser.add_argument('-b', '--branch', help='The contrib branch')
-    parser.add_argument('-c', '--contrib_repo', help='The contrib repo')
-    parser.add_argument('-u', '--username', help='The contrib user name')
+    parser = argparse.ArgumentParser(description="Deploy a pack from a contribution PR to a branch")
+    parser.add_argument("-p", "--pr_number", help="Contrib PR number")
+    parser.add_argument("-b", "--branch", help="The contrib branch")
+    parser.add_argument("-c", "--contrib_repo", help="The contrib repo")
+    parser.add_argument("-u", "--username", help="The contrib user name")
     parser.add_argument("-gt", "--github_token", help="The Github token")
     args = parser.parse_args()
 
@@ -28,13 +28,13 @@ def main():
         f"args received in Utils/update_contribution_pack_in_base_branch.py script: {pr_number=}, {username=}, {repo=}, {branch=}"
     )
 
-    packs_dir_names = get_files_from_github(
-        username, branch, pr_number, repo, github_token
-    )
+    packs_dir_names = get_files_from_github(username, branch, pr_number, repo, github_token)
     if packs_dir_names:
-        print('Successfully updated the base branch '  # noqa: T201
-              'with the following contrib packs: Packs/'
-              f'{", Packs/".join(packs_dir_names)}')
+        print(
+            'Successfully updated the base branch '  # noqa: T201
+            'with the following contrib packs: Packs/'
+            f'{", Packs/".join(packs_dir_names)}'
+        )
 
 
 def get_pr_files(pr_number: str, github_token: str) -> Iterable[str]:
@@ -58,14 +58,12 @@ def get_pr_files(pr_number: str, github_token: str) -> Iterable[str]:
         if not files:
             break
         for pr_file in files:
-            if pr_file['filename'].startswith('Packs/'):
-                yield pr_file['filename']
+            if pr_file["filename"].startswith("Packs/"):
+                yield pr_file["filename"]
         page += 1
 
 
-def get_files_from_github(
-    username: str, branch: str, pr_number: str, repo: str, github_token: str
-) -> list[str]:
+def get_files_from_github(username: str, branch: str, pr_number: str, repo: str, github_token: str) -> list[str]:
     """
     Write the changed files content repo
     Args:
@@ -80,8 +78,8 @@ def get_files_from_github(
     content_path = os.getcwd()
     print(f"content_path: {content_path}")
     files_list = set()
-    chunk_size = 1024 * 500     # 500 Kb
-    base_url = f'https://raw.githubusercontent.com/{username}/{repo}/{branch}/'
+    chunk_size = 1024 * 500  # 500 Kb
+    base_url = f"https://raw.githubusercontent.com/{username}/{repo}/{branch}/"
     print(f"base url: {base_url}")
     for file_path in get_pr_files(pr_number, github_token):
         print(f"file_path: {file_path}")
@@ -106,5 +104,5 @@ def get_files_from_github(
     return list(files_list)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

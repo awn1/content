@@ -53,9 +53,7 @@ def mock_args():
 
 
 @patch("Utils.trigger_contribution_build.logging")
-def test_cancel_active_pipelines(
-    mock_logging, mock_gitlab_project, mock_branch, mock_pipeline
-):
+def test_cancel_active_pipelines(mock_logging, mock_gitlab_project, mock_branch, mock_pipeline):
     """
     Given:
         - A handled GitLab branch has one or more active pipelines.
@@ -110,12 +108,6 @@ def test_handle_contribution_prs_exception_handling(
     handle_contribution_prs(mock_args, mock_github_issues, mock_gitlab_project)
 
     # Assertions
-    mock_cancel_active_pipelines.assert_called_once_with(
-        mock_gitlab_project, mock_branch
-    )
-    mock_logging.info.assert_any_call(
-        "Trigger build for PR 123|base: master|contrib: label"
-    )
-    mock_logging.exception.assert_called_once_with(
-        "Failed to trigger pipeline for: master. Error: Test exception"
-    )
+    mock_cancel_active_pipelines.assert_called_once_with(mock_gitlab_project, mock_branch)
+    mock_logging.info.assert_any_call("Trigger build for PR 123|base: master|contrib: label")
+    mock_logging.exception.assert_called_once_with("Failed to trigger pipeline for: master. Error: Test exception")

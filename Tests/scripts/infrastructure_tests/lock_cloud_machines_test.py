@@ -5,19 +5,25 @@ import pytest
 import requests
 from requests import ConnectionError, Response
 
-from Tests.scripts.lock_cloud_machines import get_my_place_in_the_queue, try_to_lock_machine, \
-    get_machines_locks_details, wait_for_build_to_be_first_in_queue, get_and_lock_all_needed_machines, check_job_status
+from Tests.scripts.lock_cloud_machines import (
+    get_my_place_in_the_queue,
+    try_to_lock_machine,
+    get_machines_locks_details,
+    wait_for_build_to_be_first_in_queue,
+    get_and_lock_all_needed_machines,
+    check_job_status,
+)
 
 
 @pytest.mark.parametrize(
     "responses, expected_times_called, expected_status",
     [
-        ([{'status': 'running'}], 1, 'running'),
-        ([ConnectionError, {'status': 'running'}], 2, 'running'),
-        ([ConnectionError, ConnectionError, {'status': 'running'}], 3, 'running'),
-        ([ConnectionError, ConnectionError, ConnectionError, {'status': 'running'}], 4, 'running'),
-        ([ConnectionError, ConnectionError, ConnectionError, {'status': 'failed'}], 4, 'failed'),
-        ([ConnectionError, ConnectionError, {'status': 'done'}], 3, 'done')
+        ([{"status": "running"}], 1, "running"),
+        ([ConnectionError, {"status": "running"}], 2, "running"),
+        ([ConnectionError, ConnectionError, {"status": "running"}], 3, "running"),
+        ([ConnectionError, ConnectionError, ConnectionError, {"status": "running"}], 4, "running"),
+        ([ConnectionError, ConnectionError, ConnectionError, {"status": "failed"}], 4, "failed"),
+        ([ConnectionError, ConnectionError, {"status": "done"}], 3, "done"),
     ],
 )
 def test_check_job_status_with_connection_errors(mocker, responses, expected_times_called, expected_status):
@@ -35,9 +41,9 @@ def test_check_job_status_with_connection_errors(mocker, responses, expected_tim
             r._content = json.dumps(response).encode()
             side_effect_responses.append(r)
 
-    requests_mocker = mocker.patch.object(requests, 'get', side_effect=side_effect_responses)
+    requests_mocker = mocker.patch.object(requests, "get", side_effect=side_effect_responses)
 
-    assert check_job_status('token', project_id="1", job_id='1', interval=0.001) == expected_status
+    assert check_job_status("token", project_id="1", job_id="1", interval=0.001) == expected_status
     assert requests_mocker.call_count == expected_times_called
 
 
@@ -47,18 +53,17 @@ def test_try_to_lock_machine(mocker):
     when:   locking for a free machine.
     then:   assert that lock_machine_name returned because the machine was free.
     """
-    mocker.patch('Tests.scripts.lock_cloud_machines.check_job_status', return_value='running')
-    mocker.patch('Tests.scripts.lock_cloud_machines.lock_machine', return_value='')
+    mocker.patch("Tests.scripts.lock_cloud_machines.check_job_status", return_value="running")
+    mocker.patch("Tests.scripts.lock_cloud_machines.lock_machine", return_value="")
 
-    lock_machine_name = try_to_lock_machine("storage_bucket", 'qa-test-1234',
-                                            [
-                                                {'job_id': '1235',
-                                                 'machine_name': 'qa-test-1235',
-                                                 'project_id': "1234",
-                                                 'old_lock': True
-                                                }
-                                            ],
-                                            'gitlab_status_token', "gcs_locks_path", "1234")
+    lock_machine_name = try_to_lock_machine(
+        "storage_bucket",
+        "qa-test-1234",
+        [{"job_id": "1235", "machine_name": "qa-test-1235", "project_id": "1234", "old_lock": True}],
+        "gitlab_status_token",
+        "gcs_locks_path",
+        "1234",
+    )
     assert lock_machine_name == "qa-test-1234"
 
 
@@ -68,31 +73,25 @@ def test_try_to_lock_occupied_machine(mocker):
     when:   locking for a free machine.
     then:   assert that lock_machine_name is empty because there is another lock file with a job that is running.
     """
-    mocker.patch('Tests.scripts.lock_cloud_machines.check_job_status', return_value='running')
-    mocker.patch('Tests.scripts.lock_cloud_machines.lock_machine', return_value='')
+    mocker.patch("Tests.scripts.lock_cloud_machines.check_job_status", return_value="running")
+    mocker.patch("Tests.scripts.lock_cloud_machines.lock_machine", return_value="")
 
-    lock_machine_name = try_to_lock_machine("storage_bucket", 'qa-test-1234',
-                                            [
-                                                {
-                                                    'project_id': '0',
-                                                    'job_id': '1234',
-                                                    'machine_name': 'qa-test-1234',
-                                                    'old_lock': True
-                                                },
-                                                {
-                                                    'project_id': '0',
-                                                    'job_id': '1235',
-                                                    'machine_name': 'qa-test-1235',
-                                                    'old_lock': True
-                                                }
-                                            ],
-                                            'gitlab_status_token',
-                                            "gcs_locks_path", "1234")
+    lock_machine_name = try_to_lock_machine(
+        "storage_bucket",
+        "qa-test-1234",
+        [
+            {"project_id": "0", "job_id": "1234", "machine_name": "qa-test-1234", "old_lock": True},
+            {"project_id": "0", "job_id": "1235", "machine_name": "qa-test-1235", "old_lock": True},
+        ],
+        "gitlab_status_token",
+        "gcs_locks_path",
+        "1234",
+    )
     assert not lock_machine_name
 
 
 class MockResponse:
-    def __init__(self, name='', time_created=''):
+    def __init__(self, name="", time_created=""):
         self.name = name
         self.time_created = time_created
 
@@ -109,16 +108,22 @@ def test_get_my_place_in_the_queue(mocker):
     storage = MockResponse()
     mocker.patch.dict(os.environ, {"SLACK_TOKEN": "myslacktoken"})
     mocker.patch("Tests.scripts.lock_cloud_machines.GITLAB_PROJECT_ID", "1061")
-    mocker.patch('Tests.scripts.lock_cloud_machines.send_slack_notification')
-    mocker.patch.object(storage, 'list_blobs', return_value=[MockResponse('test/queue/1061-queue-1234', '08/04/2000'),
-                                                             MockResponse('test/queue/1061-queue-1235', '05/04/2000'),
-                                                             MockResponse('test/queue/1061-queue-1236', '06/04/2000'),
-                                                             MockResponse('test/queue/1061-queue-1237', '03/04/2000')])
+    mocker.patch("Tests.scripts.lock_cloud_machines.send_slack_notification")
+    mocker.patch.object(
+        storage,
+        "list_blobs",
+        return_value=[
+            MockResponse("test/queue/1061-queue-1234", "08/04/2000"),
+            MockResponse("test/queue/1061-queue-1235", "05/04/2000"),
+            MockResponse("test/queue/1061-queue-1236", "06/04/2000"),
+            MockResponse("test/queue/1061-queue-1237", "03/04/2000"),
+        ],
+    )
 
-    my_place_in_the_queue, previous_build_in_queue = get_my_place_in_the_queue(storage, 'test', '1235', None)
+    my_place_in_the_queue, previous_build_in_queue = get_my_place_in_the_queue(storage, "test", "1235", None)
 
     assert my_place_in_the_queue == 1
-    assert previous_build_in_queue == '1061-queue-1237'
+    assert previous_build_in_queue == "1061-queue-1237"
 
 
 def test_get_my_place_in_the_queue_exception(mocker):
@@ -128,11 +133,11 @@ def test_get_my_place_in_the_queue_exception(mocker):
     then:   assert Exception is returned.
     """
     storage = MockResponse()
-    mocker.patch.object(storage, 'list_blobs', return_value=[MockResponse('test/queue/1234', '08/04/2000')])
-    mocker.patch('Tests.scripts.lock_cloud_machines.send_slack_notification')
+    mocker.patch.object(storage, "list_blobs", return_value=[MockResponse("test/queue/1234", "08/04/2000")])
+    mocker.patch("Tests.scripts.lock_cloud_machines.send_slack_notification")
     with pytest.raises(Exception) as excinfo:
-        get_my_place_in_the_queue(storage, 'test', '1238', None)
-    assert str(excinfo.value) == 'Unable to find the queue lock file, probably a problem creating the file'
+        get_my_place_in_the_queue(storage, "test", "1238", None)
+    assert str(excinfo.value) == "Unable to find the queue lock file, probably a problem creating the file"
 
 
 def test_get_machines_locks_details(mocker):
@@ -142,16 +147,23 @@ def test_get_machines_locks_details(mocker):
     then:   assert that returns the right details.
     """
     storage = MockResponse()
-    mocker.patch.object(storage, 'list_blobs', return_value=[MockResponse('test/machines_locks/qa-test-1234-lock-1234'),
-                                                             MockResponse('test/machines_locks/qa-test-1235-lock-1235'),
-                                                             MockResponse('test/machines_locks/qa-test-1236-lock-1236'),
-                                                             MockResponse('test/machines_locks/qa-test-1237-lock-1237')
-                                                             ])
-    files = get_machines_locks_details(storage, 'test', "test", "machines_locks")
-    assert files == [{'project_id': '1061', 'job_id': '1234', 'machine_name': 'qa-test-1234', 'old_lock': True},
-                     {'project_id': '1061', 'job_id': '1235', 'machine_name': 'qa-test-1235', 'old_lock': True},
-                     {'project_id': '1061', 'job_id': '1236', 'machine_name': 'qa-test-1236', 'old_lock': True},
-                     {'project_id': '1061', 'job_id': '1237', 'machine_name': 'qa-test-1237', 'old_lock': True}]
+    mocker.patch.object(
+        storage,
+        "list_blobs",
+        return_value=[
+            MockResponse("test/machines_locks/qa-test-1234-lock-1234"),
+            MockResponse("test/machines_locks/qa-test-1235-lock-1235"),
+            MockResponse("test/machines_locks/qa-test-1236-lock-1236"),
+            MockResponse("test/machines_locks/qa-test-1237-lock-1237"),
+        ],
+    )
+    files = get_machines_locks_details(storage, "test", "test", "machines_locks")
+    assert files == [
+        {"project_id": "1061", "job_id": "1234", "machine_name": "qa-test-1234", "old_lock": True},
+        {"project_id": "1061", "job_id": "1235", "machine_name": "qa-test-1235", "old_lock": True},
+        {"project_id": "1061", "job_id": "1236", "machine_name": "qa-test-1236", "old_lock": True},
+        {"project_id": "1061", "job_id": "1237", "machine_name": "qa-test-1237", "old_lock": True},
+    ]
 
 
 def test_wait_for_build_to_be_first_in_queue(mocker):
@@ -164,13 +176,11 @@ def test_wait_for_build_to_be_first_in_queue(mocker):
             assert the function "check_job_status" wil be called 2 times.
             assert the function "remove_file" wil be called ones.
     """
-    mock_my_place = mocker.patch('Tests.scripts.lock_cloud_machines.get_my_place_in_the_queue',
-                                 side_effect=[(1, "1234"),
-                                              (1, "1234"),
-                                              (0, "1234")])
-    mock_job_status = mocker.patch('Tests.scripts.lock_cloud_machines.check_job_status',
-                                   side_effect=['running', 'failed'])
-    mock_remove_file = mocker.patch('Tests.scripts.lock_cloud_machines.remove_file')
+    mock_my_place = mocker.patch(
+        "Tests.scripts.lock_cloud_machines.get_my_place_in_the_queue", side_effect=[(1, "1234"), (1, "1234"), (0, "1234")]
+    )
+    mock_job_status = mocker.patch("Tests.scripts.lock_cloud_machines.check_job_status", side_effect=["running", "failed"])
+    mock_remove_file = mocker.patch("Tests.scripts.lock_cloud_machines.remove_file")
 
     storage = MockResponse()
     wait_for_build_to_be_first_in_queue(storage, storage, "test", "1234", "12345")
@@ -189,10 +199,12 @@ def test_get_and_lock_all_needed_machines(mocker):
             assert the returned lock_machine_list == ["machine2", "machine1"]
     """
     storage = MockResponse()
-    mocker.patch('Tests.scripts.lock_cloud_machines.get_machines_locks_details', return_value=[])
-    mock_try_to_lock_machine = mocker.patch('Tests.scripts.lock_cloud_machines.try_to_lock_machine',
-                                            side_effect=['', 'machine2', 'machine1'])
-    lock_machine_list = get_and_lock_all_needed_machines(storage, storage, ["machine1", "machine2"], "gcs_locks_path",
-                                                         2, "job_id", "gitlab_status_token")
+    mocker.patch("Tests.scripts.lock_cloud_machines.get_machines_locks_details", return_value=[])
+    mock_try_to_lock_machine = mocker.patch(
+        "Tests.scripts.lock_cloud_machines.try_to_lock_machine", side_effect=["", "machine2", "machine1"]
+    )
+    lock_machine_list = get_and_lock_all_needed_machines(
+        storage, storage, ["machine1", "machine2"], "gcs_locks_path", 2, "job_id", "gitlab_status_token"
+    )
     assert mock_try_to_lock_machine.call_count == 3
     assert lock_machine_list == ["machine2", "machine1"]

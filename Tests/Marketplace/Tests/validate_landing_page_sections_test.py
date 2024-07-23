@@ -12,9 +12,7 @@ def test_validate_file_keys_negative():
     Then
     - Ensure an exception is raised
     """
-    file_content = {'description': '',
-                    'sections': ['Featured'],
-                    'another_section': ['']}
+    file_content = {"description": "", "sections": ["Featured"], "another_section": [""]}
     with pytest.raises(AssertionError):
         validate_file_keys(file_content)
 
@@ -28,9 +26,7 @@ def test_validate_file_keys_positive():
     Then
     - Ensure no exception is raised
     """
-    file_content = {'description': '',
-                    'sections': ['Featured'],
-                    'Featured': ['pack']}
+    file_content = {"description": "", "sections": ["Featured"], "Featured": ["pack"]}
     validate_file_keys(file_content)
 
 
@@ -43,10 +39,8 @@ def test_validate_valid_packs_in_sections_negative():
     Then
     - Ensure an exception is raised
     """
-    valid_packs = {'pack1', 'pack2'}
-    file_content = {'description': '',
-                    'sections': ['Featured'],
-                    'Featured': ['pack3']}
+    valid_packs = {"pack1", "pack2"}
+    file_content = {"description": "", "sections": ["Featured"], "Featured": ["pack3"]}
     with pytest.raises(AssertionError):
         validate_valid_packs_in_sections(file_content, valid_packs)
 
@@ -60,8 +54,6 @@ def test_validate_valid_packs_in_sections_positive():
     Then
     - Ensure no exception is raised
     """
-    valid_packs = {'pack1', 'pack2'}
-    file_content = {'description': '',
-                    'sections': ['Featured'],
-                    'Featured': ['pack1', 'pack2']}
+    valid_packs = {"pack1", "pack2"}
+    file_content = {"description": "", "sections": ["Featured"], "Featured": ["pack1", "pack2"]}
     validate_valid_packs_in_sections(file_content, valid_packs)

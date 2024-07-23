@@ -23,8 +23,8 @@ class SecretManager:
             self.client = SecretManagerServiceClient.from_service_account_file(GSM_SERVICE_ACCOUNT)
         else:
             self.client = SecretManagerServiceClient()
-        logging.getLogger('google.auth.transport.requests').setLevel(logging.WARNING)
-        logging.getLogger('google.auth._default').setLevel(logging.WARNING)
+        logging.getLogger("google.auth.transport.requests").setLevel(logging.WARNING)
+        logging.getLogger("google.auth._default").setLevel(logging.WARNING)
         # self.inc_metric = partial(metrics_client.incr, self.connector_name)
 
     def get_secret(self, secret_id: str) -> str:
@@ -56,4 +56,4 @@ class SecretManager:
 
     def _build_path(self, secret_id) -> str:
         secret_path = self.client.secret_path(project=self.project_id, secret=secret_id)
-        return f'{secret_path}/versions/latest'
+        return f"{secret_path}/versions/latest"

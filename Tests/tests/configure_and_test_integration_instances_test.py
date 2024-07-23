@@ -2,8 +2,14 @@ import os
 
 import demisto_client
 import pytest
-from Tests.configure_and_test_integration_instances import XSOARBuild, create_build_object, \
-    options_handler, CloudBuild, packs_names_to_integrations_names, Server
+from Tests.configure_and_test_integration_instances import (
+    XSOARBuild,
+    create_build_object,
+    options_handler,
+    CloudBuild,
+    packs_names_to_integrations_names,
+    Server,
+)
 
 XSIAM_SERVERS = {
     "qa2-test-111111": {
@@ -13,7 +19,7 @@ XSIAM_SERVERS = {
         "x-xdr-auth-id": 1,
         "base_url": "https://api1.paloaltonetworks.com/",
         "xsiam_version": "3.2.0",
-        "demisto_version": "99.99.98"
+        "demisto_version": "99.99.98",
     },
     "qa2-test-222222": {
         "ui_url": "https://xsoar-content-2.xdr-qa2-uat.us.paloaltonetworks.com/",
@@ -22,37 +28,53 @@ XSIAM_SERVERS = {
         "x-xdr-auth-id": 1,
         "base_url": "https://api-xsoar-content-2.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "3.2.0",
-        "demisto_version": "99.99.98"
-    }
+        "demisto_version": "99.99.98",
+    },
 }
 
 
 def create_build_object_with_mock(mocker, server_type):
-    args = ['-u', "$USERNAME", '-p', "$PASSWORD", '-c', "$CONF_PATH",
-            '--pack_ids_to_install', "$ARTIFACTS_FOLDER_SERVER_TYPE/content_packs_to_install.txt",
-            '-g', "$GIT_SHA1", '--ami_env', "$1", '--branch', "$CI_COMMIT_BRANCH",
-            '--build_number', "$CI_PIPELINE_ID", '-sa', "$GCS_MARKET_KEY", '--server_type', server_type,
-            '--cloud_servers_path', '$XSIAM_SERVERS_PATH',
-            '--marketplace_name', 'marketplacev2',
-            '--machine_assignment', "$ARTIFACTS_FOLDER_SERVER_TYPE/packs_to_install_by_machine.json"]
+    args = [
+        "-u",
+        "$USERNAME",
+        "-p",
+        "$PASSWORD",
+        "-c",
+        "$CONF_PATH",
+        "--pack_ids_to_install",
+        "$ARTIFACTS_FOLDER_SERVER_TYPE/content_packs_to_install.txt",
+        "-g",
+        "$GIT_SHA1",
+        "--ami_env",
+        "$1",
+        "--branch",
+        "$CI_COMMIT_BRANCH",
+        "--build_number",
+        "$CI_PIPELINE_ID",
+        "-sa",
+        "$GCS_MARKET_KEY",
+        "--server_type",
+        server_type,
+        "--cloud_servers_path",
+        "$XSIAM_SERVERS_PATH",
+        "--marketplace_name",
+        "marketplacev2",
+        "--machine_assignment",
+        "$ARTIFACTS_FOLDER_SERVER_TYPE/packs_to_install_by_machine.json",
+    ]
     options = options_handler(args=args)
-    json_data = [{'tests': [], 'skipped_integrations': [], 'unmockable_integrations': []}]
-    if server_type == 'XSOAR':  # machine_assignment
+    json_data = [{"tests": [], "skipped_integrations": [], "unmockable_integrations": []}]
+    if server_type == "XSOAR":  # machine_assignment
         json_data += [{"xsoar-machine": {"packs_to_install": ["TEST"]}}]
     else:
         json_data += [{"qa2-test-111111": {"packs_to_install": ["TEST"]}, "qa2-test-222222": {"packs_to_install": ["TEST2"]}}]
-    json_data += [XSIAM_SERVERS, {}] *2
+    json_data += [XSIAM_SERVERS, {}] * 2
 
-
-    mocker.patch('Tests.configure_and_test_integration_instances.get_json_file',
-                 side_effect=json_data)
-    mocker.patch('Tests.configure_and_test_integration_instances.options_handler',
-                 return_value=options)
-    mocker.patch('Tests.configure_and_test_integration_instances.XSOARBuild.get_servers',
-                 return_value=({'1.1.1.1': '7000'}))
-    mocker.patch('Tests.configure_and_test_integration_instances.get_secrets_from_gsm',
-                 return_value={})
-    mocker.patch('Tests.configure_and_test_integration_instances.XSOARServer.server_numeric_version', return_value="6.5.0")
+    mocker.patch("Tests.configure_and_test_integration_instances.get_json_file", side_effect=json_data)
+    mocker.patch("Tests.configure_and_test_integration_instances.options_handler", return_value=options)
+    mocker.patch("Tests.configure_and_test_integration_instances.XSOARBuild.get_servers", return_value=({"1.1.1.1": "7000"}))
+    mocker.patch("Tests.configure_and_test_integration_instances.get_secrets_from_gsm", return_value={})
+    mocker.patch("Tests.configure_and_test_integration_instances.XSOARServer.server_numeric_version", return_value="6.5.0")
     build = create_build_object()
     return build
 
@@ -68,26 +90,27 @@ def test_configure_old_and_new_integrations(mocker):
     Then:
         - Assert there the configured old integrations has no intersection with the configured new integrations
     """
-    def configure_integration_instance_mocker(integration,
-                                              _):
+
+    def configure_integration_instance_mocker(integration, _):
         return integration
 
-    mocker.patch('Tests.configure_and_test_integration_instances.XSOARBuild.__init__',
-                 return_value=None)
+    mocker.patch("Tests.configure_and_test_integration_instances.XSOARBuild.__init__", return_value=None)
 
-    mocker.patch('Tests.configure_and_test_integration_instances.Server.configure_integration_instance',
-                 side_effect=configure_integration_instance_mocker)
+    mocker.patch(
+        "Tests.configure_and_test_integration_instances.Server.configure_integration_instance",
+        side_effect=configure_integration_instance_mocker,
+    )
     server = Server()
     server.build = XSOARBuild({})
-    server.build.servers = ['server1']
+    server.build.servers = ["server1"]
     old_modules_instances, new_modules_instances = server.configure_modified_and_new_integrations(
-        modified_integrations_to_configure=['old_integration1', 'old_integration2'],
-        new_integrations_to_configure=['new_integration1', 'new_integration2']
+        modified_integrations_to_configure=["old_integration1", "old_integration2"],
+        new_integrations_to_configure=["new_integration1", "new_integration2"],
     )
     assert not set(old_modules_instances).intersection(new_modules_instances)
 
 
-@pytest.mark.parametrize('expected_class, server_type', [(XSOARBuild, 'XSOAR'), (CloudBuild, 'XSIAM')])
+@pytest.mark.parametrize("expected_class, server_type", [(XSOARBuild, "XSOAR"), (CloudBuild, "XSIAM")])
 def test_create_build(mocker, expected_class, server_type):
     """
     Given:
@@ -102,34 +125,46 @@ def test_create_build(mocker, expected_class, server_type):
 
 
 NON_HIDDEN_PACKS = [
-    ("""
+    (
+        """
    "tags": [],
 +  "hidden": false,
    "marketplaces": [
      "xsoar",
-     "marketplacev2""", True),
-    ("""
+     "marketplacev2""",
+        True,
+    ),
+    (
+        """
    "tags": [],
 +  "hidden": true,
    "marketplaces": [
      "xsoar",
-     "marketplacev2""", False),
-    ("""
+     "marketplacev2""",
+        False,
+    ),
+    (
+        """
    "tags": [],
    "marketplaces": [
      "xsoar",
-     "marketplacev2""", False),
-    ("""
+     "marketplacev2""",
+        False,
+    ),
+    (
+        """
     "tags": [],
     +  "hidden": true,
     -  "hidden": false,
     "marketplaces": [
       "xsoar",
-      "marketplacev2""", False)
+      "marketplacev2""",
+        False,
+    ),
 ]
 
 
-@pytest.mark.parametrize('diff, the_expected_result', NON_HIDDEN_PACKS)
+@pytest.mark.parametrize("diff, the_expected_result", NON_HIDDEN_PACKS)
 def test_get_turned_non_hidden_packs(mocker, diff, the_expected_result):
     """
     Given:
@@ -139,25 +174,27 @@ def test_get_turned_non_hidden_packs(mocker, diff, the_expected_result):
     Then:
         - Assert the expected result is returned.
     """
-    mocker.patch('Tests.configure_and_test_integration_instances.Server.run_git_diff', return_value=diff)
+    mocker.patch("Tests.configure_and_test_integration_instances.Server.run_git_diff", return_value=diff)
     server = Server()
-    turned_non_hidden = server.get_turned_non_hidden_packs({'test'})
-    assert ('test' in turned_non_hidden) is the_expected_result
+    turned_non_hidden = server.get_turned_non_hidden_packs({"test"})
+    assert ("test" in turned_non_hidden) is the_expected_result
 
 
 UPDATE_INTEGRATION_LISTS = [
-    (['test1'], ['test2'], ['test2'], lambda new, modified: 'test2' in new and not modified),
-    (['test1'], ['test1'], ['test2'], lambda new, modified: 'test2' not in new and 'test2' in modified),
-    (['test1'], [], ['test2'], lambda new, modified: 'test2' not in new and 'test2' in modified),
-    (['test1'], ['test1'], ['test1'], lambda new, modified: len(new) == 1 and not modified)
+    (["test1"], ["test2"], ["test2"], lambda new, modified: "test2" in new and not modified),
+    (["test1"], ["test1"], ["test2"], lambda new, modified: "test2" not in new and "test2" in modified),
+    (["test1"], [], ["test2"], lambda new, modified: "test2" not in new and "test2" in modified),
+    (["test1"], ["test1"], ["test1"], lambda new, modified: len(new) == 1 and not modified),
 ]
 
 
 @pytest.mark.parametrize(
-    'new_integrations_names, turned_non_hidden_packs_id, modified_integrations_names, the_expected_result',
-    UPDATE_INTEGRATION_LISTS)
-def test_update_integration_lists(mocker, new_integrations_names, turned_non_hidden_packs_id,
-                                  modified_integrations_names, the_expected_result):
+    "new_integrations_names, turned_non_hidden_packs_id, modified_integrations_names, the_expected_result",
+    UPDATE_INTEGRATION_LISTS,
+)
+def test_update_integration_lists(
+    mocker, new_integrations_names, turned_non_hidden_packs_id, modified_integrations_names, the_expected_result
+):
     """
     Given:
         - New integrations names, modifeid integrations names and turned non-hidden packs ids.
@@ -167,10 +204,13 @@ def test_update_integration_lists(mocker, new_integrations_names, turned_non_hid
         - Assert the turned non-hidden integrations removed from the modified integrations list and
          added to the new integration list.
     """
-    mocker.patch('Tests.configure_and_test_integration_instances.packs_names_to_integrations_names',
-                 return_value=turned_non_hidden_packs_id)
-    returned_results = Server.update_integration_lists(new_integrations_names, turned_non_hidden_packs_id,
-                                                       modified_integrations_names)
+    mocker.patch(
+        "Tests.configure_and_test_integration_instances.packs_names_to_integrations_names",
+        return_value=turned_non_hidden_packs_id,
+    )
+    returned_results = Server.update_integration_lists(
+        new_integrations_names, turned_non_hidden_packs_id, modified_integrations_names
+    )
     assert the_expected_result(returned_results[0], returned_results[1])
 
 
@@ -184,21 +224,19 @@ def test_pack_names_to_integration_names_no_integrations_folder(tmp_path):
         - Assert no exceptions are raised.
         - Assert no integrations are found.
     """
-    packs_path = tmp_path / 'Packs'
+    packs_path = tmp_path / "Packs"
     packs_path.mkdir()
-    pack_path = packs_path / 'PackName'
+    pack_path = packs_path / "PackName"
     pack_path.mkdir()
     current_path = os.getcwd()
     os.chdir(tmp_path)
     try:
-        assert packs_names_to_integrations_names(['PackName']) == []
+        assert packs_names_to_integrations_names(["PackName"]) == []
     finally:
         os.chdir(current_path)
 
 
-@pytest.mark.parametrize(
-    'pack_version, expected_results',
-    [('6.5.0', {'TestPack'}), ('6.8.0', set())])
+@pytest.mark.parametrize("pack_version, expected_results", [("6.5.0", {"TestPack"}), ("6.8.0", set())])
 def test_get_packs_with_higher_min_version(mocker, pack_version, expected_results):
     """
     Given:
@@ -215,46 +253,56 @@ def test_get_packs_with_higher_min_version(mocker, pack_version, expected_result
     from Tests.Marketplace.common import get_packs_with_higher_min_version
 
     mocker.patch("Tests.Marketplace.common.extract_packs_artifacts")
-    mocker.patch("Tests.Marketplace.common.get_json_file",
-                 return_value={"serverMinVersion": "6.6.0"})
+    mocker.patch("Tests.Marketplace.common.get_json_file", return_value={"serverMinVersion": "6.6.0"})
     server = Server()
-    server.pack_ids_to_install = ['TestPack']
+    server.pack_ids_to_install = ["TestPack"]
     server.server_numeric_version = pack_version
 
-    packs_with_higher_min_version = get_packs_with_higher_min_version(server.pack_ids_to_install,
-                                                                      server.server_numeric_version)
+    packs_with_higher_min_version = get_packs_with_higher_min_version(server.pack_ids_to_install, server.server_numeric_version)
     assert packs_with_higher_min_version == expected_results
 
 
 CHANGED_MARKETPLACE_PACKS = [
-    ("""
+    (
+        """
      "dependencies": {},
      "marketplaces": [
 -         "xsoar"
 +         "xsoar",
 +        "marketplacev2"
      ]
- }""", 'XSOAR', set()),
-    ("""
+ }""",
+        "XSOAR",
+        set(),
+    ),
+    (
+        """
      "dependencies": {},
      "marketplaces": [
 -         "xsoar"
 +         "xsoar",
 +        "marketplacev2"
      ]
- }""", 'XSIAM', {'pack_name'}),
-    ("""
+ }""",
+        "XSIAM",
+        {"pack_name"},
+    ),
+    (
+        """
      "dependencies": {},
      "marketplaces": [
 -        "marketplacev2"
 +        "marketplacev2",
 +        "xsoar"
      ]
- }""", 'XSOAR', {'pack_name'}),
+ }""",
+        "XSOAR",
+        {"pack_name"},
+    ),
 ]
 
 
-@pytest.mark.parametrize('diff, build_type, the_expected_result', CHANGED_MARKETPLACE_PACKS)
+@pytest.mark.parametrize("diff, build_type, the_expected_result", CHANGED_MARKETPLACE_PACKS)
 def test_first_added_to_marketplace(mocker, diff, build_type, the_expected_result):
     """
     Given:
@@ -265,14 +313,14 @@ def test_first_added_to_marketplace(mocker, diff, build_type, the_expected_resul
         - Assert the expected result is returned.
     """
     build = create_build_object_with_mock(mocker, build_type)
-    mocker.patch('Tests.configure_and_test_integration_instances.Server.run_git_diff', return_value=diff)
+    mocker.patch("Tests.configure_and_test_integration_instances.Server.run_git_diff", return_value=diff)
     server = Server()
     server.build = build
-    first_added_to_marketplace = server.filter_new_to_marketplace_packs(modified_pack_names={'pack_name'})
+    first_added_to_marketplace = server.filter_new_to_marketplace_packs(modified_pack_names={"pack_name"})
     assert the_expected_result == first_added_to_marketplace
 
 
-@pytest.mark.parametrize('version', ["6.11.0", "6.12.0"])
+@pytest.mark.parametrize("version", ["6.11.0", "6.12.0"])
 def test_get_server_numeric_version(mocker, version):
     """
     Given:
@@ -283,5 +331,6 @@ def test_get_server_numeric_version(mocker, version):
         - validate that the version is returned
     """
     from Tests.test_content import get_server_numeric_version
+
     mocker.patch("Tests.test_content.get_demisto_version", return_value=version)
     assert get_server_numeric_version(demisto_client) == version

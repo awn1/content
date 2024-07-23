@@ -7,7 +7,7 @@ from Tests.scripts.collect_tests.version_range import VersionRange
 
 class UnsupportedPackException(Exception):
     def __init__(self, pack_name: str, reason: str):
-        self.message = f'Unsupported pack {pack_name}: {reason}'
+        self.message = f"Unsupported pack {pack_name}: {reason}"
 
     def __str__(self):
         return self.message
@@ -15,35 +15,37 @@ class UnsupportedPackException(Exception):
 
 class BlankPackNameException(UnsupportedPackException):
     def __init__(self, pack_name: str):
-        super().__init__(pack_name, 'Blank pack name')
+        super().__init__(pack_name, "Blank pack name")
 
 
 class NonexistentPackException(UnsupportedPackException):
     def __init__(self, pack_name: str):
-        super().__init__(pack_name, 'Nonexistent pack name')
+        super().__init__(pack_name, "Nonexistent pack name")
 
 
 class NonXsoarSupportedPackException(UnsupportedPackException):
     def __init__(self, pack_name: str, support_level: str | None, content_version_range: VersionRange | None = None):
         self.support_level = support_level
         self.content_version_range = content_version_range
-        super().__init__(pack_name, f'pack support level is not XSOAR (it is {support_level})')
+        super().__init__(pack_name, f"pack support level is not XSOAR (it is {support_level})")
 
 
 class DeprecatedPackException(UnsupportedPackException):
     def __init__(self, pack_name: str):
-        super().__init__(pack_name, 'Pack is deprecated')
+        super().__init__(pack_name, "Pack is deprecated")
 
 
 class SkippedPackException(UnsupportedPackException):
     def __init__(self, pack_name: str):
-        super().__init__(pack_name, 'Pack is skipped')
+        super().__init__(pack_name, "Pack is skipped")
 
 
 class NonNightlyPackInNightlyBuildException(Exception):
     def __init__(self, pack_name: str | None):
-        self.message = f'Skipping tests for pack {pack_name}: ' \
-                       f'This is a nightly build, and the pack is not in the list of Nightly packs/Non API packs.'
+        self.message = (
+            f"Skipping tests for pack {pack_name}: "
+            f"This is a nightly build, and the pack is not in the list of Nightly packs/Non API packs."
+        )
 
     def __str__(self):
         return self.message
@@ -59,11 +61,13 @@ class NonDictException(Exception):
 
 
 class NoTestsConfiguredException(Exception):
-    """ raised when an integration has no tests configured """
+    """raised when an integration has no tests configured"""
 
     def __init__(self, content_id: str):
-        self.message = f'The content item with id {content_id} has `Tests: No Tests` configured. ' \
-                       f'This is not an error! Tests for this integration are to be taken from the conf.json instead.'
+        self.message = (
+            f"The content item with id {content_id} has `Tests: No Tests` configured. "
+            f"This is not an error! Tests for this integration are to be taken from the conf.json instead."
+        )
         super().__init__(self.message)
 
     def __str__(self):
@@ -72,7 +76,7 @@ class NoTestsConfiguredException(Exception):
 
 class NotUnderPackException(Exception):
     def __init__(self, path: Path | str):
-        self.message = f'Could not find a pack for {str(path)}'
+        self.message = f"Could not find a pack for {str(path)}"
         super().__init__(self.message)
 
     def __str__(self):
@@ -81,7 +85,7 @@ class NotUnderPackException(Exception):
 
 class NothingToCollectException(Exception):
     def __init__(self, path: Path, reason: str):
-        self.message = f'Nothing to collect for file {str(path)}: {reason}'
+        self.message = f"Nothing to collect for file {str(path)}: {reason}"
         super().__init__(self.message)
 
     def __str__(self):
@@ -89,15 +93,22 @@ class NothingToCollectException(Exception):
 
 
 class IncompatibleMarketplaceException(NothingToCollectException):
-    def __init__(self, content_path: Path, content_item_marketplaces: tuple[MarketplaceVersions, ...],
-                 expected_marketplace: MarketplaceVersions):
-        super().__init__(content_path, f'content item marketplace values are: {", ".join(content_item_marketplaces)}, '
-                                       f'incompatible with expected marketplace {expected_marketplace.name}')
+    def __init__(
+        self,
+        content_path: Path,
+        content_item_marketplaces: tuple[MarketplaceVersions, ...],
+        expected_marketplace: MarketplaceVersions,
+    ):
+        super().__init__(
+            content_path,
+            f'content item marketplace values are: {", ".join(content_item_marketplaces)}, '
+            f'incompatible with expected marketplace {expected_marketplace.name}',
+        )
 
 
 class InvalidTestException(Exception):
     def __init__(self, test_name: str, reason: str):
-        self.message = f'invalid test {test_name}: {reason}'
+        self.message = f"invalid test {test_name}: {reason}"
 
     def __str__(self):
         return self.message
@@ -105,7 +116,7 @@ class InvalidTestException(Exception):
 
 class TestMissingFromIdSetException(InvalidTestException):
     def __init__(self, test_name: str):
-        super().__init__(test_name, 'missing from the id-set')
+        super().__init__(test_name, "missing from the id-set")
 
 
 class SkippedTestException(InvalidTestException):
@@ -115,25 +126,29 @@ class SkippedTestException(InvalidTestException):
         :param skip_place: where the test was skipped (conf.json or pack_ignore)
         :param skip_reason: the reason the test was skipped (if available, mostly when skipped in conf.json)
         """
-        skip_reason_suffix = f': {skip_reason}' if skip_reason else ''
-        super().__init__(test_name, f'test is skipped in {skip_place}{skip_reason_suffix}')
+        skip_reason_suffix = f": {skip_reason}" if skip_reason else ""
+        super().__init__(test_name, f"test is skipped in {skip_place}{skip_reason_suffix}")
 
 
 class PrivateTestException(InvalidTestException):
     def __init__(self, test_name: str):
-        super().__init__(test_name, 'test is private')
+        super().__init__(test_name, "test is private")
 
 
 class IncompatibleTestMarketplaceException(InvalidTestException):
-    def __init__(self, test_name: str, test_marketplaces: set[MarketplaceVersions],
-                 expected_marketplace: MarketplaceVersions):
-        super().__init__(test_name, f'test marketplace values are: {", ".join(test_marketplaces)}, '
-                                    f'incompatible with expected marketplace: {expected_marketplace}')
+    def __init__(self, test_name: str, test_marketplaces: set[MarketplaceVersions], expected_marketplace: MarketplaceVersions):
+        super().__init__(
+            test_name,
+            f'test marketplace values are: {", ".join(test_marketplaces)}, '
+            f'incompatible with expected marketplace: {expected_marketplace}',
+        )
 
 
 class TestMarketplaceException(InvalidTestException):
     # For XSIAM machines we collect tests that have not xsoar marketplace.
-    def __init__(self, test_name: str, test_marketplaces: set[MarketplaceVersions],
-                 expected_marketplace: MarketplaceVersions):
-        super().__init__(test_name, f'test marketplace values are: {", ".join(test_marketplaces)}, '
-                                    f'as expected marketplace: {expected_marketplace} will be tested only on xsoar')
+    def __init__(self, test_name: str, test_marketplaces: set[MarketplaceVersions], expected_marketplace: MarketplaceVersions):
+        super().__init__(
+            test_name,
+            f'test marketplace values are: {", ".join(test_marketplaces)}, '
+            f'as expected marketplace: {expected_marketplace} will be tested only on xsoar',
+        )

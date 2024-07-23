@@ -11,7 +11,7 @@ from demisto_sdk.commands.common.tools import get_pack_metadata
 
 from git import Repo
 
-CONTENT_ROOT_PATH = os.path.abspath(os.path.join(__file__, '../../..'))  # full path to content root repo
+CONTENT_ROOT_PATH = os.path.abspath(os.path.join(__file__, "../../.."))  # full path to content root repo
 CONTENT_ROLES_PATH = Path(os.path.join(CONTENT_ROOT_PATH, ".github", "content_roles.json"))
 
 DOC_REVIEWER_KEY = "DOC_REVIEWER"
@@ -25,7 +25,7 @@ CallArgs = Iterable[tuple[Any] | tuple[Any, dict]]
 
 
 def load_json(file_path: str | Path) -> dict:
-    """ Reads and loads json file.
+    """Reads and loads json file.
 
     Args:
         file_path (str): full path to json file.
@@ -46,7 +46,7 @@ def load_json(file_path: str | Path) -> dict:
 
 
 def timestamped_print(*args, **kwargs):
-    org_print(datetime.now().strftime('%H:%M:%S.%f'), *args, **kwargs)
+    org_print(datetime.now().strftime("%H:%M:%S.%f"), *args, **kwargs)
 
 
 def iter_flatten_call_args(
@@ -71,7 +71,7 @@ def flatten_call_args(call_args: CallArgs) -> tuple[Any, ...]:
 
 class EnvVariableError(Exception):
     def __init__(self, env_var_name: str):
-        super().__init__(f'{env_var_name} env variable not set or empty')
+        super().__init__(f"{env_var_name} env variable not set or empty")
 
 
 def get_env_var(env_var_name: str, default_val: str | None = None) -> str:
@@ -102,7 +102,7 @@ class Checkout:  # pragma: no cover
     previously current branch.
     """
 
-    def __init__(self, repo: Repo, branch_to_checkout: str, fork_owner: str | None = None, repo_name: str = 'content'):
+    def __init__(self, repo: Repo, branch_to_checkout: str, fork_owner: str | None = None, repo_name: str = "content"):
         """Initializes instance attributes.
         Arguments:
             repo: git repo object
@@ -114,20 +114,20 @@ class Checkout:  # pragma: no cover
         self.repo = repo
 
         if fork_owner:
-            forked_remote_name = f'{fork_owner}_{repo_name}_{branch_to_checkout}_remote'
+            forked_remote_name = f"{fork_owner}_{repo_name}_{branch_to_checkout}_remote"
             url = f"https://github.com/{fork_owner}/{repo_name}"
             try:
                 self.repo.create_remote(name=forked_remote_name, url=url)
-                print(f'Successfully created remote {forked_remote_name} for repo {url}')  # noqa: T201
+                print(f"Successfully created remote {forked_remote_name} for repo {url}")  # noqa: T201
             except Exception as error:
-                print(f'could not create remote from {url}, {error=}')  # noqa: T201
+                print(f"could not create remote from {url}, {error=}")  # noqa: T201
                 # handle the case where the name of the forked repo is not content
                 if github_event_path := os.getenv("GITHUB_EVENT_PATH"):
                     try:
                         payload = json.loads(github_event_path)
                     except ValueError:
-                        print('failed to load GITHUB_EVENT_PATH')  # noqa: T201
-                        raise ValueError(f'cannot checkout to the forked branch {branch_to_checkout} of the owner {fork_owner}')
+                        print("failed to load GITHUB_EVENT_PATH")  # noqa: T201
+                        raise ValueError(f"cannot checkout to the forked branch {branch_to_checkout} of the owner {fork_owner}")
                     # forked repo name includes fork_owner + repo name, for example foo/content.
                     forked_repo_name = payload.get("pull_request", {}).get("head", {}).get("repo", {}).get("full_name")
                     self.repo.create_remote(name=forked_remote_name, url=f"https://github.com/{forked_repo_name}")
@@ -136,7 +136,7 @@ class Checkout:  # pragma: no cover
 
             forked_remote = self.repo.remote(forked_remote_name)
             forked_remote.fetch(branch_to_checkout)
-            self.branch_to_checkout = f'refs/remotes/{forked_remote_name}/{branch_to_checkout}'
+            self.branch_to_checkout = f"refs/remotes/{forked_remote_name}/{branch_to_checkout}"
         else:
             self.branch_to_checkout = branch_to_checkout
             self.repo.remote().fetch(branch_to_checkout)
@@ -144,12 +144,12 @@ class Checkout:  # pragma: no cover
         try:
             self._original_branch = self.repo.active_branch.name
         except TypeError:
-            self._original_branch = self.repo.git.rev_parse('HEAD')
+            self._original_branch = self.repo.git.rev_parse("HEAD")
 
     def __enter__(self):
         """Checks out the given branch"""
         self.repo.git.checkout(self.branch_to_checkout)
-        print(f'Checked out to branch {self.branch_to_checkout}')  # noqa: T201
+        print(f"Checked out to branch {self.branch_to_checkout}")  # noqa: T201
         return self
 
     def __exit__(self, *args):
@@ -224,11 +224,11 @@ def get_support_level(pack_dirs: set[str]) -> set[str]:
     packs_support_levels = set()
 
     for pack_dir in pack_dirs:
-        if pack_support_level := get_pack_metadata(pack_dir).get('support'):
-            print(f'Pack support level for pack {pack_dir} is {pack_support_level}')  # noqa: T201
+        if pack_support_level := get_pack_metadata(pack_dir).get("support"):
+            print(f"Pack support level for pack {pack_dir} is {pack_support_level}")  # noqa: T201
             packs_support_levels.add(pack_support_level)
         else:
-            print(f'Could not find pack support level for pack {pack_dir}')  # noqa: T201
+            print(f"Could not find pack support level for pack {pack_dir}")  # noqa: T201
 
     return packs_support_levels
 

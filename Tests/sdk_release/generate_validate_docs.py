@@ -92,9 +92,7 @@ class GitHubClient:
             url=f"{self.base_url}/contents/{path_in_repo!s}",
             json={
                 "message": commit_message,
-                "content": base64.b64encode(bytes(content, encoding="utf8")).decode(
-                    "utf-8"
-                ),
+                "content": base64.b64encode(bytes(content, encoding="utf8")).decode("utf-8"),
                 "branch": self.branch,
                 "sha": self.get_file(path_in_repo)["sha"],
             },
@@ -132,42 +130,26 @@ class GitHubClient:
         )
         GitHubClient.raise_for_status(res)
         if res.json()["total_count"] == 0:
-            raise CannotFindWorkflowError(
-                f"Could not find workflows with {workflow_name=} for {self.branch=}"
-            )
+            raise CannotFindWorkflowError(f"Could not find workflows with {workflow_name=} for {self.branch=}")
 
         if not (
             matching_name := sorted(
-                (
-                    run
-                    for run in res.json()["workflow_runs"]
-                    if run["name"] == workflow_name
-                ),
+                (run for run in res.json()["workflow_runs"] if run["name"] == workflow_name),
                 key=lambda run: run["created_at"],
             )
         ):
-            raise ValueError(
-                f"Could not find workflows with {workflow_name=} in {self.branch=}"
-            )
+            raise ValueError(f"Could not find workflows with {workflow_name=} in {self.branch=}")
 
         return matching_name[-1]["id"]
 
-    def get_workflow_artifact_zip(
-        self, workflow_id: int, artifact_name: str
-    ) -> ZipFile:
+    def get_workflow_artifact_zip(self, workflow_id: int, artifact_name: str) -> ZipFile:
         res = requests.get(
             url=f"{self.base_url}/actions/runs/{workflow_id}/artifacts",
         )
         GitHubClient.raise_for_status(res)
         if not res.json()["total_count"]:
-            raise CannotFindArtifactError(
-                f"Counld not find any artifacts for {workflow_id=}"
-            )
-        matching_name = [
-            artifact
-            for artifact in res.json()["artifacts"]
-            if artifact["name"] == artifact_name
-        ]
+            raise CannotFindArtifactError(f"Counld not find any artifacts for {workflow_id=}")
+        matching_name = [artifact for artifact in res.json()["artifacts"] if artifact["name"] == artifact_name]
         if not matching_name:
             raise CannotFindArtifactError
         file = requests.get(
@@ -189,9 +171,7 @@ def compile_validate_docs(readme_markdown: str, checks_markdown: str) -> str:
     )
 
     return (
-        "\n\n".join(
-            (document_header, readme_markdown, checks_markdown.replace("\\n", "\n"))
-        )
+        "\n\n".join((document_header, readme_markdown, checks_markdown.replace("\\n", "\n")))
         .replace("<", "&lt;")
         .replace(">", "&gt;")
     )  # required for docusaurus
@@ -218,22 +198,14 @@ def main(
 
     checks_markdown_artifact_zip = sdk_client.get_workflow_artifact_zip(
         artifact_name="validation_docs",
-        workflow_id=sdk_client.get_most_recent_workflow_run_id(
-            workflow_name="CI - On Push"
-        ),
+        workflow_id=sdk_client.get_most_recent_workflow_run_id(workflow_name="CI - On Push"),
     )
 
     validate_docs_path = Path("docs/concepts/demisto-sdk-validate.md")
 
     generated_docs = compile_validate_docs(
-        readme_markdown=decode_base64(
-            sdk_client.get_file(Path("demisto_sdk/commands/validate/README.md"))[
-                "content"
-            ]
-        ),
-        checks_markdown=checks_markdown_artifact_zip.read("validation_docs.md").decode(
-            "utf-8"
-        ),
+        readme_markdown=decode_base64(sdk_client.get_file(Path("demisto_sdk/commands/validate/README.md"))["content"]),
+        checks_markdown=checks_markdown_artifact_zip.read("validation_docs.md").decode("utf-8"),
     )
 
     docs_master_client = GitHubClient(  # Used for retrieving existing markdown

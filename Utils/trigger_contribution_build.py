@@ -40,7 +40,7 @@ def arguments_handler() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Trigger contribution build.")
     parser.add_argument("--github-token", help="Github API token")
     parser.add_argument("--gitlab-api-token", help="Gitlab API token")
-    parser.add_argument("--gitlab-trigger-token", help='Gitlab trigger token')
+    parser.add_argument("--gitlab-trigger-token", help="Gitlab trigger token")
     return parser.parse_args()
 
 

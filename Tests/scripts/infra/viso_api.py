@@ -10,10 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 class VisoAPI:
-
     def __init__(self, base_url: str, api_key: str):
         retry_strategy = Retry(
-            #allowed_methods=frozenset(["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE", "POST"]),
+            # allowed_methods=frozenset(["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE", "POST"]),
             total=5,
             connect=3,
             backoff_factor=0.5,
@@ -28,7 +27,7 @@ class VisoAPI:
         self.data_api_key = {"api_key": api_key}
 
     def get_request(self, url, data):
-        response = self.session.get(url=f'{self.base_url}/{url}', json=self.data_api_key | data)
+        response = self.session.get(url=f"{self.base_url}/{url}", json=self.data_api_key | data)
         raise_for_status(response)
         return response
 
@@ -45,4 +44,4 @@ class VisoAPI:
         Get disposable tenants token count for group owner.
         """
         res = self.get_request(f"api/v4.0/disposable/get-disposable-group-max-tokens/{group_owner}", self.data_api_key)
-        return res.json()['disposable_max_allowed_tokens']
+        return res.json()["disposable_max_allowed_tokens"]

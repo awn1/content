@@ -3,7 +3,11 @@ import os
 import pytest
 
 from demisto_sdk.commands.common.clients import (
-    XsoarSaasClient, XsoarSaasClientConfig, get_client_from_config, XsiamClient, XsiamClientConfig
+    XsoarSaasClient,
+    XsoarSaasClientConfig,
+    get_client_from_config,
+    XsiamClient,
+    XsiamClientConfig,
 )
 
 from Tests.configure_and_test_integration_instances import CloudBuild
@@ -13,18 +17,22 @@ def pytest_addoption(parser):
     parser.addoption("--cloud_machine", action="store", default=None)
     parser.addoption("--cloud_servers_path", action="store", default=None)
     parser.addoption("--cloud_servers_api_keys", action="store", default=None)
-    parser.addoption('--gsm_service_account',
-                        help=("Path to gcloud service account, for circleCI usage. "
-                              "For local development use your personal account and "
-                              "authenticate using Google Cloud SDK by running: "
-                              "`gcloud auth application-default login` and leave this parameter blank. "
-                              "For more information see: "
-                              "https://googleapis.dev/python/google-api-core/latest/auth.html"))
-    parser.addoption('--gsm_project_id_dev', help='The project id for the GSM dev.')
-    parser.addoption('--gsm_project_id_prod', help='The project id for the GSM prod.')
-    parser.addoption('-u', '--user', help='the user name for our build.')
-    parser.addoption('-p', '--password', help='The password for our build.')
-    parser.addoption('-gt', '--github_token', help='the github token.')
+    parser.addoption(
+        "--gsm_service_account",
+        help=(
+            "Path to gcloud service account, for circleCI usage. "
+            "For local development use your personal account and "
+            "authenticate using Google Cloud SDK by running: "
+            "`gcloud auth application-default login` and leave this parameter blank. "
+            "For more information see: "
+            "https://googleapis.dev/python/google-api-core/latest/auth.html"
+        ),
+    )
+    parser.addoption("--gsm_project_id_dev", help="The project id for the GSM dev.")
+    parser.addoption("--gsm_project_id_prod", help="The project id for the GSM prod.")
+    parser.addoption("-u", "--user", help="the user name for our build.")
+    parser.addoption("-p", "--password", help="The password for our build.")
+    parser.addoption("-gt", "--github_token", help="the github token.")
 
 
 def get_cloud_machine_credentials(request):
@@ -43,9 +51,11 @@ def get_cloud_machine_credentials(request):
         api_key_id = os.getenv("XSIAM_AUTH_ID")
 
         if not url or not api_key or not api_key_id:
-            message = 'could not find environment configuration, either pass ' \
-                      '--cloud_machine --cloud_servers_path --cloud_servers_api_' \
-                      'keys or make sure DEMISTO_BASE_URL/DEMISTO_API_KEY/XSIAM_AUTH_ID environment variables are set'
+            message = (
+                "could not find environment configuration, either pass "
+                "--cloud_machine --cloud_servers_path --cloud_servers_api_"
+                "keys or make sure DEMISTO_BASE_URL/DEMISTO_API_KEY/XSIAM_AUTH_ID environment variables are set"
+            )
             if os.getenv("GITLAB_CI"):
                 raise ValueError(message)
             pytest.skip(message)
@@ -60,13 +70,11 @@ def get_cloud_machine_credentials(request):
 def xsiam_client(request) -> XsiamClient:
     xsiam_url, api_key, api_key_id = get_cloud_machine_credentials(request)
     return get_client_from_config(
-        XsiamClientConfig(base_api_url=xsiam_url, api_key=api_key, auth_id=api_key_id, token='test', collector_token='test')
+        XsiamClientConfig(base_api_url=xsiam_url, api_key=api_key, auth_id=api_key_id, token="test", collector_token="test")
     )
 
 
 @pytest.fixture(scope="module")
 def xsoar_saas_client(request) -> XsoarSaasClient:
     xsoar_saas_url, api_key, api_key_id = get_cloud_machine_credentials(request)
-    return get_client_from_config(
-        XsoarSaasClientConfig(base_api_url=xsoar_saas_url, api_key=api_key, auth_id=api_key_id)
-    )
+    return get_client_from_config(XsoarSaasClientConfig(base_api_url=xsoar_saas_url, api_key=api_key, auth_id=api_key_id))

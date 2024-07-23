@@ -6,9 +6,7 @@ from urllib3.exceptions import InsecureRequestWarning
 
 urllib3.disable_warnings(InsecureRequestWarning)
 
-GITLAB_CONTENT_PIPELINES_BASE_URL = (
-    "https://gitlab.xdr.pan.local/api/v4/projects/1701/pipelines/{}/jobs"
-)
+GITLAB_CONTENT_PIPELINES_BASE_URL = "https://gitlab.xdr.pan.local/api/v4/projects/1701/pipelines/{}/jobs"
 
 
 def get_job(pipeline: dict, job_name: str) -> dict:
@@ -27,9 +25,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("-gt", "--gitlab-token", help="Gitlab token.")
     parser.add_argument("-pid", "--pipeline-id", help="The pipeline ID.")
     parser.add_argument("-jn", "--job-name", help="The job name")
-    parser.add_argument(
-        "-auf", "--allowed-users-force", help="List of the allowed users to force"
-    )
+    parser.add_argument("-auf", "--allowed-users-force", help="List of the allowed users to force")
     return parser.parse_args()
 
 
@@ -46,11 +42,7 @@ def main():
         exit(1)
 
     job = get_job(res, args.job_name)
-    print(
-        f"true,{job['user']['name']}"
-        if is_force_merge_allowed(job, allowed_force_list)
-        else "false"
-    )
+    print(f"true,{job['user']['name']}" if is_force_merge_allowed(job, allowed_force_list) else "false")
 
 
 if __name__ == "__main__":

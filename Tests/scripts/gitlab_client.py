@@ -32,10 +32,10 @@ class GitlabClient:
         return response
 
     def get_pipelines(
-            self,
-            commit_sha: str | None = None,
-            ref: str | None = None,
-            sort: str = "asc",
+        self,
+        commit_sha: str | None = None,
+        ref: str | None = None,
+        sort: str = "asc",
     ) -> list:
         params = {
             "sha": commit_sha,
@@ -109,6 +109,4 @@ class GitlabClient:
             raise Exception("\n".join(errors))
 
         except Exception as e:
-            raise Exception(
-                f"Could not extract {artifact_filepath.name} from any pipeline with SHA {commit_sha}:\n{e}"
-            )
+            raise Exception(f"Could not extract {artifact_filepath.name} from any pipeline with SHA {commit_sha}:\n{e}")

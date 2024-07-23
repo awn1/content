@@ -4,20 +4,19 @@ from google.oauth2.service_account import Credentials
 
 
 class InstancesService:
-
     def __init__(self, creds: str | Credentials, zone: str):
-        credentials = creds if isinstance(
-            creds, Credentials) else Credentials.from_service_account_file(creds)
+        credentials = creds if isinstance(creds, Credentials) else Credentials.from_service_account_file(creds)
 
         self.zone = zone
         self.project_id = credentials.project_id
-        self.instance_client = compute_v1.InstancesClient(
-            credentials=credentials)
+        self.instance_client = compute_v1.InstancesClient(credentials=credentials)
 
     def get_all_instances(self) -> dict[str, compute_v1.Instance]:
         all_instances = {}
         # List instances in the specified project and zone with the page token
-        instances = self.instance_client.aggregated_list(project=self.project_id,)
+        instances = self.instance_client.aggregated_list(
+            project=self.project_id,
+        )
 
         for instances_zone, instance_list in instances:
             if self.zone in instances_zone:
