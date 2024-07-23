@@ -85,7 +85,7 @@ mock = "^5.1.0"
 
 [tool.poetry.group.linters.dependencies]
 mypy = "^0.982"
-ruff = "^0.5.1"
+ruff = "^0.5.4"
 
 
 [tool.poetry.group.testing]
