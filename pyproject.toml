@@ -85,7 +85,7 @@ mock = "^5.1.0"
 
 [tool.poetry.group.linters.dependencies]
 mypy = "^0.982"
-ruff = "^0.0.264"
+ruff = "^0.5.1"
 
 
 [tool.poetry.group.testing]
@@ -100,9 +100,10 @@ lint.ignore = [
     "F405", # undefined-local-with-import-star-usage
     "PLC1901", #compare-to-empty-string
 ]
-lint.select = ['E', 'F', 'PLC', 'PLE']
+lint.select = ['E', 'F', 'PLC', 'PLE', 'UP', 'I', 'YTT', 'PIE', 'RSE', 'TID', 'FURB', 'RUF010', 'RUF100']
 extend-exclude = ["Tests/scripts/infrastructure_tests/tests_data", "Utils/test_upload_flow"]
 line-length = 130
+target-version = "py310"
 
 [tool.pytest.ini_options]
 addopts = """
