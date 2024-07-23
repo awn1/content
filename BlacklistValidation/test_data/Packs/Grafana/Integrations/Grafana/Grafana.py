@@ -1,5 +1,5 @@
 import demistomock as demisto  # noqa: F401
-from CommonServerPython import *  # noqa: F401
+from CommonServerPython import *
 
 ''' CONSTANTS '''
 
@@ -22,7 +22,6 @@ def paging_heading(page_number: str = None, page_size: str = None):
 def main():
     """main function, parses params and runs command functions
     """
-    pass
 
 
 ''' ENTRY POINT '''

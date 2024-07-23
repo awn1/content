@@ -1,14 +1,15 @@
+import argparse
+import logging
 from datetime import datetime
 from enum import Enum
+
 import dateparser
 import json5
 from google.auth import default
 from google.cloud import secretmanager
-import logging
-from typing import List
+
 from Tests.scripts.common import BUCKET_UPLOAD_BRANCH_SUFFIX
 from Tests.scripts.github_client import GithubClient
-import argparse
 
 SPECIAL_CHARS = [" ", "(", "(", ")", ".", "", "+", "="]
 GSM_MAXIMUM_LABEL_CHARS = 63
@@ -326,8 +327,8 @@ def get_secrets_from_gsm(options: argparse.Namespace, branch_name: str = '') -> 
     """
     secret_conf = GoogleSecreteManagerModule(options.gsm_service_account)
 
-    master_secrets: List[dict] = []
-    branch_secrets: List[dict] = []
+    master_secrets: list[dict] = []
+    branch_secrets: list[dict] = []
     logging.info(f'Getting secrets for the master branch from {options.gsm_project_id_prod=} project')
     master_secrets = secret_conf.get_secrets_from_project(
         options.gsm_project_id_prod)
@@ -345,7 +346,7 @@ def get_secrets_from_gsm(options: argparse.Namespace, branch_name: str = '') -> 
                 logging.info(f'Did not find the associated PR with the branch {branch_name}, you may be running from infra.' \
                              'Will only use the secrets from prod')
             else:
-                logging.info(f'Got the following error when trying to contact Github: {str(e)}')
+                logging.info(f'Got the following error when trying to contact Github: {e!s}')
 
         if pr_number:
             logging.info(

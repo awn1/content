@@ -1,17 +1,16 @@
 # function to compare two zip files
 
 import argparse
+import difflib
 import filecmp
 import json
 import os
-from pathlib import Path
 import shutil
+from contextlib import redirect_stdout
+from pathlib import Path
 from zipfile import ZipFile
 
-import difflib
-from contextlib import redirect_stdout
 import dictdiffer
-
 from ruamel.yaml import YAML
 from slack_sdk import WebClient
 
@@ -33,7 +32,7 @@ def sort_dict(dct: dict):
                 elif v and v[0].get("name"):
                     v.sort(key=lambda x: x["name"])
                 else:
-                    print("Could not sort list", v)  # noqa: T201
+                    print("Could not sort list", v)
 
 
 def compare_indexes(index_id_set_path: Path, index_graph_path: Path, output_path: Path) -> bool:
@@ -120,7 +119,7 @@ def file_diff(output_path: Path, zip1_files: str, zip2_files: str, file: str, di
         elif file1_path.suffix == ".json":
             load_func = json.load  # type: ignore[assignment]
         else:
-            print(f"not yaml or json: {output_path / file}. continue")  # noqa: T201
+            print(f"not yaml or json: {output_path / file}. continue")
             return
         output_dict_diff = output_path / f"{file}-dictdiff.json"
         output_dict_diff.unlink(missing_ok=True)
@@ -139,7 +138,7 @@ def file_diff(output_path: Path, zip1_files: str, zip2_files: str, file: str, di
                 diff_files.append(file1_path.name)
 
     except Exception as e:
-        print(f"could not diff files {file1_path}:{file2_path}: {e}")  # noqa: T201
+        print(f"could not diff files {file1_path}:{file2_path}: {e}")
 
 
 def compare(
@@ -224,7 +223,7 @@ def main():
             message,
             output_path,
         )
-    print("\n".join(message))  # noqa: T201
+    print("\n".join(message))
     if slack_token and (diff_output := output_path / f"diff-{marketplace}.zip"):
         slack_client = WebClient(token=slack_token)
         slack_client.files_upload(

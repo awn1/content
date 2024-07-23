@@ -1,8 +1,8 @@
+import argparse
 import logging
 import os
-import argparse
-from Tests.Marketplace.marketplace_services import init_storage_client
 
+from Tests.Marketplace.marketplace_services import init_storage_client
 from Tests.scripts.utils.log_util import install_logging
 
 

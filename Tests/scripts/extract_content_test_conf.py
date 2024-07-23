@@ -1,9 +1,9 @@
 
 
 import argparse
-from pathlib import Path
 import logging as logger
 import shutil
+from pathlib import Path
 
 from Tests.scripts.utils.log_util import install_logging
 

@@ -4,21 +4,22 @@ import json
 import logging
 import os
 import sys
+from collections.abc import Generator
 from contextlib import contextmanager
 from queue import Queue
 from typing import Any
-from collections.abc import Generator
-import demisto_client
-from demisto_client.demisto_api.api.default_api import DefaultApi as DemistoClient
 
+import demisto_client
 import pytz
 import requests
 import urllib3
+from demisto_client.demisto_api.api.default_api import DefaultApi as DemistoClient
+from demisto_sdk.commands.common.tools import get_demisto_version
+from demisto_sdk.commands.test_content.ParallelLoggingManager import ParallelLoggingManager
 from google.api_core.exceptions import PreconditionFailed
 from google.cloud import storage  # type: ignore[attr-defined]
+
 from Tests.test_dependencies import get_used_integrations
-from demisto_sdk.commands.test_content.ParallelLoggingManager import ParallelLoggingManager
-from demisto_sdk.commands.common.tools import get_demisto_version
 
 logging_manager: ParallelLoggingManager = None
 

@@ -1,4 +1,3 @@
-from typing import Optional
 
 from bs4 import BeautifulSoup
 from requests import HTTPError
@@ -6,7 +5,7 @@ from requests import HTTPError
 ALLOWED_HTML_TAGS = ['strong', 'code', 'br', 'pre']
 
 
-def find_html_attribute(html_content, name: str) -> Optional[str]:
+def find_html_attribute(html_content, name: str) -> str | None:
     """Parse html content and return the value of first attribute with requested name, or None if the attribute wasn't found"""
     soup = BeautifulSoup(html_content, features="html.parser")
     if element := soup.find(attrs={"name": name}):
@@ -14,7 +13,7 @@ def find_html_attribute(html_content, name: str) -> Optional[str]:
     return None
 
 
-def find_html_form_action(html_content: str) -> Optional[str]:
+def find_html_form_action(html_content: str) -> str | None:
     """Parse html content and return the first form action"""
     soup = BeautifulSoup(html_content, features="html.parser")
     if form := soup.find('form'):

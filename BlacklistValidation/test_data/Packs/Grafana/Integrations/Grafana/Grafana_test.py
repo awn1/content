@@ -1,5 +1,4 @@
 import pytest
-
 from Grafana import paging_heading
 
 no_page_number = (None, '100', 'Showing 100 results:\n')

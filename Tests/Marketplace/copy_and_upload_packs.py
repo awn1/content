@@ -1,22 +1,34 @@
+import argparse
 import json
 import os
-import sys
-import argparse
-import shutil
 import re
+import shutil
+import sys
 from pathlib import Path
 from zipfile import ZipFile
+
 from google.cloud.storage import Blob, Bucket
 
-from Tests.scripts.utils.log_util import install_logging
-from Tests.Marketplace.marketplace_services import init_storage_client, Pack, \
-    load_json, store_successful_and_failed_packs_in_ci_artifacts, \
-    get_upload_data
-from Tests.Marketplace.marketplace_constants import XSIAM_MP, PackStatus, GCPConfig, BucketUploadFlow, PACKS_FOLDER, \
-    PACKS_FULL_PATH, IGNORED_FILES
-from Tests.Marketplace.upload_packs import extract_packs_artifacts, print_packs_summary, get_packs_summary
-from Tests.scripts.utils import logging_wrapper as logging
+from Tests.Marketplace.marketplace_constants import (
+    IGNORED_FILES,
+    PACKS_FOLDER,
+    PACKS_FULL_PATH,
+    XSIAM_MP,
+    BucketUploadFlow,
+    GCPConfig,
+    PackStatus,
+)
+from Tests.Marketplace.marketplace_services import (
+    Pack,
+    get_upload_data,
+    init_storage_client,
+    load_json,
+    store_successful_and_failed_packs_in_ci_artifacts,
+)
 from Tests.Marketplace.pack_readme_handler import copy_markdown_images
+from Tests.Marketplace.upload_packs import extract_packs_artifacts, get_packs_summary, print_packs_summary
+from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
 
 LATEST_ZIP_REGEX = re.compile(fr'^{GCPConfig.GCS_PUBLIC_URL}/[\w./-]+/content/packs/([A-Za-z0-9-_.]+/\d+\.\d+\.\d+/'
                               r'[A-Za-z0-9-_.]+\.zip$)')
@@ -95,7 +107,7 @@ def copy_index(index_folder_path: str, build_index_blob: Blob, build_index_gener
             logging.error(f"Current build index generation: {build_current_index_generation}")
             sys.exit(1)
     except Exception as e:
-        logging.exception(f"Failed copying {GCPConfig.INDEX_NAME}. Additional Info: {str(e)}")
+        logging.exception(f"Failed copying {GCPConfig.INDEX_NAME}. Additional Info: {e!s}")
         sys.exit(1)
     finally:
         shutil.rmtree(index_folder_path)
@@ -299,7 +311,7 @@ def copy_id_set(production_bucket: Bucket, build_bucket: Bucket, storage_base_pa
         else:
             logging.success("Finished uploading id_set.json to storage.")
     except Exception as e:
-        logging.exception(f"Failed copying ID Set. Additional Info: {str(e)}")
+        logging.exception(f"Failed copying ID Set. Additional Info: {e!s}")
         sys.exit(1)
 
 

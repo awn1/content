@@ -5,8 +5,7 @@ from demisto_sdk.commands.common.constants import MarketplaceVersions
 
 from Tests.scripts.collect_tests.constants import DEFAULT_MARKETPLACES_WHEN_MISSING
 from Tests.scripts.collect_tests.logger import logger
-from Tests.scripts.collect_tests.utils import (DictBased, DictFileBased,
-                                               to_tuple)
+from Tests.scripts.collect_tests.utils import DictBased, DictFileBased, to_tuple
 
 
 class TestConfItem(DictBased):

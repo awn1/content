@@ -6,34 +6,51 @@ import re
 import shutil
 import stat
 import subprocess
-from time import sleep
+import sys
 import urllib.parse
 import warnings
-
 from datetime import datetime, timedelta
 from distutils.util import strtobool
-
-from packaging.version import Version
 from pathlib import Path
+from time import sleep
 from typing import Any
-from zipfile import ZipFile, ZIP_DEFLATED
-from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import git
 import google.auth
-import sys
 import yaml
+from demisto_sdk.commands.common.constants import (
+    PACK_METADATA_REQUIRE_RN_FIELDS,
+    MarketplaceVersions,
+    MarketplaceVersionToMarketplaceName,
+)
+from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
 from google.cloud import storage
+from packaging.version import Version
 
 import Tests.Marketplace.marketplace_statistics as mp_statistics
-from Tests.Marketplace.marketplace_constants import MARKDOWN_IMAGES_RELATIVE_PATH_IMAGE_KEYS, XSOAR_ON_PREM_MP, \
-    XSOAR_SAAS_MP, PackFolders, Metadata, GCPConfig, \
-    BucketUploadFlow, PACKS_FOLDER, PackTags, PackIgnored, Changelog, PackStatus, CONTENT_ROOT_PATH, XSOAR_MP, \
-    XSIAM_MP, XPANSE_MP, TAGS_BY_MP, RN_HEADER_TO_ID_SET_KEYS
-from demisto_sdk.commands.common.constants import (MarketplaceVersions, MarketplaceVersionToMarketplaceName,
-                                                   PACK_METADATA_REQUIRE_RN_FIELDS)
-from Utils.release_notes_generator import aggregate_release_notes_for_marketplace, merge_version_blocks, construct_entities_block
+from Tests.Marketplace.marketplace_constants import (
+    CONTENT_ROOT_PATH,
+    MARKDOWN_IMAGES_RELATIVE_PATH_IMAGE_KEYS,
+    PACKS_FOLDER,
+    RN_HEADER_TO_ID_SET_KEYS,
+    TAGS_BY_MP,
+    XPANSE_MP,
+    XSIAM_MP,
+    XSOAR_MP,
+    XSOAR_ON_PREM_MP,
+    XSOAR_SAAS_MP,
+    BucketUploadFlow,
+    Changelog,
+    GCPConfig,
+    Metadata,
+    PackFolders,
+    PackIgnored,
+    PackStatus,
+    PackTags,
+)
 from Tests.scripts.utils import logging_wrapper as logging
+from Utils.release_notes_generator import aggregate_release_notes_for_marketplace, construct_entities_block, merge_version_blocks
 
 PULL_REQUEST_PATTERN = '\(#(\d+)\)'
 TAGS_SECTION_PATTERN = '(.|\s)+?'
@@ -675,11 +692,11 @@ class Pack:
                 with open("keyfile", "wb") as keyfile:
                     keyfile.write(signature_string.encode())
                 arg = f'./signDirectory {self._pack_path} keyfile base64'
-                signing_process = subprocess.Popen(arg, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)  # noqa: S602
+                signing_process = subprocess.Popen(arg, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                 output, err = signing_process.communicate()
 
                 if err:
-                    logging.error(f"Failed to sign pack for {self._pack_name} - {str(err)}")
+                    logging.error(f"Failed to sign pack for {self._pack_name} - {err!s}")
                     return None
 
                 logging.debug(f"Signed {self._pack_name} pack successfully")
@@ -735,17 +752,17 @@ class Pack:
             os.chmod(os.path.join(extract_destination_path, 'encryptor'), stat.S_IXOTH)
             os.chdir(extract_destination_path)
 
-            subprocess.call('chmod +x ./encryptor', shell=True)  # noqa: S602
+            subprocess.call('chmod +x ./encryptor', shell=True)
 
             output_file = zip_pack_path.replace("_not_encrypted.zip", ".zip")
             full_command = f'./encryptor ./{pack_name}_not_encrypted.zip {output_file} "{encryption_key}"'
-            subprocess.call(full_command, shell=True)  # noqa: S602
+            subprocess.call(full_command, shell=True)
 
             secondary_encryption_key_output_file = zip_pack_path.replace("_not_encrypted.zip", ".enc2.zip")
             full_command_with_secondary_encryption = f'./encryptor ./{pack_name}_not_encrypted.zip ' \
                                                      f'{secondary_encryption_key_output_file}' \
                                                      f' "{secondary_encryption_key}"'
-            subprocess.call(full_command_with_secondary_encryption, shell=True)  # noqa: S602
+            subprocess.call(full_command_with_secondary_encryption, shell=True)
 
             new_artefacts = Path(current_working_dir, private_artifacts_dir)
             if new_artefacts.exists():
@@ -780,9 +797,9 @@ class Pack:
             output_decrypt_file_path = f"{extract_destination_path}/decrypt_pack.zip"
             os.chdir(extract_destination_path)
 
-            subprocess.call('chmod +x ./decryptor', shell=True)  # noqa: S602
+            subprocess.call('chmod +x ./decryptor', shell=True)
             full_command = f'./decryptor {secondary_encrypted_pack_path} {output_decrypt_file_path} "{decryption_key}"'
-            process = subprocess.Popen(full_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)  # noqa: S602
+            process = subprocess.Popen(full_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
             stdout, stderr = process.communicate()
             shutil.rmtree(extract_destination_path)
             os.chdir(current_working_dir)
@@ -1004,7 +1021,7 @@ class Pack:
                 task_status = copied_blob.exists()
             except Exception as e:
                 pack_suffix = os.path.join(self._pack_name, latest_pack_version, f'{self._pack_name}.zip')
-                logging.exception(f"Failed copying {pack_suffix}. Additional Info: {str(e)}")
+                logging.exception(f"Failed copying {pack_suffix}. Additional Info: {e!s}")
                 return False, False
 
             if not task_status:
@@ -1052,7 +1069,7 @@ class Pack:
                     logging.error(f"Failed in uploading {self._pack_name} pack with dependencies to production gcs.")
             except Exception as e:
                 pack_deps_zip_suffix = os.path.join(self._pack_name, pack_with_deps_name)
-                logging.exception(f"Failed copying {pack_deps_zip_suffix}. Additional Info: {str(e)}")
+                logging.exception(f"Failed copying {pack_deps_zip_suffix}. Additional Info: {e!s}")
 
     def get_changelog_latest_rn(self, changelog_index_path: str) -> tuple[dict, Version, str]:
         """
@@ -1670,7 +1687,7 @@ class Pack:
             except shutil.Error as e:
                 task_status = False
                 logging.error(f"Failed copying changelog.json file from {build_changelog_index_path} to "
-                              f"{pack_changelog_path}. Additional info: {str(e)}")
+                              f"{pack_changelog_path}. Additional info: {e!s}")
                 return task_status
         else:
             task_status = False
@@ -1863,7 +1880,7 @@ class Pack:
             logging.debug(f"Finished formatting '{self._pack_name}' packs's {Pack.METADATA} file")
             task_status = True
         except Exception as e:
-            logging.exception(f"Failed in formatting {self._pack_name} pack metadata.\n{str(e)}")
+            logging.exception(f"Failed in formatting {self._pack_name} pack metadata.\n{e!s}")
         finally:
             return task_status
 
@@ -2155,7 +2172,7 @@ class Pack:
 
         except Exception as e:
             task_status = False
-            logging.exception(f"Failed to upload {self._pack_name} pack integration images. Additional Info: {str(e)}")
+            logging.exception(f"Failed to upload {self._pack_name} pack integration images. Additional Info: {e!s}")
         return task_status
 
     def copy_integration_images(self, production_bucket, build_bucket, images_data, storage_base_path,
@@ -2200,7 +2217,7 @@ class Pack:
                         num_copied_images += 1
 
                 except Exception as e:
-                    logging.exception(f"{err_msg}. Additional Info: {str(e)}")
+                    logging.exception(f"{err_msg}. Additional Info: {e!s}")
                     return False
 
         if not task_status:
@@ -2336,7 +2353,7 @@ class Pack:
 
                 except Exception as e:
                     logging.exception(f"Failed copying {Pack.AUTHOR_IMAGE_NAME} for {self._pack_name} pack. "
-                                      f"Additional Info: {str(e)}")
+                                      f"Additional Info: {e!s}")
                     return False
 
             else:
@@ -2828,7 +2845,7 @@ class Pack:
                         num_copied_images += 1
 
                 except Exception as e:
-                    logging.exception(f"{err_msg}. Additional Info: {str(e)}")
+                    logging.exception(f"{err_msg}. Additional Info: {e!s}")
                     return False
 
         if not task_status:
@@ -2884,7 +2901,7 @@ class Pack:
                         num_copied_images += 1
 
                 except Exception as e:
-                    logging.exception(f"{err_msg}. Additional Info: {str(e)}")
+                    logging.exception(f"{err_msg}. Additional Info: {e!s}")
                     return False
 
         if not task_status:
@@ -3294,7 +3311,7 @@ def get_last_upload_commit_hash(content_repo, index_folder_path):
             last_upload_commit_hash = inner_index_json_file['commit']
             logging.debug(f"Retrieved the last commit that was uploaded to production: {last_upload_commit_hash}")
         else:
-            logging.critical(f"No commit field in {GCPConfig.INDEX_NAME}.json, content: {str(inner_index_json_file)}")
+            logging.critical(f"No commit field in {GCPConfig.INDEX_NAME}.json, content: {inner_index_json_file!s}")
             sys.exit(1)
 
     try:
@@ -3453,7 +3470,7 @@ def get_failed_packs_from_previous_upload(service_account: str, marketplace=Mark
         content_status_string = content_status_blob.download_as_string()
         return json.loads(content_status_string)
     except Exception as e:
-        logging.error(f"Failed getting the content_status.json file from the bucket. Additional Info: {str(e)}")
+        logging.error(f"Failed getting the content_status.json file from the bucket. Additional Info: {e!s}")
         return None
 
 

@@ -1,10 +1,11 @@
-import logging
 import argparse
+import logging
 from datetime import datetime
 from pathlib import Path
+
 from jinja2 import Environment, FileSystemLoader
 
-from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule, ExpirationData  # noqa: E402
+from SecretActions.google_secret_manager_handler import ExpirationData, GoogleSecreteManagerModule
 
 DEV_PROJECT_ID = '269994096945'
 DATE_FORMAT = '%Y-%m-%d'

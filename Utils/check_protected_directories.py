@@ -47,13 +47,13 @@ def main(changed_files: list[str]):
         path for path in changed_files if not is_path_change_allowed(Path(path))
     ):
         for path in unsafe_changes:
-            print(  # noqa: T201
+            print(
                 f"::error file={path},line=1,endLine=1,title=Protected folder::"
                 "Modifying infrastructure files in contribution branches is not allowed."
             )
         sys.exit(1)
 
-    print("Done, no files were found in prohibited paths")  # noqa: T201
+    print("Done, no files were found in prohibited paths")
 
 
 if __name__ == "__main__":

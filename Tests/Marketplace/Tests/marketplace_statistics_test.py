@@ -1,8 +1,10 @@
-import pytest
 import os
-from Tests.Marketplace.marketplace_statistics import PackStatisticsHandler
-from Tests.Marketplace.marketplace_services import Pack, load_json
+
+import pytest
+
 from Tests.Marketplace.marketplace_constants import Metadata, PackTags
+from Tests.Marketplace.marketplace_services import Pack, load_json
+from Tests.Marketplace.marketplace_statistics import PackStatisticsHandler
 
 
 @pytest.fixture(scope="module")

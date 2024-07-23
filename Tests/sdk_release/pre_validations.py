@@ -6,14 +6,14 @@ import sys
 import requests
 import urllib3
 
-from Tests.scripts.utils.log_util import install_logging
 from Tests.scripts.common import get_slack_user_name
+from Tests.scripts.utils.log_util import install_logging
 
 # Disable insecure warnings
 urllib3.disable_warnings()
 
 # regex to validate that the version format is correct e.g: <2.1.3>
-VERSION_FORMAT_REGEX = "\d{1,3}\.\d{1,3}\.\d{1,3}"  # noqa: W605
+VERSION_FORMAT_REGEX = "\d{1,3}\.\d{1,3}\.\d{1,3}"
 
 GITHUB_USER_URL = "https://api.github.com/users/{username}"
 GITHUB_BRANCH_URL = (

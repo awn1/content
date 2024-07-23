@@ -1,18 +1,28 @@
 import os
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
-from collections.abc import Callable, Iterable
 
 import pytest
 from demisto_sdk.commands.common.constants import MarketplaceVersions
 
 from Tests.scripts.collect_tests import collect_tests
+
 # importing Machine,FileType from collect_tests (rather than utils) to compare class member values
 from Tests.scripts.collect_tests.collect_tests import (
-    BranchTestCollector, NightlyTestCollector, FileType, Machine, UploadAllCollector)
+    BranchTestCollector,
+    FileType,
+    Machine,
+    NightlyTestCollector,
+    UploadAllCollector,
+)
 from Tests.scripts.collect_tests.constants import (
-    ALWAYS_INSTALLED_PACKS_MARKETPLACE_V2, MODELING_RULE_COMPONENT_FILES,
-    XSOAR_SANITY_TEST_NAMES, NON_CODE_FILE_TYPES_TO_COLLECT, XSIAM_COMPONENT_FILES)
+    ALWAYS_INSTALLED_PACKS_MARKETPLACE_V2,
+    MODELING_RULE_COMPONENT_FILES,
+    NON_CODE_FILE_TYPES_TO_COLLECT,
+    XSIAM_COMPONENT_FILES,
+    XSOAR_SANITY_TEST_NAMES,
+)
 from Tests.scripts.collect_tests.path_manager import PathManager
 from Tests.scripts.collect_tests.utils import FilesToCollect, PackManager
 
@@ -716,14 +726,12 @@ def test_only_collect_pack_args():
     match constants.ONLY_COLLECT_PACK_TYPES
     Any change there will require a change here.
     """
-    from Tests.scripts.collect_tests.constants import \
-        NON_CODE_FILE_TYPES_TO_COLLECT
+    from Tests.scripts.collect_tests.constants import NON_CODE_FILE_TYPES_TO_COLLECT
     assert ONLY_COLLECT_PACK_TYPES == NON_CODE_FILE_TYPES_TO_COLLECT
 
 
 def test_only_collect_and_ignore_lists_are_disjoint():
-    from Tests.scripts.collect_tests.constants import (
-        IGNORED_FILE_TYPES, NON_CODE_FILE_TYPES_TO_COLLECT)
+    from Tests.scripts.collect_tests.constants import IGNORED_FILE_TYPES, NON_CODE_FILE_TYPES_TO_COLLECT
     assert NON_CODE_FILE_TYPES_TO_COLLECT.isdisjoint(IGNORED_FILE_TYPES)
 
 
@@ -732,8 +740,7 @@ def test_file_types_with_specific_collection_logic_are_not_ignored():
     the files listed have a specific logic under _collect_single,
     hence they must not be ignored or cause only a pack-installation
     """
-    from Tests.scripts.collect_tests.constants import (
-        IGNORED_FILE_TYPES, NON_CODE_FILE_TYPES_TO_COLLECT)
+    from Tests.scripts.collect_tests.constants import IGNORED_FILE_TYPES, NON_CODE_FILE_TYPES_TO_COLLECT
 
     assert {
         FileType.PYTHON_FILE,

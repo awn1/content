@@ -1,12 +1,12 @@
-import os
 import argparse
-import uuid
 import json
+import os
+import uuid
 
-from Tests.Marketplace.marketplace_services import json_write, get_content_git_client
-from Tests.Marketplace.marketplace_constants import GCPConfig, CONTENT_ROOT_PATH, COREPACKS_OVERRIDE_FILE_PATH
-from Tests.scripts.utils.log_util import install_logging
+from Tests.Marketplace.marketplace_constants import CONTENT_ROOT_PATH, COREPACKS_OVERRIDE_FILE_PATH, GCPConfig
+from Tests.Marketplace.marketplace_services import get_content_git_client, json_write
 from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
 
 
 def should_override_locked_corepacks_file(marketplace: str, last_upload_commit: str):

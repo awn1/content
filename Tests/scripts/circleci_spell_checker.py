@@ -1,10 +1,10 @@
 import re
 import sys
 
-from Tests.scripts.spell_checker import spell_checker
-from demisto_sdk.commands.common.tools import run_command, find_type
 from demisto_sdk.commands.common.constants import DESCRIPTION_REGEX, FileType
+from demisto_sdk.commands.common.tools import find_type, run_command
 
+from Tests.scripts.spell_checker import spell_checker
 
 IGNORED_FILES = ['.devcontainer/devcontainer.json', '.vscode/extensions.json']
 
@@ -30,7 +30,7 @@ def get_modified_files(files_string):
         file_path = file_data[1]
         if file_path in IGNORED_FILES:
             continue
-        if file_path.endswith('.js') or file_path.endswith('.py'):
+        if file_path.endswith(('.js', '.py')):
             continue
         if file_status.lower().startswith('r'):
             file_path = file_data[2]
@@ -49,14 +49,14 @@ def check_changed_files():
     branch_name = sys.argv[1]
 
     if branch_name != "master":
-        all_changed_files_string = run_command("git diff --name-status origin/master...{}".format(branch_name))
+        all_changed_files_string = run_command(f"git diff --name-status origin/master...{branch_name}")
         yml_files, md_files = get_modified_files(all_changed_files_string)
         for yml_file in yml_files:
-            print("Checking the file - {}".format(yml_file))
+            print(f"Checking the file - {yml_file}")
             spell_checker(yml_file)
 
         for md_file in md_files:
-            print("Checking the file - {}".format(md_file))
+            print(f"Checking the file - {md_file}")
             spell_checker(md_file, is_md=True)
 
     else:

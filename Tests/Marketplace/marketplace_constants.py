@@ -1,6 +1,6 @@
-import os
-import json
 import enum
+import json
+import os
 from pathlib import Path
 
 IGNORED_FILES = ['__init__.py', 'ApiModules', 'NonSupported', 'index']  # files to ignore inside Packs folder

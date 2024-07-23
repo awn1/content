@@ -1,31 +1,47 @@
+import argparse
 import json
 import os
 import re
-import sys
-import argparse
 import shutil
+import sys
+import traceback
 import uuid
-import prettytable
-import requests
 from datetime import datetime
 from pathlib import Path
-from zipfile import ZipFile
 from typing import Any
+from zipfile import ZipFile
 
+import prettytable
+import requests
+from demisto_sdk.commands.common.tools import open_id_set_file, str2bool
+from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
 from requests import Response
 
-from Tests.Marketplace.marketplace_services import init_storage_client, Pack, \
-    load_json, get_content_git_client, get_recent_commits_data, store_successful_and_failed_packs_in_ci_artifacts, \
-    json_write
+from Tests.Marketplace.marketplace_constants import (
+    CONTENT_ROOT_PATH,
+    IGNORED_FILES,
+    LANDING_PAGE_SECTIONS_PATH,
+    PACKS_FOLDER,
+    SKIPPED_STATUS_CODES,
+    XSOAR_MP,
+    BucketUploadFlow,
+    GCPConfig,
+    Metadata,
+    PackStatus,
+)
+from Tests.Marketplace.marketplace_services import (
+    Pack,
+    get_content_git_client,
+    get_recent_commits_data,
+    init_storage_client,
+    json_write,
+    load_json,
+    store_successful_and_failed_packs_in_ci_artifacts,
+)
 from Tests.Marketplace.marketplace_statistics import StatisticsHandler
-from Tests.Marketplace.marketplace_constants import PackStatus, Metadata, GCPConfig, BucketUploadFlow, \
-    CONTENT_ROOT_PATH, PACKS_FOLDER, IGNORED_FILES, LANDING_PAGE_SECTIONS_PATH, SKIPPED_STATUS_CODES, XSOAR_MP
-from demisto_sdk.commands.common.tools import str2bool, open_id_set_file
-from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
-from Tests.scripts.utils.log_util import install_logging
-from Tests.scripts.utils import logging_wrapper as logging
-import traceback
 from Tests.Marketplace.pack_readme_handler import download_markdown_images_from_artifacts
+from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
 
 METADATA_FILE_REGEX_GET_VERSION = r'metadata\-([\d\.]+)\.json'
 

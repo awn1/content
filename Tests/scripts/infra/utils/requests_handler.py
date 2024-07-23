@@ -1,9 +1,10 @@
+import logging
+
 from requests import HTTPError
 from requests.adapters import HTTPAdapter
 
 from Tests.scripts.infra.utils.html import get_http_error_text
 
-import logging
 logger = logging.getLogger(__name__)
 
 

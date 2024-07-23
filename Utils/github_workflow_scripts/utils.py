@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
+import json
 import os
 import sys
-import json
-from datetime import datetime
-from typing import Any
 from collections.abc import Generator, Iterable
+from datetime import datetime
 from pathlib import Path
-from demisto_sdk.commands.common.tools import get_pack_metadata
+from typing import Any
 
+from demisto_sdk.commands.common.tools import get_pack_metadata
 from git import Repo
 
 CONTENT_ROOT_PATH = os.path.abspath(os.path.join(__file__, '../../..'))  # full path to content root repo
@@ -118,15 +118,15 @@ class Checkout:  # pragma: no cover
             url = f"https://github.com/{fork_owner}/{repo_name}"
             try:
                 self.repo.create_remote(name=forked_remote_name, url=url)
-                print(f'Successfully created remote {forked_remote_name} for repo {url}')  # noqa: T201
+                print(f'Successfully created remote {forked_remote_name} for repo {url}')
             except Exception as error:
-                print(f'could not create remote from {url}, {error=}')  # noqa: T201
+                print(f'could not create remote from {url}, {error=}')
                 # handle the case where the name of the forked repo is not content
                 if github_event_path := os.getenv("GITHUB_EVENT_PATH"):
                     try:
                         payload = json.loads(github_event_path)
                     except ValueError:
-                        print('failed to load GITHUB_EVENT_PATH')  # noqa: T201
+                        print('failed to load GITHUB_EVENT_PATH')
                         raise ValueError(f'cannot checkout to the forked branch {branch_to_checkout} of the owner {fork_owner}')
                     # forked repo name includes fork_owner + repo name, for example foo/content.
                     forked_repo_name = payload.get("pull_request", {}).get("head", {}).get("repo", {}).get("full_name")
@@ -149,13 +149,13 @@ class Checkout:  # pragma: no cover
     def __enter__(self):
         """Checks out the given branch"""
         self.repo.git.checkout(self.branch_to_checkout)
-        print(f'Checked out to branch {self.branch_to_checkout}')  # noqa: T201
+        print(f'Checked out to branch {self.branch_to_checkout}')
         return self
 
     def __exit__(self, *args):
         """Checks out the previous branch"""
         self.repo.git.checkout(self._original_branch)
-        print(f"Checked out to original branch {self._original_branch}")  # noqa: T201
+        print(f"Checked out to original branch {self._original_branch}")
 
 
 class ChangeCWD:
@@ -193,24 +193,24 @@ def get_content_reviewers(content_roles: dict[str, Any]) -> tuple[list[str], str
         tim_reviewer: str = content_roles[TIM_REVIEWER_KEY]
 
         if not isinstance(contribution_reviewers, list):
-            print(f"'{CONTRIBUTION_REVIEWERS_KEY}' is not an array. Terminating...")  # noqa: T201
+            print(f"'{CONTRIBUTION_REVIEWERS_KEY}' is not an array. Terminating...")
             sys.exit(1)
 
         if not isinstance(security_reviewer, str) or not security_reviewer:
-            print(f"'{CONTRIBUTION_SECURITY_REVIEWER_KEY}' is not a string. Terminating...")  # noqa: T201
+            print(f"'{CONTRIBUTION_SECURITY_REVIEWER_KEY}' is not a string. Terminating...")
             sys.exit(1)
 
         if not isinstance(tim_reviewer, str) or not tim_reviewer:
-            print(f"'{TIM_REVIEWER_KEY}' is not a string. Terminating...")  # noqa: T201
+            print(f"'{TIM_REVIEWER_KEY}' is not a string. Terminating...")
             sys.exit(1)
 
         if not contribution_reviewers or not security_reviewer:
-            print("No contribution or  reviewers")  # noqa: T201
+            print("No contribution or  reviewers")
             sys.exit(1)
 
         return contribution_reviewers, security_reviewer, tim_reviewer
     except KeyError as ke:
-        print(f"Error parsing reviewers: {str(ke)}.")  # noqa: T201
+        print(f"Error parsing reviewers: {ke!s}.")
         sys.exit(1)
 
 
@@ -225,10 +225,10 @@ def get_support_level(pack_dirs: set[str]) -> set[str]:
 
     for pack_dir in pack_dirs:
         if pack_support_level := get_pack_metadata(pack_dir).get('support'):
-            print(f'Pack support level for pack {pack_dir} is {pack_support_level}')  # noqa: T201
+            print(f'Pack support level for pack {pack_dir} is {pack_support_level}')
             packs_support_levels.add(pack_support_level)
         else:
-            print(f'Could not find pack support level for pack {pack_dir}')  # noqa: T201
+            print(f'Could not find pack support level for pack {pack_dir}')
 
     return packs_support_levels
 

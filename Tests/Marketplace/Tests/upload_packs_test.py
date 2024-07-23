@@ -2,13 +2,13 @@
 # pylint: disable=no-member
 import json
 import os
+from unittest.mock import patch
 
 import pytest
-from unittest.mock import patch
-from Tests.Marketplace.upload_packs import (get_packs_ids_to_upload, get_packs_ids_to_upload_and_update)
 
-from Tests.Marketplace.marketplace_services import Pack
 from Tests.Marketplace.marketplace_constants import Metadata
+from Tests.Marketplace.marketplace_services import Pack
+from Tests.Marketplace.upload_packs import get_packs_ids_to_upload, get_packs_ids_to_upload_and_update
 
 # disable-secrets-detection-start
 
@@ -82,8 +82,9 @@ class TestUpdateIndexAndPack:
         Then
         - Ensure new metadata files are created for the new version
         """
-        from Tests.Marketplace import upload_packs
         import shutil
+
+        from Tests.Marketplace import upload_packs
 
         mocker.patch('shutil.copy')
         mocker.patch('os.path.exists')
@@ -130,8 +131,9 @@ class TestUpdateIndexAndPack:
         - Ensure new metadata files are created for the new pack
         - Ensure other files in the index are copied
         """
-        from Tests.Marketplace import upload_packs
         import shutil
+
+        from Tests.Marketplace import upload_packs
 
         mocker.patch('shutil.copy')
         mocker.patch('os.path.exists')
@@ -315,6 +317,7 @@ class TestUpdateIndexAndPack:
                 - Ensure the pack is downloaded and extracted successfully.
         """
         from zipfile import ZipFile
+
         from Tests.Marketplace.marketplace_constants import GCPConfig
         from Tests.Marketplace.upload_packs import download_and_extract_pack
 
@@ -361,8 +364,8 @@ class TestCleanPacks:
         Then
         - Ensure that task is skipped and blob form master bucket are not deleted
         """
-        from Tests.Marketplace.upload_packs import clean_non_existing_packs
         from Tests.Marketplace.marketplace_constants import GCPConfig
+        from Tests.Marketplace.upload_packs import clean_non_existing_packs
 
         dummy_storage_bucket = mocker.MagicMock()
         dummy_storage_bucket.name = GCPConfig.PRODUCTION_BUCKET
@@ -391,8 +394,8 @@ class TestCleanPacks:
         Then
         - Ensure that task is skipped and blob form master bucket are not deleted
         """
-        from Tests.Marketplace.upload_packs import clean_non_existing_packs
         from Tests.Marketplace.marketplace_constants import GCPConfig
+        from Tests.Marketplace.upload_packs import clean_non_existing_packs
 
         dummy_storage_bucket = mocker.MagicMock()
         dummy_storage_bucket.name = "dummy_bucket"
@@ -420,10 +423,11 @@ class TestCleanPacks:
          Then
          - Ensure that not valid pack is deleted from index
          """
-        from Tests.Marketplace.upload_packs import clean_non_existing_packs
-        from Tests.Marketplace.marketplace_constants import GCPConfig
         import os
         import shutil
+
+        from Tests.Marketplace.marketplace_constants import GCPConfig
+        from Tests.Marketplace.upload_packs import clean_non_existing_packs
 
         dummy_storage_bucket = mocker.MagicMock()
         dummy_storage_bucket.name = GCPConfig.PRODUCTION_BUCKET
@@ -459,10 +463,11 @@ class TestCorepacksFiles:
         """
         Test the upload flow of the corepacks files in the build bucket.
         """
-        from Tests.Marketplace.upload_packs import create_corepacks_config
-        from Tests.Marketplace.marketplace_constants import GCPConfig
         import os
         import shutil
+
+        from Tests.Marketplace.marketplace_constants import GCPConfig
+        from Tests.Marketplace.upload_packs import create_corepacks_config
 
         dummy_storage_bucket = mocker.MagicMock()
         dummy_storage_bucket.name = GCPConfig.CI_BUILD_BUCKET

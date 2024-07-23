@@ -1,14 +1,16 @@
-import requests
+import argparse
 import json
 import sys
-import argparse
-import urllib3
 import time
-from pathlib import Path
 from distutils.util import strtobool
+from pathlib import Path
+
+import requests
+import urllib3
 from create_release import get_changelog_text
-from Tests.scripts.utils.log_util import install_logging
+
 from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
 
 # Disable insecure warnings
 urllib3.disable_warnings()

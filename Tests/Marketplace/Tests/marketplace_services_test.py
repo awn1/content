@@ -1,29 +1,54 @@
 # type: ignore[attr-defined]
 import copy
-import shutil
-import pytest
+import glob
 import json
 import os
 import random
-import glob
-from unittest.mock import mock_open
-from mock_open import MockOpen
-from google.cloud.storage.blob import Blob
-from packaging.version import Version
-from freezegun import freeze_time
+import shutil
 from datetime import datetime, timedelta
-from typing import Any
 from pathlib import Path
+from typing import Any
+from unittest.mock import mock_open
+
+import pytest
+from freezegun import freeze_time
+from google.cloud.storage.blob import Blob
+from mock_open import MockOpen
+from packaging.version import Version
+
+from Tests.Marketplace.marketplace_constants import (
+    XSIAM_MP,
+    XSOAR_END_TAG,
+    XSOAR_MP,
+    XSOAR_ON_PREM_END_TAG,
+    XSOAR_ON_PREM_TAG,
+    XSOAR_SAAS_END_TAG,
+    XSOAR_SAAS_MP,
+    XSOAR_SAAS_START_TAG,
+    XSOAR_START_TAG,
+    BucketUploadFlow,
+    Changelog,
+    GCPConfig,
+    Metadata,
+    PackFolders,
+    PackStatus,
+    PackTags,
+)
 
 # pylint: disable=no-member
-
-from Tests.Marketplace.marketplace_services import Pack, input_to_list, get_valid_bool, convert_price, \
-    get_updated_server_version, load_json, \
-    store_successful_and_failed_packs_in_ci_artifacts, is_ignored_pack_file, \
-    is_the_only_rn_in_block, get_pull_request_numbers_from_file, remove_old_versions_from_changelog
-from Tests.Marketplace.marketplace_constants import Changelog, PackStatus, PackFolders, Metadata, GCPConfig, BucketUploadFlow, \
-    PackTags, XSOAR_START_TAG, XSOAR_END_TAG, XSOAR_SAAS_START_TAG, XSOAR_SAAS_END_TAG, XSOAR_ON_PREM_TAG, \
-    XSOAR_ON_PREM_END_TAG, XSOAR_MP, XSIAM_MP, XSOAR_SAAS_MP
+from Tests.Marketplace.marketplace_services import (
+    Pack,
+    convert_price,
+    get_pull_request_numbers_from_file,
+    get_updated_server_version,
+    get_valid_bool,
+    input_to_list,
+    is_ignored_pack_file,
+    is_the_only_rn_in_block,
+    load_json,
+    remove_old_versions_from_changelog,
+    store_successful_and_failed_packs_in_ci_artifacts,
+)
 
 CHANGELOG_DATA_INITIAL_VERSION = {
     "1.0.0": {
@@ -3171,8 +3196,8 @@ def test_remove_old_versions_from_changelog(changelog, expected_result):
 
 
 def test_get_upload_data(mocker):
-    from Tests.Marketplace.marketplace_services import get_upload_data
     from Tests.Marketplace.marketplace_constants import BucketUploadFlow
+    from Tests.Marketplace.marketplace_services import get_upload_data
 
     load_json_data = {
         "prepare_content_for_testing": {

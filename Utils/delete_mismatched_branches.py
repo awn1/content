@@ -2,8 +2,8 @@
 
 import gitlab
 from github import Github
-from Utils.github_workflow_scripts.utils import timestamped_print, get_env_var
 
+from Utils.github_workflow_scripts.utils import get_env_var, timestamped_print
 
 # ANSI Colors
 RED = '\033[0;31m'
@@ -54,7 +54,7 @@ def main():
                 gitlab_branch.delete()
                 print(f'{GREEN}deleted "{gitlab_branch_name}"{RESET}')
             except gitlab.exceptions.GitlabError as e:
-                print(f'{RED}Deletion of {gitlab_branch_name} encountered an issue: {str(e)}{RESET}')
+                print(f'{RED}Deletion of {gitlab_branch_name} encountered an issue: {e!s}{RESET}')
 
 
 if __name__ == "__main__":

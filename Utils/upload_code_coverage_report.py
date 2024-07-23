@@ -1,11 +1,10 @@
 
 import argparse
-from datetime import datetime
 import json
 import os
+from datetime import datetime
 
 from Tests.Marketplace.marketplace_services import init_storage_client
-
 
 DATE_FORMAT = '%Y-%m-%d'
 TIMESTAMP_FORMAT_SECONDS = '%Y-%m-%dT%H:%M:%SZ'

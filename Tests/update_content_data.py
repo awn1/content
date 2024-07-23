@@ -1,10 +1,11 @@
 import argparse
-import os
 import ast
+import os
+
 import demisto_client
 
-from Tests.scripts.utils.log_util import install_simple_logging
 from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_simple_logging
 
 
 def options_handler():

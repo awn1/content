@@ -5,7 +5,6 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
 from uuid import uuid4
 
 import humanize
@@ -55,15 +54,15 @@ def options_handler():
 
 
 def instance_config(env_type: str,
-                    instances_config_file_path) -> List[Dict]:
-    with open(instances_config_file_path, 'r') as inst_config:
+                    instances_config_file_path) -> list[dict]:
+    with open(instances_config_file_path) as inst_config:
         data = json.load(inst_config)
     config = data['config'][env_type]
     global_config = data['globalconfig']
     return [global_config | single_conf for single_conf in config]
 
 
-def create_instances(inst_config: List[Dict], filtered_envs: Dict[str, bool], sa_file_path: str, zone: str) -> List[Dict]:
+def create_instances(inst_config: list[dict], filtered_envs: dict[str, bool], sa_file_path: str, zone: str) -> list[dict]:
     pipeline_id = os.getenv(
         'CI_PIPELINE_ID', '').lower() or f'local-dev-{uuid4()}'
 

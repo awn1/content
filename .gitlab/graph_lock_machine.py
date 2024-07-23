@@ -1,12 +1,13 @@
-from time import sleep
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
+import os
 from datetime import datetime
+from time import sleep
+
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
+import pytz
 from matplotlib.ticker import MultipleLocator
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
-import pytz
-import os
 
 ist = pytz.timezone('Israel')
 slack_token = os.getenv("SLACK_TOKEN")

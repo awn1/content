@@ -7,7 +7,7 @@ from jira import Issue
 from junitparser import JUnitXml, TestSuite
 
 from Tests.scripts.common import get_properties_for_test_suite
-from Tests.scripts.jira_issues import generate_ticket_summary, convert_jira_time_to_datetime, jira_ticket_to_json_data
+from Tests.scripts.jira_issues import convert_jira_time_to_datetime, generate_ticket_summary, jira_ticket_to_json_data
 from Tests.scripts.utils import logging_wrapper as logging
 
 TEST_PLAYBOOKS_BASE_HEADERS = ["Playbook ID"]

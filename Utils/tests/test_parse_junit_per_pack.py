@@ -1,10 +1,12 @@
+from pathlib import Path
+
+import pytest
+
 from Utils.github_workflow_scripts.parse_junit_per_pack import (
+    PackNameParseError,
     parse_pack_name,
     parse_xml,
-    PackNameParseError,
 )
-from pathlib import Path
-import pytest
 
 
 def test_parse_xml(tmp_path):

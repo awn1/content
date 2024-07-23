@@ -1,7 +1,17 @@
 from pathlib import Path
-from Tests.scripts.common import get_reviewer, get_person_in_charge, are_pipelines_in_order, is_pivot, get_slack_user_name, \
-    was_message_already_sent, get_nearest_newer_commit_with_pipeline, get_nearest_older_commit_with_pipeline
+
 from requests_mock import MockerCore
+
+from Tests.scripts.common import (
+    are_pipelines_in_order,
+    get_nearest_newer_commit_with_pipeline,
+    get_nearest_older_commit_with_pipeline,
+    get_person_in_charge,
+    get_reviewer,
+    get_slack_user_name,
+    is_pivot,
+    was_message_already_sent,
+)
 
 
 def test_get_person_in_charge(mocker):

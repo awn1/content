@@ -1,7 +1,4 @@
-from demisto_sdk.commands.common.constants import (SAMPLES_DIR,
-                                                   TESTS_AND_DOC_DIRECTORIES,
-                                                   FileType,
-                                                   MarketplaceVersions)
+from demisto_sdk.commands.common.constants import SAMPLES_DIR, TESTS_AND_DOC_DIRECTORIES, FileType, MarketplaceVersions
 
 XSOAR_SANITY_TEST_NAMES: tuple[str, ...] = (
     # Skipped until helloworld server will be fixed

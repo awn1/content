@@ -1,11 +1,13 @@
 import argparse
-import sys
 import os
+import sys
 import time
+
 import requests
 import urllib3
-from Tests.scripts.utils.log_util import install_logging
+
 from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
 
 # Disable insecure warnings
 urllib3.disable_warnings()

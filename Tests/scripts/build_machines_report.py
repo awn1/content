@@ -7,18 +7,17 @@ import warnings
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List
-from google.auth import _default  # noqa
+from typing import Any
 
+import common
 import urllib3
+from google.auth import _default
+from infra.resources.constants import AUTOMATION_GCP_PROJECT
 from jinja2 import Environment, FileSystemLoader
 from urllib3.exceptions import InsecureRequestWarning
 
-import common
-from infra.resources.constants import AUTOMATION_GCP_PROJECT
-
 urllib3.disable_warnings(InsecureRequestWarning)
-warnings.filterwarnings("ignore", _default._CLOUD_SDK_CREDENTIALS_WARNING)  # noqa
+warnings.filterwarnings("ignore", _default._CLOUD_SDK_CREDENTIALS_WARNING)
 
 from infra.settings import Settings, XSOARAdminUser  # noqa
 from infra.viso_api import VisoAPI  # noqa
@@ -311,7 +310,7 @@ def main() -> None:
     args = options_handler()
     output_path = Path(args.output_path)
     try:
-        slack_msg_append: List[Dict[Any, Any]] = []
+        slack_msg_append: list[dict[Any, Any]] = []
         if args.without_viso:
             logging.info("Not connecting to Viso.")
             tenants = {}

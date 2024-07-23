@@ -1,15 +1,17 @@
-import time
-from typing import Any
-from Tests.scripts.utils import logging_wrapper as logging
-from Tests.scripts.utils.log_util import install_logging
-from time import sleep
+import argparse
 import random
+import time
+from datetime import datetime
+from time import sleep
+from typing import Any
+
 import requests
 from google.cloud import storage  # type: ignore[attr-defined]
-import argparse
-from Utils.github_workflow_scripts.utils import get_env_var
 from slack_sdk import WebClient as SlackWebClient
-from datetime import datetime
+
+from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
+from Utils.github_workflow_scripts.utils import get_env_var
 
 GITLAB_SERVER_URL = get_env_var(
     "CI_SERVER_URL", "https://gitlab.xdr.pan.local"
@@ -206,7 +208,7 @@ def remove_file(storage_bucket: Any, file_path: str):
         blob.delete()
     except Exception as err:
         logging.error(
-            f"when we try to delete a build_from_queue = {file_path}, we get an error: {str(err)}"
+            f"when we try to delete a build_from_queue = {file_path}, we get an error: {err!s}"
         )
 
 
@@ -298,7 +300,7 @@ def get_my_place_in_the_queue(
                 ]
             )
     except Exception as e:
-        logging.info(f"Failed to send Slack notification. Reason: {str(e)}")
+        logging.info(f"Failed to send Slack notification. Reason: {e!s}")
 
     return my_place_in_the_queue, previous_build_in_queue
 
@@ -603,7 +605,7 @@ def main():
             ]
         )
     except Exception as e:
-        logging.info(f"Failed to send Slack notification. Reason: {str(e)}")
+        logging.info(f"Failed to send Slack notification. Reason: {e!s}")
 
 
 if __name__ == "__main__":

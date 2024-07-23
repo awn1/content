@@ -1,11 +1,12 @@
+import argparse
+import json
 import math
 import os
-import json
-import argparse
-from glob import glob
-from concurrent.futures import ThreadPoolExecutor
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from glob import glob
+
 import demisto_client.demisto_api
 from demisto_client import generic_request_func
 from slack_notifier import slack_notifier
@@ -287,7 +288,7 @@ def is_secret_in_secret_ignore(pack_path, potential_secret: str):
     the char: '"' before or after the word.
     """
     secrets_ignore_data = ''
-    with open(f'{pack_path}/.secrets-ignore', 'r') as f:
+    with open(f'{pack_path}/.secrets-ignore') as f:
         secrets_ignore_data = f.read()
 
     if secrets_ignore_data:

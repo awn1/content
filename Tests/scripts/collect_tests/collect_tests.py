@@ -4,36 +4,56 @@ import os
 import sys
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
+from collections.abc import Iterable, Sequence
 from enum import Enum
 from pathlib import Path
 from typing import Optional
-from collections.abc import Iterable, Sequence
 
-from demisto_sdk.commands.common.constants import FileType, MarketplaceVersions, CONTENT_ENTITIES_DIRS
-from demisto_sdk.commands.common.tools import find_type, str2bool, get_yaml
+from demisto_sdk.commands.common.constants import CONTENT_ENTITIES_DIRS, FileType, MarketplaceVersions
+from demisto_sdk.commands.common.tools import find_type, get_yaml, str2bool
 
-from Tests.Marketplace.marketplace_services import get_last_commit_from_index, get_failed_packs_from_previous_upload
+from Tests.Marketplace.marketplace_services import get_failed_packs_from_previous_upload, get_last_commit_from_index
 from Tests.scripts.collect_tests.constants import (
-    DEFAULT_MARKETPLACES_WHEN_MISSING, IGNORED_FILE_TYPES, NON_CONTENT_FOLDERS,
-    NON_CODE_FILE_TYPES_TO_COLLECT, SANITY_TEST_TO_PACK,
+    ALWAYS_INSTALLED_PACKS_MAPPING,
+    DEFAULT_MARKETPLACES_WHEN_MISSING,
+    IGNORED_FILE_TYPES,
+    MODELING_RULE_COMPONENT_FILES,
+    NON_CODE_FILE_TYPES_TO_COLLECT,
+    NON_CONTENT_FOLDERS,
+    SANITY_TEST_TO_PACK,
+    TEST_DATA_PATTERN,
+    XSIAM_COMPONENT_FILES,
     XSOAR_SANITY_TEST_NAMES,
-    ALWAYS_INSTALLED_PACKS_MAPPING, MODELING_RULE_COMPONENT_FILES, XSIAM_COMPONENT_FILES,
-    TEST_DATA_PATTERN)
+)
 from Tests.scripts.collect_tests.exceptions import (
-    DeprecatedPackException, IncompatibleMarketplaceException,
-    InvalidTestException, NonDictException, NonXsoarSupportedPackException,
-    NoTestsConfiguredException, NothingToCollectException,
-    NotUnderPackException, SkippedPackException,
-    SkippedTestException, TestMissingFromIdSetException,
-    NonNightlyPackInNightlyBuildException, IncompatibleTestMarketplaceException, TestMarketplaceException)
+    DeprecatedPackException,
+    IncompatibleMarketplaceException,
+    IncompatibleTestMarketplaceException,
+    InvalidTestException,
+    NonDictException,
+    NonNightlyPackInNightlyBuildException,
+    NonXsoarSupportedPackException,
+    NoTestsConfiguredException,
+    NothingToCollectException,
+    NotUnderPackException,
+    SkippedPackException,
+    SkippedTestException,
+    TestMarketplaceException,
+    TestMissingFromIdSetException,
+)
 from Tests.scripts.collect_tests.id_set import Graph, IdSet, IdSetItem
 from Tests.scripts.collect_tests.logger import logger
 from Tests.scripts.collect_tests.path_manager import PathManager
 from Tests.scripts.collect_tests.test_conf import TestConf
-from Tests.scripts.collect_tests.utils import (ContentItem, Machine,
-                                               PackManager, find_pack_folder,
-                                               find_yml_content_type, hotfix_detect_old_script_yml,
-                                               FilesToCollect)
+from Tests.scripts.collect_tests.utils import (
+    ContentItem,
+    FilesToCollect,
+    Machine,
+    PackManager,
+    find_pack_folder,
+    find_yml_content_type,
+    hotfix_detect_old_script_yml,
+)
 from Tests.scripts.collect_tests.version_range import VersionRange
 
 
@@ -138,7 +158,7 @@ class CollectionResult:
                 test = None
 
         except InvalidTestException as e:
-            logger.error(f'{str(e)}, not collecting {test}, pack will be installed in Nightly.')
+            logger.error(f'{e!s}, not collecting {test}, pack will be installed in Nightly.')
             test = None
 
         except (SkippedPackException, DeprecatedPackException,) as e:
@@ -932,7 +952,7 @@ class BranchTestCollector(TestCollector):
                 elif yml.id_ not in self.conf.integrations_to_tests:
                     # note, this whole method is always called after validating support level is xsoar
                     raise ValueError(
-                        f'integration {str(PACK_MANAGER.relative_to_packs(yml.path))} is '
+                        f'integration {PACK_MANAGER.relative_to_packs(yml.path)!s} is '
                         f'(1) missing from conf.json, AND'
                         ' (2) does not explicitly state `tests: no tests` AND'
                         ' (3) has support level == xsoar. '
@@ -1375,7 +1395,7 @@ class NightlyTestCollector(BranchTestCollector, ABC):
                     id_set=self.id_set,
                 ))
             except (NothingToCollectException, NonXsoarSupportedPackException, NonNightlyPackInNightlyBuildException) as e:
-                logger.debug(f"{playbook.id_} - {str(e)}")
+                logger.debug(f"{playbook.id_} - {e!s}")
         return CollectionResult.union(result)
 
     def _collect_nightly_packs(self) -> CollectionResult | None:
@@ -1401,7 +1421,7 @@ class NightlyTestCollector(BranchTestCollector, ABC):
                     version_range=pack_metadata.version_range
                 ))
             except (NothingToCollectException, NonXsoarSupportedPackException) as e:
-                logger.debug(f"{pack} - {str(e)}")
+                logger.debug(f"{pack} - {e!s}")
 
         logger.debug(f'Collected {len(result)} nightly packs to install')
         return CollectionResult.union(result)

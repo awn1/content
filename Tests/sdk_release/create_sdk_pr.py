@@ -1,18 +1,19 @@
-import time
-
-import requests
-import re
-import sys
 import argparse
 import base64
 import json
-import urllib3
-from pathlib import Path
-from distutils.util import strtobool
+import re
+import sys
+import time
 from datetime import datetime
+from distutils.util import strtobool
+from pathlib import Path
+
+import requests
+import urllib3
 from create_release import get_changelog_text
-from Tests.scripts.utils.log_util import install_logging
+
 from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
 
 # Disable insecure warnings
 urllib3.disable_warnings()

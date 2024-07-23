@@ -1,7 +1,7 @@
 import logging
 import os
-from pathlib import Path
 from collections.abc import Iterable
+from pathlib import Path
 
 from git import InvalidGitRepositoryError, Repo
 

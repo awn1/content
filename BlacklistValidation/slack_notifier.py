@@ -48,10 +48,10 @@ def get_all_github_links(secrets_filenames, matching_secrets, base_url):
         split_secret = secret_file_name.split(':')
         file_name = split_secret[0].strip('.')
         line_number = split_secret[1]
-        line_number = "#L{0}".format(line_number)
+        line_number = f"#L{line_number}"
         secret = matching_secrets[index]
         link_to_file = base_url + file_name + line_number
-        file_link = "<{0}|{1} -- {2}>".format(link_to_file, file_name[1:] + line_number, secret)
+        file_link = f"<{link_to_file}|{file_name[1:] + line_number} -- {secret}>"
         secret_files_links_with_secrets.append(file_link)
         secret_files_links_no_secrets.append(link_to_file)
 
@@ -75,7 +75,7 @@ def get_fields(secrets_filenames, matching_secrets, base_url):
     entity_fields = []
     if secret_files_links:
         entity_fields.append({
-            "title": "{0} - {1}".format("Found Secrets", str(len(secret_files_links))),
+            "title": f"Found Secrets - {len(secret_files_links)}",
             "value": '\n'.join(secret_files_links),
             "short": False
         })

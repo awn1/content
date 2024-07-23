@@ -1,13 +1,15 @@
 import argparse
 import sys
 import time
+from pathlib import Path
+
 import requests
 import urllib3
 from create_content_pr import CONTENT_PR_NUMBER_FILE
 from create_sdk_pr import SDK_PR_NUMBER_FILE
-from Tests.scripts.utils.log_util import install_logging
+
 from Tests.scripts.utils import logging_wrapper as logging
-from pathlib import Path
+from Tests.scripts.utils.log_util import install_logging
 
 # Disable insecure warnings
 urllib3.disable_warnings()
@@ -51,14 +53,14 @@ def main():
     try:
         content_pr_id = Path(artifacts_folder, CONTENT_PR_NUMBER_FILE).read_text()
     except Exception as e:
-        logging.error(f'Failed to read the file {CONTENT_PR_NUMBER_FILE}, error: {str(e)}')
+        logging.error(f'Failed to read the file {CONTENT_PR_NUMBER_FILE}, error: {e!s}')
         sys.exit(1)
 
     # get the sdk pr id from the file
     try:
         sdk_pr_id = Path(artifacts_folder, SDK_PR_NUMBER_FILE).read_text()
     except Exception as e:
-        logging.error(f'Failed to read the file {SDK_PR_NUMBER_FILE}, error: {str(e)}')
+        logging.error(f'Failed to read the file {SDK_PR_NUMBER_FILE}, error: {e!s}')
         sys.exit(1)
 
     content_pr = get_pr_by_id('content', content_pr_id, access_token)

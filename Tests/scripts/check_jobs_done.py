@@ -2,7 +2,7 @@ import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
-from Tests.scripts.common import WORKFLOW_TYPES, CONTENT_NIGHTLY, BUCKET_UPLOAD, CONTENT_PR, SDK_NIGHTLY, CONTENT_MERGE
+from Tests.scripts.common import BUCKET_UPLOAD, CONTENT_MERGE, CONTENT_NIGHTLY, CONTENT_PR, SDK_NIGHTLY, WORKFLOW_TYPES
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 

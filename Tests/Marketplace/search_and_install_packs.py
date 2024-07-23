@@ -1,38 +1,41 @@
 import base64
 import contextlib
-from datetime import datetime
 import glob
 import itertools
 import json
 import os
 import re
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any
-import networkx as nx
-from networkx import DiGraph
 
+import networkx as nx
 from demisto_client.demisto_api.api.default_api import DefaultApi as DemistoClient
 from demisto_sdk.commands.common import tools
 from demisto_sdk.commands.common.logger import logger
 from demisto_sdk.commands.content_graph.common import PACK_METADATA_FILENAME, ContentType
 from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
 from demisto_sdk.commands.test_content.ParallelLoggingManager import ARTIFACTS_PATH
-from google.cloud.storage import Bucket  # noqa
+from google.cloud.storage import Bucket
+from networkx import DiGraph
 from packaging.version import Version
 from requests import Session
-from Tests.Marketplace.common import (ALREADY_IN_PROGRESS, wait_until_not_updating, generic_request_with_retries,
-                                      get_packs_with_higher_min_version)
-from Tests.Marketplace.marketplace_constants import (PACKS_FOLDER,
-                                                     GCPConfig, Metadata)
-from Tests.Marketplace.marketplace_services import (Pack, init_storage_client,
-                                                    load_json)
+
+from Tests.Marketplace.common import (
+    ALREADY_IN_PROGRESS,
+    generic_request_with_retries,
+    get_packs_with_higher_min_version,
+    wait_until_not_updating,
+)
+from Tests.Marketplace.marketplace_constants import PACKS_FOLDER, GCPConfig, Metadata
+from Tests.Marketplace.marketplace_services import Pack, init_storage_client, load_json
 from Tests.Marketplace.upload_packs import download_and_extract_index, extract_packs_artifacts
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.test_content import get_server_numeric_version
 
-PACK_PATH_VERSION_REGEX = re.compile(fr'^{GCPConfig.PRODUCTION_STORAGE_BASE_PATH}/[A-Za-z0-9-_.]+/(\d+\.\d+\.\d+)/[A-Za-z0-9-_.]'  # noqa: E501
+PACK_PATH_VERSION_REGEX = re.compile(fr'^{GCPConfig.PRODUCTION_STORAGE_BASE_PATH}/[A-Za-z0-9-_.]+/(\d+\.\d+\.\d+)/[A-Za-z0-9-_.]'
                                      r'+\.zip$')
 WLM_TASK_FAILED_ERROR_CODE = 101704
 POLLING_FAILURE = "polling request failed for task id"
@@ -549,7 +552,7 @@ def upload_zipped_packs(client: DemistoClient,
         else:
             message = response_data.get('message', '')
             raise Exception(f'Failed to install packs - with status code {status_code}\n{message}')
-    except Exception:  # noqa
+    except Exception:
         logging.exception('The request to install packs has failed.')
         return False
     return True

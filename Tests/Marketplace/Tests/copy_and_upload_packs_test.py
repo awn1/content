@@ -1,5 +1,6 @@
-import pytest
 import os
+
+import pytest
 
 from Tests.Marketplace.marketplace_constants import IGNORED_FILES, GCPConfig
 
@@ -135,9 +136,10 @@ class TestRegex:
               to the full paths as required in the production bucket, and then uploaded to the production bucket.
             - For the versioned corepacks file, assert that the file is copied from the build bucket as is.
         """
+        import json
+
         from Tests.Marketplace.copy_and_upload_packs import upload_core_packs_config
         from Tests.Marketplace.marketplace_constants import GCPConfig
-        import json
 
         production_bucket = mocker.MagicMock()
         production_bucket.name = GCPConfig.PRODUCTION_BUCKET

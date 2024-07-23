@@ -1,12 +1,14 @@
 import argparse
 import json
 import os
-from demisto_sdk.commands.common.constants import MarketplaceVersionToMarketplaceName, MarketplaceVersions
-from Tests.Marketplace.marketplace_services import init_storage_client, load_json
+
+from demisto_sdk.commands.common.constants import MarketplaceVersions, MarketplaceVersionToMarketplaceName
+
 from Tests.Marketplace.marketplace_constants import GCPConfig
-from Tests.scripts.utils.log_util import install_logging
-from Tests.scripts.utils import logging_wrapper as logging
+from Tests.Marketplace.marketplace_services import init_storage_client, load_json
 from Tests.Marketplace.upload_packs import get_packs_ids_to_upload_and_update
+from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
 
 
 def extract_failed_to_upload(packs_results_upload: dict) -> set[str]:
@@ -48,7 +50,7 @@ def upload_to_bucket(service_account: str, failed_packs_data: dict,
         logging.info(
             f"Uploaded content_status data to {content_status_storage_path} in bucket {production_bucket_name}")
     except Exception as e:
-        logging.exception(f"Failed to upload the file to the bucket. Additional Info: {str(e)}")
+        logging.exception(f"Failed to upload the file to the bucket. Additional Info: {e!s}")
 
 
 def option_handler():

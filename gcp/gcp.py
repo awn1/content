@@ -1,16 +1,17 @@
-from typing import Dict, Iterator, List, Optional, Union
-from google.oauth2.service_account import Credentials
-from google.cloud import compute_v1
-from google.api_core.extended_operation import ExtendedOperation
 import json
 import logging
+from collections.abc import Iterator
+
+from google.api_core.extended_operation import ExtendedOperation
+from google.cloud import compute_v1
+from google.oauth2.service_account import Credentials
 
 TEMPLATE_LINK = "projects/{project_id}/global/instanceTemplates/{template}"
 IMAGE_LINK = "projects/{project_id}/global/images/{image_name}"
 
 
 class Images:
-    def __init__(self, creds: Union[str, Credentials]):
+    def __init__(self, creds: str | Credentials):
         credentials = creds if isinstance(
             creds, Credentials) else Credentials.from_service_account_file(creds)
         self.project_id = credentials.project_id
@@ -38,11 +39,11 @@ class Instance:
         zone: str,
         instance_client: compute_v1.InstancesClient,
         *,
-        config_dict: Optional[Dict] = {},
-        source_instance_template: Optional[str] = None,
-        instance_sa: Optional[str] = None,
-        source_image: Optional[str] = None,
-        role: Optional[str] = None,
+        config_dict: dict | None = {},
+        source_instance_template: str | None = None,
+        instance_sa: str | None = None,
+        source_image: str | None = None,
+        role: str | None = None,
     ):
         self.instance_client = instance_client
         self.instance_name = instance_name
@@ -124,7 +125,7 @@ class Instance:
 
 class InstanceService:
 
-    def __init__(self, creds: Union[str, Credentials], zone: str):
+    def __init__(self, creds: str | Credentials, zone: str):
         credentials = creds if isinstance(
             creds, Credentials) else Credentials.from_service_account_file(creds)
 
@@ -132,7 +133,7 @@ class InstanceService:
         self.project_id = credentials.project_id
         self.instance_client = compute_v1.InstancesClient(credentials=credentials)
 
-    def create_instances(self, instances: List[Dict]):
+    def create_instances(self, instances: list[dict]):
         insert_extended_operations: list[ExtendedOperation] = []
         ready_instances = []
         for instance_conf in instances:
@@ -145,14 +146,14 @@ class InstanceService:
                 instance_client=self.instance_client,
                 config_dict=instance_conf,
             )
-            insert_extended_operations.append((
+            insert_extended_operations.append(
                 self.instance_client.insert(
                     request=compute_v1.InsertInstanceRequest(
                         project=self.project_id,
                         zone=self.zone,
                         source_instance_template=instance_obj.source_instance_template,
                         instance_resource=instance_obj.instance_request())
-                )))
+                ))
             ready_instances.append(instance_obj)
 
         while insert_extended_operations:

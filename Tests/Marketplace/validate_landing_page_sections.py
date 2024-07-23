@@ -4,8 +4,8 @@ import os
 import sys
 from glob import glob
 
-from Tests.scripts.utils.log_util import install_logging
 from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
 
 LANDING_PAGE_SECTIONS_PAGE_PATH = 'Tests/Marketplace/landingPage_sections.json'
 
@@ -59,7 +59,7 @@ def validate_file_keys(landing_page_sections_json: dict) -> None:
 
 def parse_landing_page_sections_to_json():
     try:
-        with open(LANDING_PAGE_SECTIONS_PAGE_PATH, 'r') as file:
+        with open(LANDING_PAGE_SECTIONS_PAGE_PATH) as file:
             return json.load(file)
     except Exception:
         logging.critical('Could not parse the file as json file')

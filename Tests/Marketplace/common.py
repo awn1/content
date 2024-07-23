@@ -1,21 +1,22 @@
-import time
-import os
 import json
-import requests
-from typing import Any
+import os
+import time
 from collections.abc import Callable
-from urllib.parse import urljoin
-from urllib3.exceptions import HTTPError, HTTPWarning
-from packaging.version import Version
-from tempfile import mkdtemp
 from datetime import datetime, timedelta
+from tempfile import mkdtemp
+from typing import Any
+from urllib.parse import urljoin
+
+import demisto_client
+import requests
 from demisto_client.demisto_api.api.default_api import DefaultApi as DemistoClient
 from demisto_client.demisto_api.rest import ApiException
-import demisto_client
-from Tests.scripts.utils import logging_wrapper as logging
+from packaging.version import Version
+from urllib3.exceptions import HTTPError, HTTPWarning
+
 from Tests.Marketplace.marketplace_constants import Metadata
 from Tests.Marketplace.upload_packs import extract_packs_artifacts
-
+from Tests.scripts.utils import logging_wrapper as logging
 
 ALREADY_IN_PROGRESS = "operation is already in progress"
 
@@ -115,7 +116,7 @@ def generic_request_with_retries(client: DemistoClient,
             logging.debug(f"{retries_message}, sleeping for {sleep_interval} seconds.")
             time.sleep(sleep_interval)
     except Exception as e:
-        logging.exception(f'{exception_message}. Additional info: {str(e)}')
+        logging.exception(f'{exception_message}. Additional info: {e!s}')
     return False, None
 
 
@@ -275,7 +276,7 @@ def send_api_request_with_retries(
             logging.debug(f"{retries_message}, sleeping for {sleep_interval} seconds.")
             time.sleep(sleep_interval)
     except Exception as e:
-        logging.exception(f'{exception_message}. Additional info: {str(e)}')
+        logging.exception(f'{exception_message}. Additional info: {e!s}')
     return False
 
 
@@ -290,7 +291,7 @@ def fetch_pack_ids_to_install(packs_to_install_path: str) -> list[str]:
     try:
         with open(packs_to_install_path) as pack_ids_to_install:
             packs_to_install = [pack.rstrip() for pack in pack_ids_to_install]
-    except (FileNotFoundError, IOError) as e:
+    except (OSError, FileNotFoundError) as e:
         logging.info(f"Error occurred while reading the file {packs_to_install_path}: {e}")
         return []
 

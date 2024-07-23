@@ -1,7 +1,8 @@
 import json
 import os
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 
 @pytest.fixture
@@ -40,8 +41,8 @@ def test_should_override_locked_corepacks_file(mocker, mocked_content_repo):
         3. Assert that the result returned from the function is False
     """
 
-    from Tests.Marketplace.override_core_packs_versions import should_override_locked_corepacks_file
     from Tests.Marketplace.marketplace_constants import GCPConfig
+    from Tests.Marketplace.override_core_packs_versions import should_override_locked_corepacks_file
     marketplace = "xsoar"
     last_upload_commit = "abcd1234"
 
@@ -101,9 +102,10 @@ def test_override_locked_corepacks_file(mocker):
     """
     Test the override_locked_corepacks_file function.
     """
-    from Tests.Marketplace.override_core_packs_versions import override_locked_corepacks_file
-    from Tests.Marketplace.marketplace_constants import GCPConfig
     import shutil
+
+    from Tests.Marketplace.marketplace_constants import GCPConfig
+    from Tests.Marketplace.override_core_packs_versions import override_locked_corepacks_file
 
     # Create a temp artifacts dir for the corepacks files:
     artifacts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tmp')

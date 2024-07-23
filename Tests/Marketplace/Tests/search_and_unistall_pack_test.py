@@ -1,11 +1,11 @@
 
 import demisto_client
 import pytest
-
-from Tests.Marketplace.common import generic_request_with_retries
-import Tests.Marketplace.search_and_uninstall_pack as script
 from demisto_client.demisto_api.rest import ApiException
 from urllib3.exceptions import HTTPError
+
+import Tests.Marketplace.search_and_uninstall_pack as script
+from Tests.Marketplace.common import generic_request_with_retries
 
 BASE_URL = 'http://123-fake-api.com'
 API_KEY = 'test-api-key'

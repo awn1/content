@@ -2,9 +2,9 @@ import hashlib
 import random
 import string
 import uuid
-from typing import Any, Union, List
-
 from distutils.util import strtobool
+from typing import Any
+
 from faker import Faker
 from faker.providers import internet
 
@@ -37,7 +37,7 @@ def generate_random_string(lowercase=True, uppercase=True, digits=True, length=6
     return text
 
 
-def str_to_bool(text: Union[str, bool]) -> bool:
+def str_to_bool(text: str | bool) -> bool:
     return text if isinstance(text, bool) else bool(strtobool(text))
 
 
@@ -79,9 +79,9 @@ def to_lower_camel_case(text: str) -> str:
     return _string[:1].lower() + _string[1:]
 
 
-def to_list(value: Any) -> List[Any]:
+def to_list(value: Any) -> list[Any]:
     """covert any given value to list, in case of None return empty list"""
-    if not isinstance(value, List):
+    if not isinstance(value, list):
         value = [value] if value is not None else []
     return value
 
@@ -105,7 +105,7 @@ def convert_dot_notation_to_dict(*args) -> dict:
     return res
 
 
-def convert_mb_to_bytes(mb: Union[int, float]) -> int:
+def convert_mb_to_bytes(mb: int | float) -> int:
     """Convert MB to Bytes"""
     return int((2**10) ** 2 * mb)
 

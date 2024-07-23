@@ -1,12 +1,14 @@
-import requests
-import json
-import sys
 import argparse
+import json
 import re
-import urllib3
+import sys
 from distutils.util import strtobool
-from Tests.scripts.utils.log_util import install_logging
+
+import requests
+import urllib3
+
 from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
 
 # Disable insecure warnings
 urllib3.disable_warnings()

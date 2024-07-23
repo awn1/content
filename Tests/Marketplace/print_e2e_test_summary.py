@@ -2,18 +2,20 @@ import argparse
 import sys
 import traceback
 from pathlib import Path
+from typing import Any
 
 import urllib3
 from junitparser import JUnitXml, TestSuite
 from tabulate import tabulate
 
-from Tests.scripts.common import calculate_results_table, E2E_RESULT_FILE_NAME, get_test_results_files, \
-    TEST_SUITE_CELL_EXPLANATION
+from Tests.scripts.common import (
+    E2E_RESULT_FILE_NAME,
+    TEST_SUITE_CELL_EXPLANATION,
+    calculate_results_table,
+    get_test_results_files,
+)
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
-
-from typing import Any
-
 
 urllib3.disable_warnings()  # Disable insecure warnings
 

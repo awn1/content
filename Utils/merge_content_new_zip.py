@@ -1,9 +1,9 @@
-import zipfile as z
-import os
-from google.cloud import storage  # type: ignore[attr-defined]
 import argparse
+import os
 import shutil
+import zipfile as z
 
+from google.cloud import storage  # type: ignore[attr-defined]
 
 ARTIFACTS_PATH = os.environ.get('ARTIFACTS_FOLDER')
 STORAGE_BUCKET_NAME = 'xsoar-ci-artifacts'

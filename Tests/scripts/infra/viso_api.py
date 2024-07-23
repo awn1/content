@@ -1,10 +1,8 @@
 import logging
 
 import requests
+from infra.utils.requests_handler import TimeoutHTTPAdapter, raise_for_status
 from urllib3.util import Retry
-
-from infra.utils.requests_handler import TimeoutHTTPAdapter
-from infra.utils.requests_handler import raise_for_status
 
 logger = logging.getLogger(__name__)
 
