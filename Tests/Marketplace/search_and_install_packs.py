@@ -35,6 +35,8 @@ from Tests.test_content import get_server_numeric_version
 PACK_PATH_VERSION_REGEX = re.compile(fr'^{GCPConfig.PRODUCTION_STORAGE_BASE_PATH}/[A-Za-z0-9-_.]+/(\d+\.\d+\.\d+)/[A-Za-z0-9-_.]'  # noqa: E501
                                      r'+\.zip$')
 WLM_TASK_FAILED_ERROR_CODE = 101704
+POLLING_FAILURE = "polling request failed for task id"
+ITEM_NOT_FOUND_ERROR = "item not found"
 
 GITLAB_SESSION = Session()
 CONTENT_PROJECT_ID = os.getenv('CI_PROJECT_ID', '1061')
@@ -339,13 +341,14 @@ def install_packs(client: DemistoClient,
 
         error_ids = get_error_ids(ex.body)
         if WLM_TASK_FAILED_ERROR_CODE in error_ids:
-            if "polling request failed for task ID" in error_ids[WLM_TASK_FAILED_ERROR_CODE].lower():
+            if POLLING_FAILURE in error_ids[WLM_TASK_FAILED_ERROR_CODE].lower():
                 logging.error(f"Got {WLM_TASK_FAILED_ERROR_CODE} error code - polling request failed for task ID, "
                               f"retrying.")
             else:
-                # If we got this error code, it means that the modeling rules are not valid, exiting install flow.
-                raise Exception(f"Got [{WLM_TASK_FAILED_ERROR_CODE}] error code - Modeling rules and Dataset validations "
-                                f"failed. Please look at GCP logs to understand why it failed.") from ex
+                # If we got this error code, it may mean that the modeling rules are not valid,
+                # but to make sure it wasn't a tenant or a server-side issue, we'll want to more retries.
+                logging.error(f"Got [{WLM_TASK_FAILED_ERROR_CODE}] error code - might be an indication of a"
+                              f" problem in Modeling rules or Datasets, retrying.")
 
         if not attempt_left:  # exhausted all attempts, understand what happened and exit.
             if 'timeout awaiting response' in ex.body:
@@ -356,8 +359,14 @@ def install_packs(client: DemistoClient,
                 raise Exception("timeout awaiting response headers while trying to install, "
                                 "couldn't determine pack id.") from ex
 
-            if 'Item not found' in ex.body:
+            if ITEM_NOT_FOUND_ERROR in ex.body.lower():
                 raise Exception(f'Item not found error, headers:{ex.headers}.') from ex
+
+            if WLM_TASK_FAILED_ERROR_CODE in error_ids and POLLING_FAILURE not in error_ids[WLM_TASK_FAILED_ERROR_CODE].lower():
+                # If we still get this error code after 5 retries, it is probably mean that the modeling rules are invalid
+                raise Exception(f"Got [{WLM_TASK_FAILED_ERROR_CODE}] error code - Might be an indication of a"
+                                f" Modeling rules and Dataset validations failure. Please look at GCP logs to"
+                                f" understand why it failed.") from ex
         return body
 
     def should_try_handler():
