@@ -11,7 +11,7 @@ def to_epoch_timestamp(date: pendulum.DateTime | None = None) -> int:
 
 
 def time_now() -> pendulum.DateTime:
-    return pendulum.now(tz='UTC')
+    return pendulum.now(tz="UTC")
 
 
 class RocketDateTime(pendulum.DateTime):
@@ -30,8 +30,9 @@ class RocketDateTime(pendulum.DateTime):
         fold=0,
         timestamp=None,
     ):
-        date_value = cls._parse(timestamp) if timestamp else pendulum.datetime(year, month, day, hour, minute, second,
-                                                                               microsecond, tzinfo)
+        date_value = (
+            cls._parse(timestamp) if timestamp else pendulum.datetime(year, month, day, hour, minute, second, microsecond, tzinfo)
+        )
         return super().__new__(
             cls,
             year=date_value.year,
@@ -57,7 +58,7 @@ class RocketDateTime(pendulum.DateTime):
         if isinstance(value, pendulum.DateTime):
             return value
         if isinstance(value, int):
-            return pendulum.from_timestamp(value / 1000, tz='UTC')
+            return pendulum.from_timestamp(value / 1000, tz="UTC")
         if isinstance(value, datetime):
-            return pendulum.instance(value).in_tz('UTC')
-        return pendulum.parse(value, tz='UTC')  # type: ignore[return-value]
+            return pendulum.instance(value).in_tz("UTC")
+        return pendulum.parse(value, tz="UTC")  # type: ignore[return-value]

@@ -3,23 +3,24 @@ import sys
 
 
 def add_descriptions(file_path, output_path):
-    with open(file_path, 'r') as f:
+    with open(file_path, "r") as f:
         lines = f.readlines()
 
     new_lines = lines[:]
     for i, line in enumerate(lines):
         # if line has `type: start` or `type: title` or `type: end`
         # we want to create empty description (description: "") inside its task field with correct indentation
-        if (line.find('type: start') > -1 or line.find('type: title') > -1 or line.find('type: end'))\
-                and lines[i + 1 if i + 1 < len(lines) else i].find('task:') > -1:
+        if (line.find("type: start") > -1 or line.find("type: title") > -1 or line.find("type: end")) and lines[
+            i + 1 if i + 1 < len(lines) else i
+        ].find("task:") > -1:
             inside_task_line = lines[i + 2]
-            indentation = len(inside_task_line) - len(inside_task_line.lstrip(' '))
+            indentation = len(inside_task_line) - len(inside_task_line.lstrip(" "))
 
-            empty_description = (' ' * indentation) + 'description: ""\n'
+            empty_description = (" " * indentation) + 'description: ""\n'
             new_lines.insert(i + 2, empty_description)
 
-    with open(output_path, 'w') as f:
-        f.write(''.join(new_lines))
+    with open(output_path, "w") as f:
+        f.write("".join(new_lines))
 
 
 def main(argv):

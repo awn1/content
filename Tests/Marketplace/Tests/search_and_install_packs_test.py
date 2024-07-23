@@ -17,11 +17,11 @@ from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4j
 from Tests.Marketplace.marketplace_constants import GCPConfig
 from google.cloud.storage import Blob
 
-CONTENT_PROJECT_ID = os.getenv('CI_PROJECT_ID', '1061')
+CONTENT_PROJECT_ID = os.getenv("CI_PROJECT_ID", "1061")
 
 
 def load_json_file(directory: str, file_name: str):
-    with open(Path(__file__).parent / 'test_data' / directory / file_name) as json_file:
+    with open(Path(__file__).parent / "test_data" / directory / file_name) as json_file:
         json_data = json.load(json_file)
     return json_data
 
@@ -42,6 +42,7 @@ def mock_environment_variables(mocker):
     Note:
         Works only if the environment variables are fetched in the code using the custom 'get_env_var' function.
     """
+
     def env_side_effect(env_name: str):
         if env_name == "CI_SERVER_URL":
             return "https://example.com"
@@ -57,44 +58,24 @@ def mock_environment_variables(mocker):
     mocker.patch("Tests.Marketplace.search_and_install_packs.get_env_var", side_effect=env_side_effect)
 
 
-MOCK_HELLOWORLD_SEARCH_RESULTS = load_json_file('search_dependencies', "HelloWorld_1.2.19.json")
-MOCK_AZURESENTINEL_SEARCH_RESULTS = load_json_file('search_dependencies', 'AzureSentinel_1.5.8.json')
+MOCK_HELLOWORLD_SEARCH_RESULTS = load_json_file("search_dependencies", "HelloWorld_1.2.19.json")
+MOCK_AZURESENTINEL_SEARCH_RESULTS = load_json_file("search_dependencies", "AzureSentinel_1.5.8.json")
 
 MOCK_PACKS_INSTALLATION_RESULT = [
-    {
-        "id": "HelloWorld",
-        "currentVersion": "2.0.0",
-        "name": "HelloWorldPremium",
-        "installed": "2020-04-06T16:35:10.998538+03:00"
-    },
-    {
-        "id": "TestPack",
-        "currentVersion": "1.0.0",
-        "name": "TestPack",
-        "installed": "2020-04-13T16:43:22.304144+03:00"
-    },
-    {
-        "id": "AzureSentinel",
-        "currentVersion": "1.0.0",
-        "name": "AzureSentinel",
-        "installed": "2020-04-13T16:57:32.655598+03:00"
-    },
-    {
-        "id": "Base",
-        "currentVersion": "1.0.0",
-        "name": "Base",
-        "installed": "2020-04-06T14:54:09.755811+03:00"
-    }
+    {"id": "HelloWorld", "currentVersion": "2.0.0", "name": "HelloWorldPremium", "installed": "2020-04-06T16:35:10.998538+03:00"},
+    {"id": "TestPack", "currentVersion": "1.0.0", "name": "TestPack", "installed": "2020-04-13T16:43:22.304144+03:00"},
+    {"id": "AzureSentinel", "currentVersion": "1.0.0", "name": "AzureSentinel", "installed": "2020-04-13T16:57:32.655598+03:00"},
+    {"id": "Base", "currentVersion": "1.0.0", "name": "Base", "installed": "2020-04-06T14:54:09.755811+03:00"},
 ]
 
-PACKS_PACK_META_FILE_NAME = 'pack_metadata.json'
+PACKS_PACK_META_FILE_NAME = "pack_metadata.json"
 
 
 def mocked_generic_request_func(self, path: str, method, body=None, **kwargs):
     if body:
-        if body[0].get('id') == 'HelloWorld':
+        if body[0].get("id") == "HelloWorld":
             return MOCK_HELLOWORLD_SEARCH_RESULTS, 200, None
-        elif body and body[0].get('id') == 'AzureSentinel':
+        elif body and body[0].get("id") == "AzureSentinel":
             return MOCK_AZURESENTINEL_SEARCH_RESULTS, 200, None
     raise ApiException(status=400)
 
@@ -128,59 +109,62 @@ def test_install_nightly_packs_endless_loop(mocker):
     """
 
     def generic_request_mock(self, path: str, method, body=None, accept=None, _request_timeout=None):
-        requested_pack_ids = {pack['id'] for pack in body['packs']}
-        for bad_integration in ['bad_integration1', 'bad_integration2']:
+        requested_pack_ids = {pack["id"] for pack in body["packs"]}
+        for bad_integration in ["bad_integration1", "bad_integration2"]:
             if bad_integration in requested_pack_ids:
-                raise Exception(f'invalid version 1.2.0 for pack with ID {bad_integration}')
+                raise Exception(f"invalid version 1.2.0 for pack with ID {bad_integration}")
         return MOCK_PACKS_INSTALLATION_RESULT, 200, None
 
     client = MockClient()
-    mocker.patch.object(demisto_client, 'generic_request_func', generic_request_mock)
+    mocker.patch.object(demisto_client, "generic_request_func", generic_request_mock)
     mocker.patch("Tests.Marketplace.search_and_install_packs.logging")
     packs_to_install = [
-        {'id': 'HelloWorld', 'version': '1.0.0'},
-        {'id': 'TestPack', 'version': '1.0.0'},
-        {'id': 'AzureSentinel', 'version': '1.0.0'},
-        {'id': 'Base', 'version': '1.0.0'},
-        {'id': 'bad_integration1', 'version': '1.0.0'},
-        {'id': 'bad_integration2', 'version': '1.0.0'},
+        {"id": "HelloWorld", "version": "1.0.0"},
+        {"id": "TestPack", "version": "1.0.0"},
+        {"id": "AzureSentinel", "version": "1.0.0"},
+        {"id": "Base", "version": "1.0.0"},
+        {"id": "bad_integration1", "version": "1.0.0"},
+        {"id": "bad_integration2", "version": "1.0.0"},
     ]
-    script.install_packs(client, 'my_host', packs_to_install)
+    script.install_packs(client, "my_host", packs_to_install)
 
 
-@pytest.mark.parametrize('path, latest_version', [
-    (f'{GCPConfig.CONTENT_PACKS_PATH}/TestPack/1.0.1/TestPack.zip', '1.0.1'),
-    (f'{GCPConfig.CONTENT_PACKS_PATH}/Blockade.io/1.0.1/Blockade.io.zip', '1.0.1')
-])
+@pytest.mark.parametrize(
+    "path, latest_version",
+    [
+        (f"{GCPConfig.CONTENT_PACKS_PATH}/TestPack/1.0.1/TestPack.zip", "1.0.1"),
+        (f"{GCPConfig.CONTENT_PACKS_PATH}/Blockade.io/1.0.1/Blockade.io.zip", "1.0.1"),
+    ],
+)
 def test_pack_path_version_regex(path, latest_version):
     """
-       Given:
-           - A path in GCS of a zipped pack.
-       When:
-           - Extracting the version from the path.
-       Then:
-           - Validate that the extracted version is the expected version.
-   """
+    Given:
+        - A path in GCS of a zipped pack.
+    When:
+        - Extracting the version from the path.
+    Then:
+        - Validate that the extracted version is the expected version.
+    """
     assert script.PACK_PATH_VERSION_REGEX.findall(path)[0] == latest_version
 
 
 def test_get_latest_version_from_bucket(mocker):
     """
-       Given:
-           - An id of a pack and the bucket.
-       When:
-           - Getting the latest version of the pack in the bucket.
-           - Having a with_dependency.zip file in the bucket.
-       Then:
-           - Validate that the version is the one we expect for.
-           - Skip over with_dependencies.zip file.
-   """
+    Given:
+        - An id of a pack and the bucket.
+    When:
+        - Getting the latest version of the pack in the bucket.
+        - Having a with_dependency.zip file in the bucket.
+    Then:
+        - Validate that the version is the one we expect for.
+        - Skip over with_dependencies.zip file.
+    """
     dummy_prod_bucket = mocker.MagicMock()
-    first_blob = Blob(f'{GCPConfig.CONTENT_PACKS_PATH}/TestPack/1.0.0/TestPack.zip', dummy_prod_bucket)
-    second_blob = Blob(f'{GCPConfig.CONTENT_PACKS_PATH}/TestPack/1.0.1/TestPack.zip', dummy_prod_bucket)
-    third_blob = Blob(f'{GCPConfig.CONTENT_PACKS_PATH}/TestPack/TestPack_with_dependencies.zip', dummy_prod_bucket)
+    first_blob = Blob(f"{GCPConfig.CONTENT_PACKS_PATH}/TestPack/1.0.0/TestPack.zip", dummy_prod_bucket)
+    second_blob = Blob(f"{GCPConfig.CONTENT_PACKS_PATH}/TestPack/1.0.1/TestPack.zip", dummy_prod_bucket)
+    third_blob = Blob(f"{GCPConfig.CONTENT_PACKS_PATH}/TestPack/TestPack_with_dependencies.zip", dummy_prod_bucket)
     dummy_prod_bucket.list_blobs.return_value = [first_blob, second_blob, third_blob]
-    assert script.get_latest_version_from_bucket('TestPack', dummy_prod_bucket) == '1.0.1'
+    assert script.get_latest_version_from_bucket("TestPack", dummy_prod_bucket) == "1.0.1"
 
 
 def test_is_pack_deprecated_locally(mocker):
@@ -239,23 +223,19 @@ def test_is_pack_deprecated_using_marketplace_api_data():
     Then: Validate the result is as expected
     """
     mock_pack_api_data = {
-        "TestPack": {
-            "currentVersion": "1",
-            "dependencies": [],
-            "deprecated": False
-        },
+        "TestPack": {"currentVersion": "1", "dependencies": [], "deprecated": False},
     }
 
     # Check missing "hidden" field results in a default value of False
-    assert not script.is_pack_deprecated("TestPack", production_bucket=True, pack_api_data=mock_pack_api_data['TestPack'])
+    assert not script.is_pack_deprecated("TestPack", production_bucket=True, pack_api_data=mock_pack_api_data["TestPack"])
 
     # Check normal case of hidden pack
     mock_pack_api_data["TestPack"]["deprecated"] = True
-    assert script.is_pack_deprecated("TestPack", production_bucket=True, pack_api_data=mock_pack_api_data['TestPack'])
+    assert script.is_pack_deprecated("TestPack", production_bucket=True, pack_api_data=mock_pack_api_data["TestPack"])
 
     # Check normal case of non-hidden pack
     mock_pack_api_data["TestPack"]["deprecated"] = False
-    assert not script.is_pack_deprecated("TestPack", production_bucket=True, pack_api_data=mock_pack_api_data['TestPack'])
+    assert not script.is_pack_deprecated("TestPack", production_bucket=True, pack_api_data=mock_pack_api_data["TestPack"])
 
 
 def test_fetch_pack_metadata_from_gitlab(mocker):
@@ -291,29 +271,35 @@ def test_fetch_pack_metadata_from_gitlab(mocker):
 
 class MockHttpRequest:
     def __init__(self, body):
-        self.status = ''
-        self.reason = ''
+        self.status = ""
+        self.reason = ""
         self.data = body
 
     def getheaders(self):
-        return ''
+        return ""
 
 
-GCP_TIMEOUT_EXCEPTION_RESPONSE_BODY = '{"id":"errInstallContentPack","status":400,"title":"Could not install content ' \
-                                      'pack","detail":"Could not install content pack","error":"Get' \
-                                      ' \"https://storage.googleapis.com/marketplace-ci-build/content/builds' \
-                                      '/master%2F2788053%2Fxsoar/content/packs/pack2/1.0.2/pack2.zip\": http2: ' \
-                                      'timeout awaiting response headers","encrypted":false,"multires":null}'
+GCP_TIMEOUT_EXCEPTION_RESPONSE_BODY = (
+    '{"id":"errInstallContentPack","status":400,"title":"Could not install content '
+    'pack","detail":"Could not install content pack","error":"Get'
+    ' "https://storage.googleapis.com/marketplace-ci-build/content/builds'
+    '/master%2F2788053%2Fxsoar/content/packs/pack2/1.0.2/pack2.zip": http2: '
+    'timeout awaiting response headers","encrypted":false,"multires":null}'
+)
 
-MALFORMED_PACK_RESPONSE_BODY = '{"id":"errGetContentPack","status":400,"title":"Failed getting content pack",' \
-                               '"detail":"Failed getting content pack","error":"Item not found (8), pack id: ' \
-                               '[pack1]","encrypted":false,"multires":null}'
+MALFORMED_PACK_RESPONSE_BODY = (
+    '{"id":"errGetContentPack","status":400,"title":"Failed getting content pack",'
+    '"detail":"Failed getting content pack","error":"Item not found (8), pack id: '
+    '[pack1]","encrypted":false,"multires":null}'
+)
 
 ERROR_AS_LIST_RESPONSE_BODY = '{"errors":[{"SystemError":null,"id":8,"detail":"Item not found"}]}'
 
-MALFORMED_PACK_RESPONSE_BODY_TWO_PACKS = '{"id":"errGetContentPack","status":400,"title":"Failed getting ' \
-                                         'content pack", "detail":"Failed getting content pack","error":"Item not ' \
-                                         'found (8), pack id: [pack1, pack2]","encrypted":false,"multires":null}'
+MALFORMED_PACK_RESPONSE_BODY_TWO_PACKS = (
+    '{"id":"errGetContentPack","status":400,"title":"Failed getting '
+    'content pack", "detail":"Failed getting content pack","error":"Item not '
+    'found (8), pack id: [pack1, pack2]","encrypted":false,"multires":null}'
+)
 
 
 class TestInstallPacks:
@@ -328,13 +314,11 @@ class TestInstallPacks:
             Fail completely if reoccurs after retry.
         """
         http_resp = MockHttpRequest(GCP_TIMEOUT_EXCEPTION_RESPONSE_BODY)
-        mocker.patch.object(demisto_client, 'generic_request_func', side_effect=ApiException(http_resp=http_resp))
+        mocker.patch.object(demisto_client, "generic_request_func", side_effect=ApiException(http_resp=http_resp))
         client = MockClient()
-        success, _ = script.install_packs(client, 'my_host',
-                                          packs_to_install=[
-                                              {'id': 'pack1', 'version': '1.0.0'},
-                                              {'id': 'pack3', 'version': '1.0.0'}
-                                          ])
+        success, _ = script.install_packs(
+            client, "my_host", packs_to_install=[{"id": "pack1", "version": "1.0.0"}, {"id": "pack3", "version": "1.0.0"}]
+        )
         assert not success
 
     def test_malformed_pack_exception(self, mocker):
@@ -349,23 +333,22 @@ class TestInstallPacks:
 
         """
         http_resp = MockHttpRequest(MALFORMED_PACK_RESPONSE_BODY)
-        mocker.patch.object(demisto_client, 'generic_request_func', side_effect=ApiException(http_resp=http_resp))
+        mocker.patch.object(demisto_client, "generic_request_func", side_effect=ApiException(http_resp=http_resp))
         client = MockClient()
-        success, _ = script.install_packs(client, 'my_host', packs_to_install=[
-            {'id': 'pack1', 'version': '1.0.0'},
-            {'id': 'pack3', 'version': '1.0.0'}
-        ])
+        success, _ = script.install_packs(
+            client, "my_host", packs_to_install=[{"id": "pack1", "version": "1.0.0"}, {"id": "pack3", "version": "1.0.0"}]
+        )
         assert not success
 
 
 def test_malformed_pack_id():
-    assert script.find_malformed_pack_id(MALFORMED_PACK_RESPONSE_BODY) == ['pack1']
-    assert script.find_malformed_pack_id(MALFORMED_PACK_RESPONSE_BODY_TWO_PACKS) == ['pack1', 'pack2']
+    assert script.find_malformed_pack_id(MALFORMED_PACK_RESPONSE_BODY) == ["pack1"]
+    assert script.find_malformed_pack_id(MALFORMED_PACK_RESPONSE_BODY_TWO_PACKS) == ["pack1", "pack2"]
     assert script.find_malformed_pack_id(ERROR_AS_LIST_RESPONSE_BODY) == []
 
 
 def test_get_pack_id_from_error_with_gcp_path():
-    assert script.get_pack_id_from_error_with_gcp_path(GCP_TIMEOUT_EXCEPTION_RESPONSE_BODY) == 'pack2'
+    assert script.get_pack_id_from_error_with_gcp_path(GCP_TIMEOUT_EXCEPTION_RESPONSE_BODY) == "pack2"
 
 
 class TestFindMalformedPackId:
@@ -396,7 +379,7 @@ class TestFindMalformedPackId:
 
     #  Tests that the function handles an empty input string.
     def test_empty_input(self):
-        assert script.find_malformed_pack_id('') == []
+        assert script.find_malformed_pack_id("") == []
 
     #  Tests that the function returns an empty list if no malformed pack IDs are found.
     def test_no_malformed_ids(self):
@@ -409,17 +392,17 @@ class TestFindMalformedPackId:
     #  Tests that the function correctly extracts multiple pack IDs from the error message.
     def test_multiple_malformed_ids(self):
         error_msg = '{"errors": ["Pack installation failed. pack id: pack1","Pack installation failed. pack id: pack2"]}'
-        assert script.find_malformed_pack_id(error_msg) == ['pack1', 'pack2']
+        assert script.find_malformed_pack_id(error_msg) == ["pack1", "pack2"]
 
     #  Tests that the function handles a JSONDecodeError when parsing the input string.
     def test_invalid_json(self):
-        assert script.find_malformed_pack_id('invalid json') == []
+        assert script.find_malformed_pack_id("invalid json") == []
 
     #  Tests that the function correctly extracts the pack ID when the error message contains additional
     #  information after the pack ID.
     def test_additional_info(self):
         error_msg = '{"errors": ["invalid version 1.0.0 for pack with ID pack1 some additional info"]}'
-        assert script.find_malformed_pack_id(error_msg) == ['pack1']
+        assert script.find_malformed_pack_id(error_msg) == ["pack1"]
 
 
 def test_create_graph_empty():
@@ -467,9 +450,7 @@ def test_create_graph_multiple_dependencies():
         A DiGraph with multiple edges is returned
     """
     all_packs_dependencies = {
-        "PackA": {
-            "dependencies": {"PackB": {"mandatory": True}, "PackC": {"mandatory": True}}
-        },
+        "PackA": {"dependencies": {"PackB": {"mandatory": True}, "PackC": {"mandatory": True}}},
         "PackB": {"dependencies": {"PackD": {"mandatory": True}}},
         "PackC": {"dependencies": {}},
     }
@@ -628,7 +609,7 @@ def test_get_all_content_packs_dependencies(mocker: MockFixture):
                     "currentVersion": "",
                     "deprecated": "",
                 },
-            ]
+            ],
         },
         {
             "total": 3,
@@ -639,7 +620,7 @@ def test_get_all_content_packs_dependencies(mocker: MockFixture):
                     "currentVersion": "",
                     "deprecated": "",
                 }
-            ]
+            ],
         },
     ]
     mock_hybrid_pack_request = {
@@ -648,17 +629,11 @@ def test_get_all_content_packs_dependencies(mocker: MockFixture):
         "currentVersion": "",
         "deprecated": "",
     }
-    mocker.patch.object(
-        script, "get_one_page_of_packs_dependencies", side_effect=mock_request
-    )
-    mocker.patch.object(
-        script, "get_hybrid_pack_dependencies", return_value=mock_hybrid_pack_request
-    )
+    mocker.patch.object(script, "get_one_page_of_packs_dependencies", side_effect=mock_request)
+    mocker.patch.object(script, "get_hybrid_pack_dependencies", return_value=mock_hybrid_pack_request)
     hybrid_pack_mocker = mocker.MagicMock()
     hybrid_pack_mocker.object_id = "HybridPack"
-    mocker.patch.object(
-        Neo4jContentGraphInterface, "search", return_value=[hybrid_pack_mocker]
-    )
+    mocker.patch.object(Neo4jContentGraphInterface, "search", return_value=[hybrid_pack_mocker])
     script.PAGE_SIZE_DEFAULT = 2
 
     # Call function and test
@@ -678,15 +653,9 @@ def test_get_all_content_packs_dependencies_empty(mocker: MockFixture):
         An empty dict is returned
     """
     client = mocker.Mock()
-    mocker.patch.object(
-        script, "get_one_page_of_packs_dependencies", return_value={"total": 3, "packs": []}
-    )
-    mocker.patch.object(
-        script, "get_hybrid_pack_dependencies", return_value={}
-    )
-    mocker.patch.object(
-        Neo4jContentGraphInterface, "search", return_value=[]
-    )
+    mocker.patch.object(script, "get_one_page_of_packs_dependencies", return_value={"total": 3, "packs": []})
+    mocker.patch.object(script, "get_hybrid_pack_dependencies", return_value={})
+    mocker.patch.object(Neo4jContentGraphInterface, "search", return_value=[])
     result = script.get_all_content_packs_dependencies(client)
 
     assert result == {}
@@ -719,22 +688,13 @@ def test_get_all_content_packs_dependencies_null(mocker: MockFixture):
                     "currentVersion": "",
                     "deprecated": "",
                 },
-            ]
+            ],
         },
-        {
-            "total": 2,
-            "packs": None
-        },
+        {"total": 2, "packs": None},
     ]
-    mocker.patch.object(
-        script, "get_one_page_of_packs_dependencies", side_effect=mock_request
-    )
-    mocker.patch.object(
-        script, "get_hybrid_pack_dependencies", return_value={}
-    )
-    mocker.patch.object(
-        Neo4jContentGraphInterface, "search", return_value=[]
-    )
+    mocker.patch.object(script, "get_one_page_of_packs_dependencies", side_effect=mock_request)
+    mocker.patch.object(script, "get_hybrid_pack_dependencies", return_value={})
+    mocker.patch.object(Neo4jContentGraphInterface, "search", return_value=[])
     script.PAGE_SIZE_DEFAULT = 2
 
     # Call function and test
@@ -757,9 +717,7 @@ def test_get_one_page_of_packs_dependencies_success(mocker: MockFixture):
     client = mocker.Mock()
     page = 1
 
-    mocker.patch.object(
-        script, "generic_request_with_retries", return_value=(True, {"packs": []})
-    )
+    mocker.patch.object(script, "generic_request_with_retries", return_value=(True, {"packs": []}))
 
     result = script.get_one_page_of_packs_dependencies(client, page)
 
@@ -785,12 +743,7 @@ def test_search_for_deprecated_dependencies_with_deprecated_dependency(
     dependencies_data = {"Pack1": {"deprecated": True}, "Pack2": {"deprecated": False}}
     mocker.patch.object(script, "logging")
 
-    assert (
-        script.search_for_deprecated_dependencies(
-            pack_id, dependencies, True, dependencies_data
-        )
-        is False
-    )
+    assert script.search_for_deprecated_dependencies(pack_id, dependencies, True, dependencies_data) is False
 
     script.logging.critical.assert_called_with(mocker.ANY)
 
@@ -812,12 +765,7 @@ def test_search_for_deprecated_dependencies_no_deprecated_dependency(mocker: Moc
     dependencies_data = {"Pack1": {"deprecated": False}, "Pack2": {"deprecated": False}}
     mocker.patch.object(script, "logging")
 
-    assert (
-        script.search_for_deprecated_dependencies(
-            pack_id, dependencies, True, dependencies_data
-        )
-        is True
-    )
+    assert script.search_for_deprecated_dependencies(pack_id, dependencies, True, dependencies_data) is True
     script.logging.critical.assert_not_called()
 
 
@@ -831,8 +779,7 @@ def test_get_packs_and_dependencies_to_install_no_deprecated(mocker: MockFixture
         Ensure correct return value with no deprecated dependencies
     """
     client = MockClient()
-    mocker.patch.object(script, 'search_for_deprecated_dependencies',
-                        return_value=True)
+    mocker.patch.object(script, "search_for_deprecated_dependencies", return_value=True)
     mocker.patch.object(script, "get_server_numeric_version", return_value="6.11")
     mocker.patch.object(script, "create_packs_artifacts", return_value="")
 
@@ -846,7 +793,8 @@ def test_get_packs_and_dependencies_to_install_no_deprecated(mocker: MockFixture
     graph_dependencies = DiGraph([(d, pack_id) for d in dependencies])
 
     result = script.get_packs_and_dependencies_to_install(
-        pack_ids, graph_dependencies, production_bucket, dependencies_data, client)
+        pack_ids, graph_dependencies, production_bucket, dependencies_data, client
+    )
 
     assert result == (True, {pack_id, *dependencies})
 
@@ -861,8 +809,7 @@ def test_get_packs_and_dependencies_to_install_no_dependencies(mocker: MockFixtu
         Ensure that the pack itself added to result
     """
     client = MockClient()
-    mocker.patch.object(script, 'search_for_deprecated_dependencies',
-                        return_value=True)
+    mocker.patch.object(script, "search_for_deprecated_dependencies", return_value=True)
     mocker.patch.object(script, "create_packs_artifacts", return_value="")
 
     pack_id = "PackA"
@@ -875,7 +822,8 @@ def test_get_packs_and_dependencies_to_install_no_dependencies(mocker: MockFixtu
     graph_dependencies.add_node(pack_id)
 
     result = script.get_packs_and_dependencies_to_install(
-        pack_ids, graph_dependencies, production_bucket, dependencies_data, client)
+        pack_ids, graph_dependencies, production_bucket, dependencies_data, client
+    )
 
     assert result == (True, {pack_id, *dependencies})
 
@@ -895,8 +843,7 @@ def test_get_packs_and_dependencies_to_install_deprecated(mocker: MockFixture):
         - Ensure no deprecated dependencies flag set to False
     """
     client = MockClient()
-    mocker.patch.object(script, "search_for_deprecated_dependencies",
-                        return_value=False)
+    mocker.patch.object(script, "search_for_deprecated_dependencies", return_value=False)
     mocker.patch.object(script, "get_server_numeric_version", return_value="6.11")
     mocker.patch.object(script, "create_packs_artifacts", return_value="")
 
@@ -910,7 +857,8 @@ def test_get_packs_and_dependencies_to_install_deprecated(mocker: MockFixture):
     graph_dependencies = DiGraph([(d, pack_id) for d in dependencies])
 
     result = script.get_packs_and_dependencies_to_install(
-        pack_ids, graph_dependencies, production_bucket, dependencies_data, client)
+        pack_ids, graph_dependencies, production_bucket, dependencies_data, client
+    )
 
     assert result == (False, set())
 
@@ -925,16 +873,13 @@ def test_create_install_request_body():
     Then:
         Validate returned request body contains correct data
     """
-    packs_to_install = [['HelloWorld'], ['TestPack']]
-    packs_deps_data = {
-        'HelloWorld': {'currentVersion': '1.0.0'},
-        'TestPack': {'currentVersion': '2.0.0'}
-    }
+    packs_to_install = [["HelloWorld"], ["TestPack"]]
+    packs_deps_data = {"HelloWorld": {"currentVersion": "1.0.0"}, "TestPack": {"currentVersion": "2.0.0"}}
     result = script.create_install_request_body(packs_to_install, packs_deps_data)
 
     assert len(result) == 2
-    assert result[0][0]['id'] == 'HelloWorld'
-    assert result[1][0]['id'] == 'TestPack'
+    assert result[0][0]["id"] == "HelloWorld"
+    assert result[1][0]["id"] == "TestPack"
 
 
 def test_filter_deprecated_packs(mocker: MockFixture):
@@ -952,33 +897,30 @@ def test_filter_deprecated_packs(mocker: MockFixture):
         - Warning is logged for deprecated packs
         - List without deprecated packs is returned
     """
-    pack_ids = ['pack1', 'deprecated_pack', 'pack2']
+    pack_ids = ["pack1", "deprecated_pack", "pack2"]
     production_bucket = True
-    commit_hash = '1234abcd'
+    commit_hash = "1234abcd"
 
-    mocker.patch.object(script, 'is_pack_deprecated', side_effect=[False, True, False])
-    mocker.patch.object(script, 'logging')
+    mocker.patch.object(script, "is_pack_deprecated", side_effect=[False, True, False])
+    mocker.patch.object(script, "logging")
 
     result = script.filter_deprecated_packs(pack_ids, production_bucket, commit_hash)
 
-    assert result == ['pack1', 'pack2']
+    assert result == ["pack1", "pack2"]
     script.logging.warning.assert_called_with("Pack 'deprecated_pack' is deprecated (hidden) and will not be installed.")
 
 
-@pytest.mark.parametrize("list_of_packs, expected", [
-    (
-        [["pack1"], ["pack2", "pack3"]],
-        [["pack1", "pack2", "pack3"]]
-    ),
-    (
-        [["pack1"], ["pack2", "pack3"], ["pack4"]],
-        [["pack1", "pack2", "pack3", "pack4"]]
-    ),
-    (
-        [["pack1"], ["pack2", "pack3"], ["pack4", "pack5", "pack6"]],
-        [["pack1", "pack2", "pack3"], ["pack4", "pack5", "pack6"]]
-    )
-])
+@pytest.mark.parametrize(
+    "list_of_packs, expected",
+    [
+        ([["pack1"], ["pack2", "pack3"]], [["pack1", "pack2", "pack3"]]),
+        ([["pack1"], ["pack2", "pack3"], ["pack4"]], [["pack1", "pack2", "pack3", "pack4"]]),
+        (
+            [["pack1"], ["pack2", "pack3"], ["pack4", "pack5", "pack6"]],
+            [["pack1", "pack2", "pack3"], ["pack4", "pack5", "pack6"]],
+        ),
+    ],
+)
 def test_create_batches(mocker: MockFixture, list_of_packs, expected):
     """
     Given:
@@ -1011,15 +953,11 @@ def test_search_and_install_packs_success(mocker: MockFixture):
     mocker.patch.object(script, "filter_deprecated_packs", return_value=mock_packs)
     mocker.patch.object(script, "get_all_content_packs_dependencies", return_value={})
     mocker.patch.object(script, "save_graph_data_file_log")
-    mocker.patch.object(
-        script, "get_packs_and_dependencies_to_install", return_value=(True, set())
-    )
+    mocker.patch.object(script, "get_packs_and_dependencies_to_install", return_value=(True, set()))
     mocker.patch.object(script, "merge_cycles", return_value=DiGraph())
     mocker.patch.object(script, "install_packs", return_value=(True, []))
 
-    _, success = script.search_and_install_packs_and_their_dependencies(
-        pack_ids=mock_packs, client=MockClient()
-    )
+    _, success = script.search_and_install_packs_and_their_dependencies(pack_ids=mock_packs, client=MockClient())
 
     assert success is True
 
@@ -1040,15 +978,11 @@ def test_search_and_install_packs_deprecated_dependencies(mocker: MockFixture):
     mocker.patch.object(script, "filter_deprecated_packs", return_value=mock_packs)
     mocker.patch.object(script, "get_all_content_packs_dependencies", return_value={})
     mocker.patch.object(script, "save_graph_data_file_log")
-    mocker.patch.object(
-        script, "get_packs_and_dependencies_to_install", return_value=(False, set())
-    )
+    mocker.patch.object(script, "get_packs_and_dependencies_to_install", return_value=(False, set()))
     mocker.patch.object(script, "merge_cycles", return_value=DiGraph())
     mocker.patch.object(script, "install_packs", return_value=(True, []))
 
-    _, success = script.search_and_install_packs_and_their_dependencies(
-        pack_ids=mock_packs, client=MockClient()
-    )
+    _, success = script.search_and_install_packs_and_their_dependencies(pack_ids=mock_packs, client=MockClient())
 
     assert success is False
 
@@ -1069,22 +1003,16 @@ def test_search_and_install_packs_failure_install_packs(mocker: MockFixture):
     mocker.patch.object(script, "filter_deprecated_packs", return_value=mock_packs)
     mocker.patch.object(script, "get_all_content_packs_dependencies", return_value={})
     mocker.patch.object(script, "save_graph_data_file_log")
-    mocker.patch.object(
-        script, "get_packs_and_dependencies_to_install", return_value=(False, set())
-    )
+    mocker.patch.object(script, "get_packs_and_dependencies_to_install", return_value=(False, set()))
     mocker.patch.object(script, "merge_cycles", return_value=DiGraph())
     mocker.patch.object(script, "install_packs", return_value=(False, []))
 
-    _, success = script.search_and_install_packs_and_their_dependencies(
-        pack_ids=mock_packs, client=MockClient()
-    )
+    _, success = script.search_and_install_packs_and_their_dependencies(pack_ids=mock_packs, client=MockClient())
 
     assert success is False
 
 
-@pytest.mark.parametrize(
-    'pack_version, expected_results',
-    [('6.5.0', {'TestPack'}), ('6.8.0', set())])
+@pytest.mark.parametrize("pack_version, expected_results", [("6.5.0", {"TestPack"}), ("6.8.0", set())])
 def test_get_packs_with_higher_min_version(mocker: MockFixture, pack_version, expected_results):
     """
     Given:
@@ -1099,11 +1027,11 @@ def test_get_packs_with_higher_min_version(mocker: MockFixture, pack_version, ex
         - case 2: should filter the pack.
     """
     from Tests.Marketplace.common import get_packs_with_higher_min_version
+
     mocker.patch("Tests.Marketplace.common.extract_packs_artifacts")
 
-    mocker.patch("Tests.Marketplace.common.get_json_file",
-                 return_value={"serverMinVersion": "6.6.0"})
-    packs_with_higher_min_version = get_packs_with_higher_min_version({'TestPack'}, pack_version, "")
+    mocker.patch("Tests.Marketplace.common.get_json_file", return_value={"serverMinVersion": "6.6.0"})
+    packs_with_higher_min_version = get_packs_with_higher_min_version({"TestPack"}, pack_version, "")
     assert packs_with_higher_min_version == expected_results
 
 
@@ -1118,7 +1046,7 @@ def test_filter_packs_by_min_server_version_packs_filtered(mocker: MockFixture):
     """
     packs_id = {"Pack1", "Pack2", "Pack3"}
     server_version = "6.10.0"
-    mocker.patch('Tests.Marketplace.search_and_install_packs.get_packs_with_higher_min_version', return_value={"Pack2", "Pack3"})
+    mocker.patch("Tests.Marketplace.search_and_install_packs.get_packs_with_higher_min_version", return_value={"Pack2", "Pack3"})
 
     filtered_packs = script.filter_packs_by_min_server_version(packs_id, server_version, "")
 
@@ -1136,7 +1064,7 @@ def test_filter_packs_by_min_server_version_no_packs_filtered(mocker: MockFixtur
     """
     packs_id = {"Pack1", "Pack2", "Pack3"}
     server_version = "6.11.0"
-    mocker.patch('Tests.Marketplace.search_and_install_packs.get_packs_with_higher_min_version', return_value=set())
+    mocker.patch("Tests.Marketplace.search_and_install_packs.get_packs_with_higher_min_version", return_value=set())
 
     filtered_packs = script.filter_packs_by_min_server_version(packs_id, server_version, "")
 

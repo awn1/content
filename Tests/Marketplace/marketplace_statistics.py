@@ -12,7 +12,7 @@ from Tests.Marketplace.marketplace_constants import Metadata, LANDING_PAGE_SECTI
 
 
 class PackStatisticsHandler:
-    """" A class that manipulates the needed statistics of a given pack.
+    """ " A class that manipulates the needed statistics of a given pack.
 
     Attributes:
         pack_name (str): The pack name.
@@ -22,8 +22,9 @@ class PackStatisticsHandler:
 
     """
 
-    def __init__(self, pack_name, packs_statistics_df: DataFrame, packs_download_count_desc: Series,
-                 displayed_dependencies: list):
+    def __init__(
+        self, pack_name, packs_statistics_df: DataFrame, packs_download_count_desc: Series, displayed_dependencies: list
+    ):
         self.pack_name: str = pack_name
         self._packs_statistics_df: DataFrame = packs_statistics_df
         self._packs_dc_desc: Series = packs_download_count_desc
@@ -32,7 +33,7 @@ class PackStatisticsHandler:
         self.download_count: int = self._get_pack_downloads_count()
 
     def _get_pack_dependencies_sorted(self):
-        """ Filters the packs download count series by the pack dependencies
+        """Filters the packs download count series by the pack dependencies
 
         Returns:
             list: pack names that are dependencies of the current pack by descending download count
@@ -46,11 +47,11 @@ class PackStatisticsHandler:
             if dep_pack_name not in packs_dependencies_sorted:
                 packs_dependencies_sorted.append(dep_pack_name)
 
-        logging.debug(f'{self.pack_name} pack sorted dependencies: {packs_dependencies_sorted}')
+        logging.debug(f"{self.pack_name} pack sorted dependencies: {packs_dependencies_sorted}")
         return packs_dependencies_sorted
 
     def _get_pack_downloads_count(self):
-        """ Returns number of packs downloads from big query dataframe.
+        """Returns number of packs downloads from big query dataframe.
 
         Returns:
             int: number of packs downloads.
@@ -63,7 +64,7 @@ class PackStatisticsHandler:
 
     @staticmethod
     def calculate_search_rank(tags, certification, content_items):
-        """ Returns pack search rank.
+        """Returns pack search rank.
 
         The initial value is 0
         In case the pack has the tag Featured, its search rank will increase by 10
@@ -83,18 +84,18 @@ class PackStatisticsHandler:
         search_rank = 0
         all_deprecated = False
 
-        if 'Featured' in tags:
+        if "Featured" in tags:
             search_rank += 10
-        if 'New' in tags:
+        if "New" in tags:
             search_rank += 10
         if certification == Metadata.CERTIFIED:
             search_rank += 10
 
         if content_items:
-            integrations = content_items.get('integration')
+            integrations = content_items.get("integration")
             if isinstance(integrations, list):
                 for integration in integrations:
-                    if 'deprecated' in integration.get('name').lower():
+                    if "deprecated" in integration.get("name").lower():
                         all_deprecated = True
                     else:
                         all_deprecated = False
@@ -107,7 +108,7 @@ class PackStatisticsHandler:
 
 
 class StatisticsHandler:
-    """" A class that handles all-packs related statistics.
+    """ " A class that handles all-packs related statistics.
 
     Attributes:
         _bq_client (google.cloud.bigquery.client.Client): The Google Big-Query client.
@@ -119,20 +120,19 @@ class StatisticsHandler:
     """
 
     DOWNLOADS_TABLE = "oproxy-dev.shared_views.top_packs"  # packs downloads statistics table
-    TOP_PACKS_14_DAYS_TABLE = 'oproxy-dev.shared_views.top_packs_14_days'
+    TOP_PACKS_14_DAYS_TABLE = "oproxy-dev.shared_views.top_packs_14_days"
     BIG_QUERY_MAX_RESULTS = 2000  # big query max row results
 
     def __init__(self, service_account: str, index_folder_path: str):
         self._bq_client: Client = init_bigquery_client(service_account)
         self._index_folder_path: str = index_folder_path
         self.packs_statistics_df: DataFrame = self._get_packs_statistics_df()
-        self.packs_download_count_desc: Series = self.packs_statistics_df.num_count.sort_values(ascending=False).\
-            astype('int32')
+        self.packs_download_count_desc: Series = self.packs_statistics_df.num_count.sort_values(ascending=False).astype("int32")
         self.landing_page_sections = self.get_landing_page_sections()
         self.trending_packs = self._get_trending_packs()
 
     def _get_packs_statistics_df(self) -> DataFrame:
-        """ Runs big query, selects all columns from top_packs table and returns table as pandas data frame.
+        """Runs big query, selects all columns from top_packs table and returns table as pandas data frame.
         Additionally table index is set to pack_name (pack unique id).
 
 
@@ -143,13 +143,13 @@ class StatisticsHandler:
         # ignore missing package warning
         warnings.filterwarnings("ignore", message="Cannot create BigQuery Storage client, the dependency ")
         packs_statistic_table = self._bq_client.query(query).result().to_dataframe()
-        packs_statistic_table.set_index('pack_name', inplace=True)  # noqa: PD002
+        packs_statistic_table.set_index("pack_name", inplace=True)  # noqa: PD002
 
         return packs_statistic_table
 
     @staticmethod
     def get_landing_page_sections() -> dict:
-        """ Returns the landing page sections file content """
+        """Returns the landing page sections file content"""
         return mp_services.load_json(LANDING_PAGE_SECTIONS_PATH)
 
     def _filter_packs_from_before_3_months(self, pack_list_to_filter: list) -> list[str]:
@@ -168,7 +168,7 @@ class StatisticsHandler:
             if mp_services.Pack.pack_created_in_time_delta(pack_name, three_months_delta, self._index_folder_path):
                 filtered_packs_list.append(pack_name)
 
-        logging.debug(f'packs with less than 3 months creation time: {pformat(filtered_packs_list)}')
+        logging.debug(f"packs with less than 3 months creation time: {pformat(filtered_packs_list)}")
         return filtered_packs_list
 
     def _get_trending_packs(self) -> list:
@@ -181,9 +181,7 @@ class StatisticsHandler:
         """
         query = f"SELECT pack_name FROM `{StatisticsHandler.TOP_PACKS_14_DAYS_TABLE}` ORDER BY num_count DESC"
         packs_sorted_by_download_count_dataframe = self._bq_client.query(query).result().to_dataframe()
-        packs_sorted_by_download_count = [
-            pack_array[0] for pack_array in packs_sorted_by_download_count_dataframe.to_numpy()
-        ]
+        packs_sorted_by_download_count = [pack_array[0] for pack_array in packs_sorted_by_download_count_dataframe.to_numpy()]
         filtered_pack_list = self._filter_packs_from_before_3_months(packs_sorted_by_download_count)
         top_downloaded_packs = filtered_pack_list[:20]
 
@@ -194,11 +192,12 @@ class StatisticsHandler:
                 top_downloaded_packs.append(current_pack)
             current_iteration_index += 1
 
-        logging.debug(f'Found the following trending packs {pformat(top_downloaded_packs)}')
+        logging.debug(f"Found the following trending packs {pformat(top_downloaded_packs)}")
         return top_downloaded_packs
 
 
 # ========== HELPER FUNCTIONS ==========
+
 
 def init_bigquery_client(service_account=None):
     """Initialize google cloud big query client.

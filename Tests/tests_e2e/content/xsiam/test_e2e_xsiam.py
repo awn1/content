@@ -2,31 +2,17 @@ from demisto_sdk.commands.common.clients import XsiamClient
 
 
 def create_filter(size=50, show_installed=True, with_collection_type=False):
-
-    filter = {
-        "page": 0,
-        "size": size,
-        "sort": [
-            {
-                "field": "searchRank",
-                "asc": False
-            },
-            {
-                "field": "updated",
-                "acs": False
-            }
-        ]
-    }
+    filter = {"page": 0, "size": size, "sort": [{"field": "searchRank", "asc": False}, {"field": "updated", "acs": False}]}
 
     if not show_installed:
-        if 'general' not in filter:
-            filter['general'] = []
-        filter['general'].append('generalFieldNotInstalled')
+        if "general" not in filter:
+            filter["general"] = []
+        filter["general"].append("generalFieldNotInstalled")
 
     if with_collection_type:
-        if 'types' not in filter:
-            filter['types'] = []
-        filter['types'].append('Collection')
+        if "types" not in filter:
+            filter["types"] = []
+        filter["types"].append("Collection")
 
     return filter
 
@@ -46,7 +32,7 @@ def test_check_number_of_packs_in_marketplace(xsiam_client: XsiamClient):
     search_all_packs_filter = create_filter(size=1)
     results = xsiam_client.search_marketplace_packs(search_all_packs_filter)
 
-    assert results['total'] > 900
+    assert results["total"] > 900
 
 
 def test_check_number_of_collector_packs_in_marketplace(xsiam_client: XsiamClient):
@@ -64,4 +50,4 @@ def test_check_number_of_collector_packs_in_marketplace(xsiam_client: XsiamClien
     collection_packs_filter = create_filter(size=1, with_collection_type=True)
     results = xsiam_client.search_marketplace_packs(collection_packs_filter)
 
-    assert results['total'] > 120
+    assert results["total"] > 120

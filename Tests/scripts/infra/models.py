@@ -15,13 +15,18 @@ class PublicApiKey:
     created_by: Optional[str]
     user_name: Optional[str]
 
-    def __init__(self, id: str, key: str, comment: Optional[str] = None,
-                 roles: Optional[Union[str, list[str]]] = None,
-                 security_level: Optional[KeySecurityLevel] = None,
-                 expiration: Optional[datetime.datetime] = None,
-                 creation_time: Optional[datetime.datetime] = None,
-                 created_by: Optional[str] = None,
-                 user_name: Optional[str] = None):
+    def __init__(
+        self,
+        id: str,
+        key: str,
+        comment: Optional[str] = None,
+        roles: Optional[Union[str, list[str]]] = None,
+        security_level: Optional[KeySecurityLevel] = None,
+        expiration: Optional[datetime.datetime] = None,
+        creation_time: Optional[datetime.datetime] = None,
+        created_by: Optional[str] = None,
+        user_name: Optional[str] = None,
+    ):
         self.id = id
         self.key = key
         self.comment = comment

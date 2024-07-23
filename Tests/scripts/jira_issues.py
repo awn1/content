@@ -11,20 +11,23 @@ from jira.client import ResultList
 
 from Tests.scripts.utils import logging_wrapper as logging
 
-GITLAB_PROJECT_ID = os.getenv('CI_PROJECT_ID')
-GITLAB_SERVER_URL = os.getenv('CI_SERVER_URL')
-CI_PIPELINE_URL = os.getenv('CI_PIPELINE_URL', '')
+GITLAB_PROJECT_ID = os.getenv("CI_PROJECT_ID")
+GITLAB_SERVER_URL = os.getenv("CI_SERVER_URL")
+CI_PIPELINE_URL = os.getenv("CI_PIPELINE_URL", "")
 JIRA_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z"
 
 JiraServerInfo = namedtuple("JiraServerInfo", ["server_url", "api_key", "verify_ssl"])
-JiraTicketInfo = namedtuple("JiraTicketInfo", ["project_id", "issue_type", "component",
-                                               "issue_unresolved_transition_name", "additional_fields", "labels"])
+JiraTicketInfo = namedtuple(
+    "JiraTicketInfo", ["project_id", "issue_type", "component", "issue_unresolved_transition_name", "additional_fields", "labels"]
+)
 
 
 def get_jira_server_info() -> JiraServerInfo:
-    return JiraServerInfo(server_url=os.getenv("JIRA_SERVER_URL"),
-                          api_key=os.getenv("JIRA_API_KEY"),
-                          verify_ssl=bool(strtobool(os.getenv("JIRA_VERIFY_SSL", "true"))))
+    return JiraServerInfo(
+        server_url=os.getenv("JIRA_SERVER_URL"),
+        api_key=os.getenv("JIRA_API_KEY"),
+        verify_ssl=bool(strtobool(os.getenv("JIRA_VERIFY_SSL", "true"))),
+    )
 
 
 def get_jira_ticket_info() -> JiraTicketInfo:
@@ -37,9 +40,14 @@ def get_jira_ticket_info() -> JiraTicketInfo:
     additional_fields = json.loads(os.getenv("JIRA_ADDITIONAL_FIELDS", "{}"))
     # Jira label are a json string that will be parsed into a list of labels.
     labels = json.loads(os.getenv("JIRA_LABELS", "[]"))
-    return JiraTicketInfo(project_id=project_id, issue_type=issue_type, component=component,
-                          issue_unresolved_transition_name=issue_unresolved_transition_name,
-                          additional_fields=additional_fields, labels=labels)
+    return JiraTicketInfo(
+        project_id=project_id,
+        issue_type=issue_type,
+        component=component,
+        issue_unresolved_transition_name=issue_unresolved_transition_name,
+        additional_fields=additional_fields,
+        labels=labels,
+    )
 
 
 def generate_ticket_summary(prefix: str) -> str:
@@ -49,14 +57,17 @@ def generate_ticket_summary(prefix: str) -> str:
 
 
 def generate_query_by_component_and_issue_type(jira_ticket_info: JiraTicketInfo) -> str:
-    jira_labels = "".join(f" AND labels = \"{x}\"" for x in jira_ticket_info.labels) if jira_ticket_info.labels else ""
-    return (f"project = \"{jira_ticket_info.project_id}\" AND issuetype = \"{jira_ticket_info.issue_type}\" "
-            f"AND component = \"{jira_ticket_info.component}\" {jira_labels}")
+    jira_labels = "".join(f' AND labels = "{x}"' for x in jira_ticket_info.labels) if jira_ticket_info.labels else ""
+    return (
+        f'project = "{jira_ticket_info.project_id}" AND issuetype = "{jira_ticket_info.issue_type}" '
+        f'AND component = "{jira_ticket_info.component}" {jira_labels}'
+    )
 
 
 def generate_query_with_summary(jira_ticket_info: JiraTicketInfo, summary: str) -> str:
-    jql_query = (f"{generate_query_by_component_and_issue_type(jira_ticket_info)} "
-                 f"AND summary ~ \"{summary}\" ORDER BY created DESC")
+    jql_query = (
+        f"{generate_query_by_component_and_issue_type(jira_ticket_info)} " f'AND summary ~ "{summary}" ORDER BY created DESC'
+    )
     return jql_query
 
 
@@ -69,7 +80,7 @@ def jira_file_link(file_name: str) -> str:
 
 
 def jira_sanitize_file_name(file_name: str) -> str:
-    return re.sub(r'[^\w-]', '-', file_name).lower()
+    return re.sub(r"[^\w-]", "-", file_name).lower()
 
 
 def jira_color_text(text: str, color: str) -> str:
@@ -78,9 +89,10 @@ def jira_color_text(text: str, color: str) -> str:
 
 def get_transition(jira_ticket_info: JiraTicketInfo, jira_server: JIRA, jira_issue: Issue) -> str | None:
     transitions = jira_server.transitions(jira_issue)
-    unresolved_transition = next(filter(
-        lambda transition: transition['name'] == jira_ticket_info.issue_unresolved_transition_name, transitions), None)
-    return unresolved_transition['id'] if unresolved_transition else None
+    unresolved_transition = next(
+        filter(lambda transition: transition["name"] == jira_ticket_info.issue_unresolved_transition_name, transitions), None
+    )
+    return unresolved_transition["id"] if unresolved_transition else None
 
 
 def transition_jira_ticket_to_unresolved(jira_server: JIRA, jira_issue: Issue | None, unresolved_transition_id: str | None):
@@ -88,12 +100,13 @@ def transition_jira_ticket_to_unresolved(jira_server: JIRA, jira_issue: Issue | 
         jira_server.transition_issue(jira_issue, unresolved_transition_id)
 
 
-def find_existing_jira_ticket(jira_ticket_info: JiraTicketInfo,
-                              jira_server: JIRA,
-                              now: datetime,
-                              max_days_to_reopen: int,
-                              jira_issue: Issue | None,
-                              ) -> tuple[Issue | None, Issue | None, bool, str | None]:
+def find_existing_jira_ticket(
+    jira_ticket_info: JiraTicketInfo,
+    jira_server: JIRA,
+    now: datetime,
+    max_days_to_reopen: int,
+    jira_issue: Issue | None,
+) -> tuple[Issue | None, Issue | None, bool, str | None]:
     link_to_issue = None
     jira_issue_to_use = None
     unresolved_transition_id = None
@@ -101,14 +114,14 @@ def find_existing_jira_ticket(jira_ticket_info: JiraTicketInfo,
         searched_issue: Issue = jira_issue
         if searched_issue.get_field("resolution"):
             resolution_date = convert_jira_time_to_datetime(searched_issue.get_field("resolutiondate"))
-            if use_existing_issue := (resolution_date
-                                      and (now - resolution_date)
-                                      <= timedelta(days=max_days_to_reopen)):  # type: ignore[assignment]
+            if use_existing_issue := (resolution_date and (now - resolution_date) <= timedelta(days=max_days_to_reopen)):  # type: ignore[assignment]
                 if unresolved_transition_id := get_transition(jira_ticket_info, jira_server, jira_issue):
                     jira_issue_to_use = searched_issue
                 else:
-                    logging.error(f"Failed to find the '{jira_ticket_info.issue_unresolved_transition_name}' "
-                                  f"transition for issue {searched_issue.key}")
+                    logging.error(
+                        f"Failed to find the '{jira_ticket_info.issue_unresolved_transition_name}' "
+                        f"transition for issue {searched_issue.key}"
+                    )
                     jira_issue_to_use = None
                     use_existing_issue = False
                     link_to_issue = searched_issue
@@ -121,8 +134,9 @@ def find_existing_jira_ticket(jira_ticket_info: JiraTicketInfo,
 
 def generate_build_markdown_link(ci_pipeline_id: str) -> str:
     ci_pipeline_id_hash = f" #{ci_pipeline_id}" if ci_pipeline_id else ""
-    ci_pipeline_markdown_link = f"[Nightly{ci_pipeline_id_hash}|{CI_PIPELINE_URL}]" \
-        if CI_PIPELINE_URL else f"Nightly{ci_pipeline_id_hash}"
+    ci_pipeline_markdown_link = (
+        f"[Nightly{ci_pipeline_id_hash}|{CI_PIPELINE_URL}]" if CI_PIPELINE_URL else f"Nightly{ci_pipeline_id_hash}"
+    )
     return ci_pipeline_markdown_link
 
 
@@ -134,17 +148,19 @@ def jira_server_information(jira_server: JIRA) -> dict[str, Any]:
     return jira_server_info
 
 
-def jira_search_all_by_query(jira_server: JIRA,
-                             jql_query: str,
-                             max_results_per_request: int = 100,
-                             ) -> dict[str, list[Issue]]:
-
+def jira_search_all_by_query(
+    jira_server: JIRA,
+    jql_query: str,
+    max_results_per_request: int = 100,
+) -> dict[str, list[Issue]]:
     start_at = 0  # Initialize pagination parameters
     issues: dict[str, list[Issue]] = defaultdict(list)
     while True:
-        issues_batch: ResultList[Issue] = jira_server.search_issues(jql_query,  # type: ignore[assignment]
-                                                                    startAt=start_at,
-                                                                    maxResults=max_results_per_request)
+        issues_batch: ResultList[Issue] = jira_server.search_issues(
+            jql_query,  # type: ignore[assignment]
+            startAt=start_at,
+            maxResults=max_results_per_request,
+        )
         for issue in issues_batch:
             summary: str = issue.get_field("summary").lower()
             issues[summary].append(issue)

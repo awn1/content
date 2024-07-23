@@ -10,13 +10,13 @@ from Tests.scripts.infra.resources.constants import IS_PROD_ENV_PATH
 
 def is_production() -> bool:
     """return is the run executed on production environment"""
-    prod = os.getenv(IS_PROD_ENV_PATH) or 'no'
+    prod = os.getenv(IS_PROD_ENV_PATH) or "no"
     return bool(strtobool(prod))
 
 
 def is_mssp_tenant() -> bool:
     """return is the run executed on MSSP tenant"""
-    is_mssp = os.getenv(IS_MSSP_TENANT) or 'no'
+    is_mssp = os.getenv(IS_MSSP_TENANT) or "no"
     return bool(strtobool(is_mssp))
 
 
@@ -32,4 +32,4 @@ def is_gitlab_pipeline() -> bool:
 
 def is_unit_test_run(pytest_config):
     """return is the run executes unit tests"""
-    return 'unit_test' in pytest_config.invocation_dir.strpath or is_gitlab_pipeline()
+    return "unit_test" in pytest_config.invocation_dir.strpath or is_gitlab_pipeline()

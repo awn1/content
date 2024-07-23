@@ -13,8 +13,8 @@ import argparse
 SPECIAL_CHARS = [" ", "(", "(", ")", ".", "", "+", "="]
 GSM_MAXIMUM_LABEL_CHARS = 63
 DEV_PROJECT_ID = "269994096945"
-DATE_FORMAT = '%Y-%m-%d'
-SYNC_GSM_LABEL = 'sync-gsm'
+DATE_FORMAT = "%Y-%m-%d"
+SYNC_GSM_LABEL = "sync-gsm"
 
 
 class FilterLabels(Enum):
@@ -46,7 +46,7 @@ class ExpirationData:
     CENTRIFY_LABEL_NAME = "centrify"
     SKIP_REASON_LABEL_NAME = "skip_reason"
     JIRA_LINK_LABEL_NAME = "jira_link"
-    SECRET_OWNER = 'owner'
+    SECRET_OWNER = "owner"
 
     class Status:
         STATUS_LABEL_NAME = "status"
@@ -73,9 +73,7 @@ class GoogleSecreteManagerModule:
             return datetime.strftime(d, DATE_FORMAT) if d else None
 
     def __init__(self, service_account_file: str | None = None, project_id=DEV_PROJECT_ID):
-        self.client = self.create_secret_manager_client(
-            project_id, service_account_file
-        )
+        self.client = self.create_secret_manager_client(project_id, service_account_file)
 
     @staticmethod
     def convert_to_gsm_format(name: str, secret_name: bool = False) -> str:
@@ -92,15 +90,11 @@ class GoogleSecreteManagerModule:
             return name
         # the GSM label cannot be longer than 63 characters
         if len(name) > GSM_MAXIMUM_LABEL_CHARS:
-            logging.info(
-                f"Truncated the original value {name} to {name[:GSM_MAXIMUM_LABEL_CHARS]}"
-            )
+            logging.info(f"Truncated the original value {name} to {name[:GSM_MAXIMUM_LABEL_CHARS]}")
             name = name[:GSM_MAXIMUM_LABEL_CHARS]
         return name.lower()
 
-    def get_secret(
-        self, project_id: str, secret_id: str, version_id: str = "latest"
-    ) -> dict:
+    def get_secret(self, project_id: str, secret_id: str, version_id: str = "latest") -> dict:
         """
         Gets a secret from GSM
         :param project_id: the ID of the GCP project
@@ -113,9 +107,7 @@ class GoogleSecreteManagerModule:
         try:
             return json5.loads(response.payload.data.decode("UTF-8"))
         except Exception as e:
-            logging.error(
-                f'Secret json is malformed for: {secret_id} version: {response.name.split("/")[-1]}, got error: {e}'
-            )
+            logging.error(f'Secret json is malformed for: {secret_id} version: {response.name.split("/")[-1]}, got error: {e}')
             return {}
 
     def list_secrets(
@@ -143,22 +135,15 @@ class GoogleSecreteManagerModule:
             try:
                 labels = dict(secret.labels)
             except Exception as e:
-                logging.error(
-                    f"Error: The secret {secret.name} has no labels, got the error: {e}"
-                )
+                logging.error(f"Error: The secret {secret.name} has no labels, got the error: {e}")
             secret_id = labels.get("secret_id", "no_secret_id").split("__")[0]
             logging.debug(f"Getting the secret: {secret.name}")
-            search_ids = [self.convert_to_gsm_format(
-                s.lower()) for s in name_filter]
+            search_ids = [self.convert_to_gsm_format(s.lower()) for s in name_filter]
             try:
                 # Check if the secret comply to the function filter params
-                filter = [
-                    eval(f'{labels}.get("{k}"){v}') for k, v in labels_filter.items()
-                ]
+                filter = [eval(f'{labels}.get("{k}"){v}') for k, v in labels_filter.items()]
             except Exception as e:
-                logging.error(
-                    f"Eval function failed for the secret {secret.name}, error: {e}"
-                )
+                logging.error(f"Eval function failed for the secret {secret.name}, error: {e}")
                 filter = [False]
             if not all(filter) or (search_ids and secret_id not in search_ids):
                 continue
@@ -171,18 +156,14 @@ class GoogleSecreteManagerModule:
                     secret_value["labels"] = labels
                     secrets.append(secret_value)
                 except Exception as e:
-                    logging.error(
-                        f"Error getting the secret: {secret.name}, got the error: {e}"
-                    )
+                    logging.error(f"Error getting the secret: {secret.name}, got the error: {e}")
             else:
                 secret.labels = labels
                 secrets.append(secret)
 
         return secrets
 
-    def add_secret_version(
-        self, project_id: str, secret_id: str, payload: dict
-    ) -> None:
+    def add_secret_version(self, project_id: str, secret_id: str, payload: dict) -> None:
         """
         Add a new secret version to the given secret with the provided payload.
         :param project_id: The project ID for GCP
@@ -235,9 +216,7 @@ class GoogleSecreteManagerModule:
         )
 
     @staticmethod
-    def create_secret_manager_client(
-        project_id, service_account: str | None = None
-    ) -> secretmanager.SecretManagerServiceClient:
+    def create_secret_manager_client(project_id, service_account: str | None = None) -> secretmanager.SecretManagerServiceClient:
         """
         Creates GSM object using a service account
         :param project_id: The Google project ID to connect to
@@ -251,9 +230,7 @@ class GoogleSecreteManagerModule:
                 )
             else:
                 credentials, _project_id = default(quota_project_id=project_id)
-                client = secretmanager.SecretManagerServiceClient(
-                    credentials=credentials
-                )
+                client = secretmanager.SecretManagerServiceClient(credentials=credentials)
             return client
         except Exception as e:
             logging.error(f"Could not create GSM client, error: {e}")
@@ -272,9 +249,7 @@ class GoogleSecreteManagerModule:
         name = self.client.secret_path(project_id, secret_id)
         secret = {"name": name, "labels": labels}
         update_mask = {"paths": ["labels"]}
-        self.client.update_secret(
-            request={"secret": secret, "update_mask": update_mask}
-        )
+        self.client.update_secret(request={"secret": secret, "update_mask": update_mask})
         logging.info(f"Updated secret {secret_id} with labels {labels}")
 
     def list_secrets_metadata_by_query(self, project_id: str, query: str) -> list:
@@ -285,25 +260,23 @@ class GoogleSecreteManagerModule:
         :return: the secret as json5 object
         """
         parent = f"projects/{project_id}"
-        return list(
-            self.client.list_secrets(
-                request={"parent": parent, "filter": query})
-        )
+        return list(self.client.list_secrets(request={"parent": parent, "filter": query}))
 
     def get_secrets_from_project(self, project_id: str, pr_number: int | None = None, is_dev_branch: bool = False):
-        """getting the secrets from a given project id. Can also get a secret by stating a pr number
-        """
-        labels_filter = {FilterLabels.SECRET_ID: FilterOperators.NOT_NONE,
-                         FilterLabels.IGNORE_SECRET: FilterOperators.NONE,
-                         FilterLabels.SECRET_MERGE_TIME: FilterOperators.NONE}
+        """getting the secrets from a given project id. Can also get a secret by stating a pr number"""
+        labels_filter = {
+            FilterLabels.SECRET_ID: FilterOperators.NOT_NONE,
+            FilterLabels.IGNORE_SECRET: FilterOperators.NONE,
+            FilterLabels.SECRET_MERGE_TIME: FilterOperators.NONE,
+        }
         labels_filter[FilterLabels.IS_DEV_BRANCH] = FilterOperators.NOT_NONE if is_dev_branch else FilterOperators.NONE
         if pr_number:
             labels_filter[FilterLabels.PR_NUMBER] = f'{FilterOperators.EQUALS}"{pr_number}"'
 
-        secrets = self.list_secrets(
-            project_id, labels_filter, with_secrets=True)
+        secrets = self.list_secrets(project_id, labels_filter, with_secrets=True)
 
         return secrets
+
 
 def normalize_branch_name(branch_name: str):
     """normalizing the branch name if it contains the upload bucket suffix"""
@@ -311,13 +284,15 @@ def normalize_branch_name(branch_name: str):
         branch_name = branch_name.split(BUCKET_UPLOAD_BRANCH_SUFFIX)[0]
     return branch_name
 
-def create_github_client(gsm_object: GoogleSecreteManagerModule, project_id: str, github_token: str = ''):
+
+def create_github_client(gsm_object: GoogleSecreteManagerModule, project_id: str, github_token: str = ""):
     if not github_token:
-        github_token = gsm_object.get_secret(project_id, 'Github_Content_Token').get('GITHUB_TOKEN', '')
+        github_token = gsm_object.get_secret(project_id, "Github_Content_Token").get("GITHUB_TOKEN", "")
 
     return GithubClient(github_token)
 
-def get_secrets_from_gsm(options: argparse.Namespace, branch_name: str = '') -> dict:
+
+def get_secrets_from_gsm(options: argparse.Namespace, branch_name: str = "") -> dict:
     """
     Gets the dev secrets and main secrets from GSM and merges them
     :param branch_name: the name of the branch of the PR
@@ -328,40 +303,39 @@ def get_secrets_from_gsm(options: argparse.Namespace, branch_name: str = '') -> 
 
     master_secrets: List[dict] = []
     branch_secrets: List[dict] = []
-    logging.info(f'Getting secrets for the master branch from {options.gsm_project_id_prod=} project')
-    master_secrets = secret_conf.get_secrets_from_project(
-        options.gsm_project_id_prod)
-    logging.info(
-        f'Finished getting all secrets from prod, got {len(master_secrets)} master secrets')
+    logging.info(f"Getting secrets for the master branch from {options.gsm_project_id_prod=} project")
+    master_secrets = secret_conf.get_secrets_from_project(options.gsm_project_id_prod)
+    logging.info(f"Finished getting all secrets from prod, got {len(master_secrets)} master secrets")
 
-    if branch_name and branch_name != 'master':
+    if branch_name and branch_name != "master":
         pr_number = 0
         try:
             github_client = GithubClient(options.github_token)
             branch_name = normalize_branch_name(branch_name)
             pr_number = github_client.get_pr_number_from_branch_name(branch_name)
         except Exception as e:
-            if 'Did not find the PR' in str(e):
-                logging.info(f'Did not find the associated PR with the branch {branch_name}, you may be running from infra.' \
-                             'Will only use the secrets from prod')
+            if "Did not find the PR" in str(e):
+                logging.info(
+                    f"Did not find the associated PR with the branch {branch_name}, you may be running from infra."
+                    "Will only use the secrets from prod"
+                )
             else:
-                logging.info(f'Got the following error when trying to contact Github: {str(e)}')
+                logging.info(f"Got the following error when trying to contact Github: {str(e)}")
 
         if pr_number:
-            logging.info(
-                f'Getting secrets for the {branch_name} branch with pr number: {pr_number}')
-            branch_secrets = secret_conf.get_secrets_from_project(
-                options.gsm_project_id_dev, pr_number, is_dev_branch=True)
-            logging.info(
-                f'Finished getting all branch secrets, got {len(branch_secrets)} branch secrets')
+            logging.info(f"Getting secrets for the {branch_name} branch with pr number: {pr_number}")
+            branch_secrets = secret_conf.get_secrets_from_project(options.gsm_project_id_dev, pr_number, is_dev_branch=True)
+            logging.info(f"Finished getting all branch secrets, got {len(branch_secrets)} branch secrets")
 
     if branch_secrets:
         for dev_secret in branch_secrets:
             replaced = False
-            instance = dev_secret.get('instance_name', 'no_instance_name')
+            instance = dev_secret.get("instance_name", "no_instance_name")
             for i in range(len(master_secrets)):
-                if dev_secret['name'] == master_secrets[i]['name'] and \
-                        master_secrets[i].get('instance_name', 'no_instance_name') == instance:
+                if (
+                    dev_secret["name"] == master_secrets[i]["name"]
+                    and master_secrets[i].get("instance_name", "no_instance_name") == instance
+                ):
                     master_secrets[i] = dev_secret
                     replaced = True
                     break
@@ -369,10 +343,5 @@ def get_secrets_from_gsm(options: argparse.Namespace, branch_name: str = '') -> 
             if not replaced:
                 master_secrets.append(dev_secret)
 
-    secret_file = {
-        "username": options.user,
-        "userPassword": options.password,
-        "integrations": master_secrets
-    }
+    secret_file = {"username": options.user, "userPassword": options.password, "integrations": master_secrets}
     return secret_file
-

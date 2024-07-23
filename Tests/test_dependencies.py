@@ -68,13 +68,12 @@ class GraphTester:
         self.clusters = clusters
 
     def build_tests_graph_from_conf_json(self, tests_file_path, dependent_tests):
-        with open(tests_file_path, 'r') as myfile:
+        with open(tests_file_path, "r") as myfile:
             conf_json_string = myfile.read()
 
         tests_data = json.loads(conf_json_string)["tests"]
 
-        dependent_tests_data = [test_record for test_record in tests_data
-                                if test_record.get("playbookID") in dependent_tests]
+        dependent_tests_data = [test_record for test_record in tests_data if test_record.get("playbookID") in dependent_tests]
 
         self.add_test_graph_vertices(dependent_tests_data)
         self.add_test_graph_neighbors(dependent_tests_data)
@@ -104,7 +103,7 @@ def get_used_integrations(test_playbook_record):
 
 
 def get_dependent_and_independent_integrations(tests_file_path):
-    with open(tests_file_path, 'r') as myfile:
+    with open(tests_file_path, "r") as myfile:
         conf_json_string = myfile.read()
 
     conf_json_obj = json.loads(conf_json_string)
@@ -118,17 +117,19 @@ def get_dependent_and_independent_integrations(tests_file_path):
             else:
                 integration_tests_count[integration_name] = 1
 
-    dependent_integrations = [integration_name for integration_name in integration_tests_count
-                              if integration_tests_count[integration_name] > 1]
-    independent_integrations = [integration_name for integration_name in integration_tests_count
-                                if integration_tests_count[integration_name] <= 1]
+    dependent_integrations = [
+        integration_name for integration_name in integration_tests_count if integration_tests_count[integration_name] > 1
+    ]
+    independent_integrations = [
+        integration_name for integration_name in integration_tests_count if integration_tests_count[integration_name] <= 1
+    ]
     return dependent_integrations, independent_integrations
 
 
 def get_test_dependencies(tests_file_path):
     dependent_integrations = get_dependent_and_independent_integrations(tests_file_path)[0]
 
-    with open(tests_file_path, 'r') as myfile:
+    with open(tests_file_path, "r") as myfile:
         conf_json_string = myfile.read()
     conf_json_obj = json.loads(conf_json_string)
 
@@ -139,8 +140,7 @@ def get_test_dependencies(tests_file_path):
         playbook = test_record.get("playbookID", None)
         if playbook not in all_tests:
             all_tests.append(playbook)
-        dependent_integrations_used = [integration for integration in integrations_used
-                                       if integration in dependent_integrations]
+        dependent_integrations_used = [integration for integration in integrations_used if integration in dependent_integrations]
         if dependent_integrations_used and playbook not in dependent_tests:
             dependent_tests.append(playbook)
 

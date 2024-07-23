@@ -19,21 +19,21 @@ class ConnectorName:
         return self.name
 
     def __set__(self, instance, value):
-        raise AttributeError('Connector name cannot be overwritten')
+        raise AttributeError("Connector name cannot be overwritten")
 
 
 def generate_random_string(lowercase=True, uppercase=True, digits=True, length=6) -> str:
     if not any((lowercase, uppercase, digits)):
         raise TypeError("at least 1 option lowercase, uppercase or digits must be selected")
 
-    str_options = ''
+    str_options = ""
     if lowercase:
         str_options += string.ascii_lowercase
     if uppercase:
         str_options += string.ascii_uppercase
     if digits:
         str_options += string.digits
-    text = ''.join(random.choices(str_options, k=length))
+    text = "".join(random.choices(str_options, k=length))
     return text
 
 
@@ -63,15 +63,15 @@ def random_email() -> str:
 
 
 def md5_hash(text: str) -> str:
-    return hashlib.md5(text.encode('utf-8')).hexdigest()
+    return hashlib.md5(text.encode("utf-8")).hexdigest()
 
 
 def sha_hash(text: str) -> str:
-    return hashlib.sha1(text.encode('utf-8')).hexdigest()
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()
 
 
 def sha256_hash(text: str) -> str:
-    return hashlib.sha256(text.encode('utf-8')).hexdigest()
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def to_lower_camel_case(text: str) -> str:
@@ -112,4 +112,4 @@ def convert_mb_to_bytes(mb: Union[int, float]) -> int:
 
 def sanitize_text_for_json_parsing(text: str) -> str:
     """Sanitizes input text by replacing certain characters, ensuring JSON parsability without altering the code block"""
-    return text.replace(r"\'", "").replace('"', r"\"").replace('\\n', " ")
+    return text.replace(r"\'", "").replace('"', r"\"").replace("\\n", " ")

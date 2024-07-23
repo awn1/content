@@ -50,9 +50,7 @@ class GithubClient:
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            self.handle_error(
-                f"{method} request to github failed: {e}"
-            )
+            self.handle_error(f"{method} request to github failed: {e}")
             return None
 
     def graphql(
@@ -94,7 +92,7 @@ class GithubClient:
         branch: str | None = None,
         pr_number: str | None = None,
         is_open: bool = True,
-    ) -> dict :
+    ) -> dict:
         if not (sha1 or branch or pr_number):
             self.handle_error("Did not provide enough details to get PR data.")
             return {}
@@ -107,27 +105,25 @@ class GithubClient:
         else:
             res = self.search_pulls(sha1, branch, is_open)
 
-        if not res or res.get('total_count', 0) != 1:
-            self.handle_error(
-                f"Could not find a pull request where {branch=}, {sha1=}, {is_open=}"
-            )
+        if not res or res.get("total_count", 0) != 1:
+            self.handle_error(f"Could not find a pull request where {branch=}, {sha1=}, {is_open=}")
             return {}
         pulls: list = res["items"]
-        print(f'got pull: {pulls}')
+        print(f"got pull: {pulls}")
         return pulls[0]
 
     def get_pr_from_pr_number(self, pr_number: str) -> Optional[dict[Any, Any]]:
-        """gets the PR details """
+        """gets the PR details"""
         full_url = f"{self.base_url}/repos/{self.repository}/pulls/{pr_number}"
-        response = self.http_request('GET', full_url=full_url)
+        response = self.http_request("GET", full_url=full_url)
 
         return response
 
     def get_pr_from_branch_name(self, branch_name: str) -> Optional[dict[Any, Any]]:
         """gets the PR from the branch name"""
-        params = {'state': 'all', 'head': f'demisto:{branch_name}'}
+        params = {"state": "all", "head": f"demisto:{branch_name}"}
         full_url = f"{self.base_url}/repos/{self.repository}/pulls"
-        response = self.http_request('GET', full_url=full_url, params=params)
+        response = self.http_request("GET", full_url=full_url, params=params)
 
         return response
 
@@ -136,11 +132,11 @@ class GithubClient:
         response = self.get_pr_from_branch_name(branch_name)
         if isinstance(response, list):
             if len(response) == 0:
-                raise ValueError(f'Did not find the PR associated with {branch_name}')
+                raise ValueError(f"Did not find the PR associated with {branch_name}")
 
-            return response[0]['number']
+            return response[0]["number"]
         else:
-            raise ValueError(f'Did not get the expected response type from Github, got {type(response)}')
+            raise ValueError(f"Did not get the expected response type from Github, got {type(response)}")
 
 
 class GithubPullRequest(GithubClient):
@@ -204,7 +200,7 @@ class GithubPullRequest(GithubClient):
             end_tag = f"\n<!-- {section_name} - END -->"
             replace_pattern = f"({start_tag})(.*?)({end_tag})"
             if re.search(replace_pattern, current_comment, re.DOTALL):
-                updated_comment = re.sub(replace_pattern, fr"\1{comment}\3", current_comment, flags=re.DOTALL)
+                updated_comment = re.sub(replace_pattern, rf"\1{comment}\3", current_comment, flags=re.DOTALL)
             else:
                 comment = f"{start_tag}{comment}{end_tag}"
                 append = True
@@ -233,9 +229,9 @@ class GithubPullRequest(GithubClient):
         """adds labels to a Github pr"""
         body = {"labels": labels}
         full_url = f"{self.base_url}/repos/{self.repository}/issues/{self.data.get('number')}/labels"
-        self.http_request('POST', json_data=body, full_url=full_url)
+        self.http_request("POST", json_data=body, full_url=full_url)
 
     def delete_label_from_pr(self, label: str):
         """deletes label from a Github pr"""
         full_url = f"{self.base_url}/repos/{self.repository}/issues/{self.data.get('number')}/labels/{label}"
-        self.http_request('DELETE', full_url=full_url)
+        self.http_request("DELETE", full_url=full_url)

@@ -17,14 +17,12 @@ from packaging.version import Version
 from ruamel import yaml
 import demisto_client
 from demisto_sdk.commands.common.constants import FileType, MarketplaceVersions
-from demisto_sdk.commands.common.tools import run_command, get_yaml, \
-    str2bool, format_version, find_type, listdir_fullpath
+from demisto_sdk.commands.common.tools import run_command, get_yaml, str2bool, format_version, find_type, listdir_fullpath
 from demisto_sdk.commands.test_content.constants import SSH_USER
 from demisto_sdk.commands.test_content.mock_server import MITMProxy, run_with_mock, RESULT
 from demisto_sdk.commands.test_content.tools import update_server_configuration, is_redhat_instance
 from demisto_sdk.commands.common.git_util import GitUtil
-from Tests.Marketplace.search_and_install_packs import search_and_install_packs_and_their_dependencies, \
-    upload_zipped_packs
+from Tests.Marketplace.search_and_install_packs import search_and_install_packs_and_their_dependencies, upload_zipped_packs
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 from Tests.test_content import get_server_numeric_version
@@ -36,50 +34,44 @@ from Tests.Marketplace.marketplace_services import get_last_commit_from_index
 from pathlib import Path
 from SecretActions.google_secret_manager_handler import get_secrets_from_gsm
 
-MARKET_PLACE_MACHINES = ('master',)
-SKIPPED_PACKS = ['NonSupported', 'ApiModules']
-NO_PROXY = ','.join([
-    'oproxy.demisto.ninja',
-    'oproxy-dev.demisto.ninja',
-])
-NO_PROXY_CONFIG = {'python.pass.extra.keys': f'--env##no_proxy={NO_PROXY}'}  # noqa: E501
+MARKET_PLACE_MACHINES = ("master",)
+SKIPPED_PACKS = ["NonSupported", "ApiModules"]
+NO_PROXY = ",".join(
+    [
+        "oproxy.demisto.ninja",
+        "oproxy-dev.demisto.ninja",
+    ]
+)
+NO_PROXY_CONFIG = {"python.pass.extra.keys": f"--env##no_proxy={NO_PROXY}"}  # noqa: E501
 DOCKER_HARDENING_CONFIGURATION = {
-    'docker.cpu.limit': '1.0',
-    'docker.run.internal.asuser': 'true',
-    'limit.docker.cpu': 'true',
-    'python.pass.extra.keys': f'--memory=1g##--memory-swap=-1##--pids-limit=256##--ulimit=nofile=1024:8192##--env##no_proxy={NO_PROXY}',  # noqa: E501
-    'powershell.pass.extra.keys': f'--env##no_proxy={NO_PROXY}',
-    'monitoring.pprof': 'true',
-    'enable.pprof.memory.dump': 'true',
-    'limit.memory.dump.size': '14000',
-    'memdump.debug.level': '1',
+    "docker.cpu.limit": "1.0",
+    "docker.run.internal.asuser": "true",
+    "limit.docker.cpu": "true",
+    "python.pass.extra.keys": f"--memory=1g##--memory-swap=-1##--pids-limit=256##--ulimit=nofile=1024:8192##--env##no_proxy={NO_PROXY}",  # noqa: E501
+    "powershell.pass.extra.keys": f"--env##no_proxy={NO_PROXY}",
+    "monitoring.pprof": "true",
+    "enable.pprof.memory.dump": "true",
+    "limit.memory.dump.size": "14000",
+    "memdump.debug.level": "1",
 }
-DOCKER_HARDENING_CONFIGURATION_FOR_PODMAN = {
-    'docker.run.internal.asuser': 'true'
-}
+DOCKER_HARDENING_CONFIGURATION_FOR_PODMAN = {"docker.run.internal.asuser": "true"}
 MARKET_PLACE_CONFIGURATION = {
-    'content.pack.verify': 'false',
-    'marketplace.initial.sync.delay': '0',
-    'content.pack.ignore.missing.warnings.contentpack': 'true'
+    "content.pack.verify": "false",
+    "marketplace.initial.sync.delay": "0",
+    "content.pack.ignore.missing.warnings.contentpack": "true",
 }
-AVOID_DOCKER_IMAGE_VALIDATION = {
-    'content.validate.docker.images': 'false'
-}
-ID_SET_PATH = './artifacts/id_set.json'
+AVOID_DOCKER_IMAGE_VALIDATION = {"content.validate.docker.images": "false"}
+ID_SET_PATH = "./artifacts/id_set.json"
 XSOAR_SERVER_TYPE = "XSOAR"
 XSOAR_SASS_SERVER_TYPE = "XSOAR SAAS"
 XSIAM_SERVER_TYPE = "XSIAM"
 SERVER_TYPES = [XSOAR_SERVER_TYPE, XSOAR_SASS_SERVER_TYPE, XSIAM_SERVER_TYPE]
-MARKETPLACE_TEST_BUCKET = (
-    'marketplace-ci-build/content/builds'
-)
-MARKETPLACE_XSIAM_BUCKETS = (
-    'marketplace-v2-dist-dev/upload-flow/builds-xsiam'
-)
-ARTIFACTS_FOLDER_MPV2 = os.getenv('ARTIFACTS_FOLDER_MPV2', '/builds/xsoar/content/artifacts/marketplacev2')
-ARTIFACTS_FOLDER = os.getenv('ARTIFACTS_FOLDER')
-ARTIFACTS_FOLDER_SERVER_TYPE = os.getenv('ARTIFACTS_FOLDER_SERVER_TYPE')
-ENV_RESULTS_PATH = os.getenv('ENV_RESULTS_PATH', f'{ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json')
+MARKETPLACE_TEST_BUCKET = "marketplace-ci-build/content/builds"
+MARKETPLACE_XSIAM_BUCKETS = "marketplace-v2-dist-dev/upload-flow/builds-xsiam"
+ARTIFACTS_FOLDER_MPV2 = os.getenv("ARTIFACTS_FOLDER_MPV2", "/builds/xsoar/content/artifacts/marketplacev2")
+ARTIFACTS_FOLDER = os.getenv("ARTIFACTS_FOLDER")
+ARTIFACTS_FOLDER_SERVER_TYPE = os.getenv("ARTIFACTS_FOLDER_SERVER_TYPE")
+ENV_RESULTS_PATH = os.getenv("ENV_RESULTS_PATH", f"{ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json")
 SET_SERVER_KEYS = True
 
 
@@ -98,7 +90,7 @@ def filepath_to_integration_name(integration_file_path):
         (str): The name of the integration.
     """
     integration_yaml = get_yaml(integration_file_path)
-    integration_name = integration_yaml.get('name')
+    integration_name = integration_yaml.get("name")
     return integration_name
 
 
@@ -116,15 +108,14 @@ def packs_names_to_integrations_names(turned_non_hidden_packs_names: set[str]) -
         List[str]: The turned non-hidden integrations names list.
     """
     hidden_integrations = []
-    hidden_integrations_paths = [f'Packs/{pack_name}/Integrations' for pack_name in turned_non_hidden_packs_names]
+    hidden_integrations_paths = [f"Packs/{pack_name}/Integrations" for pack_name in turned_non_hidden_packs_names]
     # extract integration names within the turned non-hidden packs.
     for hidden_integrations_path in hidden_integrations_paths:
         if os.path.exists(hidden_integrations_path):
             pack_integrations_paths = listdir_fullpath(hidden_integrations_path)
             for integration_path in pack_integrations_paths:
                 hidden_integrations.append(integration_path.split("/")[-1])
-    hidden_integrations_names = [integration for integration in hidden_integrations if
-                                 not str(integration).startswith('.')]
+    hidden_integrations_names = [integration for integration in hidden_integrations if not str(integration).startswith(".")]
     return hidden_integrations_names
 
 
@@ -140,15 +131,16 @@ def check_test_version_compatible_with_server(test, server_version):
     Returns:
         (bool) True if test is compatible with server version or False otherwise.
     """
-    test_from_version = format_version(test.get('fromversion', '0.0.0'))
-    test_to_version = format_version(test.get('toversion', '99.99.99'))
+    test_from_version = format_version(test.get("fromversion", "0.0.0"))
+    test_to_version = format_version(test.get("toversion", "99.99.99"))
     server_version = format_version(server_version)
 
     if not Version(test_from_version) <= Version(server_version) <= Version(test_to_version):
-        playbook_id = test.get('playbookID')
+        playbook_id = test.get("playbookID")
         logging.debug(
-            f'Test Playbook: {playbook_id} was ignored in the content installation test due to version mismatch '
-            f'(test versions: {test_from_version}-{test_to_version}, server version: {server_version})')
+            f"Test Playbook: {playbook_id} was ignored in the content installation test due to version mismatch "
+            f"(test versions: {test_from_version}-{test_to_version}, server version: {server_version})"
+        )
         return False
     return True
 
@@ -165,9 +157,8 @@ def filter_tests_with_incompatible_version(tests, server_version):
         (lst): List of filtered tests (compatible version)
     """
 
-    filtered_tests = [test for test in tests if
-                      check_test_version_compatible_with_server(test, server_version)]
-    logging.debug(f'Filtered tests (compatible version): {filtered_tests}')
+    filtered_tests = [test for test in tests if check_test_version_compatible_with_server(test, server_version)]
+    logging.debug(f"Filtered tests (compatible version): {filtered_tests}")
     return filtered_tests
 
 
@@ -190,8 +181,8 @@ def change_placeholders_to_values(placeholders_map, config_item):
 
 
 def test_pack_metadata():
-    now = datetime.now().isoformat().split('.')[0]
-    now = f'{now}Z'
+    now = datetime.now().isoformat().split(".")[0]
+    now = f"{now}Z"
     metadata = {
         "name": "test pack",
         "id": str(uuid.uuid4()),
@@ -210,14 +201,12 @@ def test_pack_metadata():
         "currentVersion": "1.0.0",
         "general": [],
         "tags": [],
-        "categories": [
-            "Forensics & Malware Analysis"
-        ],
+        "categories": ["Forensics & Malware Analysis"],
         "contentItems": {},
         "integrations": [],
         "useCases": [],
         "keywords": [],
-        "dependencies": {}
+        "dependencies": {},
     }
     return json.dumps(metadata, indent=4)
 
@@ -229,7 +218,7 @@ def get_test_playbooks_in_dir(path):
 
 
 def test_files(content_path, packs_to_install: list | None = None):
-    packs_root = f'{content_path}/Packs'
+    packs_root = f"{content_path}/Packs"
     packs_to_install = packs_to_install or []
 
     # if is given a list of packs to install then collect the test playbook only for those packs (in commit/push build)
@@ -242,12 +231,12 @@ def test_files(content_path, packs_to_install: list | None = None):
     for pack_dir in packs:
         if pack_dir in SKIPPED_PACKS:
             continue
-        playbooks_root = f'{pack_dir.path}/TestPlaybooks'
+        playbooks_root = f"{pack_dir.path}/TestPlaybooks"
         if os.path.isdir(playbooks_root):
             for playbook_path, playbook in get_test_playbooks_in_dir(playbooks_root):
                 yield playbook_path, playbook
-            if os.path.isdir(f'{playbooks_root}/NonCircleTests'):
-                for playbook_path, playbook in get_test_playbooks_in_dir(f'{playbooks_root}/NonCircleTests'):
+            if os.path.isdir(f"{playbooks_root}/NonCircleTests"):
+                for playbook_path, playbook in get_test_playbooks_in_dir(f"{playbooks_root}/NonCircleTests"):
                     yield playbook_path, playbook
 
 
@@ -257,15 +246,19 @@ def get_env_conf():
 
     if Build.run_environment == Running.WITH_LOCAL_SERVER:
         # START CHANGE ON LOCAL RUN #
-        return [{
-            "InstanceDNS": "http://localhost:8080",
-            "Role": "Server Master"  # e.g. 'Server Master'
-        }]
+        return [
+            {
+                "InstanceDNS": "http://localhost:8080",
+                "Role": "Server Master",  # e.g. 'Server Master'
+            }
+        ]
     if Build.run_environment == Running.WITH_OTHER_SERVER:
-        return [{
-            "InstanceDNS": "DNS NAME",  # without http prefix
-            "Role": "DEMISTO EVN"  # e.g. 'Server Master'
-        }]
+        return [
+            {
+                "InstanceDNS": "DNS NAME",  # without http prefix
+                "Role": "DEMISTO EVN",  # e.g. 'Server Master'
+            }
+        ]
 
     #  END CHANGE ON LOCAL RUN  #
     return None
@@ -283,10 +276,11 @@ def get_servers(env_results, instance_role):
         (lst): The server url list to connect to
     """
 
-    return [env.get('InstanceDNS') for env in env_results if instance_role in env.get('Role')]
+    return [env.get("InstanceDNS") for env in env_results if instance_role in env.get("Role")]
 
 
 # ------------------------------------------------ Server Classes -------------------------------------------
+
 
 class Running(IntEnum):
     CI_RUN = 0
@@ -295,13 +289,12 @@ class Running(IntEnum):
 
 
 class Server:
-
     def __init__(self):
         self.internal_ip = None
         self.user_name = None
         self.password = None
-        self.name = ''
-        self.build_number = 'unknown'
+        self.name = ""
+        self.build_number = "unknown"
         self.pack_ids_to_install = []
         self.tests_to_run = []
         self.build = None
@@ -309,8 +302,7 @@ class Server:
         self.test_pack_path = None
 
     @abstractmethod
-    def install_packs(self, pack_ids: list | None = None, install_packs_in_batches=False,
-                      production_bucket: bool = True) -> bool:
+    def install_packs(self, pack_ids: list | None = None, install_packs_in_batches=False, production_bucket: bool = True) -> bool:
         pass
 
     @property
@@ -331,18 +323,19 @@ class Server:
         In this step we want to get only updated packs (not new packs).
         :return: all non added packs i.e. unchanged packs (dependencies) and modified packs
         """
-        compare_against = (
-            'master~1' if self.build.branch_name == 'master' else 'origin/master'
+        compare_against = "master~1" if self.build.branch_name == "master" else "origin/master"
+        added_files = run_command(
+            f"git diff --name-only --diff-filter=A "
+            f"{compare_against}..refs/heads/{self.build.branch_name} -- Packs/*/pack_metadata.json"
         )
-        added_files = run_command(f'git diff --name-only --diff-filter=A '
-                                  f'{compare_against}..refs/heads/{self.build.branch_name} -- Packs/*/pack_metadata.json')
-        if os.getenv('CONTRIB_BRANCH'):
-            added_contrib_files = run_command(
-                'git status -uall --porcelain -- Packs/*/pack_metadata.json | grep "?? "').replace('?? ', '')
-            added_files = added_files if not added_contrib_files else '\n'.join([added_files, added_contrib_files])
+        if os.getenv("CONTRIB_BRANCH"):
+            added_contrib_files = run_command('git status -uall --porcelain -- Packs/*/pack_metadata.json | grep "?? "').replace(
+                "?? ", ""
+            )
+            added_files = added_files if not added_contrib_files else "\n".join([added_files, added_contrib_files])
 
-        added_files = filter(lambda x: x, added_files.split('\n'))
-        added_pack_ids = (x.split('/')[1] for x in added_files)
+        added_files = filter(lambda x: x, added_files.split("\n"))
+        added_pack_ids = (x.split("/")[1] for x in added_files)
         # pack_ids_to_install contains new packs and modified. added_pack_ids contains new packs only.
         return set(self.pack_ids_to_install) - set(added_pack_ids)
 
@@ -354,11 +347,8 @@ class Server:
         Returns:
             (str): The git diff output.
         """
-        compare_against = (
-            f"origin/master{'' if self.build.branch_name != 'master' else '~1'}"
-        )
-        return run_command(
-            f'git diff {compare_against}..{self.build.branch_name} -- Packs/{pack_name}/pack_metadata.json')
+        compare_against = f"origin/master{'' if self.build.branch_name != 'master' else '~1'}"
+        return run_command(f"git diff {compare_against}..{self.build.branch_name} -- Packs/{pack_name}/pack_metadata.json")
 
     def check_hidden_field_changed(self, pack_name: str) -> bool:
         """
@@ -369,8 +359,7 @@ class Server:
             (bool): True if the pack transformed to non-hidden.
         """
         diff = self.run_git_diff(pack_name)
-        return any(
-            '"hidden": false' in diff_line and diff_line.split()[0].startswith('+') for diff_line in diff.splitlines())
+        return any('"hidden": false' in diff_line and diff_line.split()[0].startswith("+") for diff_line in diff.splitlines())
 
     def get_turned_non_hidden_packs(self, modified_packs_names: set[str]) -> set[str]:
         """
@@ -395,8 +384,7 @@ class Server:
             (bool): whether new (current) marketplace was added to the pack_metadata or not
         """
         spaced_diff = " ".join(diff.split())
-        return (
-                f'+ "{self.build.marketplace_name}"' in spaced_diff) and f'- "{self.build.marketplace_name}"' not in spaced_diff
+        return (f'+ "{self.build.marketplace_name}"' in spaced_diff) and f'- "{self.build.marketplace_name}"' not in spaced_diff
 
     def filter_new_to_marketplace_packs(self, modified_pack_names: set[str]) -> set[str]:
         """
@@ -426,8 +414,9 @@ class Server:
 
         non_hidden_packs = self.get_turned_non_hidden_packs(modified_packs_names)
 
-        packs_with_higher_min_version = get_packs_with_higher_min_version(set(self.pack_ids_to_install),
-                                                                          self.server_numeric_version)
+        packs_with_higher_min_version = get_packs_with_higher_min_version(
+            set(self.pack_ids_to_install), self.server_numeric_version
+        )
 
         # packs to install used in post update
         self.pack_ids_to_install = list(set(self.pack_ids_to_install) - packs_with_higher_min_version)
@@ -436,8 +425,9 @@ class Server:
             modified_packs_names - non_hidden_packs - packs_with_higher_min_version
         )
 
-        packs_not_to_install_in_pre_update = set().union(*[packs_with_higher_min_version,
-                                                           non_hidden_packs, first_added_to_marketplace])
+        packs_not_to_install_in_pre_update = set().union(
+            *[packs_with_higher_min_version, non_hidden_packs, first_added_to_marketplace]
+        )
         packs_to_install_in_pre_update = modified_packs_names - packs_not_to_install_in_pre_update
         return packs_to_install_in_pre_update, non_hidden_packs
 
@@ -450,11 +440,10 @@ class Server:
 
         # get changed yaml files (filter only added and modified files)
         git_util = GitUtil()
-        if str2bool(os.getenv('IS_NIGHTLY')) or os.getenv('IFRA_ENV_TYPE') == 'Bucket-Upload':
-            prev_ver = get_last_commit_from_index(self.build.service_account,
-                                                  MarketplaceVersions(self.build.marketplace_name))
+        if str2bool(os.getenv("IS_NIGHTLY")) or os.getenv("IFRA_ENV_TYPE") == "Bucket-Upload":
+            prev_ver = get_last_commit_from_index(self.build.service_account, MarketplaceVersions(self.build.marketplace_name))
         else:
-            prev_ver = 'origin/master'
+            prev_ver = "origin/master"
 
         logging.info(f"get_new_and_modified_integration_files, {prev_ver=}")
         modified_files = git_util.modified_files(prev_ver=prev_ver)
@@ -462,19 +451,22 @@ class Server:
 
         logging.info(f"{modified_files=},\n{added_files=}")
         new_integration_files = [
-            file_path for file_path in added_files if
-            find_type(str(file_path)) in [FileType.INTEGRATION, FileType.BETA_INTEGRATION]
+            file_path
+            for file_path in added_files
+            if find_type(str(file_path)) in [FileType.INTEGRATION, FileType.BETA_INTEGRATION]
         ]
 
         modified_integration_files = [
-            file_path for file_path in modified_files if
-            find_type(str(file_path)) in [FileType.INTEGRATION, FileType.BETA_INTEGRATION]
+            file_path
+            for file_path in modified_files
+            if find_type(str(file_path)) in [FileType.INTEGRATION, FileType.BETA_INTEGRATION]
         ]
         return new_integration_files, modified_integration_files
 
     @staticmethod
-    def update_integration_lists(new_integrations_names: list[str], packs_not_to_install: set[str] | None,
-                                 modified_integrations_names: list[str]) -> tuple[list[str], list[str]]:
+    def update_integration_lists(
+        new_integrations_names: list[str], packs_not_to_install: set[str] | None, modified_integrations_names: list[str]
+    ) -> tuple[list[str], list[str]]:
         """
         Add the turned non-hidden integrations names to the new integrations names list and
          remove it from modified integrations names.
@@ -507,17 +499,18 @@ class Server:
         Returns:
             Tuple[List[str], List[str]]: The list of new integrations names and list of modified integrations names.
         """
-        new_integrations_files, modified_integrations_files = self.get_new_and_modified_integration_files() \
-            if not self.build.is_private else ([], [])
+        new_integrations_files, modified_integrations_files = (
+            self.get_new_and_modified_integration_files() if not self.build.is_private else ([], [])
+        )
         new_integrations_names, modified_integrations_names = [], []
 
         if new_integrations_files:
             new_integrations_names = get_integration_names_from_files(new_integrations_files)
-            logging.info(f'New Integrations Since Last Release:\n{new_integrations_names}')
+            logging.info(f"New Integrations Since Last Release:\n{new_integrations_names}")
 
         if modified_integrations_files:
             modified_integrations_names = get_integration_names_from_files(modified_integrations_files)
-            logging.info(f'Updated Integrations Since Last Release:\n{modified_integrations_names}')
+            logging.info(f"Updated Integrations Since Last Release:\n{modified_integrations_names}")
         return self.update_integration_lists(new_integrations_names, packs_not_to_install, modified_integrations_names)
 
     # ------------------------------ Configure and test integrations ----------------------------------------------
@@ -535,22 +528,19 @@ class Server:
         tests: dict = self.build.tests
         tests_for_iteration: list[dict]
         if Build.run_environment == Running.CI_RUN:
-            tests_for_iteration = list(filter(lambda test: test.get('playbookID', '') in self.tests_to_run, tests))
+            tests_for_iteration = list(filter(lambda test: test.get("playbookID", "") in self.tests_to_run, tests))
             tests_for_iteration = filter_tests_with_incompatible_version(tests_for_iteration, server_numeric_version)
             return tests_for_iteration
 
         # START CHANGE ON LOCAL RUN #
         return [
-            {
-                "playbookID": "Docker Hardening Test",
-                "fromversion": "5.0.0"
-            },
+            {"playbookID": "Docker Hardening Test", "fromversion": "5.0.0"},
             {
                 "integrations": "SplunkPy",
                 "playbookID": "SplunkPy-Test-V2",
                 "memory_threshold": 500,
-                "instance_names": "use_default_handler"
-            }
+                "instance_names": "use_default_handler",
+            },
         ]
         #  END CHANGE ON LOCAL RUN  #
 
@@ -567,19 +557,19 @@ class Server:
         Returns:
             (list): List of integration objects to configure.
         """
-        integrations_conf = test.get('integrations', [])
+        integrations_conf = test.get("integrations", [])
 
         if not isinstance(integrations_conf, list):
             integrations_conf = [integrations_conf]
 
         integrations = [
-            {'name': integration, 'params': {}} for
-            integration in integrations_conf if integration not in skipped_integrations_conf
+            {"name": integration, "params": {}}
+            for integration in integrations_conf
+            if integration not in skipped_integrations_conf
         ]
         return integrations
 
-    def group_integrations(self, integrations, new_integrations_names,
-                           modified_integrations_names):
+    def group_integrations(self, integrations, new_integrations_names, modified_integrations_names):
         """
         Filter integrations into their respective lists - new, modified or unchanged. if it's on the skip list, then
         skip if random tests were chosen then we may be configuring integrations that are neither new nor modified.
@@ -597,7 +587,7 @@ class Server:
         unchanged_integrations = []
         integration_to_status = {}
         for integration in integrations:
-            integration_name = integration.get('name', '')
+            integration_name = integration.get("name", "")
             if integration_name in self.build.skipped_integrations_conf:
                 continue
 
@@ -605,10 +595,10 @@ class Server:
                 new_integrations.append(integration)
             elif integration_name in modified_integrations_names:
                 modified_integrations.append(integration)
-                integration_to_status[integration_name] = 'Modified Integration'
+                integration_to_status[integration_name] = "Modified Integration"
             else:
                 unchanged_integrations.append(integration)
-                integration_to_status[integration_name] = 'Unchanged Integration'
+                integration_to_status[integration_name] = "Unchanged Integration"
         return new_integrations, modified_integrations, unchanged_integrations, integration_to_status
 
     @abstractmethod
@@ -618,12 +608,7 @@ class Server:
         """
         pass
 
-    def set_integration_params(self,
-                               integrations,
-                               secret_params,
-                               instance_names,
-                               placeholders_map,
-                               logging_module=logging):
+    def set_integration_params(self, integrations, secret_params, instance_names, placeholders_map, logging_module=logging):
         """
         For each integration object, fill in the parameter values needed to configure an instance from
         the secret_params taken from our secret configuration file. Because there may be a number of
@@ -652,9 +637,12 @@ class Server:
             (bool): True if integrations params were filled with secret configuration values, otherwise false
         """
         for integration in integrations:
-            integration_params = [change_placeholders_to_values(placeholders_map, item) for item
-                                  in secret_params if item['name'] == integration['name']]
-            if integration['name'] == "Core REST API":
+            integration_params = [
+                change_placeholders_to_values(placeholders_map, item)
+                for item in secret_params
+                if item["name"] == integration["name"]
+            ]
+            if integration["name"] == "Core REST API":
                 # Relevant only for cloud
                 self.add_core_pack_params(integration_params)
 
@@ -667,32 +655,35 @@ class Server:
                 if len(integration_params) != 1:
                     found_matching_instance = False
                     for item in integration_params:
-                        if item.get('instance_name', 'Not Found') in instance_names:
+                        if item.get("instance_name", "Not Found") in instance_names:
                             matched_integration_params = item
                             found_matching_instance = True
 
                     if not found_matching_instance:
-                        optional_instance_names = [optional_integration.get('instance_name', 'None')
-                                                   for optional_integration in integration_params]
-                        failed_match_instance_msg = 'There are {} instances of {}, please select one of them by using' \
-                                                    ' the instance_name argument in conf.json. The options are:\n{}'
-                        logging_module.error(failed_match_instance_msg.format(len(integration_params),
-                                                                              integration['name'],
-                                                                              '\n'.join(optional_instance_names)))
+                        optional_instance_names = [
+                            optional_integration.get("instance_name", "None") for optional_integration in integration_params
+                        ]
+                        failed_match_instance_msg = (
+                            "There are {} instances of {}, please select one of them by using"
+                            " the instance_name argument in conf.json. The options are:\n{}"
+                        )
+                        logging_module.error(
+                            failed_match_instance_msg.format(
+                                len(integration_params), integration["name"], "\n".join(optional_instance_names)
+                            )
+                        )
                         return False
 
-                integration['params'] = matched_integration_params.get('params', {})
-                integration['byoi'] = matched_integration_params.get('byoi', True)
-                integration['instance_name'] = matched_integration_params.get('instance_name', integration['name'])
-                integration['validate_test'] = matched_integration_params.get('validate_test', True)
-                if integration['name'] not in self.build.unmockable_integrations:
-                    integration['params'].update({'proxy': True})
-                    logging.debug(
-                        f'Configuring integration "{integration["name"]}" with proxy=True')
+                integration["params"] = matched_integration_params.get("params", {})
+                integration["byoi"] = matched_integration_params.get("byoi", True)
+                integration["instance_name"] = matched_integration_params.get("instance_name", integration["name"])
+                integration["validate_test"] = matched_integration_params.get("validate_test", True)
+                if integration["name"] not in self.build.unmockable_integrations:
+                    integration["params"].update({"proxy": True})
+                    logging.debug(f'Configuring integration "{integration["name"]}" with proxy=True')
                 else:
-                    integration['params'].update({'proxy': False})
-                    logging.debug(
-                        f'Configuring integration "{integration["name"]}" with proxy=False')
+                    integration["params"].update({"proxy": False})
+                    logging.debug(f'Configuring integration "{integration["name"]}" with proxy=False')
 
         return True
 
@@ -704,24 +695,17 @@ class Server:
             integration_name (str): The name of the integration which the server configurations keys are related to.
 
         """
-        if 'server_keys' not in integration_params or not SET_SERVER_KEYS:
+        if "server_keys" not in integration_params or not SET_SERVER_KEYS:
             return
 
-        logging.info(f'Setting server keys for integration: {integration_name}')
+        logging.info(f"Setting server keys for integration: {integration_name}")
 
-        data: dict = {
-            'data': {},
-            'version': -1
-        }
+        data: dict = {"data": {}, "version": -1}
 
-        for key, value in integration_params.get('server_keys').items():
-            data['data'][key] = value
+        for key, value in integration_params.get("server_keys").items():
+            data["data"][key] = value
 
-        update_server_configuration(
-            client=self.client,
-            server_configuration=data,
-            error_msg='Failed to set server keys'
-        )
+        update_server_configuration(client=self.client, server_configuration=data, error_msg="Failed to set server keys")
 
     @staticmethod
     def set_module_params(param_conf, integration_params):
@@ -739,33 +723,31 @@ class Server:
         Returns:
             (dict): The configured parameter object
         """
-        if param_conf['display'] in integration_params or param_conf['name'] in integration_params:
+        if param_conf["display"] in integration_params or param_conf["name"] in integration_params:
             # param defined in conf
-            key = param_conf['display'] if param_conf['display'] in integration_params else param_conf['name']
-            if key == 'credentials' or key == "creds_apikey":
+            key = param_conf["display"] if param_conf["display"] in integration_params else param_conf["name"]
+            if key == "credentials" or key == "creds_apikey":
                 credentials = integration_params[key]
                 param_value = {
-                    'credential': '',
-                    'identifier': credentials.get('identifier', ''),
-                    'password': credentials['password'],
-                    'passwordChanged': False
+                    "credential": "",
+                    "identifier": credentials.get("identifier", ""),
+                    "password": credentials["password"],
+                    "passwordChanged": False,
                 }
             else:
                 param_value = integration_params[key]
 
-            param_conf['value'] = param_value
-            param_conf['hasvalue'] = True
-        elif param_conf['defaultValue']:
+            param_conf["value"] = param_value
+            param_conf["hasvalue"] = True
+        elif param_conf["defaultValue"]:
             # if the parameter doesn't have a value provided in the integration's configuration values
             # but does have a default value then assign it to the parameter for the module instance
-            param_conf['value'] = param_conf['defaultValue']
+            param_conf["value"] = param_conf["defaultValue"]
         return param_conf
 
-    def set_integration_instance_parameters(self,
-                                            integration_configuration,
-                                            integration_params,
-                                            integration_instance_name,
-                                            is_byoi):
+    def set_integration_instance_parameters(
+        self, integration_configuration, integration_params, integration_instance_name, is_byoi
+    ):
         """Set integration module values for integration instance creation
 
         The integration_configuration and integration_params should match, in that
@@ -790,37 +772,37 @@ class Server:
             (dict): The configured module instance to send to the Demisto server for
             instantiation.
         """
-        module_configuration = integration_configuration.get('configuration', {})
+        module_configuration = integration_configuration.get("configuration", {})
         if not module_configuration:
             module_configuration = []
 
-        if 'integrationInstanceName' in integration_params:
-            instance_name = integration_params['integrationInstanceName']
+        if "integrationInstanceName" in integration_params:
+            instance_name = integration_params["integrationInstanceName"]
         else:
-            instance_name = '{}_test_{}'.format(integration_instance_name.replace(' ', '_'), str(uuid.uuid4()))
+            instance_name = "{}_test_{}".format(integration_instance_name.replace(" ", "_"), str(uuid.uuid4()))
 
         # define module instance
         module_instance = {
-            'brand': integration_configuration['name'],
-            'category': integration_configuration['category'],
-            'configuration': integration_configuration,
-            'data': [],
-            'enabled': "true",
-            'engine': '',
-            'id': '',
-            'isIntegrationScript': is_byoi,
-            'name': instance_name,
-            'passwordProtected': False,
-            'version': 0
+            "brand": integration_configuration["name"],
+            "category": integration_configuration["category"],
+            "configuration": integration_configuration,
+            "data": [],
+            "enabled": "true",
+            "engine": "",
+            "id": "",
+            "isIntegrationScript": is_byoi,
+            "name": instance_name,
+            "passwordProtected": False,
+            "version": 0,
         }
 
         # set server keys
-        self.__set_server_keys(integration_params, integration_configuration['name'])
+        self.__set_server_keys(integration_params, integration_configuration["name"])
 
         # set module params
         for param_conf in module_configuration:
             configured_param = self.set_module_params(param_conf, integration_params)
-            module_instance['data'].append(configured_param)
+            module_instance["data"].append(configured_param)
 
         return module_instance
 
@@ -837,12 +819,12 @@ class Server:
         Returns:
             (dict): Configured integration instance
         """
-        integration_name = integration.get('name')
+        integration_name = integration.get("name")
         logging.info(f'Configuring instance for integration "{integration_name}"')
-        integration_instance_name = integration.get('instance_name', '')
-        integration_params = change_placeholders_to_values(placeholders_map, integration.get('params'))
-        is_byoi = integration.get('byoi', True)
-        validate_test = integration.get('validate_test', True)
+        integration_instance_name = integration.get("instance_name", "")
+        integration_params = change_placeholders_to_values(placeholders_map, integration.get("params"))
+        is_byoi = integration.get("byoi", True)
+        validate_test = integration.get("validate_test", True)
 
         integration_configuration = get_integration_config(self.client, integration_name)
         if not integration_configuration:
@@ -850,16 +832,16 @@ class Server:
 
         # In the integration configuration in content-test-conf conf.json, the test_validate flag was set to false
         if not validate_test:
-            logging.debug(
-                f'Skipping configuration for integration: {integration_name} (it has test_validate set to false)')
+            logging.debug(f"Skipping configuration for integration: {integration_name} (it has test_validate set to false)")
             return None
-        module_instance = self.set_integration_instance_parameters(integration_configuration, integration_params,
-                                                                   integration_instance_name, is_byoi)
+        module_instance = self.set_integration_instance_parameters(
+            integration_configuration, integration_params, integration_instance_name, is_byoi
+        )
         return module_instance
 
-    def configure_modified_and_new_integrations(self,
-                                                modified_integrations_to_configure: list,
-                                                new_integrations_to_configure: list) -> tuple:
+    def configure_modified_and_new_integrations(
+        self, modified_integrations_to_configure: list, new_integrations_to_configure: list
+    ) -> tuple:
         """
         Configures old and new integrations in the server configured in the demisto_client.
         Args:
@@ -875,12 +857,12 @@ class Server:
         modified_modules_instances = []
         new_modules_instances = []
         for integration in modified_integrations_to_configure:
-            placeholders_map = {'%%SERVER_HOST%%': self}
+            placeholders_map = {"%%SERVER_HOST%%": self}
             module_instance = self.configure_integration_instance(integration, placeholders_map)
             if module_instance:
                 modified_modules_instances.append(module_instance)
         for integration in new_integrations_to_configure:
-            placeholders_map = {'%%SERVER_HOST%%': self}
+            placeholders_map = {"%%SERVER_HOST%%": self}
             module_instance = self.configure_integration_instance(integration, placeholders_map)
             if module_instance:
                 new_modules_instances.append(module_instance)
@@ -892,43 +874,42 @@ class Server:
         for test in tests_for_iteration:
             integrations = self.get_integrations_for_test(test, self.build.skipped_integrations_conf)
 
-            playbook_id = test.get('playbookID')
+            playbook_id = test.get("playbookID")
 
-            new_integrations, modified_integrations, unchanged_integrations, integration_to_status = \
-                self.group_integrations(integrations, all_new_integrations, modified_integrations)
+            new_integrations, modified_integrations, unchanged_integrations, integration_to_status = self.group_integrations(
+                integrations, all_new_integrations, modified_integrations
+            )
 
-            integration_to_status_string = '\n\t\t\t\t\t\t'.join(
-                [f'"{key}" - {val}' for key, val in integration_to_status.items()])
+            integration_to_status_string = "\n\t\t\t\t\t\t".join(
+                [f'"{key}" - {val}' for key, val in integration_to_status.items()]
+            )
             if integration_to_status_string:
                 logging.info(f'All Integrations for test "{playbook_id}":\n\t\t\t\t\t\t{integration_to_status_string}')
             else:
                 logging.info(f'No Integrations for test "{playbook_id}"')
-            instance_names_conf = test.get('instance_names', [])
+            instance_names_conf = test.get("instance_names", [])
             if not isinstance(instance_names_conf, list):
                 instance_names_conf = [instance_names_conf]
 
             integrations_to_configure = modified_integrations[:]
             integrations_to_configure.extend(unchanged_integrations)
-            placeholders_map = {'%%SERVER_HOST%%': self}
-            new_ints_params_set = self.set_integration_params(new_integrations,
-                                                              self.build.secret_conf['integrations'],
-                                                              instance_names_conf,
-                                                              placeholders_map)
-            ints_to_configure_params_set = self.set_integration_params(integrations_to_configure,
-                                                                       self.build.secret_conf['integrations'],
-                                                                       instance_names_conf,
-                                                                       placeholders_map)
+            placeholders_map = {"%%SERVER_HOST%%": self}
+            new_ints_params_set = self.set_integration_params(
+                new_integrations, self.build.secret_conf["integrations"], instance_names_conf, placeholders_map
+            )
+            ints_to_configure_params_set = self.set_integration_params(
+                integrations_to_configure, self.build.secret_conf["integrations"], instance_names_conf, placeholders_map
+            )
             if not new_ints_params_set:
-                logging.error(f'failed setting parameters for integrations: {new_integrations}')
+                logging.error(f"failed setting parameters for integrations: {new_integrations}")
             if not ints_to_configure_params_set:
-                logging.error(f'failed setting parameters for integrations: {integrations_to_configure}')
+                logging.error(f"failed setting parameters for integrations: {integrations_to_configure}")
             if not (new_ints_params_set and ints_to_configure_params_set):
                 continue
 
-            modified_module_instances_for_test, new_module_instances_for_test = (
-                self.configure_modified_and_new_integrations(
-                    integrations_to_configure,
-                    new_integrations))
+            modified_module_instances_for_test, new_module_instances_for_test = self.configure_modified_and_new_integrations(
+                integrations_to_configure, new_integrations
+            )
 
             modified_module_instances.extend(modified_module_instances_for_test)
             new_module_instances.extend(new_module_instances_for_test)
@@ -942,11 +923,9 @@ class Server:
     def test_integration_with_mock(self, instance: dict, pre_update: bool):
         pass
 
-    def instance_testing(self,
-                         all_module_instances: list,
-                         pre_update: bool,
-                         use_mock: bool = True,
-                         first_call: bool = True) -> tuple[set, set]:
+    def instance_testing(
+        self, all_module_instances: list, pre_update: bool, use_mock: bool = True, first_call: bool = True
+    ) -> tuple[set, set]:
         """
         Runs 'test-module' command for the instances detailed in `all_module_instances`
         Args:
@@ -961,7 +940,7 @@ class Server:
             A set of the successful tests containing the instance name and the integration name
             A set of the failed tests containing the instance name and the integration name
         """
-        update_status = 'Pre' if pre_update else 'Post'
+        update_status = "Pre" if pre_update else "Post"
         failed_tests = set()
         successful_tests = set()
         # Test all module instances (of modified + unchanged integrations) pre-updating content
@@ -969,12 +948,12 @@ class Server:
             # only print start message if there are instances to configure
             logging.info(f'Start of Instance Testing ("Test" button) ({update_status}-update)')
         else:
-            logging.info(f'No integrations to configure for the chosen tests. ({update_status}-update)')
+            logging.info(f"No integrations to configure for the chosen tests. ({update_status}-update)")
         failed_instances = []
         for instance in all_module_instances:
-            integration_of_instance = instance.get('brand', '')
-            instance_name = instance.get('name', '')
-            logging.info(f'Start of Instance Testing {instance_name=}')
+            integration_of_instance = instance.get("brand", "")
+            instance_name = instance.get("name", "")
+            logging.info(f"Start of Instance Testing {instance_name=}")
 
             # If there is a failure, test_integration_instance will print it
             if integration_of_instance not in self.build.unmockable_integrations and use_mock:
@@ -990,17 +969,13 @@ class Server:
 
         # in case some tests failed post update, wait a 15 secs, runs the tests again
         if failed_instances and not pre_update and first_call:
-            logging.info(
-                "Sleep - some post-update tests failed, sleeping for 15 seconds, then running the failed tests again")
+            logging.info("Sleep - some post-update tests failed, sleeping for 15 seconds, then running the failed tests again")
             sleep(15)
             _, failed_tests = self.instance_testing(failed_instances, pre_update=False, first_call=False)
 
         return successful_tests, failed_tests
 
-    def set_marketplace_url(self,
-                            marketplace_name,
-                            artifacts_folder,
-                            marketplace_buckets) -> bool:
+    def set_marketplace_url(self, marketplace_name, artifacts_folder, marketplace_buckets) -> bool:
         raise NotImplementedError
 
     def update_content_on_servers(self) -> bool:
@@ -1016,56 +991,56 @@ class Server:
             If the server version is higher or equal to 6.0 - will return True if the packs installation was successful
             both before that update and after the update.
         """
-        installed_content_packs_successfully = self.set_marketplace_url(self.build.marketplace_tag_name,
-                                                                        self.build.artifacts_folder,
-                                                                        self.build.marketplace_buckets)
+        installed_content_packs_successfully = self.set_marketplace_url(
+            self.build.marketplace_tag_name, self.build.artifacts_folder, self.build.marketplace_buckets
+        )
         installed_content_packs_successfully &= self.install_packs(production_bucket=False)
         return installed_content_packs_successfully
 
     @abstractmethod
-    def test_integrations_post_update(self, new_module_instances: list,
-                                      modified_module_instances: list) -> tuple:
+    def test_integrations_post_update(self, new_module_instances: list, modified_module_instances: list) -> tuple:
         pass
 
     def create_and_upload_test_pack(self):
-        """Creates and uploads a test pack that contains the test playbook of the specified packs to install list.
-
-        """
+        """Creates and uploads a test pack that contains the test playbook of the specified packs to install list."""
         self.test_pack_zip()
 
-        upload_zipped_packs(client=self.client,
-                            host=self.name or self.internal_ip,
-                            pack_path=f'{Build.test_pack_target}/{self.test_pack_path}.zip')
+        upload_zipped_packs(
+            client=self.client,
+            host=self.name or self.internal_ip,
+            pack_path=f"{Build.test_pack_target}/{self.test_pack_path}.zip",
+        )
 
     def test_pack_zip(self):
         """
         Iterates over all TestPlaybooks folders and adds all files from there to test_pack_path.zip file.
         """
         packs = self.pack_ids_to_install or []
-        with zipfile.ZipFile(f'{self.build.test_pack_target}/{self.test_pack_path}.zip', 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            zip_file.writestr(f'{self.test_pack_path}/metadata.json', test_pack_metadata())
+        with zipfile.ZipFile(f"{self.build.test_pack_target}/{self.test_pack_path}.zip", "w", zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.writestr(f"{self.test_pack_path}/metadata.json", test_pack_metadata())
             for test_path, test in test_files(Build.content_path, packs):
-                if not test_path.endswith('.yml'):
+                if not test_path.endswith(".yml"):
                     continue
                 test = test.name
                 with open(test_path) as test_file:
-                    if not (test.startswith(('playbook-', 'script-'))):
-                        test_type = find_type(_dict=yaml.safe_load(test_file), file_type='yml', path=test_path).value
+                    if not (test.startswith(("playbook-", "script-"))):
+                        test_type = find_type(_dict=yaml.safe_load(test_file), file_type="yml", path=test_path).value
                         test_file.seek(0)
                         # we need to convert to the regular filetype if we get a test type, because that what the server expects
                         if test_type == FileType.TEST_PLAYBOOK.value:
                             test_type = FileType.PLAYBOOK.value
                         if test_type == FileType.TEST_SCRIPT.value:
                             test_type = FileType.SCRIPT.value
-                        test_target = f'{self.test_pack_path}/TestPlaybooks/{test_type}-{test}'
+                        test_target = f"{self.test_pack_path}/TestPlaybooks/{test_type}-{test}"
                     else:
-                        test_target = f'{self.test_pack_path}/TestPlaybooks/{test}'
+                        test_target = f"{self.test_pack_path}/TestPlaybooks/{test}"
                     zip_file.writestr(test_target, test_file.read())
 
     # ---------------------------------------- Success report flow ----------------------------------------------
 
-    def report_tests_status(self, preupdate_fails, postupdate_fails, preupdate_success, postupdate_success,
-                            new_integrations_names):
+    def report_tests_status(
+        self, preupdate_fails, postupdate_fails, preupdate_success, postupdate_success, new_integrations_names
+    ):
         """Prints errors and/or warnings if there are any and returns whether testing was successful or not.
 
         Args:
@@ -1096,11 +1071,15 @@ class Server:
         succeeded_pre_and_post = preupdate_success.intersection(postupdate_success)
         if succeeded_pre_and_post:
             succeeded_pre_and_post_string = "\n".join(
-                [f'Integration: "{integration_of_instance}", Instance: "{instance_name}"' for
-                 instance_name, integration_of_instance in succeeded_pre_and_post])
+                [
+                    f'Integration: "{integration_of_instance}", Instance: "{instance_name}"'
+                    for instance_name, integration_of_instance in succeeded_pre_and_post
+                ]
+            )
             logging.success(
                 'Integration instances that had ("Test" Button) succeeded both before and after the content update:\n'
-                f'{succeeded_pre_and_post_string}')
+                f"{succeeded_pre_and_post_string}"
+            )
 
         failed_pre_and_post = preupdate_fails.intersection(postupdate_fails)
         mismatched_statuses = postupdate_fails - preupdate_fails
@@ -1115,31 +1094,44 @@ class Server:
         # warnings but won't fail the build step
         if failed_but_is_new:
             failed_but_is_new_string = "\n".join(
-                [f'Integration: "{integration_of_instance}", Instance: "{instance_name}"'
-                 for instance_name, integration_of_instance in failed_but_is_new])
+                [
+                    f'Integration: "{integration_of_instance}", Instance: "{instance_name}"'
+                    for instance_name, integration_of_instance in failed_but_is_new
+                ]
+            )
             logging.warning(f'New Integrations ("Test" Button) Failures:\n{failed_but_is_new_string}')
         if failed_pre_and_post:
             failed_pre_and_post_string = "\n".join(
-                [f'Integration: "{integration_of_instance}", Instance: "{instance_name}"'
-                 for instance_name, integration_of_instance in failed_pre_and_post])
-            logging.warning(f'Integration instances that had ("Test" Button) failures '
-                            f'both before and after the content update'
-                            f'(No need to handle ERROR messages for these "test-module" failures):'
-                            f'\n{pformat(failed_pre_and_post_string)}.')
+                [
+                    f'Integration: "{integration_of_instance}", Instance: "{instance_name}"'
+                    for instance_name, integration_of_instance in failed_pre_and_post
+                ]
+            )
+            logging.warning(
+                f'Integration instances that had ("Test" Button) failures '
+                f"both before and after the content update"
+                f'(No need to handle ERROR messages for these "test-module" failures):'
+                f"\n{pformat(failed_pre_and_post_string)}."
+            )
         # fail the step if there are instances that only failed after content was updated
         if failed_only_after_update:
             failed_only_after_update_string = "\n".join(
-                [f'Integration: "{integration_of_instance}", Instance: "{instance_name}"' for
-                 instance_name, integration_of_instance in failed_only_after_update])
+                [
+                    f'Integration: "{integration_of_instance}", Instance: "{instance_name}"'
+                    for instance_name, integration_of_instance in failed_only_after_update
+                ]
+            )
             testing_status = False
-            logging.critical('Integration instances that had ("Test" Button) failures only after content was updated:\n'
-                             f'{pformat(failed_only_after_update_string)}.\n'
-                             f'This indicates that your updates introduced breaking changes to the integration.')
+            logging.critical(
+                'Integration instances that had ("Test" Button) failures only after content was updated:\n'
+                f"{pformat(failed_only_after_update_string)}.\n"
+                f"This indicates that your updates introduced breaking changes to the integration."
+            )
         else:
             # creating this file to indicates that this instance passed post update tests,
             # uses this file in XSOAR destroy instances
             if self.build and self.build.__class__ == XSOARBuild:
-                with open(f"{ARTIFACTS_FOLDER}/is_post_update_passed_{self.build.ami_env.replace(' ', '')}.txt", 'a'):
+                with open(f"{ARTIFACTS_FOLDER}/is_post_update_passed_{self.build.ami_env.replace(' ', '')}.txt", "a"):
                     pass
 
         return testing_status
@@ -1148,7 +1140,7 @@ class Server:
 
     def perform_single_server_test_flow(self):
         """
-            Calculate pre and post update packs to install, install them and test them
+        Calculate pre and post update packs to install, install them and test them
 
         """
         logging.info(f"Start performing test flow on server {self.name}")
@@ -1157,33 +1149,31 @@ class Server:
         logging.info("Installing packs in pre-update step")
         self.install_packs(pack_ids=packs_to_install_in_pre_update)  # type: ignore[arg-type]
 
-        new_integrations_names, modified_integrations_names = self.get_changed_integrations(
-            packs_to_install_in_post_update)
+        new_integrations_names, modified_integrations_names = self.get_changed_integrations(packs_to_install_in_post_update)
 
-        pre_update_configuration_results = self.configure_and_test_integrations_pre_update(new_integrations_names,
-                                                                                           modified_integrations_names)
-        modified_module_instances, new_module_instances, failed_tests_pre, successful_tests_pre = (
-            pre_update_configuration_results)
+        pre_update_configuration_results = self.configure_and_test_integrations_pre_update(
+            new_integrations_names, modified_integrations_names
+        )
+        modified_module_instances, new_module_instances, failed_tests_pre, successful_tests_pre = pre_update_configuration_results
 
         logging.info("Installing packs in post-update step")
         success = self.update_content_on_servers()
-        successful_tests_post, failed_tests_post = self.test_integrations_post_update(new_module_instances,
-                                                                                      modified_module_instances)
+        successful_tests_post, failed_tests_post = self.test_integrations_post_update(
+            new_module_instances, modified_module_instances
+        )
 
-        if not os.getenv('BUCKET_UPLOAD'):  # Don't need to upload test playbooks in upload flow
+        if not os.getenv("BUCKET_UPLOAD"):  # Don't need to upload test playbooks in upload flow
             self.create_and_upload_test_pack()
 
-        success &= self.report_tests_status(failed_tests_pre, failed_tests_post, successful_tests_pre,
-                                            successful_tests_post,
-                                            new_integrations_names)
+        success &= self.report_tests_status(
+            failed_tests_pre, failed_tests_post, successful_tests_pre, successful_tests_post, new_integrations_names
+        )
 
         return success
 
 
 class XSOARServer(Server):
-
-    def __init__(self, internal_ip, user_name, password, pack_ids_to_install,
-                 tests_to_run, build, build_number=''):
+    def __init__(self, internal_ip, user_name, password, pack_ids_to_install, tests_to_run, build, build_number=""):
         super().__init__()
         self.__client = None
         self.internal_ip: str = internal_ip
@@ -1193,7 +1183,7 @@ class XSOARServer(Server):
         self.tests_to_run = tests_to_run
         self.build = build
         self.build_number = build_number
-        self.test_pack_path = f'test_pack_{internal_ip}'
+        self.test_pack_path = f"test_pack_{internal_ip}"
 
     def __str__(self):
         return self.internal_ip
@@ -1203,10 +1193,9 @@ class XSOARServer(Server):
         return get_server_numeric_version(self.client)
 
     def reconnect_client(self):
-        self.__client = demisto_client.configure(f'https://{self.internal_ip}',
-                                                 verify_ssl=False,
-                                                 username=self.user_name,
-                                                 password=self.password)
+        self.__client = demisto_client.configure(
+            f"https://{self.internal_ip}", verify_ssl=False, username=self.user_name, password=self.password
+        )
         custom_user_agent = get_custom_user_agent(self.build_number)
         logging.debug(f"Setting user-agent on client to '{custom_user_agent}'.")
         self.__client.api_client.user_agent = custom_user_agent
@@ -1225,7 +1214,7 @@ class XSOARServer(Server):
             If a record was executed - will return the result of the 'test--module' with the record mode only.
         """
         testing_client = self.reconnect_client()
-        integration_of_instance = instance.get('brand', '')
+        integration_of_instance = instance.get("brand", "")
         logging.debug(f'Integration "{integration_of_instance}" is mockable, running test-module with mitmproxy')
         has_mock_file = self.build.proxy.has_mock_file(integration_of_instance)
         success = False
@@ -1248,11 +1237,10 @@ class XSOARServer(Server):
         update_server_configuration(self.client, config_dict, error_msg)
 
         if restart:
-            self.exec_command('sudo systemctl restart demisto')
+            self.exec_command("sudo systemctl restart demisto")
 
     def exec_command(self, command):
-        subprocess.check_output(f'ssh {SSH_USER}@{self.internal_ip} {command}'.split(),
-                                stderr=subprocess.STDOUT)
+        subprocess.check_output(f"ssh {SSH_USER}@{self.internal_ip} {command}".split(), stderr=subprocess.STDOUT)
 
     @run_with_proxy_configured
     def configure_and_test_integrations_pre_update(self, new_integrations, modified_integrations) -> tuple:
@@ -1273,14 +1261,12 @@ class XSOARServer(Server):
         """
         tests_for_iteration = self.get_tests()
         modified_module_instances, new_module_instances = self.configure_server_instances(
-            tests_for_iteration,
-            new_integrations,
-            modified_integrations)
+            tests_for_iteration, new_integrations, modified_integrations
+        )
         successful_tests_pre, failed_tests_pre = self.instance_testing(modified_module_instances, pre_update=True)
         return modified_module_instances, new_module_instances, failed_tests_pre, successful_tests_pre
 
-    def install_packs(self, pack_ids: list | None = None, install_packs_in_batches=False,
-                      production_bucket: bool = True) -> bool:
+    def install_packs(self, pack_ids: list | None = None, install_packs_in_batches=False, production_bucket: bool = True) -> bool:
         """
         Install packs using 'pack_ids' or "$ARTIFACTS_FOLDER_SERVER_TYPE/content_packs_to_install.txt" file,
         and their dependencies.
@@ -1297,36 +1283,33 @@ class XSOARServer(Server):
         logging.info(f"IDs of packs to install: {pack_ids}")
         installed_content_packs_successfully = True
         try:
-            _, flag = search_and_install_packs_and_their_dependencies(pack_ids=pack_ids,
-                                                                      client=self.client,
-                                                                      hostname='',
-                                                                      install_packs_in_batches=install_packs_in_batches,
-                                                                      production_bucket=production_bucket)
+            _, flag = search_and_install_packs_and_their_dependencies(
+                pack_ids=pack_ids,
+                client=self.client,
+                hostname="",
+                install_packs_in_batches=install_packs_in_batches,
+                production_bucket=production_bucket,
+            )
             if not flag:
-                raise Exception('Failed to search and install packs and their dependencies.')
+                raise Exception("Failed to search and install packs and their dependencies.")
         except Exception:
-            logging.exception('Failed to search and install packs')
+            logging.exception("Failed to search and install packs")
             installed_content_packs_successfully = False
 
         return installed_content_packs_successfully
 
-    def set_marketplace_url(self,
-                            marketplace_name=None,
-                            artifacts_folder=None,
-                            marketplace_buckets=None):
-        url_suffix = f'{quote_plus(self.build.branch_name)}/{self.build.ci_build_number}/xsoar'
-        config_path = 'marketplace.bootstrap.bypass.url'
-        config = {config_path:
-                      f'https://storage.googleapis.com/marketplace-ci-build/content/builds/{url_suffix}'}
-        self.add_server_configuration(config, 'failed to configure marketplace custom url ', True)
-        logging.success('Updated marketplace url and restarted servers')
-        logging.info('sleeping for 120 seconds')
+    def set_marketplace_url(self, marketplace_name=None, artifacts_folder=None, marketplace_buckets=None):
+        url_suffix = f"{quote_plus(self.build.branch_name)}/{self.build.ci_build_number}/xsoar"
+        config_path = "marketplace.bootstrap.bypass.url"
+        config = {config_path: f"https://storage.googleapis.com/marketplace-ci-build/content/builds/{url_suffix}"}
+        self.add_server_configuration(config, "failed to configure marketplace custom url ", True)
+        logging.success("Updated marketplace url and restarted servers")
+        logging.info("sleeping for 120 seconds")
         sleep(120)
         return True
 
     @run_with_proxy_configured
-    def test_integrations_post_update(self, new_module_instances: list,
-                                      modified_module_instances: list) -> tuple:
+    def test_integrations_post_update(self, new_module_instances: list, modified_module_instances: list) -> tuple:
         """
         Runs 'test-module on all integrations for post-update check
         Args:
@@ -1344,9 +1327,9 @@ class XSOARServer(Server):
 
 
 class CloudServer(Server):
-
-    def __init__(self, api_key, server_numeric_version, base_url, xdr_auth_id, name, pack_ids_to_install,
-                 tests_to_run, build, build_number):
+    def __init__(
+        self, api_key, server_numeric_version, base_url, xdr_auth_id, name, pack_ids_to_install, tests_to_run, build, build_number
+    ):
         super().__init__()
         self.name = name
         self.api_key = api_key
@@ -1359,17 +1342,16 @@ class CloudServer(Server):
         self.build_number = build_number
         self.__client = None
         # we use client without demisto username
-        os.environ.pop('DEMISTO_USERNAME', None)
-        self.test_pack_path = f'test_pack_{name}'
+        os.environ.pop("DEMISTO_USERNAME", None)
+        self.test_pack_path = f"test_pack_{name}"
 
     def __str__(self):
         return self.name
 
     def reconnect_client(self):
-        self.__client = demisto_client.configure(base_url=self.base_url,
-                                                 verify_ssl=False,
-                                                 api_key=self.api_key,
-                                                 auth_id=self.xdr_auth_id)
+        self.__client = demisto_client.configure(
+            base_url=self.base_url, verify_ssl=False, api_key=self.api_key, auth_id=self.xdr_auth_id
+        )
         custom_user_agent = get_custom_user_agent(self.build_number)
         logging.debug(f"Setting user-agent on client to '{custom_user_agent}'.")
         self.__client.api_client.user_agent = custom_user_agent
@@ -1379,8 +1361,7 @@ class CloudServer(Server):
         # No need of this step in CLOUD.
         pass
 
-    def install_packs(self, pack_ids: list | None = None, install_packs_in_batches=False,
-                      production_bucket: bool = True) -> bool:
+    def install_packs(self, pack_ids: list | None = None, install_packs_in_batches=False, production_bucket: bool = True) -> bool:
         """
         Install packs using 'pack_ids' or  packs from splitting algorithm,
         and their dependencies.
@@ -1397,15 +1378,17 @@ class CloudServer(Server):
         logging.info(f"IDs of packs to install: {pack_ids}")
         installed_content_packs_successfully = True
         try:
-            _, flag = search_and_install_packs_and_their_dependencies(pack_ids=pack_ids,
-                                                                      client=self.client,
-                                                                      hostname=self.name,
-                                                                      install_packs_in_batches=True,
-                                                                      production_bucket=production_bucket)
+            _, flag = search_and_install_packs_and_their_dependencies(
+                pack_ids=pack_ids,
+                client=self.client,
+                hostname=self.name,
+                install_packs_in_batches=True,
+                production_bucket=production_bucket,
+            )
             if not flag:
-                raise Exception('Failed to search and install packs.')
+                raise Exception("Failed to search and install packs.")
         except Exception:
-            logging.exception('Failed to search and install packs')
+            logging.exception("Failed to search and install packs")
             installed_content_packs_successfully = False
 
         return installed_content_packs_successfully
@@ -1414,7 +1397,7 @@ class CloudServer(Server):
         """
         For cloud build we need to add core rest api params differently
         """
-        integration_params[0]['params'] = {  # type: ignore
+        integration_params[0]["params"] = {  # type: ignore
             "url": self.base_url,
             "creds_apikey": {
                 "identifier": str(self.xdr_auth_id),
@@ -1443,49 +1426,48 @@ class CloudServer(Server):
         """
         tests_for_iteration = self.get_tests()
         modified_module_instances, new_module_instances = self.configure_server_instances(
-            tests_for_iteration,
-            new_integrations,
-            modified_integrations)
-        successful_tests_pre, failed_tests_pre = self.instance_testing(modified_module_instances,
-                                                                       pre_update=True,
-                                                                       use_mock=False)
+            tests_for_iteration, new_integrations, modified_integrations
+        )
+        successful_tests_pre, failed_tests_pre = self.instance_testing(modified_module_instances, pre_update=True, use_mock=False)
         return modified_module_instances, new_module_instances, failed_tests_pre, successful_tests_pre
 
-    def set_marketplace_url(self,
-                            marketplace_name='marketplacev2',
-                            artifacts_folder=ARTIFACTS_FOLDER_MPV2,
-                            marketplace_buckets=MARKETPLACE_XSIAM_BUCKETS):
+    def set_marketplace_url(
+        self,
+        marketplace_name="marketplacev2",
+        artifacts_folder=ARTIFACTS_FOLDER_MPV2,
+        marketplace_buckets=MARKETPLACE_XSIAM_BUCKETS,
+    ):
         from Tests.Marketplace.search_and_uninstall_pack import sync_marketplace
-        logging.info('Copying custom build bucket to cloud_instance_bucket.')
+
+        logging.info("Copying custom build bucket to cloud_instance_bucket.")
         marketplace_name = marketplace_name
-        from_bucket = (f'{MARKETPLACE_TEST_BUCKET}/{self.build.branch_name}/{self.build.ci_build_number}'
-                       f'/{marketplace_name}/content')
-        output_file = f'{artifacts_folder}/Copy_custom_bucket_to_cloud_machine.log'
+        from_bucket = (
+            f"{MARKETPLACE_TEST_BUCKET}/{self.build.branch_name}/{self.build.ci_build_number}" f"/{marketplace_name}/content"
+        )
+        output_file = f"{artifacts_folder}/Copy_custom_bucket_to_cloud_machine.log"
         success = True
-        to_bucket = f'{marketplace_buckets}/{self.name}'
-        cmd = f'gsutil -m cp -r gs://{from_bucket} gs://{to_bucket}/'
+        to_bucket = f"{marketplace_buckets}/{self.name}"
+        cmd = f"gsutil -m cp -r gs://{from_bucket} gs://{to_bucket}/"
         with open(output_file, "w") as outfile:
             try:
                 subprocess.run(cmd.split(), stdout=outfile, stderr=outfile, check=True)
-                logging.info('Finished copying successfully.')
+                logging.info("Finished copying successfully.")
             except subprocess.CalledProcessError as exc:
-                logging.exception(f'Failed to copy custom build bucket to cloud_instance_bucket. {exc}')
+                logging.exception(f"Failed to copy custom build bucket to cloud_instance_bucket. {exc}")
                 success = False
 
         success &= sync_marketplace(self.client)
 
         if success:
-            logging.info('Finished copying successfully.')
+            logging.info("Finished copying successfully.")
         else:
-            logging.error('Failed to copy or sync marketplace bucket.')
+            logging.error("Failed to copy or sync marketplace bucket.")
         sleep_time = 360
-        logging.info(f'sleeping for {sleep_time} seconds')
+        logging.info(f"sleeping for {sleep_time} seconds")
         sleep(sleep_time)
         return success
 
-    def test_integrations_post_update(self,
-                                      new_module_instances: list,
-                                      modified_module_instances: list) -> tuple:
+    def test_integrations_post_update(self, new_module_instances: list, modified_module_instances: list) -> tuple:
         """
         Runs 'test-module on all integrations for post-update check
         Args:
@@ -1498,22 +1480,23 @@ class CloudServer(Server):
             * A list of integration names that have succeeded the 'test-module' execution post update
         """
         modified_module_instances.extend(new_module_instances)
-        successful_tests_post, failed_tests_post = self.instance_testing(modified_module_instances, pre_update=False,
-                                                                         use_mock=False)
+        successful_tests_post, failed_tests_post = self.instance_testing(
+            modified_module_instances, pre_update=False, use_mock=False
+        )
         return successful_tests_post, failed_tests_post
 
 
 # ------------------------------------------ Build Objects ---------------------------------------------------------
 
+
 class Build(ABC):
     # START CHANGE ON LOCAL RUN #
-    content_path = f'{os.getenv("HOME")}/project' if os.getenv('CIRCLECI') else os.getenv('CI_PROJECT_DIR')
-    test_pack_target = f'{os.getenv("HOME")}/project/Tests' if os.getenv(
-        'CIRCLECI') else f'{os.getenv("CI_PROJECT_DIR")}/Tests'  # noqa
-    key_file_path = 'Use in case of running with non local server'
+    content_path = f'{os.getenv("HOME")}/project' if os.getenv("CIRCLECI") else os.getenv("CI_PROJECT_DIR")
+    test_pack_target = f'{os.getenv("HOME")}/project/Tests' if os.getenv("CIRCLECI") else f'{os.getenv("CI_PROJECT_DIR")}/Tests'  # noqa
+    key_file_path = "Use in case of running with non local server"
     run_environment = Running.CI_RUN
     env_results_path = ENV_RESULTS_PATH
-    DEFAULT_SERVER_VERSION = '99.99.98'
+    DEFAULT_SERVER_VERSION = "99.99.98"
 
     #  END CHANGE ON LOCAL RUN  #
 
@@ -1521,18 +1504,18 @@ class Build(ABC):
         self._proxy = None
         self.is_cloud = False
         self.servers = []
-        self.server_numeric_version = ''
+        self.server_numeric_version = ""
         self.git_sha1 = options.git_sha1
         self.branch_name = options.branch
         self.ci_build_number = options.build_number
         self.secret_conf = get_secrets_from_gsm(options, self.branch_name)
-        self.username = options.user if options.user else self.secret_conf.get('username')
-        self.password = options.password if options.password else self.secret_conf.get('userPassword')
+        self.username = options.user if options.user else self.secret_conf.get("username")
+        self.password = options.password if options.password else self.secret_conf.get("userPassword")
         self.is_private = options.is_private
         conf = get_json_file(options.conf)
-        self.tests = conf['tests']
-        self.skipped_integrations_conf = conf['skipped_integrations']
-        self.unmockable_integrations = conf['unmockable_integrations']
+        self.tests = conf["tests"]
+        self.skipped_integrations_conf = conf["skipped_integrations"]
+        self.unmockable_integrations = conf["unmockable_integrations"]
         self.service_account = options.service_account
         self.marketplace_tag_name = None
         self.artifacts_folder = None
@@ -1559,26 +1542,23 @@ class Build(ABC):
             disable_all_integrations(server.client)
 
     def concurrently_run_function_on_servers(
-            self, function=None, pack_path=None, service_account=None, packs_to_install=None
+        self, function=None, pack_path=None, service_account=None, packs_to_install=None
     ) -> tuple[bool, list[Any]]:
         if not function:
-            raise Exception('Install method was not provided.')
+            raise Exception("Install method was not provided.")
 
         with ThreadPoolExecutor(max_workers=len(self.servers)) as executor:
             kwargs = {}
             if service_account:
-                kwargs['service_account'] = service_account
+                kwargs["service_account"] = service_account
             if pack_path:
-                kwargs['pack_path'] = pack_path
+                kwargs["pack_path"] = pack_path
             if packs_to_install:
                 kwargs["pack_ids_to_install"] = packs_to_install
 
             futures = [
                 executor.submit(
-                    function,
-                    client=server.client,
-                    host=server.internal_ip if self.is_cloud else server.name,
-                    **kwargs
+                    function, client=server.client, host=server.internal_ip if self.is_cloud else server.name, **kwargs
                 )
                 for server in self.servers
             ]
@@ -1590,7 +1570,7 @@ class Build(ABC):
                 try:
                     results.append(future.result())
                 except Exception as e:
-                    logging.exception(f'Failed to run function with error: {str(e)}')
+                    logging.exception(f"Failed to run function with error: {str(e)}")
                     success = False
             return success, results
 
@@ -1602,8 +1582,9 @@ class XSOARBuild(Build):
         super().__init__(options)
         self.ami_env = options.ami_env
         self.servers = self.create_servers(options)
-        self.server_numeric_version = self.servers[0].server_numeric_version if self.run_environment == Running.CI_RUN \
-            else self.DEFAULT_SERVER_VERSION
+        self.server_numeric_version = (
+            self.servers[0].server_numeric_version if self.run_environment == Running.CI_RUN else self.DEFAULT_SERVER_VERSION
+        )
 
     @property
     def proxy(self) -> MITMProxy:
@@ -1613,15 +1594,17 @@ class XSOARBuild(Build):
             The single proxy instance that should be used in this build.
         """
         if not self._proxy:
-            self._proxy = MITMProxy(self.servers[0].internal_ip,
-                                    logging_module=logging,
-                                    build_number=self.ci_build_number,
-                                    branch_name=self.branch_name)
+            self._proxy = MITMProxy(
+                self.servers[0].internal_ip,
+                logging_module=logging,
+                build_number=self.ci_build_number,
+                branch_name=self.branch_name,
+            )
         return self._proxy
 
     @property
     def marketplace_name(self) -> str:
-        return 'xsoar'
+        return "xsoar"
 
     def configure_servers_and_restart(self):
         manual_restart = Build.run_environment == Running.WITH_LOCAL_SERVER
@@ -1630,19 +1613,19 @@ class XSOARBuild(Build):
             if is_redhat_instance(server.internal_ip):
                 configurations.update(DOCKER_HARDENING_CONFIGURATION_FOR_PODMAN)
                 configurations.update(NO_PROXY_CONFIG)
-                configurations['python.pass.extra.keys'] += "##--network=slirp4netns:cidr=192.168.0.0/16"
+                configurations["python.pass.extra.keys"] += "##--network=slirp4netns:cidr=192.168.0.0/16"
             else:
                 configurations.update(DOCKER_HARDENING_CONFIGURATION)
-            configure_types = ['docker hardening', 'marketplace']
+            configure_types = ["docker hardening", "marketplace"]
             configurations.update(MARKET_PLACE_CONFIGURATION)
 
             error_msg = f"failed to set {' and '.join(configure_types)} configurations"
             server.add_server_configuration(configurations, error_msg=error_msg, restart=not manual_restart)
 
         if manual_restart:
-            input('restart your server and then press enter.')
+            input("restart your server and then press enter.")
         else:
-            logging.info('Done restarting servers. Sleeping for 1 minute')
+            logging.info("Done restarting servers. Sleeping for 1 minute")
             sleep(60)
 
     @staticmethod
@@ -1654,25 +1637,29 @@ class XSOARBuild(Build):
         logging.info("Starting server creation")
         servers = []
 
-        packs_to_install = self.machine_assignment_json.get('xsoar-machine').get('packs_to_install')
-        tests_to_run = self.machine_assignment_json.get('xsoar-machine').get('playbooks_to_run')
+        packs_to_install = self.machine_assignment_json.get("xsoar-machine").get("packs_to_install")
+        tests_to_run = self.machine_assignment_json.get("xsoar-machine").get("playbooks_to_run")
         logging.info(f"{packs_to_install=}")
         logging.info(f"{tests_to_run=}")
 
-        servers = [XSOARServer(internal_ip=internal_ip,
-                               user_name=self.username,
-                               password=self.password,
-                               pack_ids_to_install=packs_to_install,
-                               tests_to_run=tests_to_run,
-                               build_number=self.ci_build_number,
-                               build=self) for internal_ip in self.get_servers(self.ami_env)]
+        servers = [
+            XSOARServer(
+                internal_ip=internal_ip,
+                user_name=self.username,
+                password=self.password,
+                pack_ids_to_install=packs_to_install,
+                tests_to_run=tests_to_run,
+                build_number=self.ci_build_number,
+                build=self,
+            )
+            for internal_ip in self.get_servers(self.ami_env)
+        ]
 
         logging.info("Done working on servers")
         return servers
 
 
 class CloudBuild(Build):
-
     def __init__(self, options):
         global SET_SERVER_KEYS
         SET_SERVER_KEYS = False
@@ -1685,13 +1672,13 @@ class CloudBuild(Build):
 
     @staticmethod
     def get_cloud_configuration(cloud_machine, cloud_servers_path, cloud_servers_api_keys_path):
-        logging.info('getting cloud configuration')
+        logging.info("getting cloud configuration")
 
         cloud_servers = get_json_file(cloud_servers_path)
         conf = cloud_servers.get(cloud_machine)
         cloud_servers_api_keys = get_json_file(cloud_servers_api_keys_path)
         api_key = cloud_servers_api_keys.get(cloud_machine)
-        return api_key, conf.get('demisto_version'), conf.get('base_url'), conf.get('x-xdr-auth-id'), conf.get('ui_url')
+        return api_key, conf.get("demisto_version"), conf.get("base_url"), conf.get("x-xdr-auth-id"), conf.get("ui_url")
 
     @property
     def marketplace_name(self) -> str:
@@ -1707,71 +1694,91 @@ class CloudBuild(Build):
         for machine, info in self.machine_assignment_json.items():
             logging.info(f"working on machine {str(machine)}")
 
-            packs_to_install = info.get('packs_to_install')
-            tests_to_run = info.get('playbooks_to_run')
+            packs_to_install = info.get("packs_to_install")
+            tests_to_run = info.get("playbooks_to_run")
             logging.info(f"{packs_to_install=}")
             logging.info(f"{tests_to_run=}")
 
-            api_key, server_numeric_version, base_url, xdr_auth_id, _ = \
-                self.get_cloud_configuration(machine, options.cloud_servers_path,
-                                             options.cloud_servers_api_keys)
-            servers.append(CloudServer(api_key=api_key,
-                                       server_numeric_version=server_numeric_version,
-                                       base_url=base_url,
-                                       xdr_auth_id=xdr_auth_id,
-                                       name=machine,
-                                       build_number=self.ci_build_number,
-                                       build=self,
-                                       pack_ids_to_install=packs_to_install,
-                                       tests_to_run=tests_to_run))
+            api_key, server_numeric_version, base_url, xdr_auth_id, _ = self.get_cloud_configuration(
+                machine, options.cloud_servers_path, options.cloud_servers_api_keys
+            )
+            servers.append(
+                CloudServer(
+                    api_key=api_key,
+                    server_numeric_version=server_numeric_version,
+                    base_url=base_url,
+                    xdr_auth_id=xdr_auth_id,
+                    name=machine,
+                    build_number=self.ci_build_number,
+                    build=self,
+                    pack_ids_to_install=packs_to_install,
+                    tests_to_run=tests_to_run,
+                )
+            )
         logging.info("Done working on servers")
         return servers
 
 
 # ------------------------------------------------ Main ---------------------------------------------------------------
 
+
 def options_handler(args=None):
-    parser = argparse.ArgumentParser(description='Utility for instantiating and testing integration instances')
-    parser.add_argument('-u', '--user', help='The username for the login', required=True)
-    parser.add_argument('-p', '--password', help='The password for the login', required=True)
-    parser.add_argument('--ami_env', help='The AMI environment for the current run. Options are '
-                                          '"Server Master", "Server 6.0". '
-                                          'The server url is determined by the AMI environment.')
-    parser.add_argument('-g', '--git_sha1', help='commit sha1 to compare changes with')
-    parser.add_argument('-c', '--conf', help='Path to conf file', required=True)
-    parser.add_argument('-sn', '--sdk-nightly', type=str2bool, help='Is SDK nightly build')
-    parser.add_argument('-pr', '--is_private', type=str2bool, help='Is private build')
-    parser.add_argument('--branch', help='GitHub branch name', required=True)
-    parser.add_argument('--build_number', help='CI job number where the instances were created', required=True)
-    parser.add_argument('-pl', '--pack_ids_to_install', help='Path to the packs to install file.',
-                        default='./content_packs_to_install.txt')
-    parser.add_argument('--server_type', help=f'Server type running, choices: {",".join(SERVER_TYPES)}',
-                        default=Build.run_environment)
-    parser.add_argument('--cloud_servers_path', help='Path to secret cloud server metadata file.')
-    parser.add_argument('--cloud_servers_api_keys', help='Path to file with cloud Servers api keys.')
-    parser.add_argument('--marketplace_name', help='the name of the marketplace to use.')
-    parser.add_argument('--artifacts_folder', help='the artifacts folder to use.')
-    parser.add_argument('--marketplace_buckets', help='the path to the marketplace buckets.')
-    parser.add_argument('--machine_assignment', help='the path to the machine assignment file.',
-                        default='./packs_to_install_by_machine.json')
-    parser.add_argument('-sa', '--service_account',
-                        help=("Path to gcloud service account, is for circleCI usage. "
-                              "For local development use your personal account and "
-                              "authenticate using Google Cloud SDK by running: "
-                              "`gcloud auth application-default login` and leave this parameter blank. "
-                              "For more information go to: "
-                              "https://googleapis.dev/python/google-api-core/latest/auth.html"),
-                        required=False)
-    parser.add_argument('--gsm_service_account',
-                        help=("Path to gcloud service account, for circleCI usage. "
-                              "For local development use your personal account and "
-                              "authenticate using Google Cloud SDK by running: "
-                              "`gcloud auth application-default login` and leave this parameter blank. "
-                              "For more information see: "
-                              "https://googleapis.dev/python/google-api-core/latest/auth.html"))
-    parser.add_argument('--gsm_project_id_dev', help='The project id for the GSM dev.')
-    parser.add_argument('--gsm_project_id_prod', help='The project id for the GSM prod.')
-    parser.add_argument('-gt', '--github_token', help='the github token.')
+    parser = argparse.ArgumentParser(description="Utility for instantiating and testing integration instances")
+    parser.add_argument("-u", "--user", help="The username for the login", required=True)
+    parser.add_argument("-p", "--password", help="The password for the login", required=True)
+    parser.add_argument(
+        "--ami_env",
+        help="The AMI environment for the current run. Options are "
+        '"Server Master", "Server 6.0". '
+        "The server url is determined by the AMI environment.",
+    )
+    parser.add_argument("-g", "--git_sha1", help="commit sha1 to compare changes with")
+    parser.add_argument("-c", "--conf", help="Path to conf file", required=True)
+    parser.add_argument("-sn", "--sdk-nightly", type=str2bool, help="Is SDK nightly build")
+    parser.add_argument("-pr", "--is_private", type=str2bool, help="Is private build")
+    parser.add_argument("--branch", help="GitHub branch name", required=True)
+    parser.add_argument("--build_number", help="CI job number where the instances were created", required=True)
+    parser.add_argument(
+        "-pl", "--pack_ids_to_install", help="Path to the packs to install file.", default="./content_packs_to_install.txt"
+    )
+    parser.add_argument(
+        "--server_type", help=f'Server type running, choices: {",".join(SERVER_TYPES)}', default=Build.run_environment
+    )
+    parser.add_argument("--cloud_servers_path", help="Path to secret cloud server metadata file.")
+    parser.add_argument("--cloud_servers_api_keys", help="Path to file with cloud Servers api keys.")
+    parser.add_argument("--marketplace_name", help="the name of the marketplace to use.")
+    parser.add_argument("--artifacts_folder", help="the artifacts folder to use.")
+    parser.add_argument("--marketplace_buckets", help="the path to the marketplace buckets.")
+    parser.add_argument(
+        "--machine_assignment", help="the path to the machine assignment file.", default="./packs_to_install_by_machine.json"
+    )
+    parser.add_argument(
+        "-sa",
+        "--service_account",
+        help=(
+            "Path to gcloud service account, is for circleCI usage. "
+            "For local development use your personal account and "
+            "authenticate using Google Cloud SDK by running: "
+            "`gcloud auth application-default login` and leave this parameter blank. "
+            "For more information go to: "
+            "https://googleapis.dev/python/google-api-core/latest/auth.html"
+        ),
+        required=False,
+    )
+    parser.add_argument(
+        "--gsm_service_account",
+        help=(
+            "Path to gcloud service account, for circleCI usage. "
+            "For local development use your personal account and "
+            "authenticate using Google Cloud SDK by running: "
+            "`gcloud auth application-default login` and leave this parameter blank. "
+            "For more information see: "
+            "https://googleapis.dev/python/google-api-core/latest/auth.html"
+        ),
+    )
+    parser.add_argument("--gsm_project_id_dev", help="The project id for the GSM dev.")
+    parser.add_argument("--gsm_project_id_prod", help="The project id for the GSM prod.")
+    parser.add_argument("-gt", "--github_token", help="the github token.")
     # disable-secrets-detection-end
     options = parser.parse_args(args)
 
@@ -1780,7 +1787,7 @@ def options_handler(args=None):
 
 def create_build_object() -> Build:
     options = options_handler()
-    logging.info(f'Server type: {options.server_type}')
+    logging.info(f"Server type: {options.server_type}")
     if options.server_type == XSOAR_SERVER_TYPE:
         return XSOARBuild(options)
     elif options.server_type in [XSIAM_SERVER_TYPE, XSOAR_SASS_SERVER_TYPE]:
@@ -1811,7 +1818,7 @@ def main():
         10. Upload the test playbooks of packs from the packs to install list.
         11. Prints results.
     """
-    install_logging('Install_Content_And_Configure_Integrations_On_Server.log', logger=logging)
+    install_logging("Install_Content_And_Configure_Integrations_On_Server.log", logger=logging)
     build = create_build_object()
     logging.info(f"Build Number: {build.ci_build_number}")
 
@@ -1819,13 +1826,7 @@ def main():
     build.disable_instances()
 
     with ThreadPoolExecutor(max_workers=len(build.servers)) as executor:
-
-        futures = [
-            executor.submit(
-                server.perform_single_server_test_flow
-            )
-            for server in build.servers
-        ]
+        futures = [executor.submit(server.perform_single_server_test_flow) for server in build.servers]
 
         # Wait for all tasks to complete
         success = True
@@ -1833,15 +1834,15 @@ def main():
             try:
                 success &= future.result()
             except Exception as e:
-                logging.exception(f'Failed to run function with error: {str(e)}')
+                logging.exception(f"Failed to run function with error: {str(e)}")
                 success = False
 
     if not success:
-        logging.error('Failed to configure and test integration instances.')
+        logging.error("Failed to configure and test integration instances.")
         sys.exit(2)
 
-    logging.success('Finished configuring and testing integration instances.')
+    logging.success("Finished configuring and testing integration instances.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

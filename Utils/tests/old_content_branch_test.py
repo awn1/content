@@ -1,11 +1,11 @@
-
 from Utils.old_content_branch import should_keep_json_file, should_keep_yml_file, edit_playbooks_directory, ryaml
 import json
 import shutil
+
 TEST_VERSION = "5.1.9"
-JSON_SHOULD_DELETE = 'Utils/tests/test_data_old_content/json_should_delete.json'
-YML_SHOULD_DELETE = 'Utils/tests/test_data_old_content/yml_should_delete.yml'
-TEST_TPB = 'Utils/tests/test_data_old_content/temp_test_playbook.yml'
+JSON_SHOULD_DELETE = "Utils/tests/test_data_old_content/json_should_delete.json"
+YML_SHOULD_DELETE = "Utils/tests/test_data_old_content/yml_should_delete.yml"
+TEST_TPB = "Utils/tests/test_data_old_content/temp_test_playbook.yml"
 
 
 def test_handle_json__should_stay():
@@ -34,7 +34,7 @@ def test_handle_json__should_delete():
     Then
     - function returns False (file should be deleted).
     """
-    with open(JSON_SHOULD_DELETE, 'r') as json_file:
+    with open(JSON_SHOULD_DELETE, "r") as json_file:
         json_content = json.loads(json_file.read())
     assert should_keep_json_file(json_content, TEST_VERSION) is False
 
@@ -65,8 +65,7 @@ def test_handle_yml__should_delete():
     Then
     - function returns False (file should be deleted)
     """
-    with open(YML_SHOULD_DELETE, 'r') as yml_file:
-
+    with open(YML_SHOULD_DELETE, "r") as yml_file:
         yml_content = ryaml.load(yml_file)
     assert should_keep_yml_file(yml_content, TEST_VERSION) is False
 
@@ -85,6 +84,6 @@ def test_edit_playbooks_directory(tmp_path):
     tmp_tpb = shutil.copyfile(TEST_TPB, f"{tmp_path}/tpb.yml")
 
     edit_playbooks_directory(TEST_VERSION, tmp_path)
-    with open(tmp_tpb, 'r') as yml_file:
+    with open(tmp_tpb, "r") as yml_file:
         yml_content = ryaml.load(yml_file)
-    assert yml_content['toversion'] == '5.1.9'
+    assert yml_content["toversion"] == "5.1.9"

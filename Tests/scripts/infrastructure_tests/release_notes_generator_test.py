@@ -1,22 +1,24 @@
 import os
 import re
 import pytest
-from Utils.release_notes_generator import (get_release_notes_dict,
-                                           generate_release_notes_summary,
-                                           get_pack_entities,
-                                           get_pack_version_from_path,
-                                           read_and_format_release_note,
-                                           merge_version_blocks,
-                                           EMPTY_LINES_REGEX,
-                                           get_new_entity_record,
-                                           construct_entities_block,
-                                           aggregate_release_notes,
-                                           aggregate_release_notes_for_marketplace)
+from Utils.release_notes_generator import (
+    get_release_notes_dict,
+    generate_release_notes_summary,
+    get_pack_entities,
+    get_pack_version_from_path,
+    read_and_format_release_note,
+    merge_version_blocks,
+    EMPTY_LINES_REGEX,
+    get_new_entity_record,
+    construct_entities_block,
+    aggregate_release_notes,
+    aggregate_release_notes_for_marketplace,
+)
 
-TEST_DATA_PATH = 'Tests/scripts/infrastructure_tests/tests_data/RN_tests_data'
+TEST_DATA_PATH = "Tests/scripts/infrastructure_tests/tests_data/RN_tests_data"
 
-VERSION = 'VERSION'
-ASSET_ID = 'ASSET_ID'
+VERSION = "VERSION"
+ASSET_ID = "ASSET_ID"
 
 
 class TestReadAndFormatReleaseNote:
@@ -33,10 +35,10 @@ class TestReadAndFormatReleaseNote:
         Then
         - Ensure both integration appear in the formatted string
         """
-        rn_file = os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '1_1_0.md')
+        rn_file = os.path.join(TEST_DATA_PATH, "FakePack1", "ReleaseNotes", "1_1_0.md")
         formatted_text = read_and_format_release_note(rn_file)
-        assert 'FakePack1_Integration1' in formatted_text
-        assert 'FakePack1_Integration2' in formatted_text
+        assert "FakePack1_Integration1" in formatted_text
+        assert "FakePack1_Integration2" in formatted_text
 
     def test_ignored_release_notes_block(self):
         """
@@ -51,10 +53,10 @@ class TestReadAndFormatReleaseNote:
         Then
         - Ensure only the script appears in the formatted string
         """
-        rn_file = os.path.join(TEST_DATA_PATH, 'FakePack4', 'ReleaseNotes', '1_1_0.md')
+        rn_file = os.path.join(TEST_DATA_PATH, "FakePack4", "ReleaseNotes", "1_1_0.md")
         formatted_text = read_and_format_release_note(rn_file)
-        assert 'FakePack4_Script1' in formatted_text
-        assert 'FakePack4_Integration1' not in formatted_text
+        assert "FakePack4_Script1" in formatted_text
+        assert "FakePack4_Integration1" not in formatted_text
 
     def test_ignored_entire_release_note(self):
         """
@@ -69,9 +71,9 @@ class TestReadAndFormatReleaseNote:
         Then
         - Ensure formatted string is empty.
         """
-        rn_file = os.path.join(TEST_DATA_PATH, 'FakePack4', 'ReleaseNotes', '1_0_1.md')
+        rn_file = os.path.join(TEST_DATA_PATH, "FakePack4", "ReleaseNotes", "1_0_1.md")
         formatted_text = read_and_format_release_note(rn_file)
-        assert formatted_text == ''
+        assert formatted_text == ""
 
 
 # pylint: disable=W0201
@@ -79,7 +81,7 @@ class TestGenerateReleaseNotesSummary:
     def setup(self):
         self._version = VERSION
         self._asset_id = ASSET_ID
-        self._outfile = 'temp.md'
+        self._outfile = "temp.md"
 
     def test_added_pack(self):
         """
@@ -100,20 +102,17 @@ class TestGenerateReleaseNotesSummary:
         self.setup()
 
         new_packs_rn = {
-            'FakePack3': get_pack_entities(os.path.join(TEST_DATA_PATH, 'FakePack3')),
-            'FakePack4': get_pack_entities(os.path.join(TEST_DATA_PATH, 'FakePack4')),
+            "FakePack3": get_pack_entities(os.path.join(TEST_DATA_PATH, "FakePack3")),
+            "FakePack4": get_pack_entities(os.path.join(TEST_DATA_PATH, "FakePack4")),
         }
-        packs_metadta_dict = {
-            'FakePack3': {},
-            'FakePack4': {}
-        }
-
+        packs_metadta_dict = {"FakePack3": {}, "FakePack4": {}}
 
         rn_summary = generate_release_notes_summary(
-            new_packs_rn, {}, packs_metadta_dict, self._version, self._asset_id, 'temp.md')
+            new_packs_rn, {}, packs_metadta_dict, self._version, self._asset_id, "temp.md"
+        )
 
-        assert '## New: FakePack3 Pack v1.0.0' in rn_summary
-        assert '## New: FakePack4 Pack v1.0.0' in rn_summary
+        assert "## New: FakePack3 Pack v1.0.0" in rn_summary
+        assert "## New: FakePack4 Pack v1.0.0" in rn_summary
 
     def test_added_partner_pack(self):
         """
@@ -135,20 +134,18 @@ class TestGenerateReleaseNotesSummary:
         self.setup()
 
         new_packs_rn = {
-            'FakePack3': get_pack_entities(os.path.join(TEST_DATA_PATH, 'FakePack3')),
-            'FakePack4': get_pack_entities(os.path.join(TEST_DATA_PATH, 'FakePack4')),
+            "FakePack3": get_pack_entities(os.path.join(TEST_DATA_PATH, "FakePack3")),
+            "FakePack4": get_pack_entities(os.path.join(TEST_DATA_PATH, "FakePack4")),
         }
-        packs_metadta_dict = {
-            'FakePack3': {'support': 'partner'},
-            'FakePack4': {'support': 'xsoar'}
-        }
+        packs_metadta_dict = {"FakePack3": {"support": "partner"}, "FakePack4": {"support": "xsoar"}}
 
         rn_summary = generate_release_notes_summary(
-            new_packs_rn, {}, packs_metadta_dict, self._version, self._asset_id, 'temp.md')
+            new_packs_rn, {}, packs_metadta_dict, self._version, self._asset_id, "temp.md"
+        )
 
-        assert '## New: FakePack3 Pack v1.0.0 (Partner Supported)' in rn_summary
-        assert '## New: FakePack4 Pack v1.0.0' in rn_summary
-        assert '## New: FakePack4 Pack v1.0.0 (Partner Supported)' not in rn_summary
+        assert "## New: FakePack3 Pack v1.0.0 (Partner Supported)" in rn_summary
+        assert "## New: FakePack4 Pack v1.0.0" in rn_summary
+        assert "## New: FakePack4 Pack v1.0.0 (Partner Supported)" not in rn_summary
 
     def test_added_contribution_pack(self):
         """
@@ -169,20 +166,18 @@ class TestGenerateReleaseNotesSummary:
 
         self.setup()
         new_packs_rn = {
-            'FakePack3': get_pack_entities(os.path.join(TEST_DATA_PATH, 'FakePack3')),
-            'FakePack4': get_pack_entities(os.path.join(TEST_DATA_PATH, 'FakePack4')),
+            "FakePack3": get_pack_entities(os.path.join(TEST_DATA_PATH, "FakePack3")),
+            "FakePack4": get_pack_entities(os.path.join(TEST_DATA_PATH, "FakePack4")),
         }
-        packs_metadta_dict = {
-            'FakePack3': {'support': 'community'},
-            'FakePack4': {'support': 'xsoar'}
-        }
+        packs_metadta_dict = {"FakePack3": {"support": "community"}, "FakePack4": {"support": "xsoar"}}
 
         rn_summary = generate_release_notes_summary(
-            new_packs_rn, {}, packs_metadta_dict, self._version, self._asset_id, 'temp.md')
+            new_packs_rn, {}, packs_metadta_dict, self._version, self._asset_id, "temp.md"
+        )
 
-        assert '## New: FakePack3 Pack v1.0.0 (Community Contributed)' in rn_summary
-        assert '## New: FakePack4 Pack v1.0.0' in rn_summary
-        assert '## New: FakePack4 Pack v1.0.0 (Community Contributed)' not in rn_summary
+        assert "## New: FakePack3 Pack v1.0.0 (Community Contributed)" in rn_summary
+        assert "## New: FakePack4 Pack v1.0.0" in rn_summary
+        assert "## New: FakePack4 Pack v1.0.0 (Community Contributed)" not in rn_summary
 
     def test_two_packs(self):
         """
@@ -204,33 +199,30 @@ class TestGenerateReleaseNotesSummary:
 
         self.setup()
         release_notes_files = [
-            os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '1_1_0.md'),
-            os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '2_0_0.md'),
-            os.path.join(TEST_DATA_PATH, 'FakePack2', 'ReleaseNotes', '1_1_0.md'),
+            os.path.join(TEST_DATA_PATH, "FakePack1", "ReleaseNotes", "1_1_0.md"),
+            os.path.join(TEST_DATA_PATH, "FakePack1", "ReleaseNotes", "2_0_0.md"),
+            os.path.join(TEST_DATA_PATH, "FakePack2", "ReleaseNotes", "1_1_0.md"),
         ]
 
         rn_dict, _ = get_release_notes_dict(release_notes_files)
 
-        packs_metadta_dict = {
-            'FakePack1': {},
-            'FakePack2': {}
-        }
+        packs_metadta_dict = {"FakePack1": {}, "FakePack2": {}}
 
-        assert '1.1.0' in rn_dict['FakePack1']
-        assert '2.0.0' in rn_dict['FakePack1']
-        assert '1.1.0' in rn_dict['FakePack2']
+        assert "1.1.0" in rn_dict["FakePack1"]
+        assert "2.0.0" in rn_dict["FakePack1"]
+        assert "1.1.0" in rn_dict["FakePack2"]
 
         rn_summary = generate_release_notes_summary({}, rn_dict, packs_metadta_dict, self._version, self._asset_id, self._outfile)
 
         assert VERSION in rn_summary
         assert ASSET_ID in rn_summary
-        assert '### FakePack1 Pack v2.0.0' in rn_summary
-        assert '##### FakePack1_Integration1' in rn_summary
-        assert 'This is a fake1 minor release note.' in rn_summary
-        assert 'This is a fake1 major release note.' in rn_summary
-        assert '### FakePack2 Pack v1.1.0' in rn_summary
-        assert '##### FakePack2_Script1' in rn_summary
-        assert 'This is a fake2 major release note.' in rn_summary
+        assert "### FakePack1 Pack v2.0.0" in rn_summary
+        assert "##### FakePack1_Integration1" in rn_summary
+        assert "This is a fake1 minor release note." in rn_summary
+        assert "This is a fake1 major release note." in rn_summary
+        assert "### FakePack2 Pack v1.1.0" in rn_summary
+        assert "##### FakePack2_Script1" in rn_summary
+        assert "This is a fake2 major release note." in rn_summary
 
     def test_updated_partner_pack(self):
         """
@@ -253,28 +245,25 @@ class TestGenerateReleaseNotesSummary:
         self.setup()
 
         release_notes_files = [
-            os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '1_1_0.md'),
-            os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '2_0_0.md'),
-            os.path.join(TEST_DATA_PATH, 'FakePack2', 'ReleaseNotes', '1_1_0.md'),
+            os.path.join(TEST_DATA_PATH, "FakePack1", "ReleaseNotes", "1_1_0.md"),
+            os.path.join(TEST_DATA_PATH, "FakePack1", "ReleaseNotes", "2_0_0.md"),
+            os.path.join(TEST_DATA_PATH, "FakePack2", "ReleaseNotes", "1_1_0.md"),
         ]
 
         rn_dict, _ = get_release_notes_dict(release_notes_files)
 
-        packs_metadta_dict = {
-            'FakePack1': {'support': 'partner'},
-            'FakePack2': {'support': 'xsoar'}
-        }
+        packs_metadta_dict = {"FakePack1": {"support": "partner"}, "FakePack2": {"support": "xsoar"}}
 
-        assert '2.0.0' in rn_dict['FakePack1']
-        assert '1.1.0' in rn_dict['FakePack2']
+        assert "2.0.0" in rn_dict["FakePack1"]
+        assert "1.1.0" in rn_dict["FakePack2"]
 
         rn_summary = generate_release_notes_summary({}, rn_dict, packs_metadta_dict, self._version, self._asset_id, self._outfile)
 
         assert VERSION in rn_summary
         assert ASSET_ID in rn_summary
-        assert '### FakePack1 Pack v2.0.0 (Partner Supported)' in rn_summary
-        assert '### FakePack2 Pack v1.1.0' in rn_summary
-        assert '### FakePack2 Pack v1.1.0 (Partner Supported)' not in rn_summary
+        assert "### FakePack1 Pack v2.0.0 (Partner Supported)" in rn_summary
+        assert "### FakePack2 Pack v1.1.0" in rn_summary
+        assert "### FakePack2 Pack v1.1.0 (Partner Supported)" not in rn_summary
 
     def test_updated_community_pack(self):
         """
@@ -297,28 +286,25 @@ class TestGenerateReleaseNotesSummary:
         self.setup()
 
         release_notes_files = [
-            os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '1_1_0.md'),
-            os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '2_0_0.md'),
-            os.path.join(TEST_DATA_PATH, 'FakePack2', 'ReleaseNotes', '1_1_0.md'),
+            os.path.join(TEST_DATA_PATH, "FakePack1", "ReleaseNotes", "1_1_0.md"),
+            os.path.join(TEST_DATA_PATH, "FakePack1", "ReleaseNotes", "2_0_0.md"),
+            os.path.join(TEST_DATA_PATH, "FakePack2", "ReleaseNotes", "1_1_0.md"),
         ]
 
         rn_dict, _ = get_release_notes_dict(release_notes_files)
 
-        packs_metadta_dict = {
-            'FakePack1': {'support': 'community'},
-            'FakePack2': {'support': 'xsoar'}
-        }
+        packs_metadta_dict = {"FakePack1": {"support": "community"}, "FakePack2": {"support": "xsoar"}}
 
-        assert '2.0.0' in rn_dict['FakePack1']
-        assert '1.1.0' in rn_dict['FakePack2']
+        assert "2.0.0" in rn_dict["FakePack1"]
+        assert "1.1.0" in rn_dict["FakePack2"]
 
         rn_summary = generate_release_notes_summary({}, rn_dict, packs_metadta_dict, self._version, self._asset_id, self._outfile)
 
         assert VERSION in rn_summary
         assert ASSET_ID in rn_summary
-        assert '### FakePack1 Pack v2.0.0 (Community Contributed)' in rn_summary
-        assert '### FakePack2 Pack v1.1.0' in rn_summary
-        assert '### FakePack2 Pack v1.1.0 (Community Contributed)' not in rn_summary
+        assert "### FakePack1 Pack v2.0.0 (Community Contributed)" in rn_summary
+        assert "### FakePack2 Pack v1.1.0" in rn_summary
+        assert "### FakePack2 Pack v1.1.0 (Community Contributed)" not in rn_summary
 
     def test_release_notes_summary_with_empty_lines_in_rn(self):
         """
@@ -336,17 +322,13 @@ class TestGenerateReleaseNotesSummary:
 
         self.setup()
 
-        release_notes_files = [
-            os.path.join(TEST_DATA_PATH, 'FakePack3', 'ReleaseNotes', '1_0_1.md')
-        ]
+        release_notes_files = [os.path.join(TEST_DATA_PATH, "FakePack3", "ReleaseNotes", "1_0_1.md")]
 
-        packs_metadta_dict = {
-            'FakePack3': {}
-        }
+        packs_metadta_dict = {"FakePack3": {}}
 
         rn_dict, _ = get_release_notes_dict(release_notes_files)
 
-        assert '1.0.1' in rn_dict['FakePack3']
+        assert "1.0.1" in rn_dict["FakePack3"]
         assert len(rn_dict) == 1
 
         rn_summary = generate_release_notes_summary({}, rn_dict, packs_metadta_dict, self._version, self._asset_id, self._outfile)
@@ -374,22 +356,20 @@ class TestGenerateReleaseNotesSummary:
         self.setup()
 
         release_notes_files = [
-            os.path.join(TEST_DATA_PATH, 'FakePack4', 'ReleaseNotes', '1_0_1.md'),
-            os.path.join(TEST_DATA_PATH, 'FakePack4', 'ReleaseNotes', '1_1_0.md'),
+            os.path.join(TEST_DATA_PATH, "FakePack4", "ReleaseNotes", "1_0_1.md"),
+            os.path.join(TEST_DATA_PATH, "FakePack4", "ReleaseNotes", "1_1_0.md"),
         ]
-        packs_metadta_dict = {
-            'FakePack4': {}
-        }
+        packs_metadta_dict = {"FakePack4": {}}
 
         rn_dict, _ = get_release_notes_dict(release_notes_files)
 
-        assert '1.1.0' in rn_dict['FakePack4']
+        assert "1.1.0" in rn_dict["FakePack4"]
         assert len(rn_dict) == 1
 
         rn_summary = generate_release_notes_summary({}, rn_dict, packs_metadta_dict, self._version, self._asset_id, self._outfile)
 
-        assert '### FakePack4 Pack v1.1.0' in rn_summary
-        assert '##### FakePack4_Script1' in rn_summary
+        assert "### FakePack4 Pack v1.1.0" in rn_summary
+        assert "##### FakePack4_Script1" in rn_summary
 
 
 class TestMergeVersionBlocks:
@@ -405,8 +385,8 @@ class TestMergeVersionBlocks:
         - Ensure that the content of both RN files appears in the result file.
         """
         release_notes_paths = [
-            os.path.join(TEST_DATA_PATH, 'FakePack6', 'ReleaseNotes', '1_0_1.md'),
-            os.path.join(TEST_DATA_PATH, 'FakePack6', 'ReleaseNotes', '1_0_2.md'),
+            os.path.join(TEST_DATA_PATH, "FakePack6", "ReleaseNotes", "1_0_1.md"),
+            os.path.join(TEST_DATA_PATH, "FakePack6", "ReleaseNotes", "1_0_2.md"),
         ]
 
         pack_versions_dict = {}
@@ -416,12 +396,12 @@ class TestMergeVersionBlocks:
 
         rn_block = aggregate_release_notes_for_marketplace(pack_versions_dict)
 
-        assert 'Incident Fields' in rn_block
-        assert '**XDR Alerts**' in rn_block
-        assert 'First' in rn_block
-        assert 'Second' in rn_block
-        assert rn_block.endswith('\n')
-        assert rn_block.startswith('\n')
+        assert "Incident Fields" in rn_block
+        assert "**XDR Alerts**" in rn_block
+        assert "First" in rn_block
+        assert "Second" in rn_block
+        assert rn_block.endswith("\n")
+        assert rn_block.startswith("\n")
 
     def test_spaced_content_entity_and_old_format(self):
         """
@@ -435,8 +415,8 @@ class TestMergeVersionBlocks:
         - Ensure that the content of both RN files appears in the result file.
         """
         release_notes_paths = [
-            os.path.join(TEST_DATA_PATH, 'FakePack6', 'ReleaseNotes', '1_0_1.md'),
-            os.path.join(TEST_DATA_PATH, 'FakePack6', 'ReleaseNotes', '1_0_2.md'),
+            os.path.join(TEST_DATA_PATH, "FakePack6", "ReleaseNotes", "1_0_1.md"),
+            os.path.join(TEST_DATA_PATH, "FakePack6", "ReleaseNotes", "1_0_2.md"),
         ]
 
         pack_versions_dict = {}
@@ -446,11 +426,11 @@ class TestMergeVersionBlocks:
 
         rn_block, latest_version = merge_version_blocks(pack_versions_dict)
 
-        assert 'Incident Fields' in rn_block
-        assert '**XDR Alerts**' in rn_block
-        assert 'First' in rn_block
-        assert 'Second' in rn_block
-        assert latest_version == '1.0.2'
+        assert "Incident Fields" in rn_block
+        assert "**XDR Alerts**" in rn_block
+        assert "First" in rn_block
+        assert "Second" in rn_block
+        assert latest_version == "1.0.2"
 
     def test_one_comment_with_hyphen_and_one_not(self):
         """
@@ -465,8 +445,8 @@ class TestMergeVersionBlocks:
         """
 
         release_notes_paths = [
-            os.path.join(TEST_DATA_PATH, 'FakePack9', 'ReleaseNotes', '1_0_1.md'),
-            os.path.join(TEST_DATA_PATH, 'FakePack9', 'ReleaseNotes', '1_0_2.md'),
+            os.path.join(TEST_DATA_PATH, "FakePack9", "ReleaseNotes", "1_0_1.md"),
+            os.path.join(TEST_DATA_PATH, "FakePack9", "ReleaseNotes", "1_0_2.md"),
         ]
         pack_versions_dict = {}
         for path in release_notes_paths:
@@ -475,8 +455,8 @@ class TestMergeVersionBlocks:
 
         rn_block, _ = merge_version_blocks(pack_versions_dict)
 
-        assert '- This is a fake comment of the integration without a hyphen.' in rn_block
-        assert '\nThis is a fake comment of the script without a hyphen.' in rn_block
+        assert "- This is a fake comment of the integration without a hyphen." in rn_block
+        assert "\nThis is a fake comment of the script without a hyphen." in rn_block
 
     def test_sanity(self):
         """
@@ -490,8 +470,8 @@ class TestMergeVersionBlocks:
             type sections appears one after the other
         """
         release_notes_paths = [
-            os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '1_1_0.md'),
-            os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '2_1_0.md'),
+            os.path.join(TEST_DATA_PATH, "FakePack1", "ReleaseNotes", "1_1_0.md"),
+            os.path.join(TEST_DATA_PATH, "FakePack1", "ReleaseNotes", "2_1_0.md"),
         ]
 
         pack_versions_dict = {}
@@ -499,14 +479,14 @@ class TestMergeVersionBlocks:
             with open(path) as file_:
                 pack_versions_dict[get_pack_version_from_path(path)] = file_.read()
 
-        rn_block = aggregate_release_notes('FakePack', pack_versions_dict, {})
+        rn_block = aggregate_release_notes("FakePack", pack_versions_dict, {})
 
-        assert 'FakePack1_Playbook1' in rn_block
-        assert 'FakePack1_Playbook2' in rn_block
-        assert 'FakePack1_Integration1' in rn_block
-        assert 'FakePack1_Integration2' in rn_block
-        assert 'v2.1.0' in rn_block
-        assert 'v1.1.0' not in rn_block
+        assert "FakePack1_Playbook1" in rn_block
+        assert "FakePack1_Playbook2" in rn_block
+        assert "FakePack1_Integration1" in rn_block
+        assert "FakePack1_Integration2" in rn_block
+        assert "v2.1.0" in rn_block
+        assert "v1.1.0" not in rn_block
 
     def test_similiar_entities(self):
         """
@@ -521,8 +501,8 @@ class TestMergeVersionBlocks:
             one entity title for each one with two comments
         """
         release_notes_paths = [
-            os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '1_1_0.md'),
-            os.path.join(TEST_DATA_PATH, 'FakePack1', 'ReleaseNotes', '2_0_0.md'),
+            os.path.join(TEST_DATA_PATH, "FakePack1", "ReleaseNotes", "1_1_0.md"),
+            os.path.join(TEST_DATA_PATH, "FakePack1", "ReleaseNotes", "2_0_0.md"),
         ]
 
         pack_versions_dict = {}
@@ -530,17 +510,17 @@ class TestMergeVersionBlocks:
             with open(path) as file_:
                 pack_versions_dict[get_pack_version_from_path(path)] = file_.read()
 
-        rn_block = aggregate_release_notes('FakePack', pack_versions_dict, {})
+        rn_block = aggregate_release_notes("FakePack", pack_versions_dict, {})
 
-        assert rn_block.count('Integrations') == 1
-        assert rn_block.count('FakePack1_Integration1') == 1
-        assert rn_block.count('FakePack1_Integration2') == 1
-        assert 'v2.0.0' in rn_block
-        assert 'v1.1.0' not in rn_block
-        assert 'fake1 minor' in rn_block
-        assert 'fake2 minor' in rn_block
-        assert 'fake1 major' in rn_block
-        assert 'fake2 major' in rn_block
+        assert rn_block.count("Integrations") == 1
+        assert rn_block.count("FakePack1_Integration1") == 1
+        assert rn_block.count("FakePack1_Integration2") == 1
+        assert "v2.0.0" in rn_block
+        assert "v1.1.0" not in rn_block
+        assert "fake1 minor" in rn_block
+        assert "fake2 minor" in rn_block
+        assert "fake1 major" in rn_block
+        assert "fake2 major" in rn_block
 
     def test_get_new_entity_record_integration(self):
         """
@@ -553,11 +533,12 @@ class TestMergeVersionBlocks:
         Then
             Ensure the method is valid and returns the integration name and description.
         """
-        name, description = get_new_entity_record(os.path.join(TEST_DATA_PATH,
-                                                               'FakePack5', 'Integrations', 'fake_integration.yml'))
+        name, description = get_new_entity_record(
+            os.path.join(TEST_DATA_PATH, "FakePack5", "Integrations", "fake_integration.yml")
+        )
 
-        assert name == 'fake_integration'
-        assert description == 'Use the Zoom integration manage your Zoom users and meetings'
+        assert name == "fake_integration"
+        assert description == "Use the Zoom integration manage your Zoom users and meetings"
 
     def test_get_new_entity_record_layoutscontainer(self):
         """
@@ -570,11 +551,12 @@ class TestMergeVersionBlocks:
         Then
             Ensure the method is valid and returns the layoutscontainer name and the fromversion.
         """
-        name, description = get_new_entity_record(os.path.join(TEST_DATA_PATH,
-                                                               'FakePack5', 'Layouts', 'layoutscontainer-fake.json'))
+        name, description = get_new_entity_record(
+            os.path.join(TEST_DATA_PATH, "FakePack5", "Layouts", "layoutscontainer-fake.json")
+        )
 
-        assert name == 'layoutscontainer-fake'
-        assert description == '(Available from Cortex XSOAR 6.0.0)'
+        assert name == "layoutscontainer-fake"
+        assert description == "(Available from Cortex XSOAR 6.0.0)"
 
     def test_get_new_entity_record_layout(self):
         """
@@ -587,11 +569,10 @@ class TestMergeVersionBlocks:
         Then
             Ensure the method is valid and returns the layout name and description.
         """
-        name, description = get_new_entity_record(os.path.join(TEST_DATA_PATH,
-                                                               'FakePack5', 'Layouts', 'fake_layout.json'))
+        name, description = get_new_entity_record(os.path.join(TEST_DATA_PATH, "FakePack5", "Layouts", "fake_layout.json"))
 
-        assert name == 'Fake layout - Close'
-        assert description == ''
+        assert name == "Fake layout - Close"
+        assert description == ""
 
     def test_get_new_entity_record_classifier(self):
         """
@@ -604,11 +585,12 @@ class TestMergeVersionBlocks:
         Then
             Ensure the method is valid and returns the classifier name and description.
         """
-        name, description = get_new_entity_record(os.path.join(TEST_DATA_PATH,
-                                                               'FakePack5', 'Classifiers', 'fake_classifier.json'))
+        name, description = get_new_entity_record(
+            os.path.join(TEST_DATA_PATH, "FakePack5", "Classifiers", "fake_classifier.json")
+        )
 
-        assert name == 'Fake classifier'
-        assert description == 'Maps incoming Prisma Cloud event fields.'
+        assert name == "Fake classifier"
+        assert description == "Maps incoming Prisma Cloud event fields."
 
     def test_construct_entities_block_integration(self):
         """
@@ -621,11 +603,11 @@ class TestMergeVersionBlocks:
         Then
             Ensure the method is valid and the release note block contains Tanium integration.
         """
-        entities_data = {'Integrations': {'Tanium': 'Tanium endpoint security and systems management'}}
+        entities_data = {"Integrations": {"Tanium": "Tanium endpoint security and systems management"}}
         rn = construct_entities_block(entities_data)
-        assert '### Integrations' in rn
-        assert '##### Tanium' in rn
-        assert 'Tanium endpoint security and systems management' in rn
+        assert "### Integrations" in rn
+        assert "##### Tanium" in rn
+        assert "Tanium endpoint security and systems management" in rn
 
     def test_construct_entities_block_indicator_types(self):
         """
@@ -638,33 +620,34 @@ class TestMergeVersionBlocks:
         Then
             Ensure the method is valid and the release note block contains accountRep indicator.
         """
-        entities_data = {'IndicatorTypes': {'accountRep': ''}}
+        entities_data = {"IndicatorTypes": {"accountRep": ""}}
         rn = construct_entities_block(entities_data)
-        assert '### Indicator Types' in rn
-        assert '- **accountRep**' in rn
+        assert "### Indicator Types" in rn
+        assert "- **accountRep**" in rn
 
-    @pytest.mark.parametrize('Pack_name, versions_ls, expected_version', [
-        ("FakePack7", ["1_0_1.md", "1_0_2.md"], "1.0.2"),
-        ("FakePack8", ["1_13_44.md", "1_14_0.md"], '1.14.0')])
+    @pytest.mark.parametrize(
+        "Pack_name, versions_ls, expected_version",
+        [("FakePack7", ["1_0_1.md", "1_0_2.md"], "1.0.2"), ("FakePack8", ["1_13_44.md", "1_14_0.md"], "1.14.0")],
+    )
     def test_merge_rns_with_gerneral_announcment(self, Pack_name, versions_ls, expected_version):
         """
-            Given:
-                - Case 1: two consecutive versions of RN, both containing scripts with changes announcments,
-                One of them contain entity with description and one of them contain entity with an empty description.
-                One RN also contain integration changes announcments and the other contain entity with description.
-                - Case 2: two consecutive versions of RN, one contain a script with changes announcments and two entities
-                listed in this announcments and one of them contain a script with an entity with description.
-            When:
-                - Using merge_version_blocks function.
-            Then:
-                Ensure that the merge was done correctly.
-                - Case 1: Should create a merged RN with anouncments as the top descrition of each category, two categories with
-                one entity with descrition each. The other entity with the empty description should be omitted.
-                - Case 2: Should create a merged RN with the anouncment at the top of the category
-                including the two related entities, and under entity with descrition under the anouncment.
+        Given:
+            - Case 1: two consecutive versions of RN, both containing scripts with changes announcments,
+            One of them contain entity with description and one of them contain entity with an empty description.
+            One RN also contain integration changes announcments and the other contain entity with description.
+            - Case 2: two consecutive versions of RN, one contain a script with changes announcments and two entities
+            listed in this announcments and one of them contain a script with an entity with description.
+        When:
+            - Using merge_version_blocks function.
+        Then:
+            Ensure that the merge was done correctly.
+            - Case 1: Should create a merged RN with anouncments as the top descrition of each category, two categories with
+            one entity with descrition each. The other entity with the empty description should be omitted.
+            - Case 2: Should create a merged RN with the anouncment at the top of the category
+            including the two related entities, and under entity with descrition under the anouncment.
         """
-        release_notes_paths = [os.path.join(TEST_DATA_PATH, Pack_name, 'ReleaseNotes', ver) for ver in versions_ls]
-        expected_results_paths = os.path.join(TEST_DATA_PATH, Pack_name, 'expected_results.md')
+        release_notes_paths = [os.path.join(TEST_DATA_PATH, Pack_name, "ReleaseNotes", ver) for ver in versions_ls]
+        expected_results_paths = os.path.join(TEST_DATA_PATH, Pack_name, "expected_results.md")
 
         pack_versions_dict = {}
         for path in release_notes_paths:
@@ -678,52 +661,45 @@ class TestMergeVersionBlocks:
         assert latest_version == expected_version
         assert rn_block == expected_results
 
-    @pytest.mark.parametrize('pack_rns, expected_rns, expected_version', [
-        pytest.param({
-            "1.0.1": "## SomePack\n"
-                     "\n"
-                     "- Added some stuff.",
-            "1.0.2": "## SomePack\n"
-                     "\n"
-                     "- Added some other stuff."
-        },
-            "## SomePack\n"
-            "- Added some stuff.\n"
-            "- Added some other stuff.",
-            "1.0.2", id="Merge general notes together"),
-        pytest.param({
-            "1.0.1": "#### Integrations\n"
-                     "##### Some Integration\n"
-                     "- Some stuff.",
-            "1.0.2": "## SomePack\n"
-                     "\n"
-                     "- Added some other stuff."
-        },
-            "## SomePack\n"
-            "- Added some other stuff.\n"
-            "#### Integrations\n"
-            "##### Some Integration\n"
-            "- Some stuff.",
-            "1.0.2", id="Merge general notes with entity RNs"),
-        pytest.param({
-            "1.0.1": "## SomePack\n"
-                     "\n"
-                     "- Added some stuff.\n"
-                     "#### Integrations\n"
-                     "##### Some Integration\n"
-                     "- Some stuff.",
-            "1.0.2": "## SomePack\n"
-                     "\n"
-                     "- Added some other stuff."
-        },
-            "## SomePack\n"
-            "- Added some stuff.\n"
-            "- Added some other stuff.\n"
-            "#### Integrations\n"
-            "##### Some Integration\n"
-            "- Some stuff.",
-            "1.0.2", id="Merge combined notes with general notes"),
-    ])
+    @pytest.mark.parametrize(
+        "pack_rns, expected_rns, expected_version",
+        [
+            pytest.param(
+                {"1.0.1": "## SomePack\n" "\n" "- Added some stuff.", "1.0.2": "## SomePack\n" "\n" "- Added some other stuff."},
+                "## SomePack\n" "- Added some stuff.\n" "- Added some other stuff.",
+                "1.0.2",
+                id="Merge general notes together",
+            ),
+            pytest.param(
+                {
+                    "1.0.1": "#### Integrations\n" "##### Some Integration\n" "- Some stuff.",
+                    "1.0.2": "## SomePack\n" "\n" "- Added some other stuff.",
+                },
+                "## SomePack\n" "- Added some other stuff.\n" "#### Integrations\n" "##### Some Integration\n" "- Some stuff.",
+                "1.0.2",
+                id="Merge general notes with entity RNs",
+            ),
+            pytest.param(
+                {
+                    "1.0.1": "## SomePack\n"
+                    "\n"
+                    "- Added some stuff.\n"
+                    "#### Integrations\n"
+                    "##### Some Integration\n"
+                    "- Some stuff.",
+                    "1.0.2": "## SomePack\n" "\n" "- Added some other stuff.",
+                },
+                "## SomePack\n"
+                "- Added some stuff.\n"
+                "- Added some other stuff.\n"
+                "#### Integrations\n"
+                "##### Some Integration\n"
+                "- Some stuff.",
+                "1.0.2",
+                id="Merge combined notes with general notes",
+            ),
+        ],
+    )
     def test_merge_rns_with_general_notes(self, pack_rns: dict, expected_rns: str, expected_version: str):
         """
         Given: Two consecutive versions of RNs.
@@ -740,81 +716,85 @@ class TestMergeVersionBlocks:
         assert merged_rn_block == expected_rns
         assert latest_version == expected_version
 
-    @pytest.mark.parametrize('pack_rns, expected_rns, expected_version', [
-        pytest.param({
-            "1.0.1": "#### Integrations\n"
-                     "##### Some Integration\n"
-                     "- Updated the Docker image to: 123.",
-            "1.0.2": "#### Integrations\n"
-                     "##### Some Integration\n"
-                     "- Updated the Docker image to: 456.",
-        },
-            "#### Integrations\n"
-            "##### Some Integration\n"
-            "- Updated the Docker image to: 456.",
-            "1.0.2", id="Merge docker updates"),
-        pytest.param({
-            "1.0.1": "#### Integrations\n"
-                     "##### Some Integration\n"
-                     "- Added the new update to the integration.\n"
-                     "- Updated the Docker image to: 123.",
-            "1.0.2": "#### Integrations\n"
-                     "##### Some Integration\n"
-                     "- Added the other update to the integration.\n"
-                     "- Updated the Docker image to: 456.",
-        },
-            "#### Integrations\n"
-            "##### Some Integration\n"
-            "- Added the new update to the integration.\n"
-            "- Added the other update to the integration.\n"
-            "- Updated the Docker image to: 456.",
-            "1.0.2", id="Merge docker updates with other updates"),
-        pytest.param({
-            "1.0.1": "#### Integrations\n"
-                     "##### Some Integration\n"
-                     "- Added the new update to the integration.\n"
-                     "- Updated the Docker image to: 123.",
-            "1.0.2": "#### Integrations\n"
-                     "##### Some Integration\n"
-                     "- Added the other update to the integration.\n",
-        },
-            "#### Integrations\n"
-            "##### Some Integration\n"
-            "- Added the new update to the integration.\n"
-            "- Added the other update to the integration.\n"
-            "- Updated the Docker image to: 123.",
-            "1.0.2", id="Handle old docker update"),
-        pytest.param({
-            "1.0.1": "#### Integrations\n"
-                     "##### Some Integration\n"
-                     "- Updated the Docker image to: docker_image:123.\n"
-                     "##### Some Other Integration\n"
-                     "- Updated the Docker image to: other_docker_image:456.\n",
-            "1.0.2": "#### Integrations\n"
-                     "##### Some Integration\n"
-                     "- Updated the Docker image to: docker_image:124.\n"
-                     "##### Some Other Integration\n"
-                     "- Updated the Docker image to: other_docker_image:457.\n"
-        },
-            "#### Integrations\n"
-            "##### Some Integration\n"
-            "- Updated the Docker image to: docker_image:124.\n"
-            "##### Some Other Integration\n"
-            "- Updated the Docker image to: other_docker_image:457.",
-            "1.0.2", id="Handle 2 different old docker updates"),
-        pytest.param({
-            "1.0.2": "#### Integrations\n"
-                     "##### Some Integration\n"
-                     "- Updated the Docker image to: 456.",
-            "1.0.1": "#### Integrations\n"
-                     "##### Some Integration\n"
-                     "- Updated the Docker image to: 123.",
-        },
-            "#### Integrations\n"
-            "##### Some Integration\n"
-            "- Updated the Docker image to: 456.",
-            "1.0.2", id="Merge docker updates, unsorted dict"),
-    ])
+    @pytest.mark.parametrize(
+        "pack_rns, expected_rns, expected_version",
+        [
+            pytest.param(
+                {
+                    "1.0.1": "#### Integrations\n" "##### Some Integration\n" "- Updated the Docker image to: 123.",
+                    "1.0.2": "#### Integrations\n" "##### Some Integration\n" "- Updated the Docker image to: 456.",
+                },
+                "#### Integrations\n" "##### Some Integration\n" "- Updated the Docker image to: 456.",
+                "1.0.2",
+                id="Merge docker updates",
+            ),
+            pytest.param(
+                {
+                    "1.0.1": "#### Integrations\n"
+                    "##### Some Integration\n"
+                    "- Added the new update to the integration.\n"
+                    "- Updated the Docker image to: 123.",
+                    "1.0.2": "#### Integrations\n"
+                    "##### Some Integration\n"
+                    "- Added the other update to the integration.\n"
+                    "- Updated the Docker image to: 456.",
+                },
+                "#### Integrations\n"
+                "##### Some Integration\n"
+                "- Added the new update to the integration.\n"
+                "- Added the other update to the integration.\n"
+                "- Updated the Docker image to: 456.",
+                "1.0.2",
+                id="Merge docker updates with other updates",
+            ),
+            pytest.param(
+                {
+                    "1.0.1": "#### Integrations\n"
+                    "##### Some Integration\n"
+                    "- Added the new update to the integration.\n"
+                    "- Updated the Docker image to: 123.",
+                    "1.0.2": "#### Integrations\n" "##### Some Integration\n" "- Added the other update to the integration.\n",
+                },
+                "#### Integrations\n"
+                "##### Some Integration\n"
+                "- Added the new update to the integration.\n"
+                "- Added the other update to the integration.\n"
+                "- Updated the Docker image to: 123.",
+                "1.0.2",
+                id="Handle old docker update",
+            ),
+            pytest.param(
+                {
+                    "1.0.1": "#### Integrations\n"
+                    "##### Some Integration\n"
+                    "- Updated the Docker image to: docker_image:123.\n"
+                    "##### Some Other Integration\n"
+                    "- Updated the Docker image to: other_docker_image:456.\n",
+                    "1.0.2": "#### Integrations\n"
+                    "##### Some Integration\n"
+                    "- Updated the Docker image to: docker_image:124.\n"
+                    "##### Some Other Integration\n"
+                    "- Updated the Docker image to: other_docker_image:457.\n",
+                },
+                "#### Integrations\n"
+                "##### Some Integration\n"
+                "- Updated the Docker image to: docker_image:124.\n"
+                "##### Some Other Integration\n"
+                "- Updated the Docker image to: other_docker_image:457.",
+                "1.0.2",
+                id="Handle 2 different old docker updates",
+            ),
+            pytest.param(
+                {
+                    "1.0.2": "#### Integrations\n" "##### Some Integration\n" "- Updated the Docker image to: 456.",
+                    "1.0.1": "#### Integrations\n" "##### Some Integration\n" "- Updated the Docker image to: 123.",
+                },
+                "#### Integrations\n" "##### Some Integration\n" "- Updated the Docker image to: 456.",
+                "1.0.2",
+                id="Merge docker updates, unsorted dict",
+            ),
+        ],
+    )
     def test_merge_rns_with_several_docker_updates(self, pack_rns: dict, expected_rns: str, expected_version: str):
         """
         Given: Two consecutive versions of RNs.

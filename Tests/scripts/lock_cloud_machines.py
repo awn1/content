@@ -11,14 +11,12 @@ from Utils.github_workflow_scripts.utils import get_env_var
 from slack_sdk import WebClient as SlackWebClient
 from datetime import datetime
 
-GITLAB_SERVER_URL = get_env_var(
-    "CI_SERVER_URL", "https://gitlab.xdr.pan.local"
-)  # disable-secrets-detection
+GITLAB_SERVER_URL = get_env_var("CI_SERVER_URL", "https://gitlab.xdr.pan.local")  # disable-secrets-detection
 LOCKS_BUCKET = "xsoar-ci-artifacts"
 QUEUE_REPO = "queue"
 MACHINES_LOCKS_REPO = "machines_locks"
 JOB_STATUS_URL = "{}/api/v4/projects/{}/jobs/{}"  # disable-secrets-detection
-PIPELINE_STATUS_URL = '{}/api/v4/projects/{}/pipelines/{}'  # disable-secrets-detection
+PIPELINE_STATUS_URL = "{}/api/v4/projects/{}/pipelines/{}"  # disable-secrets-detection
 GITLAB_PROJECT_ID = get_env_var("CI_PROJECT_ID", "1061")  # default is Content
 
 
@@ -48,29 +46,21 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument("--service_account", help="Path to gcloud service account.")
     parser.add_argument("--gcs_locks_path", help="Path to lock repo.")
     parser.add_argument("--ci_job_id", help="the job id.")
-    parser.add_argument('--ci_pipeline_id', help='the pipeline id.')
+    parser.add_argument("--ci_pipeline_id", help="the pipeline id.")
     parser.add_argument(
         "--test_machines",
         help="comma separated string contains all available machines.",
     )
-    parser.add_argument(
-        "--gitlab_status_token", help="gitlab token to get the job status."
-    )
+    parser.add_argument("--gitlab_status_token", help="gitlab token to get the job status.")
     parser.add_argument("--response_machine", help="file to update the chosen machine.")
-    parser.add_argument(
-        "--lock_machine_name", help="a machine name to lock the specific machine"
-    )
-    parser.add_argument(
-        "--number_machines_to_lock", help="the needed machines number.", type=int
-    )
+    parser.add_argument("--lock_machine_name", help="a machine name to lock the specific machine")
+    parser.add_argument("--number_machines_to_lock", help="the needed machines number.", type=int)
 
     options = parser.parse_args()
     return options
 
 
-def get_queue_locks_details(
-    storage_client: storage.Client, bucket_name: str, prefix: str
-) -> list[dict]:
+def get_queue_locks_details(storage_client: storage.Client, bucket_name: str, prefix: str) -> list[dict]:
     """
     get a list of all queue locks files.
     Args:
@@ -87,9 +77,7 @@ def get_queue_locks_details(
     for blob in blobs:
         if blob.name.startswith(prefix):
             found = True
-            files.append(
-                {"name": blob.name.strip(prefix), "time_created": blob.time_created}
-            )
+            files.append({"name": blob.name.strip(prefix), "time_created": blob.time_created})
         elif found:
             break
     return files
@@ -121,10 +109,7 @@ def get_machines_locks_details(
             if blob.name.startswith(f"{lock_repository_name}/{machines_lock_repo}"):
                 lock_file_name = blob.name.split("/")[-1]
                 if lock_file_name:
-                    if (
-                        len(lock_file_name_separate := lock_file_name.split("-lock-"))
-                        == 3
-                    ):
+                    if len(lock_file_name_separate := lock_file_name.split("-lock-")) == 3:
                         project_id, machine_name, job_id = lock_file_name_separate
                         is_old_lock = False
                     else:
@@ -164,7 +149,7 @@ def check_job_status(
 
     """
     if "_" in job_id:
-        job_id = job_id.split('_')[1]
+        job_id = job_id.split("_")[1]
         user_endpoint = JOB_STATUS_URL.format(GITLAB_SERVER_URL, project_id, job_id)
     else:
         user_endpoint = PIPELINE_STATUS_URL.format(GITLAB_SERVER_URL, project_id, job_id)
@@ -173,23 +158,18 @@ def check_job_status(
     for attempt_num in range(1, num_of_retries + 1):
         try:
             logging.debug(
-                f'Try to get the status of job ID {job_id} from project id {project_id} in attempt number'
-                f'{attempt_num},user_endpoint: {user_endpoint}')
+                f"Try to get the status of job ID {job_id} from project id {project_id} in attempt number"
+                f"{attempt_num},user_endpoint: {user_endpoint}"
+            )
             response = requests.get(user_endpoint, headers=headers)
             response_as_json = response.json()
-            logging.debug(
-                f"{user_endpoint=} raw response={response_as_json} for {job_id=} of {project_id=}"
-            )
+            logging.debug(f"{user_endpoint=} raw response={response_as_json} for {job_id=} of {project_id=}")
             return response_as_json.get("status")
         except requests.ConnectionError as error:
-            logging.error(
-                f"Got connection error: {error} in attempt number {attempt_num}"
-            )
+            logging.error(f"Got connection error: {error} in attempt number {attempt_num}")
             if attempt_num == num_of_retries:
                 raise error
-            logging.debug(
-                f"sleeping for {interval} seconds to try to re-establish gitlab connection"
-            )
+            logging.debug(f"sleeping for {interval} seconds to try to re-establish gitlab connection")
             time.sleep(interval)
     return None
 
@@ -205,14 +185,10 @@ def remove_file(storage_bucket: Any, file_path: str):
     try:
         blob.delete()
     except Exception as err:
-        logging.error(
-            f"when we try to delete a build_from_queue = {file_path}, we get an error: {str(err)}"
-        )
+        logging.error(f"when we try to delete a build_from_queue = {file_path}, we get an error: {str(err)}")
 
 
-def lock_machine(
-    storage_bucket: Any, lock_repository_name: str, machine_name: str, job_id: str
-):
+def lock_machine(storage_bucket: Any, lock_repository_name: str, machine_name: str, job_id: str):
     """
     create a lock machine file
     Args:
@@ -227,9 +203,7 @@ def lock_machine(
     blob.upload_from_string("")
 
 
-def adding_build_to_the_queue(
-    storage_bucket: Any, lock_repository_name: str, job_id: str
-):
+def adding_build_to_the_queue(storage_bucket: Any, lock_repository_name: str, job_id: str):
     """
     create a lock machine file
     Args:
@@ -237,9 +211,7 @@ def adding_build_to_the_queue(
         lock_repository_name(str): the lock repository name.
         job_id(str): the job id to be added to the queue.
     """
-    blob = storage_bucket.blob(
-        f"{lock_repository_name}/{QUEUE_REPO}/{GITLAB_PROJECT_ID}-queue-{job_id}"
-    )
+    blob = storage_bucket.blob(f"{lock_repository_name}/{QUEUE_REPO}/{GITLAB_PROJECT_ID}-queue-{job_id}")
     blob.upload_from_string("")
 
 
@@ -267,22 +239,14 @@ def get_my_place_in_the_queue(
         prefix=f"{gcs_locks_path}/{QUEUE_REPO}/",
     )
     # sorting the files by time_created
-    sorted_builds_in_queue: list[dict] = sorted(
-        builds_in_queue, key=lambda d: d["time_created"], reverse=False
-    )
+    sorted_builds_in_queue: list[dict] = sorted(builds_in_queue, key=lambda d: d["time_created"], reverse=False)
 
     my_place_in_the_queue = next(
-        (
-            index
-            for (index, d) in enumerate(sorted_builds_in_queue)
-            if d["name"] == f"{GITLAB_PROJECT_ID}-queue-{job_id}"
-        ),
+        (index for (index, d) in enumerate(sorted_builds_in_queue) if d["name"] == f"{GITLAB_PROJECT_ID}-queue-{job_id}"),
         None,
     )
     if my_place_in_the_queue is None:
-        raise Exception(
-            "Unable to find the queue lock file, probably a problem creating the file"
-        )
+        raise Exception("Unable to find the queue lock file, probably a problem creating the file")
     previous_build_in_queue = ""
     if my_place_in_the_queue > 0:
         previous_build_in_queue = sorted_builds_in_queue[my_place_in_the_queue - 1].get("name")  # type: ignore[assignment]
@@ -326,17 +290,11 @@ def try_to_lock_machine(
     """
     lock_machine_name = ""
     job_id_of_the_existing_lock, project_id_of_the_existing_lock, is_old_lock = next(
-        (
-            (d["job_id"], d["project_id"], d["old_lock"])
-            for d in machines_locks
-            if d["machine_name"] == machine
-        ),
+        ((d["job_id"], d["project_id"], d["old_lock"]) for d in machines_locks if d["machine_name"] == machine),
         (None, None, None),
     )
 
-    if (
-        job_id_of_the_existing_lock and project_id_of_the_existing_lock
-    ):  # This means there might be a build using this machine
+    if job_id_of_the_existing_lock and project_id_of_the_existing_lock:  # This means there might be a build using this machine
         logging.debug(
             f"There is a lock file for job id: {job_id_of_the_existing_lock}"
             f"from project id: {project_id_of_the_existing_lock}"
@@ -410,10 +368,7 @@ def get_and_lock_all_needed_machines(
     while number_machines_to_lock > 0:
         busy_machines = []
         for machine in list_machines:
-            machines_locks = get_machines_locks_details(storage_client,
-                                                        LOCKS_BUCKET,
-                                                        gcs_locks_path,
-                                                        MACHINES_LOCKS_REPO)
+            machines_locks = get_machines_locks_details(storage_client, LOCKS_BUCKET, gcs_locks_path, MACHINES_LOCKS_REPO)
             lock_machine_name = try_to_lock_machine(
                 storage_bucket,
                 machine,
@@ -448,9 +403,7 @@ def get_and_lock_all_needed_machines(
     return locked_machine_list
 
 
-def create_list_of_machines_to_run(
-    lock_machine_name: str, test_machines: str, number_machines_to_lock: int
-) -> list[str]:
+def create_list_of_machines_to_run(lock_machine_name: str, test_machines: str, number_machines_to_lock: int) -> list[str]:
     """
     get the list of the available machines (or one specific given machine for debugging).
     Args:
@@ -464,9 +417,7 @@ def create_list_of_machines_to_run(
         logging.info(f"trying to lock the given machine: {lock_machine_name}")
         list_machines = [lock_machine_name]
     else:
-        logging.info(
-            "getting all machine names"
-        )  # We are looking for a free machine in all the available machines.
+        logging.info("getting all machine names")  # We are looking for a free machine in all the available machines.
         list_machines = test_machines.split(",")
         random.shuffle(list_machines)
 
@@ -513,14 +464,10 @@ def wait_for_build_to_be_first_in_queue(
             previous_job_id = previous_build_separate[0]
 
         # we check the status of the build that is ahead of me in the queue
-        previous_build_status = check_job_status(
-            gitlab_status_token, previous_project_id, previous_job_id
-        )
+        previous_build_status = check_job_status(gitlab_status_token, previous_project_id, previous_job_id)
         if previous_build_status != "running":
             # delete the lock file of the build because it's not running
-            remove_file(
-                storage_bucket, f"{gcs_locks_path}/{QUEUE_REPO}/{previous_build}"
-            )
+            remove_file(storage_bucket, f"{gcs_locks_path}/{QUEUE_REPO}/{previous_build}")
         else:
             sleep(random.randint(8, 13))
 
@@ -530,19 +477,16 @@ def main():
     install_logging("lock_cloud_machines.log", logger=logging)
     logging.info("Starting to search for a CLOUD machine/s to lock")
     options = options_handler()
-    storage_client = storage.Client.from_service_account_json(
-        options.service_account)
+    storage_client = storage.Client.from_service_account_json(options.service_account)
     storage_bucket = storage_client.bucket(LOCKS_BUCKET)
 
-    logging.info(f"job_id={options.ci_job_id} "
-                 f"pipeline_id={options.ci_pipeline_id}")
+    logging.info(f"job_id={options.ci_job_id} " f"pipeline_id={options.ci_pipeline_id}")
     if options.ci_job_id:
         options.ci_job_id = f"{options.ci_pipeline_id}_{options.ci_job_id}"
     else:
         options.ci_job_id = options.pipeline_id
-    logging.info(f'Adding job_id/pipeline_id:{options.ci_job_id} to the queue')
-    adding_build_to_the_queue(storage_bucket, options.gcs_locks_path,
-                              options.ci_job_id)
+    logging.info(f"Adding job_id/pipeline_id:{options.ci_job_id} to the queue")
+    adding_build_to_the_queue(storage_bucket, options.gcs_locks_path, options.ci_job_id)
 
     # running until the build is the first in queue
     wait_for_build_to_be_first_in_queue(

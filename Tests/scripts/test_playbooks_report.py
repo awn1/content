@@ -16,8 +16,9 @@ TEST_PLAYBOOKS_TO_JIRA_MAPPING = "test_playbook_to_jira_mapping.json"
 TEST_PLAYBOOKS_TO_JIRA_TICKETS_CONVERTED = "test_playbook_to_jira_tickets_converted.txt"
 
 
-def calculate_test_playbooks_results(test_playbooks_result_files_list: dict[str, Path]
-                                     ) -> tuple[dict[str, dict[str, Any]], set[str]]:
+def calculate_test_playbooks_results(
+    test_playbooks_result_files_list: dict[str, Path],
+) -> tuple[dict[str, dict[str, Any]], set[str]]:
     playbooks_results: dict[str, dict[str, Any]] = {}
     server_versions = set()
     for instance_role, test_playbook_result_file in test_playbooks_result_files_list.items():
@@ -33,16 +34,19 @@ def calculate_test_playbooks_results(test_playbooks_result_files_list: dict[str,
     return playbooks_results, server_versions
 
 
-def get_jira_tickets_for_playbooks(playbook_ids: list[str],
-                                   issues: dict[str, list[Issue]],
-                                   ) -> dict[str, Issue]:
+def get_jira_tickets_for_playbooks(
+    playbook_ids: list[str],
+    issues: dict[str, list[Issue]],
+) -> dict[str, Issue]:
     playbook_ids_to_jira_tickets: dict[str, Issue] = {}
     for playbook_id in playbook_ids:
         jira_ticket_summary = generate_ticket_summary(playbook_id)
         if jira_ticket_summary.lower() in issues:
-            sorted_issues = sorted(issues[jira_ticket_summary.lower()],
-                                   key=lambda issue: convert_jira_time_to_datetime(issue.get_field("created")),
-                                   reverse=True)
+            sorted_issues = sorted(
+                issues[jira_ticket_summary.lower()],
+                key=lambda issue: convert_jira_time_to_datetime(issue.get_field("created")),
+                reverse=True,
+            )
             playbook_ids_to_jira_tickets[playbook_id] = sorted_issues[0]
     return playbook_ids_to_jira_tickets
 
@@ -51,16 +55,16 @@ def write_test_playbook_to_jira_mapping(server_url: str, artifacts_path: Path, j
     test_playbooks_to_jira_mapping = artifacts_path / TEST_PLAYBOOKS_TO_JIRA_MAPPING
     logging.info(f"Writing test_playbooks_to_jira_mapping to {test_playbooks_to_jira_mapping}")
     with open(test_playbooks_to_jira_mapping, "w") as playbook_to_jira_mapping_file:
-        playbook_to_jira_mapping = {playbook_id: jira_ticket_to_json_data(server_url, jira_ticket)
-                                    for playbook_id, jira_ticket in jira_tickets_for_playbooks.items()}
-        playbook_to_jira_mapping_file.write(json.dumps(playbook_to_jira_mapping, indent=4, sort_keys=True,
-                                                       default=str))
+        playbook_to_jira_mapping = {
+            playbook_id: jira_ticket_to_json_data(server_url, jira_ticket)
+            for playbook_id, jira_ticket in jira_tickets_for_playbooks.items()
+        }
+        playbook_to_jira_mapping_file.write(json.dumps(playbook_to_jira_mapping, indent=4, sort_keys=True, default=str))
 
 
 def read_test_playbook_to_jira_mapping(artifacts_path: Path):
     logging.debug(f"Reading test_playbooks_to_jira_mapping from {TEST_PLAYBOOKS_TO_JIRA_MAPPING}")
-    with (contextlib.suppress(Exception),
-          open(artifacts_path / TEST_PLAYBOOKS_TO_JIRA_MAPPING) as playbook_to_jira_mapping_file):
+    with contextlib.suppress(Exception), open(artifacts_path / TEST_PLAYBOOKS_TO_JIRA_MAPPING) as playbook_to_jira_mapping_file:
         return json.load(playbook_to_jira_mapping_file)
 
     return {}

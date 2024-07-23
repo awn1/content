@@ -19,16 +19,16 @@ from itertools import pairwise
 from demisto_sdk.commands.common.constants import MarketplaceVersions
 
 
-CONTENT_NIGHTLY = 'Content Nightly'
-CONTENT_PR = 'Content PR'
-CONTENT_MERGE = 'Content Merge'
-BUCKET_UPLOAD = 'Upload Packs to Marketplace Storage'
-SDK_NIGHTLY = 'Demisto SDK Nightly'
-PRIVATE_NIGHTLY = 'Private Nightly'
-TEST_NATIVE_CANDIDATE = 'Test Native Candidate'
-SECURITY_SCANS = 'Security Scans'
-BUILD_MACHINES_CLEANUP = 'Build Machines Cleanup'
-SDK_RELEASE = 'Automate Demisto SDK release'
+CONTENT_NIGHTLY = "Content Nightly"
+CONTENT_PR = "Content PR"
+CONTENT_MERGE = "Content Merge"
+BUCKET_UPLOAD = "Upload Packs to Marketplace Storage"
+SDK_NIGHTLY = "Demisto SDK Nightly"
+PRIVATE_NIGHTLY = "Private Nightly"
+TEST_NATIVE_CANDIDATE = "Test Native Candidate"
+SECURITY_SCANS = "Security Scans"
+BUILD_MACHINES_CLEANUP = "Build Machines Cleanup"
+SDK_RELEASE = "Automate Demisto SDK release"
 
 WORKFLOW_TYPES = {
     CONTENT_NIGHTLY,
@@ -40,9 +40,9 @@ WORKFLOW_TYPES = {
     TEST_NATIVE_CANDIDATE,
     SECURITY_SCANS,
     BUILD_MACHINES_CLEANUP,
-    SDK_RELEASE
+    SDK_RELEASE,
 }
-BUCKET_UPLOAD_BRANCH_SUFFIX = '-upload_test_branch'
+BUCKET_UPLOAD_BRANCH_SUFFIX = "-upload_test_branch"
 TOTAL_HEADER = "Total"
 NOT_AVAILABLE = "N/A"
 TEST_SUITE_JIRA_HEADERS: list[str] = ["Jira\nTicket", "Jira\nTicket\nResolution"]
@@ -69,8 +69,8 @@ FAILED_TO_MSG = {
 }
 
 # This is the GitHub username of the bot (and its reviewer) that pushes contributions and docker updates to the content repo.
-CONTENT_BOT = 'content-bot'
-CONTENT_BOT_REVIEWER = 'github-actions[bot]'
+CONTENT_BOT = "content-bot"
+CONTENT_BOT_REVIEWER = "github-actions[bot]"
 
 STRING_TO_BOOL_MAP = {
     "y": True,
@@ -89,8 +89,8 @@ STRING_TO_BOOL_MAP = {
 
 
 def string_to_bool(
-        input_: Any,
-        default_when_empty: Optional[bool] = None,
+    input_: Any,
+    default_when_empty: Optional[bool] = None,
 ) -> bool:
     try:
         return STRING_TO_BOOL_MAP[str(input_).lower()]
@@ -104,8 +104,11 @@ def string_to_bool(
 def get_instance_directories(artifacts_path: Path) -> dict[str, Path]:
     instance_directories: dict[str, Path] = {}
     for directory in artifacts_path.iterdir():
-        if directory.is_dir() and directory.name.startswith("instance_") and \
-                (instance_role_txt := directory / "instance_role.txt").exists():
+        if (
+            directory.is_dir()
+            and directory.name.startswith("instance_")
+            and (instance_role_txt := directory / "instance_role.txt").exists()
+        ):
             instance_role: str = instance_role_txt.read_text().replace("\n", "")
             instance_directories[instance_role] = directory
     return instance_directories
@@ -129,7 +132,6 @@ def failed_to_ansi_text(text: str, failed: bool) -> str:
 
 
 class TestSuiteStatistics:
-
     def __init__(self, no_color, failures: int = 0, errors: int = 0, skipped: int = 0, tests: int = 0):
         self.no_color = no_color
         self.failures = failures
@@ -138,8 +140,13 @@ class TestSuiteStatistics:
         self.tests = tests
 
     def __add__(self, other):
-        return TestSuiteStatistics(self.no_color, self.failures + other.failures, self.errors + other.errors,
-                                   self.skipped + other.skipped, self.tests + other.tests)
+        return TestSuiteStatistics(
+            self.no_color,
+            self.failures + other.failures,
+            self.errors + other.errors,
+            self.skipped + other.skipped,
+            self.tests + other.tests,
+        )
 
     def show_with_color(self, res: int, show_as_error: bool | None = None) -> str:
         res_str = str(res)
@@ -148,25 +155,29 @@ class TestSuiteStatistics:
         return failed_to_ansi_text(res_str, show_as_error)
 
     def __str__(self):
-        return (f"{self.show_with_color(self.skipped)}/"  # no color for skipped.
-                f"{self.show_with_color(self.failures, self.failures > 0)}/"
-                f"{self.show_with_color(self.errors, self.errors > 0)}/"
-                f"{self.show_with_color(self.tests, self.errors + self.failures > 0)}")
+        return (
+            f"{self.show_with_color(self.skipped)}/"  # no color for skipped.
+            f"{self.show_with_color(self.failures, self.failures > 0)}/"
+            f"{self.show_with_color(self.errors, self.errors > 0)}/"
+            f"{self.show_with_color(self.tests, self.errors + self.failures > 0)}"
+        )
 
 
-def calculate_results_table(jira_tickets_for_result: dict[str, Issue],
-                            results: dict[str, dict[str, Any]],
-                            server_versions: set[str],
-                            base_headers: list[str],
-                            add_total_row: bool = True,
-                            no_color: bool = False,
-                            without_jira: bool = False,
-                            with_skipped: bool = False,
-                            multiline_headers: bool = True,
-                            transpose: bool = False,
-                            fail_only_nightly_tests: bool = False,
-                            artifacts_path: Path | None = None,
-                            product_type: str | None = None) -> tuple[list[str], list[list[Any]], JUnitXml, int]:
+def calculate_results_table(
+    jira_tickets_for_result: dict[str, Issue],
+    results: dict[str, dict[str, Any]],
+    server_versions: set[str],
+    base_headers: list[str],
+    add_total_row: bool = True,
+    no_color: bool = False,
+    without_jira: bool = False,
+    with_skipped: bool = False,
+    multiline_headers: bool = True,
+    transpose: bool = False,
+    fail_only_nightly_tests: bool = False,
+    artifacts_path: Path | None = None,
+    product_type: str | None = None,
+) -> tuple[list[str], list[list[Any]], JUnitXml, int]:
     xml = JUnitXml()
     headers_multiline_char = "\n" if multiline_headers else " "
     headers = [h.replace("\n", headers_multiline_char) for h in base_headers]
@@ -176,26 +187,29 @@ def calculate_results_table(jira_tickets_for_result: dict[str, Issue],
     fixed_headers_length = len(headers)
     server_versions_list: list[str] = sorted(server_versions)
     for server_version in server_versions_list:
-        server_version_header = server_version.replace(' ', headers_multiline_char)
+        server_version_header = server_version.replace(" ", headers_multiline_char)
         headers.append(
             server_version_header
-            if transpose else f"{server_version_header}{headers_multiline_char}{TEST_SUITE_DATA_CELL_HEADER}"
+            if transpose
+            else f"{server_version_header}{headers_multiline_char}{TEST_SUITE_DATA_CELL_HEADER}"
         )
         column_align.append("center")
     tabulate_data = [headers]
-    total_row: list[Any] = ([""] * fixed_headers_length + [TestSuiteStatistics(no_color)
-                                                           for _ in range(len(server_versions_list))])
+    total_row: list[Any] = [""] * fixed_headers_length + [TestSuiteStatistics(no_color) for _ in range(len(server_versions_list))]
     total_errors = 0
     server_mapping_dict: dict = {}
     if product_type and fail_only_nightly_tests and product_type == "XSOAR" and artifacts_path:
         server_mapping_dict[XSOAR_ON_PREM] = {}
         server_mapping_dict[XSOAR_SAAS] = {}
-        server_mapping_dict[XSOAR_ON_PREM]["config"] = TestConf(artifacts_path / XSOAR_ON_PREM / CONF_FILE,
-                                                                MarketplaceVersions.XSOAR)
-        server_mapping_dict[XSOAR_SAAS]["config"] = TestConf(artifacts_path / XSOAR_SAAS / CONF_FILE,
-                                                             MarketplaceVersions.XSOAR_SAAS)
-        server_mapping_dict[XSOAR_ON_PREM]["tpb_dependencies"] = get_json_data(artifacts_path / XSOAR_ON_PREM /
-                                                                               TPB_DEPENDENCIES_FILE)
+        server_mapping_dict[XSOAR_ON_PREM]["config"] = TestConf(
+            artifacts_path / XSOAR_ON_PREM / CONF_FILE, MarketplaceVersions.XSOAR
+        )
+        server_mapping_dict[XSOAR_SAAS]["config"] = TestConf(
+            artifacts_path / XSOAR_SAAS / CONF_FILE, MarketplaceVersions.XSOAR_SAAS
+        )
+        server_mapping_dict[XSOAR_ON_PREM]["tpb_dependencies"] = get_json_data(
+            artifacts_path / XSOAR_ON_PREM / TPB_DEPENDENCIES_FILE
+        )
         server_mapping_dict[XSOAR_SAAS]["tpb_dependencies"] = get_json_data(artifacts_path / XSOAR_SAAS / TPB_DEPENDENCIES_FILE)
     else:
         fail_only_nightly_tests = False
@@ -206,9 +220,7 @@ def calculate_results_table(jira_tickets_for_result: dict[str, Issue],
                 row.extend(
                     (
                         jira_ticket.key,
-                        jira_ticket.get_field("resolution")
-                        if jira_ticket.get_field("resolution")
-                        else NOT_AVAILABLE,
+                        jira_ticket.get_field("resolution") if jira_ticket.get_field("resolution") else NOT_AVAILABLE,
                     )
                 )
             else:
@@ -233,9 +245,11 @@ def calculate_results_table(jira_tickets_for_result: dict[str, Issue],
                     skipped_count += 1
                 if fail_only_nightly_tests:
                     server_mapping_field = XSOAR_SAAS if server_version == "XSOAR SAAS" else XSOAR_ON_PREM
-                    if not is_tpb_part_of_nightly(test_suite.name,
-                                                  server_mapping_dict[server_mapping_field]["config"],
-                                                  server_mapping_dict[server_mapping_field]["tpb_dependencies"]):
+                    if not is_tpb_part_of_nightly(
+                        test_suite.name,
+                        server_mapping_dict[server_mapping_field]["config"],
+                        server_mapping_dict[server_mapping_field]["tpb_dependencies"],
+                    ):
                         logging.info(f"playbook {test_suite.name} is not part of nightly, won't fail build.")
                         continue
                 errors_count += test_suite.errors + test_suite.failures
@@ -312,8 +326,7 @@ def replace_escape_characters(sentence: str, replace_with: str = " ") -> str:
     return sentence
 
 
-def get_pipelines_and_commits(gitlab_client: Gitlab, project_id,
-                              look_back_hours: int):
+def get_pipelines_and_commits(gitlab_client: Gitlab, project_id, look_back_hours: int):
     """
     Get all pipelines and commits on the master branch in the last X hours.
     The commits and pipelines are in order of creation time.
@@ -327,12 +340,12 @@ def get_pipelines_and_commits(gitlab_client: Gitlab, project_id,
     project = gitlab_client.projects.get(project_id)
 
     # Calculate the timestamp for look_back_hours ago
-    time_threshold = (
-        datetime.utcnow() - timedelta(hours=look_back_hours)).isoformat()
+    time_threshold = (datetime.utcnow() - timedelta(hours=look_back_hours)).isoformat()
 
-    commits = project.commits.list(all=True, since=time_threshold, order_by='updated_at', sort='asc')
-    pipelines = project.pipelines.list(all=True, updated_after=time_threshold, ref='master',
-                                       source='push', order_by='id', sort='asc')
+    commits = project.commits.list(all=True, since=time_threshold, order_by="updated_at", sort="asc")
+    pipelines = project.pipelines.list(
+        all=True, updated_after=time_threshold, ref="master", source="push", order_by="id", sort="asc"
+    )
 
     return pipelines, commits
 
@@ -389,11 +402,13 @@ def is_pivot(current_pipeline: ProjectPipeline, pipeline_to_compare: ProjectPipe
 
     in_order = are_pipelines_in_order(pipeline_a=current_pipeline, pipeline_b=pipeline_to_compare)
     if in_order:
-        logging.info(f"The status of the current pipeline {current_pipeline.id} is {current_pipeline.status} and the "
-                     f"status of the compared pipeline {pipeline_to_compare.id} is {pipeline_to_compare.status}")
-        if pipeline_to_compare.status == 'success' and current_pipeline.status == 'failed':
+        logging.info(
+            f"The status of the current pipeline {current_pipeline.id} is {current_pipeline.status} and the "
+            f"status of the compared pipeline {pipeline_to_compare.id} is {pipeline_to_compare.status}"
+        )
+        if pipeline_to_compare.status == "success" and current_pipeline.status == "failed":
             return True
-        if pipeline_to_compare.status == 'failed' and current_pipeline.status == 'success':
+        if pipeline_to_compare.status == "failed" and current_pipeline.status == "success":
             return False
     return None
 
@@ -469,8 +484,9 @@ def get_pipeline_by_commit(commit: ProjectCommit, list_of_pipelines: list[Projec
     return next((pipeline for pipeline in list_of_pipelines if pipeline.sha == commit.id), None)
 
 
-def create_shame_message(suspicious_commits: list[ProjectCommit],
-                         pipeline_changed_status: bool, name_mapping_path: str) -> tuple[str, str, str, str] | None:
+def create_shame_message(
+    suspicious_commits: list[ProjectCommit], pipeline_changed_status: bool, name_mapping_path: str
+) -> tuple[str, str, str, str] | None:
     """
     Create a shame message for the person in charge of the commit, or for multiple people in case of multiple suspicious commits.
     Args:
@@ -534,8 +550,9 @@ def was_message_already_sent(commit_index: int, list_of_commits: list, list_of_p
     return False
 
 
-def get_nearest_newer_commit_with_pipeline(list_of_pipelines: list[ProjectPipeline], list_of_commits: list[ProjectCommit],
-                                           current_commit_index: int) -> tuple[ProjectPipeline, list] | tuple[None, None]:
+def get_nearest_newer_commit_with_pipeline(
+    list_of_pipelines: list[ProjectPipeline], list_of_commits: list[ProjectCommit], current_commit_index: int
+) -> tuple[ProjectPipeline, list] | tuple[None, None]:
     """
      Get the nearest newer commit that has a pipeline.
     Args:
@@ -555,8 +572,9 @@ def get_nearest_newer_commit_with_pipeline(list_of_pipelines: list[ProjectPipeli
     return None, None
 
 
-def get_nearest_older_commit_with_pipeline(list_of_pipelines: list[ProjectPipeline], list_of_commits: list[ProjectCommit],
-                                           current_commit_index: int) -> tuple[ProjectPipeline, list] | tuple[None, None]:
+def get_nearest_older_commit_with_pipeline(
+    list_of_pipelines: list[ProjectPipeline], list_of_commits: list[ProjectCommit], current_commit_index: int
+) -> tuple[ProjectPipeline, list] | tuple[None, None]:
     """
      Get the nearest oldest commit that has a pipeline.
     Args:
