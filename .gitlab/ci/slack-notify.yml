@@ -41,10 +41,13 @@ slack-notify:
   script:
     - env
     - |
+      SLACK_ARGS=()
       if [ -n "${SLACK_MSG_FILE}" ]; then
-        poetry run python3 -u ./Tests/scripts/gitlab_slack_notifier.py -p "${PIPELINE_TO_QUERY}" -s "${SLACK_TOKEN}" -c "${GITLAB_STATUS_TOKEN}" -ch "${SLACK_CHANNEL}" -tw "${WORKFLOW}"  --allow-failure "${SLACK_ALLOW_FAILURE}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json" --file "${SLACK_MSG_FILE}"
-      else
-        poetry run python3 -u ./Tests/scripts/gitlab_slack_notifier.py -p "${PIPELINE_TO_QUERY}" -s "${SLACK_TOKEN}" -c "${GITLAB_STATUS_TOKEN}" -ch "${SLACK_CHANNEL}" -tw "${WORKFLOW}"  --allow-failure "${SLACK_ALLOW_FAILURE}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json"
+        SLACK_ARGS+=("--file" "${SLACK_MSG_FILE}")
       fi
+      if [ -n "${SLACK_MSG_ATTACHMENTS}" ]; then
+        SLACK_ARGS+=("--attachments" "${SLACK_MSG_ATTACHMENTS}")
+      fi
+      poetry run python3 -u ./Tests/scripts/gitlab_slack_notifier.py -p "${PIPELINE_TO_QUERY}" -s "${SLACK_TOKEN}" -c "${GITLAB_STATUS_TOKEN}" -ch "${SLACK_CHANNEL}" -tw "${WORKFLOW}"  --allow-failure "${SLACK_ALLOW_FAILURE}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json" "${SLACK_ARGS[@]}"
   retry:
     max: 2
