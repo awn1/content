@@ -29,12 +29,7 @@ from Tests.scripts.common import (
     CONTENT_PR,
     TEST_MODELING_RULES_REPORT_FILE_NAME,
     TEST_PLAYBOOKS_REPORT_FILE_NAME,
-    replace_escape_characters,
-    create_shame_message
-)
-from Tests.scripts.common import (
-    get_pipelines_and_commits,
-    is_pivot,
+    create_shame_message,
     get_commit_by_sha,
     get_instance_directories,
     get_nearest_newer_commit_with_pipeline,
@@ -42,7 +37,6 @@ from Tests.scripts.common import (
     get_pipeline_by_commit,
     get_pipelines_and_commits,
     get_properties_for_test_suite,
-    get_slack_user_name,
     get_test_results_files,
     is_pivot,
     replace_escape_characters,

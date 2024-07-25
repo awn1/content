@@ -2456,7 +2456,7 @@ class Pack:
                         try:
                             self.process_and_upload_image(image, storage_bucket)
                         except Exception as e:
-                            logging.exception(f"Failed uploading {self.name} image, reason: {str(e)}")
+                            logging.exception(f"Failed uploading {self.name} image, reason: {e!s}")
                             return False
         else:
             logging.debug(f"No markdown relative path images were found in pack {self.name}")
@@ -2482,7 +2482,7 @@ class Pack:
             logging.debug(f"Uploaded successfully markdown relative path image '{image_name}'")
 
         else:
-            logging.debug(f"Skipping uploading {image_name} at {str(image_path)}, image doesn't exist.")
+            logging.debug(f"Skipping uploading {image_name} at {image_path!s}, image doesn't exist.")
 
     def copy_author_image(
         self,
