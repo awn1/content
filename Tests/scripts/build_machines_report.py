@@ -14,14 +14,27 @@ import urllib3
 from google.auth import _default
 from infra.resources.constants import AUTOMATION_GCP_PROJECT
 from jinja2 import Environment, FileSystemLoader
+from slack_sdk import WebClient
 from urllib3.exceptions import InsecureRequestWarning
+
+import common
+from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT
+from Tests.scripts.graph_lock_machine import (
+    create_lock_duration_graph,
+    create_available_machines_graph,
+    create_builds_waiting_in_queue_graph,
+    LOCK_DURATION,
+    AVAILABLE_MACHINES,
+    BUILD_IN_QUEUE,
+)
+from Tests.scripts.utils.slack import get_messages_from_slack
 
 urllib3.disable_warnings(InsecureRequestWarning)
 warnings.filterwarnings("ignore", _default._CLOUD_SDK_CREDENTIALS_WARNING)
 
-from infra.settings import Settings, XSOARAdminUser  # noqa
-from infra.viso_api import VisoAPI  # noqa
-from infra.xsoar_api import XsoarClient, XsiamClient  # noqa
+from Tests.scripts.infra.settings import Settings, XSOARAdminUser  # noqa
+from Tests.scripts.infra.viso_api import VisoAPI  # noqa
+from Tests.scripts.infra.xsoar_api import XsoarClient, XsiamClient  # noqa
 
 ARTIFACTS_FOLDER = os.environ["ARTIFACTS_FOLDER"]
 GITLAB_ARTIFACTS_URL = os.environ["GITLAB_ARTIFACTS_URL"]
@@ -32,9 +45,11 @@ XDR_UPGRADE_CHANNEL_DEV = os.environ["XDR_UPGRADE_CHANNEL_DEV"]
 XDR_UPGRADE_CHANNEL_ID_DEV = os.environ["XDR_UPGRADE_CHANNEL_ID_DEV"]
 PERMISSION_ROLE = os.environ.get("PERMISSION_ROLE", "cortex-operator-data-access")
 NOT_AVAILABLE = "N/A"
-VISO_API_URL = os.getenv("VISO_API_URL")
+VISO_API_URL: str | None = os.getenv("VISO_API_URL")
 VISO_API_KEY = os.getenv("VISO_API_KEY")
 WITHOUT_VISO = os.getenv("WITHOUT_VISO")
+SLACK_TOKEN = os.getenv("SLACK_TOKEN")
+WAIT_IN_LINE_CHANNEL_ID: str = os.environ["WAIT_IN_LINE_CHANNEL_ID"]
 CONTENT_TENANTS_GROUP_OWNER = os.getenv("CONTENT_TENANTS_GROUP_OWNER")
 TTL_EXPIRED_DAYS_DEFAULT = 5
 TTL_EXPIRED_DAYS = timedelta(days=int(os.getenv("TTL_EXPIRED_DAYS", TTL_EXPIRED_DAYS_DEFAULT)))
@@ -43,6 +58,8 @@ TOKENS_COUNT_PERCENTAGE_THRESHOLD = int(os.getenv("TOKENS_COUNT_PERCENTAGE_THRES
 MAX_OWNERS_TO_NOTIFY_DISPLAY = 5
 BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT = {XsiamClient.PLATFORM_TYPE: ["build", "nightly"]}
 COMMENT_FIELD_NAME = "__comment__"
+RECORDS_FILE_NAME = "records.json"
+WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME = "wait_in_line_slack_messages.json"
 
 
 def create_column(
@@ -85,7 +102,7 @@ def generate_columns(without_viso: bool) -> list[dict]:
     return columns
 
 
-def create_report(
+def create_report_html(
     current_date: str, records: list[dict], columns: list[dict], columns_filterable: list[int], managers: list[str]
 ) -> str:
     template_path = Path(__file__).parent / "BuildMachines" / "templates"
@@ -316,53 +333,193 @@ def load_json_file(file_path: str) -> dict | list:
     return {}
 
 
+def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], list[int], list[str], list[dict]]:
+    slack_msg_append: List[Dict[Any, Any]] = []
+    managers: list[Any] = []
+    if args.name_mapping_path:
+        name_mapping: dict = load_json_file(args.name_mapping_path)  # type: ignore[assignment]
+        managers.extend(name_mapping.get("managers", []))
+    columns = generate_columns(args.without_viso)
+    static_columns = {column["key"] for column in columns if column["key"]}
+    dynamic_columns = list({key for record in records for key in record.keys() if key not in static_columns})
+    columns.extend([create_column(False, key, key, False, False, False, False) for key in dynamic_columns])
+    columns_filterable = [i for i, c in enumerate(columns) if c["filterable"]]
+    disabled_machines_count = set()
+    non_connectable_machines_count = set()
+    ttl_expired_count = set()
+    owners_to_machines: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    build_machines_requiring_an_agent = defaultdict(set)
+    for record in records:
+        machine_name = record.get("machine_name", {}).get("display")
+        platform_type = record.get("platform_type", {}).get("display")
+        flow_type = record.get("flow_type", {}).get("display")
+        # checking the TTL, enabled and connectable only for build machines.
+        if record.get("build_machine", {}).get("display", True):
+            if not record.get("enabled", {}).get("display", True):
+                disabled_machines_count.add(machine_name)
+            if not record.get("connectable", {}).get("display", True):
+                non_connectable_machines_count.add(machine_name)
+            if record.get("ttl", {}).get("column_class") == generate_ttl_class(True):
+                ttl_expired_count.add(machine_name)
+            if (
+                record.get("agent_host_name", {}).get("display") == NOT_AVAILABLE
+                and platform_type in BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT
+                and flow_type in BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT[platform_type]
+            ):
+                build_machines_requiring_an_agent[flow_type].add(machine_name)
+        if not args.without_viso:
+            # Count the number of machines per owner per machine type, only if they don't have a flow type.
+            owner = record.get("owner", {}).get("display")
+            flow_type = record.get("flow_type", {}).get("display")
+            if owner != NOT_AVAILABLE and flow_type == NOT_AVAILABLE:
+                owners_to_machines[owner][platform_type] += 1
+    # Notify owners that have more than one machine per product type.
+    owners_to_notify = set()
+    for owner, product_types in owners_to_machines.items():
+        for product_type, machines_count in product_types.items():
+            if machines_count > 1:
+                owners_to_notify.add(owner)
+                break
+    if owners_to_notify:
+        owners_to_notify_list = list(owners_to_notify)
+        owners_to_notify_str = (
+            f"{','.join(map(lambda o: f'@{o}', owners_to_notify_list[:MAX_OWNERS_TO_NOTIFY_DISPLAY]))}"
+            f"{' ...' if len(owners_to_notify_list) > MAX_OWNERS_TO_NOTIFY_DISPLAY else ''}"
+        )
+        title = f"Owners with multiple machines: {owners_to_notify_str}"
+        slack_msg_append.append(
+            {
+                "color": "warning",
+                "title": title,
+                "fallback": title,
+            }
+        )
+    if non_connectable_machines_count:
+        title = f"Build Machines - Non connectable:{len(non_connectable_machines_count)}"
+        slack_msg_append.append(
+            {
+                "color": "danger",
+                "title": title,
+                "fallback": title,
+                "fields": [{"title": "Machine Name(s)", "value": ", ".join(non_connectable_machines_count), "short": True}],
+            }
+        )
+    if disabled_machines_count:
+        title = f"Build Machines - Disabled:{len(disabled_machines_count)}"
+        slack_msg_append.append(
+            {
+                "color": "warning",
+                "title": title,
+                "fallback": title,
+                "fields": [{"title": "Machine Name(s)", "value": ", ".join(disabled_machines_count), "short": True}],
+            }
+        )
+    if ttl_expired_count:
+        title = f"Build Machines - With Expired TTL:{len(ttl_expired_count)}"
+        slack_msg_append.append(
+            {
+                "color": "danger",
+                "title": title,
+                "fallback": title,
+                "fields": [{"title": "Machine Name(s)", "value": ", ".join(ttl_expired_count), "short": True}],
+            }
+        )
+    if build_machines_requiring_an_agent:
+        title = f"Build Machines - Requiring an Agent:{len(build_machines_requiring_an_agent)}"
+        slack_msg_append.append(
+            {
+                "color": "danger",
+                "title": title,
+                "fallback": title,
+                "fields": [
+                    {"title": f"Flow Type - {key}", "value": ", ".join(value), "short": True}
+                    for key, value in build_machines_requiring_an_agent.items()
+                ],
+            }
+        )
+    if tokens_count is not None:
+        tokens_percentage = int((len(tenants) / tokens_count) * 100)
+        title = f"Disposable Tenants Tokens - Total:{tokens_count}, Used:{len(tenants)}"
+        if tokens_percentage >= TOKENS_COUNT_PERCENTAGE_THRESHOLD:
+            title += f", Usage > {TOKENS_COUNT_PERCENTAGE_THRESHOLD}%"
+            color = "danger"
+        else:
+            color = "good"
+        slack_msg_append.append(
+            {
+                "color": color,
+                "title": title,
+                "fallback": title,
+            }
+        )
+    return columns, columns_filterable, managers, slack_msg_append
+
+
+def get_viso_tenants_data(without_viso: bool) -> tuple[dict, int | None, list[dict]]:
+    slack_msg_append: List[Dict[Any, Any]] = []
+    tenants = {}
+    tokens_count = None
+    if without_viso:
+        logging.info("Not connecting to Viso.")
+    elif not VISO_API_URL or not VISO_API_KEY:
+        logging.error("VISO_API_URL or VISO_API_KEY env vars are not set.")
+        slack_msg_append.append(
+            {
+                "color": "danger",
+                "title": "VISO_API_URL or VISO_API_KEY env vars are not set",
+                "fallback": "VISO_API_URL or VISO_API_KEY env vars are not set",
+            }
+        )
+    else:
+        logging.info(f"Connecting to Viso - Endpoint:{VISO_API_URL}")
+        viso_api = VisoAPI(VISO_API_URL, VISO_API_KEY)
+        try:
+            tenants_list = viso_api.get_all_tenants(CONTENT_TENANTS_GROUP_OWNER)
+            tenants = {tenant["lcaas_id"]: tenant for tenant in tenants_list}
+            logging.info(f"Got {len(tenants)} tenants for group owner:{CONTENT_TENANTS_GROUP_OWNER}")
+        except Exception as e:
+            logging.debug(f"Failed to get tenants: {e}")
+            logging.error("Failed to get tenants")
+            tenants = {}
+            slack_msg_append.append(
+                {
+                    "color": "danger",
+                    "title": "Failed to get tenants",
+                    "fallback": "Failed to get tenants",
+                }
+            )
+        try:
+            tokens_count = viso_api.get_disposable_token_count(CONTENT_TENANTS_GROUP_OWNER)
+            logging.info(f"Got disposable tenants tokens count:{tokens_count} for group owner:{CONTENT_TENANTS_GROUP_OWNER}")
+        except Exception as e:
+            logging.debug(f"Failed to get disposable tenants tokens count: {e}")
+            logging.error("Failed to get disposable tenants tokens count")
+            tokens_count = None
+            slack_msg_append.append(
+                {
+                    "color": "danger",
+                    "title": "Failed to get disposable tenants tokens count",
+                    "fallback": "Failed to get disposable tenants tokens count",
+                }
+            )
+    return tenants, tokens_count, slack_msg_append
+
+
 def main() -> None:
     args = options_handler()
     output_path = Path(args.output_path)
     try:
-        slack_msg_append: list[dict[Any, Any]] = []
-        if args.without_viso:
-            logging.info("Not connecting to Viso.")
-            tenants = {}
-            tokens_count = None
-        else:
-            logging.info(f"Connecting to Viso - Endpoint:{VISO_API_URL}")
-            viso_api = VisoAPI(VISO_API_URL, VISO_API_KEY)
-            try:
-                tenants_list = viso_api.get_all_tenants(CONTENT_TENANTS_GROUP_OWNER)
-                tenants = {tenant["lcaas_id"]: tenant for tenant in tenants_list}
-                logging.info(f"Got {len(tenants)} tenants for group owner:{CONTENT_TENANTS_GROUP_OWNER}")
-            except Exception as e:
-                logging.debug(f"Failed to get tenants: {e}")
-                logging.error("Failed to get tenants")
-                tenants = {}
-                slack_msg_append.append(
-                    {
-                        "color": "danger",
-                        "title": "Failed to get tenants",
-                        "fallback": "Failed to get tenants",
-                    }
-                )
-            try:
-                tokens_count = viso_api.get_disposable_token_count(CONTENT_TENANTS_GROUP_OWNER)
-                logging.info(f"Got disposable tenants tokens count:{tokens_count} for group owner:{CONTENT_TENANTS_GROUP_OWNER}")
-            except Exception as e:
-                logging.debug(f"Failed to get disposable tenants tokens count: {e}")
-                logging.error("Failed to get disposable tenants tokens count")
-                tokens_count = None
-                slack_msg_append.append(
-                    {
-                        "color": "danger",
-                        "title": "Failed to get disposable tenants tokens count",
-                        "fallback": "Failed to get disposable tenants tokens count",
-                    }
-                )
+        tenants, tokens_count, slack_msg_append = get_viso_tenants_data(args.without_viso)
 
         current_date = datetime.utcnow()
         current_date_str = current_date.strftime("%Y-%m-%d")
 
         if args.test_data:
-            records: list[dict] = load_json_file(args.test_data)  # type: ignore[assignment]
+            test_data_path = Path(args.test_data)
+            records: list[dict] = load_json_file((test_data_path / RECORDS_FILE_NAME).as_posix())  # type: ignore[assignment]
+            wait_in_line_slack_messages: list = load_json_file(
+                (test_data_path / WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME).as_posix()
+            )  # type: ignore[assignment]
         else:
             admin_user = Settings.xsoar_admin_user
             xsiam_json: dict = load_json_file(args.xsiam_json)  # type: ignore[assignment]
@@ -370,139 +527,30 @@ def main() -> None:
             records_xsoar_ng = generate_records(xsoar_ng_json, admin_user, XsoarClient, tenants, args.without_viso, current_date)
             records_xsiam = generate_records(xsiam_json, admin_user, XsiamClient, tenants, args.without_viso, current_date)
             records = records_xsoar_ng + records_xsiam
+            client = WebClient(token=SLACK_TOKEN)
+            wait_in_line_slack_messages = get_messages_from_slack(client, WAIT_IN_LINE_CHANNEL_ID)
+
+            # Save the records to a json file for future use and debugging.
+            with open(output_path / RECORDS_FILE_NAME, "w") as f:
+                json.dump(records, f, indent=4, default=str, sort_keys=True)
+
+            with open(output_path / WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME, "w") as f:
+                json.dump(wait_in_line_slack_messages, f, indent=4, default=str, sort_keys=True)
 
         logging.info(f"Creating report for {current_date_str}")
-        managers: list[Any] = []
-        if args.name_mapping_path:
-            name_mapping: dict = load_json_file(args.name_mapping_path)  # type: ignore[assignment]
-            managers.extend(name_mapping.get("managers", []))
-        columns = generate_columns(args.without_viso)
-        static_columns = {column["key"] for column in columns if column["key"]}
-        dynamic_columns = list({key for record in records for key in record.keys() if key not in static_columns})
-        columns.extend([create_column(False, key, key, False, False, False, False) for key in dynamic_columns])
-        columns_filterable = [i for i, c in enumerate(columns) if c["filterable"]]
-        disabled_machines_count = set()
-        non_connectable_machines_count = set()
-        ttl_expired_count = set()
-        owners_to_machines: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-        build_machines_requiring_an_agent = defaultdict(set)
-        for record in records:
-            machine_name = record.get("machine_name", {}).get("display")
-            platform_type = record.get("platform_type", {}).get("display")
-            flow_type = record.get("flow_type", {}).get("display")
-            # checking the TTL, enabled and connectable only for build machines.
-            if record.get("build_machine", {}).get("display", True):
-                if not record.get("enabled", {}).get("display", True):
-                    disabled_machines_count.add(machine_name)
-                if not record.get("connectable", {}).get("display", True):
-                    non_connectable_machines_count.add(machine_name)
-                if record.get("ttl", {}).get("column_class") == generate_ttl_class(True):
-                    ttl_expired_count.add(machine_name)
-                if (
-                    record.get("agent_host_name", {}).get("display") == NOT_AVAILABLE
-                    and platform_type in BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT
-                    and flow_type in BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT[platform_type]
-                ):
-                    build_machines_requiring_an_agent[flow_type].add(machine_name)
-            if not args.without_viso:
-                # Count the number of machines per owner per machine type, only if they don't have a flow type.
-                owner = record.get("owner", {}).get("display")
-                flow_type = record.get("flow_type", {}).get("display")
-                if owner != NOT_AVAILABLE and flow_type == NOT_AVAILABLE:
-                    owners_to_machines[owner][platform_type] += 1
+        columns, columns_filterable, managers, slack_msg_append_report = generate_report(args, records, tenants, tokens_count)
+        slack_msg_append.extend(slack_msg_append_report)
 
-        # Notify owners that have more than one machine per product type.
-        owners_to_notify = set()
-        for owner, product_types in owners_to_machines.items():
-            for product_type, machines_count in product_types.items():
-                if machines_count > 1:
-                    owners_to_notify.add(owner)
-                    break
-        if owners_to_notify:
-            owners_to_notify_list = list(owners_to_notify)
-            owners_to_notify_str = (
-                f"{','.join(map(lambda o: f'@{o}', owners_to_notify_list[:MAX_OWNERS_TO_NOTIFY_DISPLAY]))}"
-                f"{' ...' if len(owners_to_notify_list) > MAX_OWNERS_TO_NOTIFY_DISPLAY else ''}"
-            )
-            title = f"Owners with multiple machines: {owners_to_notify_str}"
-            slack_msg_append.append(
-                {
-                    "color": "warning",
-                    "title": title,
-                    "fallback": title,
-                }
-            )
-        if non_connectable_machines_count:
-            title = f"Build Machines - Non connectable:{len(non_connectable_machines_count)}"
-            slack_msg_append.append(
-                {
-                    "color": "danger",
-                    "title": title,
-                    "fallback": title,
-                    "fields": [{"title": "Machine Name(s)", "value": ", ".join(non_connectable_machines_count), "short": True}],
-                }
-            )
-        if disabled_machines_count:
-            title = f"Build Machines - Disabled:{len(disabled_machines_count)}"
-            slack_msg_append.append(
-                {
-                    "color": "warning",
-                    "title": title,
-                    "fallback": title,
-                    "fields": [{"title": "Machine Name(s)", "value": ", ".join(disabled_machines_count), "short": True}],
-                }
-            )
-        if ttl_expired_count:
-            title = f"Build Machines - With Expired TTL:{len(ttl_expired_count)}"
-            slack_msg_append.append(
-                {
-                    "color": "danger",
-                    "title": title,
-                    "fallback": title,
-                    "fields": [{"title": "Machine Name(s)", "value": ", ".join(ttl_expired_count), "short": True}],
-                }
-            )
-        if build_machines_requiring_an_agent:
-            title = f"Build Machines - Requiring an Agent:{len(build_machines_requiring_an_agent)}"
-            slack_msg_append.append(
-                {
-                    "color": "danger",
-                    "title": title,
-                    "fallback": title,
-                    "fields": [
-                        {"title": f"Flow Type - {key}", "value": ", ".join(value), "short": True}
-                        for key, value in build_machines_requiring_an_agent.items()
-                    ],
-                }
-            )
-        if tokens_count is not None:
-            tokens_percentage = int((len(tenants) / tokens_count) * 100)
-            title = f"Disposable Tenants Tokens - Total:{tokens_count}, Used:{len(tenants)}"
-            if tokens_percentage >= TOKENS_COUNT_PERCENTAGE_THRESHOLD:
-                title += f", Usage > {TOKENS_COUNT_PERCENTAGE_THRESHOLD}%"
-                color = "danger"
-            else:
-                color = "good"
-            slack_msg_append.append(
-                {
-                    "color": color,
-                    "title": title,
-                    "fallback": title,
-                }
-            )
+        attachments_json = generate_graphs(output_path, wait_in_line_slack_messages)
 
-        # Save the records to a json file for future use and debugging.
-        with open(output_path / "records.json", "w") as f:
-            json.dump(records, f, indent=4, default=str, sort_keys=True)
-
-        report = create_report(current_date_str, records, columns, columns_filterable, managers)
+        report = create_report_html(current_date_str, records, columns, columns_filterable, managers)
         report_file_name = f"Report_{current_date_str}.html"
         with open(output_path / report_file_name, "w") as report_file:
             report_file.write(report)
 
         with open(output_path / "slack_msg.txt", "w") as slack_msg_file:
             report_url = f"{GITLAB_ARTIFACTS_URL}/{CI_JOB_ID}/artifacts/{ARTIFACTS_FOLDER}/{report_file_name}"
-            title = f"Click here to view Build machines report for {current_date_str}"
+            title = f"Build machines report - {current_date_str} was created"
             json.dump(
                 [
                     {
@@ -518,6 +566,10 @@ def main() -> None:
                 default=str,
                 sort_keys=True,
             )
+
+        with open(output_path / "slack_attachments.json", "w") as slack_attachments_file:
+            slack_attachments_file.write(json.dumps(attachments_json, indent=4, default=str, sort_keys=True))
+
     except Exception as e:
         logging.exception(f"Failed to create report: {e}")
         with contextlib.suppress(Exception):
@@ -532,6 +584,35 @@ def main() -> None:
                     default=str,
                     sort_keys=True,
                 )
+
+
+def generate_graphs(output_path: Path, wait_in_line_slack_messages: list[str]) -> list[dict]:
+    _, _, _, _, _, lock_duration_graph_file_name = create_lock_duration_graph(wait_in_line_slack_messages, output_path)
+    _, _, _, _, _, available_machines_graph_file_name = create_available_machines_graph(wait_in_line_slack_messages, output_path)
+    _, _, _, _, _, builds_waiting_in_queue_graph_file_name = create_builds_waiting_in_queue_graph(
+        wait_in_line_slack_messages, output_path
+    )
+    attachments_json = [
+        {
+            "file": lock_duration_graph_file_name.as_posix(),
+            "filename": lock_duration_graph_file_name.name,
+            "title": LOCK_DURATION,
+            "alt_txt": LOCK_DURATION,
+        },
+        {
+            "file": available_machines_graph_file_name.as_posix(),
+            "filename": available_machines_graph_file_name.name,
+            "title": AVAILABLE_MACHINES,
+            "alt_txt": AVAILABLE_MACHINES,
+        },
+        {
+            "file": builds_waiting_in_queue_graph_file_name.as_posix(),
+            "filename": builds_waiting_in_queue_graph_file_name.name,
+            "title": BUILD_IN_QUEUE,
+            "alt_txt": BUILD_IN_QUEUE,
+        },
+    ]
+    return attachments_json
 
 
 if __name__ == "__main__":

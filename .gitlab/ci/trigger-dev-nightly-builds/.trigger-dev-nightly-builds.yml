@@ -54,5 +54,6 @@ trigger-dev-nightly-builds-job-slack-notify:
     SLACK_JOB: 'true'
     ARTIFACTS_FOLDER: $ARTIFACTS_FOLDER
     SLACK_MSG_FILE: "${ARTIFACTS_FOLDER}/slack_msg.txt"
+    SLACK_MSG_ATTACHMENTS: "${ARTIFACTS_FOLDER}/slack_attachments.json"
     WORKFLOW: "Trigger dev nightly builds"
     SLACK_ALLOW_FAILURE: 'false'

@@ -2455,8 +2455,8 @@ class Pack:
                     for image in current_markdown_file_images:
                         try:
                             self.process_and_upload_image(image, storage_bucket)
-                        except Exception:
-                            logging.exception(f"Failed uploading {self.name} pack author image.")
+                        except Exception as e:
+                            logging.exception(f"Failed uploading {self.name} image, reason: {str(e)}")
                             return False
         else:
             logging.debug(f"No markdown relative path images were found in pack {self.name}")
@@ -2472,21 +2472,17 @@ class Pack:
         """
         final_dst_image_path = str(image.get("final_dst_image_path"))
         image_name = str(image.get("image_name"))
-        logging.debug(f"preparing to upload image {image_name} " "to image_final_storage_des ={final_dst_image_path}")
-        logging.debug(f"Uploading markdown relative path image for pack '{self.name}'")
-        image_path = os.path.join(self.path, "doc_files", f"{image_name}.png")  # disable-secrets-detection
+        logging.debug(f"Uploading markdown relative path image '{image_name}' for pack '{self.name}' to {final_dst_image_path=}")
+        image_path = os.path.join(self.path, "doc_files", image_name if image_name.endswith(".png") else f"{image_name}.png")
 
         if os.path.exists(image_path):
             markdown_image_blob = storage_bucket.blob(final_dst_image_path)
             with open(image_path, "rb") as image_file:
                 markdown_image_blob.upload_from_file(image_file)
-            logging.debug(f"Uploaded successfully markdown relative path image for pack '{self.name}'")
+            logging.debug(f"Uploaded successfully markdown relative path image '{image_name}'")
 
         else:
-            logging.debug(
-                f"Skipping uploading of {self.name} pack author image. "
-                f"The pack is defined as {self.support_type} support type"
-            )
+            logging.debug(f"Skipping uploading {image_name} at {str(image_path)}, image doesn't exist.")
 
     def copy_author_image(
         self,

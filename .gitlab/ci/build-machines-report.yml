@@ -62,5 +62,6 @@ build-machines-report-slack-notify:
     ARTIFACTS_FOLDER: artifacts
     ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
     SLACK_MSG_FILE: "${ARTIFACT_PATH}/slack_msg.txt"
+    SLACK_MSG_ATTACHMENTS: "${ARTIFACT_PATH}/slack_attachments.json"
     WORKFLOW: "Build Machines Report"
     SLACK_ALLOW_FAILURE: 'false'
