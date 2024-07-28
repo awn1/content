@@ -40,8 +40,8 @@ variables:
   IS_NIGHTLY: "false"
   SCHEDULED_NIGHTLY: "false" # true only during a real scheduled nightly run.
   OLD_NIGHTLY: "false"
-  SDK_REF: "master" # The default sdk branch to use when OVERRIDE_SDK_REF has value.
-  OVERRIDE_SDK_REF: "" # Whether to override the sdk branch over the sdk pypi release.
+  SDK_REF: "master" # The SDK reference to use when OVERRIDE_SDK_REF is "true".
+  OVERRIDE_SDK_REF: "false" # Whether to override the SDK ref defined in pyproject.toml, with the one defined in SDK_REF.
   OVERRIDE_ALL_PACKS: "false"
   TEST_UPLOAD: "true"
   NATIVE_CANDIDATE_IMAGE: "latest"
