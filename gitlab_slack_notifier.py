@@ -1,7 +1,7 @@
 import argparse
 import logging
 import os
-from typing import Tuple, Any
+from typing import Any
 
 import gitlab
 import requests
@@ -55,7 +55,7 @@ def construct_slack_msg(
     return slack_msg, title
 
 
-def collect_pipeline_data(gitlab_client, project_id, pipeline_id) -> Tuple[str, list]:
+def collect_pipeline_data(gitlab_client, project_id, pipeline_id) -> tuple[str, list]:
     """
     Args:
         - gitlab_client (Gitlab client object): Gitlab API client

@@ -1,11 +1,9 @@
 import logging
 import os
 
-from google.api_core.exceptions import GoogleAPICallError
-from google.api_core.exceptions import PermissionDenied
+from google.api_core.exceptions import GoogleAPICallError, PermissionDenied
 from google.cloud.exceptions import NotFound
 from google.cloud.secretmanager import SecretManagerServiceClient
-
 
 from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT, GSM_SERVICE_ACCOUNT
 

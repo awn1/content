@@ -3,14 +3,14 @@ from io import BytesIO
 from pathlib import Path
 from typing import Annotated
 from zipfile import ZipFile
+
 import requests
-from requests import HTTPError
 import typer
+from requests import HTTPError
 from urllib3 import disable_warnings
 
-from Tests.scripts.utils.log_util import install_logging
 from Tests.scripts.utils import logging_wrapper as logger
-
+from Tests.scripts.utils.log_util import install_logging
 
 ORG_NAME = "demisto"
 DOCS_REPO_NAME = "content-docs"

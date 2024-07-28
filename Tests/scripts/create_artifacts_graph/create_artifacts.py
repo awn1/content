@@ -1,15 +1,16 @@
+import json
+import logging as logger
 from argparse import ArgumentParser
 from pathlib import Path
-from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
+
 from demisto_sdk.commands.common.constants import MarketplaceVersions
-from demisto_sdk.commands.content_graph.objects.repository import ContentDTO
-from demisto_sdk.commands.content_graph.objects.pack import Pack
-from Tests.scripts.utils.log_util import install_logging
-import logging as logger
 from demisto_sdk.commands.common.logger import logging_setup
 from demisto_sdk.commands.common.tools import get_content_path, str2bool
+from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
+from demisto_sdk.commands.content_graph.objects.pack import Pack
+from demisto_sdk.commands.content_graph.objects.repository import ContentDTO
 
-import json
+from Tests.scripts.utils.log_util import install_logging
 
 logging_setup(3)
 install_logging("create_artifacts.log", logger=logger)

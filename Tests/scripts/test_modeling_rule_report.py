@@ -7,22 +7,22 @@ from tempfile import NamedTemporaryFile
 
 from jira import JIRA, Issue
 from jira.client import ResultList
-from junitparser import TestSuite, JUnitXml
+from junitparser import JUnitXml, TestSuite
 from tabulate import tabulate
 
-from Tests.scripts.common import get_properties_for_test_suite, FAILED_TO_COLOR_NAME, FAILED_TO_MSG
+from Tests.scripts.common import FAILED_TO_COLOR_NAME, FAILED_TO_MSG, get_properties_for_test_suite
 from Tests.scripts.jira_issues import (
-    generate_ticket_summary,
-    generate_query_with_summary,
+    JiraTicketInfo,
+    convert_jira_time_to_datetime,
     find_existing_jira_ticket,
     generate_build_markdown_link,
-    convert_jira_time_to_datetime,
-    jira_ticket_to_json_data,
+    generate_query_with_summary,
+    generate_ticket_summary,
+    jira_color_text,
     jira_file_link,
     jira_sanitize_file_name,
-    jira_color_text,
+    jira_ticket_to_json_data,
     transition_jira_ticket_to_unresolved,
-    JiraTicketInfo,
 )
 from Tests.scripts.utils import logging_wrapper as logging
 

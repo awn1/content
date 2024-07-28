@@ -1,21 +1,20 @@
 import json
 import os
 from pathlib import Path
-from pytest_mock import MockFixture
 
-import requests
-
-import networkx as nx
-from networkx import DiGraph
 import demisto_client
+import networkx as nx
 import pytest
+import requests
 import timeout_decorator
-import Tests.Marketplace.search_and_install_packs as script
 from demisto_client.demisto_api.rest import ApiException
 from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
-
-from Tests.Marketplace.marketplace_constants import GCPConfig
 from google.cloud.storage import Blob
+from networkx import DiGraph
+from pytest_mock import MockFixture
+
+import Tests.Marketplace.search_and_install_packs as script
+from Tests.Marketplace.marketplace_constants import GCPConfig
 
 CONTENT_PROJECT_ID = os.getenv("CI_PROJECT_ID", "1061")
 

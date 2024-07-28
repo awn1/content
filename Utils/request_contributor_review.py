@@ -1,15 +1,13 @@
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
-from typing import Set
 
 import requests
 import sendgrid
-import sys
-
 import urllib3
-from sendgrid.helpers.mail import Email, Content, Mail
+from sendgrid.helpers.mail import Content, Email, Mail
 
 REPO_OWNER = "demisto"
 REPO_NAME = "content"
@@ -139,7 +137,7 @@ def check_pack_and_request_review(pr_number, github_token=None, verify_ssl=True,
             print(f"Not found {pack} {PACK_METADATA} file.")
             continue
 
-        with open(pack_metadata_path, "r") as pack_metadata_file:
+        with open(pack_metadata_path) as pack_metadata_file:
             pack_metadata = json.load(pack_metadata_file)
 
         # Notify contributors if this is not new pack
@@ -210,7 +208,7 @@ def check_reviewers(
     pr_number: str,
     github_token: str,
     verify_ssl: bool,
-    tagged_packs_reviewers: Set[str],
+    tagged_packs_reviewers: set[str],
 ) -> bool:
     """Tag user on pr and ask for review if there are reviewers, and this is not new pack.
 
@@ -294,7 +292,7 @@ def send_email_to_reviewers(reviewers_emails: list, api_token: str, pack_name: s
             print("An error occurred during sending emails to contributors:\n{response}")
             return False
     except Exception as e:
-        print(f"An error occurred during sending emails to contributors:\n{str(e)}")
+        print(f"An error occurred during sending emails to contributors:\n{e!s}")
         sys.exit(1)
 
 

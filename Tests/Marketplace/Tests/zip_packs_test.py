@@ -4,12 +4,12 @@
 import pytest
 
 from Tests.Marketplace.zip_packs import (
-    get_latest_pack_zip_from_pack_files,
-    zip_packs,
-    remove_test_playbooks_if_exist,
-    remove_test_playbooks_from_signatures,
-    get_zipped_packs_names,
     copy_zipped_packs_to_artifacts,
+    get_latest_pack_zip_from_pack_files,
+    get_zipped_packs_names,
+    remove_test_playbooks_from_signatures,
+    remove_test_playbooks_if_exist,
+    zip_packs,
 )
 
 
@@ -174,8 +174,8 @@ class TestZipPacks:
         assert ZipFile.write.call_args[0][1] == "Slack.zip"
 
     def test_remove_test_playbooks_if_exist(self, mocker):
-        from zipfile import ZipFile
         import shutil
+        from zipfile import ZipFile
 
         """
         Given:

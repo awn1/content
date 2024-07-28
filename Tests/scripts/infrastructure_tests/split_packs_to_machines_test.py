@@ -1,11 +1,12 @@
 from unittest.mock import MagicMock
+
 from Tests.scripts.split_packs_to_machines import (
-    build_pack_information,
-    machine_assignment,
-    calculate_average_execution_time,
-    PackInfo,
     ARTIFACTS_BUCKET,
     MAX_REPORT_FILES,
+    PackInfo,
+    build_pack_information,
+    calculate_average_execution_time,
+    machine_assignment,
 )
 
 

@@ -1,14 +1,15 @@
 import logging
 import warnings
-import google.auth
-from pprint import pformat
-from pandas.core.frame import DataFrame, Series
-from google.cloud.bigquery.client import Client
-from google.cloud import bigquery
 from datetime import timedelta
+from pprint import pformat
+
+import google.auth
+from google.cloud import bigquery
+from google.cloud.bigquery.client import Client
+from pandas.core.frame import DataFrame, Series
 
 import Tests.Marketplace.marketplace_services as mp_services
-from Tests.Marketplace.marketplace_constants import Metadata, LANDING_PAGE_SECTIONS_PATH
+from Tests.Marketplace.marketplace_constants import LANDING_PAGE_SECTIONS_PATH, Metadata
 
 
 class PackStatisticsHandler:

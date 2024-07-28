@@ -1,11 +1,10 @@
 import os
-from tempfile import mkdtemp
 import zipfile
 from pathlib import Path
+from tempfile import mkdtemp
 from typing import Any
 
 import requests
-
 
 GITLAB_SERVER_URL = os.getenv("CI_SERVER_URL", "https://gitlab.xdr.pan.local")  # disable-secrets-detection
 API_BASE_URL = f"{GITLAB_SERVER_URL}/api/v4"

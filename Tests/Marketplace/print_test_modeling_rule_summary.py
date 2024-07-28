@@ -8,17 +8,17 @@ from jira import JIRA
 from tabulate import tabulate
 
 from Tests.scripts.common import (
-    calculate_results_table,
     TEST_MODELING_RULES_REPORT_FILE_NAME,
-    get_test_results_files,
     TEST_SUITE_CELL_EXPLANATION,
+    calculate_results_table,
+    get_test_results_files,
 )
 from Tests.scripts.jira_issues import (
-    jira_server_information,
-    jira_search_all_by_query,
     generate_query_by_component_and_issue_type,
     get_jira_server_info,
     get_jira_ticket_info,
+    jira_search_all_by_query,
+    jira_server_information,
 )
 from Tests.scripts.test_modeling_rule_report import (
     TEST_MODELING_RULES_BASE_HEADERS,

@@ -1,16 +1,17 @@
-import re
-import os
-import sys
-import json
-import glob
 import argparse
-from datetime import datetime
-import logging
 import copy
+import glob
+import json
+import logging
+import os
+import re
+import sys
+from datetime import datetime
 
-from packaging.version import Version
 import requests
-from demisto_sdk.commands.common.tools import run_command, get_dict_from_file
+from demisto_sdk.commands.common.tools import get_dict_from_file, run_command
+from packaging.version import Version
+
 from Tests.scripts.utils.log_util import install_logging
 
 PACKS_DIR = "Packs"
@@ -20,11 +21,11 @@ PACKS_RN_FILES_FORMAT = "*/ReleaseNotes/*.md"
 
 EMPTY_LINES_REGEX = re.compile(r"\s*-\s*\n")
 IGNORED_LINES_REGEX = re.compile(r"<!-[\W\w]*?-->")
-ENTITY_TYPE_SECTION_REGEX = re.compile(r"^#### ([\w ]+)([\w\W]*?)(?=^#### )|^#### ([\w ]+)([\w\W]*)", re.M)
+ENTITY_TYPE_SECTION_REGEX = re.compile(r"^#### ([\w ]+)([\w\W]*?)(?=^#### )|^#### ([\w ]+)([\w\W]*)", re.MULTILINE)
 ENTITY_SECTION_REGEX = re.compile(
-    r"^##### (.+)$\n([\w\W]*?)(?=^##### )|^##### (.+)$\n([\w\W]*)|" r"^- \*\*(.+)\*\*$\n([\w\W]*)", re.M
+    r"^##### (.+)$\n([\w\W]*?)(?=^##### )|^##### (.+)$\n([\w\W]*)|" r"^- \*\*(.+)\*\*$\n([\w\W]*)", re.MULTILINE
 )
-PACK_GENERAL_NOTES_REGEX = re.compile(r"^## (.+)$\n([\w\W]*?)(?=^#### )|^## ([\w ]+)$\n([\w\W]*)", re.M)
+PACK_GENERAL_NOTES_REGEX = re.compile(r"^## (.+)$\n([\w\W]*?)(?=^#### )|^## ([\w ]+)$\n([\w\W]*)", re.MULTILINE)
 
 LAYOUT_TYPE_TO_NAME = {
     "details": "Summary",
@@ -158,7 +159,7 @@ def construct_entities_block(entities_data: dict) -> str:
         pretty_entity_type = re.sub(r"([a-z])([A-Z])", r"\1 \2", entity_type)
         release_notes += f"#### {pretty_entity_type}\n"
         if "[special_msg]" in entities_description:
-            release_notes += f'{str(entities_description.pop("[special_msg]"))}\n'
+            release_notes += f'{entities_description.pop("[special_msg]")!s}\n'
         for name, description in entities_description.items():
             new_description = squash_docker_updates(description)
             if entity_type in (
@@ -530,7 +531,7 @@ def get_release_notes_draft(github_token, asset_id):
             headers={"Authorization": f"token {github_token}"},
         )
     except requests.exceptions.ConnectionError as exc:
-        logging.warning(f"Unable to get release draft, reason:\n{str(exc)}")
+        logging.warning(f"Unable to get release draft, reason:\n{exc!s}")
         return ""
 
     if res.status_code != 200:

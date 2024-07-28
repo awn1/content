@@ -1,7 +1,7 @@
+import demisto_client
 import pytest
 
 from Tests.test_integration import __print_investigation_error
-import demisto_client
 
 
 @pytest.mark.parametrize(

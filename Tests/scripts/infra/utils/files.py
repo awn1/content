@@ -3,10 +3,9 @@ Various utility methods for working with files
 """
 
 import json
+import logging
 from json import JSONDecodeError
 from pathlib import Path
-
-import logging
 
 logger = logging.getLogger(__name__)
 

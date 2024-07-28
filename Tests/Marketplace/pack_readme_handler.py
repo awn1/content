@@ -1,9 +1,11 @@
+import json
 import os
-from pathlib import Path
-import requests
 import shutil
 import urllib.parse
-import json
+from pathlib import Path
+
+import requests
+
 from Tests.Marketplace.marketplace_constants import BucketUploadFlow, ImagesFolderNames
 from Tests.scripts.utils import logging_wrapper as logging
 
@@ -190,7 +192,7 @@ def copy_markdown_images(
                                 task_status = False
 
                         except Exception as e:
-                            logging.exception(f"{err_msg}. Additional Info: {str(e)}")
+                            logging.exception(f"{err_msg}. Additional Info: {e!s}")
 
                 if not task_status:
                     logging.error(err_msg)

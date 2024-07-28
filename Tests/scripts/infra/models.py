@@ -1,5 +1,4 @@
 import datetime
-from typing import Optional, Union
 
 from Tests.scripts.infra.enums.papi import KeySecurityLevel
 
@@ -7,25 +6,25 @@ from Tests.scripts.infra.enums.papi import KeySecurityLevel
 class PublicApiKey:
     id: str
     key: str
-    comment: Optional[str]
-    roles: Optional[Union[str, list[str]]]
-    security_level: Optional[KeySecurityLevel]
-    expiration: Optional[datetime.datetime]
-    creation_time: Optional[datetime.datetime]
-    created_by: Optional[str]
-    user_name: Optional[str]
+    comment: str | None
+    roles: str | list[str] | None
+    security_level: KeySecurityLevel | None
+    expiration: datetime.datetime | None
+    creation_time: datetime.datetime | None
+    created_by: str | None
+    user_name: str | None
 
     def __init__(
         self,
         id: str,
         key: str,
-        comment: Optional[str] = None,
-        roles: Optional[Union[str, list[str]]] = None,
-        security_level: Optional[KeySecurityLevel] = None,
-        expiration: Optional[datetime.datetime] = None,
-        creation_time: Optional[datetime.datetime] = None,
-        created_by: Optional[str] = None,
-        user_name: Optional[str] = None,
+        comment: str | None = None,
+        roles: str | list[str] | None = None,
+        security_level: KeySecurityLevel | None = None,
+        expiration: datetime.datetime | None = None,
+        creation_time: datetime.datetime | None = None,
+        created_by: str | None = None,
+        user_name: str | None = None,
     ):
         self.id = id
         self.key = key

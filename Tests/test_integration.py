@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import ast
 import copy
 import logging
@@ -8,7 +6,6 @@ import time
 import urllib.parse
 import uuid
 from pprint import pformat
-from typing import Optional, Tuple
 
 import demisto_client
 import requests.exceptions
@@ -16,7 +13,6 @@ import urllib3
 from demisto_client.demisto_api import DefaultApi
 from demisto_client.demisto_api.models.incident import Incident
 from demisto_client.demisto_api.rest import ApiException
-
 from demisto_sdk.commands.common.constants import PB_Status
 
 # Disable insecure warnings
@@ -299,7 +295,7 @@ def __create_incident_with_playbook(
     playbook_id,
     integrations,
     logging_manager,
-) -> Tuple[Optional[Incident], int]:
+) -> tuple[Incident | None, int]:
     # create incident
     create_incident_request = demisto_client.demisto_api.CreateIncidentRequest()
     create_incident_request.create_investigation = True

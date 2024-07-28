@@ -89,11 +89,14 @@ def get_files_from_github(username: str, branch: str, pr_number: str, repo: str,
         print(f"abs_dir: {abs_dir}")
         if not os.path.isdir(abs_dir):
             os.makedirs(abs_dir)
-        with open(abs_file_path, "wb") as changed_file, requests.get(
-            urljoin(base_url, file_path),
-            stream=True,
-            headers={"Authorization": f"Bearer {github_token}"},
-        ) as file_content:
+        with (
+            open(abs_file_path, "wb") as changed_file,
+            requests.get(
+                urljoin(base_url, file_path),
+                stream=True,
+                headers={"Authorization": f"Bearer {github_token}"},
+            ) as file_content,
+        ):
             # mypy didn't like the request being used as context manager
             file_content.raise_for_status()  # type:ignore[attr-defined]
             for data in file_content.iter_content(chunk_size=chunk_size):  # type:ignore[attr-defined]

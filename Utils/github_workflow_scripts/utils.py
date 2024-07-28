@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
+import json
 import os
 import sys
-import json
-from datetime import datetime
-from typing import Any
 from collections.abc import Generator, Iterable
+from datetime import datetime
 from pathlib import Path
-from demisto_sdk.commands.common.tools import get_pack_metadata
+from typing import Any
 
+from demisto_sdk.commands.common.tools import get_pack_metadata
 from git import Repo
 
 CONTENT_ROOT_PATH = os.path.abspath(os.path.join(__file__, "../../.."))  # full path to content root repo
@@ -210,7 +210,7 @@ def get_content_reviewers(content_roles: dict[str, Any]) -> tuple[list[str], str
 
         return contribution_reviewers, security_reviewer, tim_reviewer
     except KeyError as ke:
-        print(f"Error parsing reviewers: {str(ke)}.")  # noqa: T201
+        print(f"Error parsing reviewers: {ke!s}.")  # noqa: T201
         sys.exit(1)
 
 

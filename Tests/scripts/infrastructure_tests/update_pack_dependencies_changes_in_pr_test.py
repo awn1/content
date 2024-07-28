@@ -1,5 +1,6 @@
-import Tests.scripts.update_pack_dependencies_changes_in_pr as script_module
 import pytest
+
+import Tests.scripts.update_pack_dependencies_changes_in_pr as script_module
 
 
 @pytest.mark.parametrize(

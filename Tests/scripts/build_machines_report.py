@@ -7,28 +7,28 @@ import warnings
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List
-from google.auth import _default  # noqa
+from typing import Any
 
+import common
 import urllib3
+from google.auth import _default
+from infra.resources.constants import AUTOMATION_GCP_PROJECT
 from jinja2 import Environment, FileSystemLoader
 from slack_sdk import WebClient
 from urllib3.exceptions import InsecureRequestWarning
 
-import common
-from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT
 from Tests.scripts.graph_lock_machine import (
-    create_lock_duration_graph,
-    create_available_machines_graph,
-    create_builds_waiting_in_queue_graph,
-    LOCK_DURATION,
     AVAILABLE_MACHINES,
     BUILD_IN_QUEUE,
+    LOCK_DURATION,
+    create_available_machines_graph,
+    create_builds_waiting_in_queue_graph,
+    create_lock_duration_graph,
 )
 from Tests.scripts.utils.slack import get_messages_from_slack
 
 urllib3.disable_warnings(InsecureRequestWarning)
-warnings.filterwarnings("ignore", _default._CLOUD_SDK_CREDENTIALS_WARNING)  # noqa
+warnings.filterwarnings("ignore", _default._CLOUD_SDK_CREDENTIALS_WARNING)
 
 from Tests.scripts.infra.settings import Settings, XSOARAdminUser  # noqa
 from Tests.scripts.infra.viso_api import VisoAPI  # noqa
@@ -332,7 +332,7 @@ def load_json_file(file_path: str) -> dict | list:
 
 
 def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], list[int], list[str], list[dict]]:
-    slack_msg_append: List[Dict[Any, Any]] = []
+    slack_msg_append: list[dict[Any, Any]] = []
     managers: list[Any] = []
     if args.name_mapping_path:
         name_mapping: dict = load_json_file(args.name_mapping_path)  # type: ignore[assignment]
@@ -454,7 +454,7 @@ def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], l
 
 
 def get_viso_tenants_data(without_viso: bool) -> tuple[dict, int | None, list[dict]]:
-    slack_msg_append: List[Dict[Any, Any]] = []
+    slack_msg_append: list[dict[Any, Any]] = []
     tenants = {}
     tokens_count = None
     if without_viso:

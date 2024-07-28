@@ -1,15 +1,15 @@
 import argparse
 import os
+import pathlib
+from pathlib import Path
 
 import json5
-import pathlib
 import yaml
 
+from SecretActions.google_secret_manager_handler import get_secrets_from_gsm
 from Tests.scripts.collect_tests.path_manager import PathManager
 from Tests.scripts.collect_tests.utils import find_pack_folder
-from SecretActions.google_secret_manager_handler import get_secrets_from_gsm
 from Tests.scripts.utils import logging_wrapper as logging
-from pathlib import Path
 
 # The default previous commit branch to check for when getting the difference from master using git
 PREVIOUS_COMMIT = "origin/master"
@@ -97,7 +97,7 @@ def get_yml_pack_ids(changed_packs: list[str]) -> list[str]:
         root_dir_instance = pathlib.Path(root_dir)
         yml_files = [item.name for item in root_dir_instance.glob("*") if str(item.name).endswith("yml")]
         for yml_file in yml_files:
-            with open(f"{changed_pack}/{yml_file}", "r") as stream:
+            with open(f"{changed_pack}/{yml_file}") as stream:
                 try:
                     yml_obj = yaml.safe_load(stream)
                     yml_ids.append(yml_obj["commonfields"]["id"])
@@ -141,7 +141,7 @@ def get_test_integrations_ids(ids: list[str]) -> list[str]:
     conf_path = "Tests/conf.json"
     ids_to_add = set(ids)
     try:
-        with open(conf_path, "r") as file:
+        with open(conf_path) as file:
             data = json5.load(file)
             tests = data["tests"]
             for test in tests:

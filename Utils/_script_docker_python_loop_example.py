@@ -13,10 +13,10 @@ docker run --rm -i -v `pwd`:/work -w /work demisto/python3:3.8.6.12176 python Ut
 
 """
 
-import os
-import threading
-import sys
 import json
+import os
+import sys
+import threading
 import traceback
 
 if sys.version_info[0] < 3:
@@ -476,7 +476,7 @@ while True:
 
         sub_globals = {"__readWhileAvailable": __readWhileAvailable, "context": contextJSON, "win": win}
 
-        exec(code, sub_globals, sub_globals)  # guardrails-disable-line  # pylint: disable=W0122 # noqa: S102
+        exec(code, sub_globals, sub_globals)  # guardrails-disable-line  # pylint: disable=W0122
 
     except Exception:
         exc_type, exc_value, exc_traceback = sys.exc_info()

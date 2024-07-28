@@ -1,11 +1,13 @@
+import os
+from collections.abc import Iterator
 from configparser import ConfigParser, MissingSectionHeaderError
 from enum import Enum
 from pathlib import Path
 from typing import Any, NamedTuple
-from collections.abc import Iterator
-import os
+
 from demisto_sdk.commands.common.constants import FileType, MarketplaceVersions
-from demisto_sdk.commands.common.tools import json, yaml
+from demisto_sdk.commands.common.tools import json, str2bool, yaml
+from more_itertools import powerset, unique_everseen
 from packaging import version
 from packaging._structures import InfinityType, NegativeInfinityType
 from packaging.version import Version
@@ -24,8 +26,6 @@ from Tests.scripts.collect_tests.exceptions import (
 from Tests.scripts.collect_tests.logger import logger
 from Tests.scripts.collect_tests.path_manager import PathManager
 from Tests.scripts.collect_tests.version_range import VersionRange
-from more_itertools import powerset, unique_everseen
-from demisto_sdk.commands.common.tools import str2bool
 
 
 def find_pack_folder(path: Path) -> Path:
@@ -88,7 +88,7 @@ class Machine(Enum):
             return Machine.get_all_machines()
 
         logger.debug(f"Collected the following version_ranges: {version_ranges}")
-        result: tuple["Machine", ...] = ()
+        result: tuple[Machine, ...] = ()
         if not version_ranges:
             return result
 

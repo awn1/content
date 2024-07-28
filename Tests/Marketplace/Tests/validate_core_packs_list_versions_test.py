@@ -1,8 +1,9 @@
-import os
-from unittest import mock
 import json
-from Tests.Marketplace.marketplace_services import load_json
+import os
 from pathlib import Path
+from unittest import mock
+
+from Tests.Marketplace.marketplace_services import load_json
 from Tests.Marketplace.validate_core_packs_list_versions import LogAggregator
 
 

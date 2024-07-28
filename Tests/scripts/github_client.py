@@ -1,6 +1,8 @@
 import re
-from typing import Any, Optional
+from typing import Any
+
 import requests
+
 from Tests.scripts.utils import logging_wrapper as logging
 
 
@@ -112,14 +114,14 @@ class GithubClient:
         print(f"got pull: {pulls}")
         return pulls[0]
 
-    def get_pr_from_pr_number(self, pr_number: str) -> Optional[dict[Any, Any]]:
+    def get_pr_from_pr_number(self, pr_number: str) -> dict[Any, Any] | None:
         """gets the PR details"""
         full_url = f"{self.base_url}/repos/{self.repository}/pulls/{pr_number}"
         response = self.http_request("GET", full_url=full_url)
 
         return response
 
-    def get_pr_from_branch_name(self, branch_name: str) -> Optional[dict[Any, Any]]:
+    def get_pr_from_branch_name(self, branch_name: str) -> dict[Any, Any] | None:
         """gets the PR from the branch name"""
         params = {"state": "all", "head": f"demisto:{branch_name}"}
         full_url = f"{self.base_url}/repos/{self.repository}/pulls"

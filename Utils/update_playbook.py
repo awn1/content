@@ -1,6 +1,7 @@
 import logging
-import sys
 import ntpath
+import sys
+
 import yaml
 import yamlordereddictloader
 

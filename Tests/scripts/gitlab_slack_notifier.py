@@ -15,44 +15,42 @@ from typing import Any
 import requests
 from gitlab import GitlabGetError
 from gitlab.client import Gitlab
-from gitlab.v4.objects import ProjectPipelineJob, ProjectPipeline
+from gitlab.v4.objects import ProjectPipeline, ProjectPipelineJob
 from junitparser import JUnitXml, TestSuite
 from slack_sdk import WebClient
 
 from Tests.Marketplace.marketplace_constants import BucketUploadFlow
 from Tests.Marketplace.marketplace_services import get_upload_data
 from Tests.scripts.common import (
-    CONTENT_NIGHTLY,
-    CONTENT_PR,
-    get_instance_directories,
-    get_properties_for_test_suite,
     BUCKET_UPLOAD,
     BUCKET_UPLOAD_BRANCH_SUFFIX,
-    TEST_MODELING_RULES_REPORT_FILE_NAME,
-    get_test_results_files,
     CONTENT_MERGE,
+    CONTENT_NIGHTLY,
+    CONTENT_PR,
+    TEST_MODELING_RULES_REPORT_FILE_NAME,
     TEST_PLAYBOOKS_REPORT_FILE_NAME,
-    replace_escape_characters,
-)
-from Tests.scripts.common import (
-    get_pipelines_and_commits,
-    is_pivot,
-    get_commit_by_sha,
-    get_pipeline_by_commit,
     create_shame_message,
-    slack_link,
-    was_message_already_sent,
+    get_commit_by_sha,
+    get_instance_directories,
     get_nearest_newer_commit_with_pipeline,
     get_nearest_older_commit_with_pipeline,
+    get_pipeline_by_commit,
+    get_pipelines_and_commits,
+    get_properties_for_test_suite,
+    get_test_results_files,
+    is_pivot,
+    replace_escape_characters,
+    slack_link,
+    was_message_already_sent,
 )
 from Tests.scripts.github_client import GithubPullRequest
 from Tests.scripts.test_modeling_rule_report import (
-    calculate_test_modeling_rule_results,
-    read_test_modeling_rule_to_jira_mapping,
-    get_summary_for_test_modeling_rule,
     TEST_MODELING_RULES_TO_JIRA_TICKETS_CONVERTED,
+    calculate_test_modeling_rule_results,
+    get_summary_for_test_modeling_rule,
+    read_test_modeling_rule_to_jira_mapping,
 )
-from Tests.scripts.test_playbooks_report import read_test_playbook_to_jira_mapping, TEST_PLAYBOOKS_TO_JIRA_TICKETS_CONVERTED
+from Tests.scripts.test_playbooks_report import TEST_PLAYBOOKS_TO_JIRA_TICKETS_CONVERTED, read_test_playbook_to_jira_mapping
 from Tests.scripts.utils.log_util import install_logging
 
 ROOT_ARTIFACTS_FOLDER = Path(os.getenv("ARTIFACTS_FOLDER", "./artifacts"))

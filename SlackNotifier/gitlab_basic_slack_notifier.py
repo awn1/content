@@ -2,12 +2,12 @@ import argparse
 import logging
 import os
 import sys
-import requests
 from distutils.util import strtobool
-from slack_sdk import WebClient
-from slack_sdk.web import SlackResponse
 from pathlib import Path
 
+import requests
+from slack_sdk import WebClient
+from slack_sdk.web import SlackResponse
 
 CONTENT_CHANNEL = "dmst-build-test"
 
@@ -59,7 +59,7 @@ def main():
         try:
             text = Path(text_file).read_text()
         except Exception as e:
-            logging.error(f"Failed to read from file {text_file}, error: {str(e)}")
+            logging.error(f"Failed to read from file {text_file}, error: {e!s}")
             sys.exit(1)
 
     slack_client = WebClient(token=slack_token)

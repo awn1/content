@@ -1,9 +1,9 @@
 import logging
 from contextlib import contextmanager
-from typing import Any, Union
+from typing import Any
 
 from google.api_core.exceptions import GoogleAPICallError
-from google.cloud.firestore import Client, DELETE_FIELD
+from google.cloud.firestore import DELETE_FIELD, Client
 
 from .rocket_retry import retry
 from .text import ConnectorName
@@ -40,7 +40,7 @@ class Firestore:
         # self.inc_metric('update_doc')
         return self.client.collection(collection).document(document).update(data)
 
-    def get_document_field(self, collection, document, field: str) -> Union[dict, str]:
+    def get_document_field(self, collection, document, field: str) -> dict | str:
         """Get document field, returns empty dict if field does not exist"""
         if document_data := self._get_doc(collection=collection, document=document).to_dict():
             return document_data.get(field, {})

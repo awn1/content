@@ -1,8 +1,9 @@
+import logging
+
 from decorator import decorator
 from retry.api import retry_call
 
 from Tests.scripts.infra.utils.time_utils import time_now
-import logging
 
 logger = logging.getLogger(__name__)
 

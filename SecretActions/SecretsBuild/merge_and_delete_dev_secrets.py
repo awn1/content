@@ -1,17 +1,18 @@
 import argparse
-from typing import Tuple
+import logging
+
 import json5
 import requests
 from google.api_core.exceptions import NotFound
-from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule, FilterLabels, FilterOperators, SYNC_GSM_LABEL
-import logging
+
+from SecretActions.google_secret_manager_handler import SYNC_GSM_LABEL, FilterLabels, FilterOperators, GoogleSecreteManagerModule
 
 CONTENT_REPO_URL = "https://api.github.com/repos/demisto/content"
 # The max limit for the PRs API is 100, we use this variable to get more if it's 5 for example will get the last 500 PRs
 GET_PRS_ITERATIONS = 3
 
 
-def get_latest_merged() -> Tuple[list[int], list[int]]:
+def get_latest_merged() -> tuple[list[int], list[int]]:
     """
     Get the latest merged PR numbers, divided into 2 lists
     :return: A list of the latest PRs from Github
@@ -177,7 +178,7 @@ def validate_secret(secret: dict, attr_validation: ()) -> bool:  # type: ignore
     except Exception as e:
         logging.error(
             # type: ignore
-            f'Could not convert the secret "{secret.get("secret_name")}" to json5,' f"got the following error: {str(e)}"  # type: ignore
+            f'Could not convert the secret "{secret.get("secret_name")}" to json5,' f"got the following error: {e!s}"  # type: ignore
         )
         return False
     # Validate mandatory properties in the secret

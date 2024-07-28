@@ -1,5 +1,6 @@
-from Tests.scripts.utils import logging_wrapper as logging
 import sys
+
+from Tests.scripts.utils import logging_wrapper as logging
 
 
 class LogAggregator:

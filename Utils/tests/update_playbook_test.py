@@ -1,5 +1,7 @@
-from ruamel import yaml
 import os
+
+from ruamel import yaml
+
 from Utils.update_playbook import update_playbook
 
 

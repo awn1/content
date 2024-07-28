@@ -11,6 +11,7 @@ from gitlab import Gitlab
 from gitlab.exceptions import GitlabError
 from gitlab.v4.objects.branches import ProjectBranch
 from gitlab.v4.objects.projects import Project
+
 from Tests.scripts.utils.log_util import install_logging
 
 urllib3.disable_warnings()

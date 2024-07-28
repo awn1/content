@@ -1,25 +1,26 @@
+import argparse
 import json
 import os
 import re
-import argparse
+import shutil
 import sys
+from tempfile import mkdtemp
 from typing import Any
-from Tests.Marketplace.marketplace_services import init_storage_client
-from Tests.Marketplace.marketplace_constants import GCPConfig
-from Tests.scripts.utils.log_util import install_logging
-from Tests.scripts.utils import logging_wrapper as logging
+
+from demisto_sdk.commands.content_graph.common import ContentType, RelationshipType
 from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
 from google.cloud.storage import Blob
 from packaging.version import Version
-import shutil
-from demisto_sdk.commands.content_graph.common import RelationshipType
-from demisto_sdk.commands.content_graph.common import ContentType
-from tempfile import mkdtemp
+
 from Tests.Marketplace.logs_aggregator import LogAggregator
+from Tests.Marketplace.marketplace_constants import GCPConfig
+from Tests.Marketplace.marketplace_services import init_storage_client
 from Tests.Marketplace.upload_packs import (
     download_and_extract_index,
     download_and_extract_pack,
 )
+from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
 
 VERSION_FORMAT_REGEX = "\d{1,3}\.\d{1,3}\.\d{1,3}"
 LATEST_ZIP_REGEX = re.compile(
@@ -132,7 +133,7 @@ def get_dependencies_from_pack_meta_data(pack_path: str, folder_path: str) -> di
     """
     pack_metadata_path = folder_path + pack_path
     if os.path.exists(pack_metadata_path):
-        with open(pack_metadata_path, "r") as pack:
+        with open(pack_metadata_path) as pack:
             pack_meta_data_json = json.load(pack)
             # if dependencies is empty we get {}
             pack_dependencies = pack_meta_data_json.get("dependencies")

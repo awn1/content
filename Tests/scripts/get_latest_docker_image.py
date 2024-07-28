@@ -1,7 +1,9 @@
-import sys
 import argparse
 import logging
+import sys
+
 from demisto_sdk.commands.common.hook_validations.docker import DockerImageValidator
+
 from Tests.scripts.utils.log_util import install_logging
 
 

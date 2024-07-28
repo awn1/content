@@ -1,6 +1,5 @@
 from Utils.comment_on_pr import get_pr_comments_url
 
-
 github_comment_response_1 = [
     {"url": "https://api.github.com/repos/demisto/content/pulls/comments/477124055", "body": "shtak"},
     {

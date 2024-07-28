@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import sys
-from argparse import Namespace, ArgumentParser
+from argparse import ArgumentParser, Namespace
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -11,7 +11,7 @@ from typing import Any
 import humanize
 import urllib3
 from demisto_sdk.commands.test_content.constants import SSH_USER
-from paramiko import SSHClient, SSHException, MissingHostKeyPolicy
+from paramiko import MissingHostKeyPolicy, SSHClient, SSHException
 from scp import SCPClient, SCPException
 from tqdm import tqdm
 

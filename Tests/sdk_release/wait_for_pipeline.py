@@ -1,10 +1,12 @@
 import argparse
 import json
-from Tests.scripts.utils import logging_wrapper as logging
 import sys
 import time
+
 import requests
 import urllib3
+
+from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 from Utils.github_workflow_scripts.utils import get_env_var
 
@@ -28,7 +30,7 @@ def get_pipeline_status(pipeline_id, project_id, token):
         pipeline_status = jobs_info[0].get("pipeline", {}).get("status")
 
     except Exception as e:
-        logging.error(f"Unable to parse pipeline status response: {res.text}, error: {str(e)}")
+        logging.error(f"Unable to parse pipeline status response: {res.text}, error: {e!s}")
         return ""
 
     return pipeline_status
@@ -45,7 +47,7 @@ def get_pipeline_info(pipeline_id, project_id, token):
     try:
         pipeline_info = json.loads(res.content)
     except Exception as e:
-        logging.error(f"Unable to parse pipeline status response: {res.text}, error: {str(e)}")
+        logging.error(f"Unable to parse pipeline status response: {res.text}, error: {e!s}")
         sys.exit(1)
 
     return pipeline_info

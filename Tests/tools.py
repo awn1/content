@@ -1,10 +1,11 @@
-from functools import wraps
+import argparse
 from collections.abc import Callable
+from functools import wraps
 
 import requests
 from demisto_sdk.commands.test_content.mock_server import MITMProxy
+
 from SecretActions.google_secret_manager_handler import get_secrets_from_gsm
-import argparse
 
 
 def run_with_proxy_configured(function: Callable) -> Callable:

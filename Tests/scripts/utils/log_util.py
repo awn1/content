@@ -3,8 +3,7 @@ import os
 import sys
 
 import coloredlogs
-
-from demisto_sdk.commands.test_content.ParallelLoggingManager import LOGGING_FORMAT, LEVEL_STYLES, ARTIFACTS_PATH
+from demisto_sdk.commands.test_content.ParallelLoggingManager import ARTIFACTS_PATH, LEVEL_STYLES, LOGGING_FORMAT
 
 
 def _add_logging_level(level_name: str, level_num: int, method_name: str | None = None, logger=logging) -> None:

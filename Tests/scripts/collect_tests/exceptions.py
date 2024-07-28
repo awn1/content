@@ -76,7 +76,7 @@ class NoTestsConfiguredException(Exception):
 
 class NotUnderPackException(Exception):
     def __init__(self, path: Path | str):
-        self.message = f"Could not find a pack for {str(path)}"
+        self.message = f"Could not find a pack for {path!s}"
         super().__init__(self.message)
 
     def __str__(self):
@@ -85,7 +85,7 @@ class NotUnderPackException(Exception):
 
 class NothingToCollectException(Exception):
     def __init__(self, path: Path, reason: str):
-        self.message = f"Nothing to collect for file {str(path)}: {reason}"
+        self.message = f"Nothing to collect for file {path!s}: {reason}"
         super().__init__(self.message)
 
     def __str__(self):

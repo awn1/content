@@ -1,23 +1,22 @@
 import json
 from datetime import datetime, timedelta
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
-from typing import Optional
 
 import pandas as pd
 import requests
 from dateutil import parser
+from demisto_sdk.commands.common.constants import MarketplaceVersions
 from gitlab import Gitlab
+from gitlab.v4.objects.commits import ProjectCommit
+from gitlab.v4.objects.pipelines import ProjectPipeline
 from jira import Issue
-from junitparser import TestSuite, JUnitXml
+from junitparser import JUnitXml, TestSuite
+
 from Tests.scripts.collect_tests.constants import CONF_FILE, TPB_DEPENDENCIES_FILE, XSOAR_ON_PREM, XSOAR_SAAS
 from Tests.scripts.collect_tests.test_conf import TestConf
 from Tests.scripts.utils import logging_wrapper as logging
-from gitlab.v4.objects.pipelines import ProjectPipeline
-from gitlab.v4.objects.commits import ProjectCommit
-from itertools import pairwise
-from demisto_sdk.commands.common.constants import MarketplaceVersions
-
 
 CONTENT_NIGHTLY = "Content Nightly"
 CONTENT_PR = "Content PR"
@@ -90,7 +89,7 @@ STRING_TO_BOOL_MAP = {
 
 def string_to_bool(
     input_: Any,
-    default_when_empty: Optional[bool] = None,
+    default_when_empty: bool | None = None,
 ) -> bool:
     try:
         return STRING_TO_BOOL_MAP[str(input_).lower()]
@@ -288,7 +287,7 @@ def get_json_data(path: Path) -> dict:
         with open(path) as json_file:
             file_data = json.load(json_file)
     except Exception as e:
-        logging.info(f"Couldn't open {str(path)}, reason is: {str(e)}")
+        logging.info(f"Couldn't open {path!s}, reason is: {e!s}")
         file_data = {}
     return file_data
 
@@ -563,7 +562,7 @@ def get_nearest_newer_commit_with_pipeline(
         A tuple of the nearest pipeline and a list of suspicious commits that have no pipelines.
     """
     suspicious_commits = []
-    for index in reversed(range(0, current_commit_index - 1)):
+    for index in reversed(range(current_commit_index - 1)):
         next_commit = list_of_commits[index]
         suspicious_commits.append(list_of_commits[index + 1])
         next_pipeline = get_pipeline_by_commit(next_commit, list_of_pipelines)

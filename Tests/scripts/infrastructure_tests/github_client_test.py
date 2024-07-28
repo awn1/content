@@ -4,7 +4,6 @@ import pytest
 
 from Tests.scripts.github_client import GithubClient, GithubPullRequest
 
-
 SHA = "mock_sha"
 BRANCH = "mock_branch"
 COMMENTS_URL = "https://comments_url"  # disable-secrets-detection

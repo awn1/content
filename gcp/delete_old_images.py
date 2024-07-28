@@ -1,5 +1,6 @@
-from gcp import Images
 import argparse
+
+from gcp import Images
 
 
 def options_handler():

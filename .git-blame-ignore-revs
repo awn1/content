@@ -5,3 +5,8 @@
 
 # Applied ruff-format to the whole infra repo
 9bed4f0a5a5d204b8195641fca9050779711adb6
+
+# Added more ruff categories (3 commits)
+11a1a3c028b50de69dcfea31331efc3cc7b37f75
+5fe915f300f48a20132658e4081b16e34d926d14
+738787bfaa5d83ce3b9e2868f3055cd7d49994f1

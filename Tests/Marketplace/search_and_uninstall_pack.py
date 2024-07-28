@@ -12,21 +12,21 @@ from typing import Any
 import demisto_client
 from demisto_sdk.commands.common.tools import string_to_bool
 
+from Tests.configure_and_test_integration_instances import CloudBuild, get_custom_user_agent
 from Tests.Marketplace.common import (
-    generic_request_with_retries,
-    wait_until_not_updating,
     ALREADY_IN_PROGRESS,
-    send_api_request_with_retries,
     fetch_pack_ids_to_install,
+    generic_request_with_retries,
+    send_api_request_with_retries,
+    wait_until_not_updating,
 )
 from Tests.Marketplace.search_and_install_packs import search_and_install_packs_and_their_dependencies
-from Tests.configure_and_test_integration_instances import CloudBuild, get_custom_user_agent
+from Tests.scripts.infra.enums.tables import XdrTables
 from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT
 from Tests.scripts.infra.settings import XSOARAdminUser
 from Tests.scripts.infra.xsoar_api import XsiamClient
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
-from Tests.scripts.infra.enums.tables import XdrTables
 
 DATASET_NOT_FOUND_ERROR_CODE = 599
 
@@ -115,7 +115,7 @@ def get_all_installed_packs(
                 installed_packs_ids.remove(pack)
         return installed_packs_ids
     except Exception as e:
-        logging.exception(f"The request to fetch installed packs has failed. Additional info: {str(e)}")
+        logging.exception(f"The request to fetch installed packs has failed. Additional info: {e!s}")
         return None
 
 
@@ -140,7 +140,7 @@ def uninstall_all_packs_one_by_one(
 
     logging.info(
         f"Starting to search and uninstall packs in server: {hostname}, packs count to "
-        f"uninstall: {len(packs_to_uninstall)} and they are: {str(packs_to_uninstall)}"
+        f"uninstall: {len(packs_to_uninstall)} and they are: {packs_to_uninstall!s}"
     )
     uninstalled_count = 0
     failed_to_uninstall = []
@@ -242,7 +242,7 @@ def uninstall_packs(client: demisto_client, pack_ids: list):
             _request_timeout=None,
         )
     except Exception as e:
-        logging.exception(f"The request to uninstall packs has failed. Additional info: {str(e)}")
+        logging.exception(f"The request to uninstall packs has failed. Additional info: {e!s}")
         return False
 
     return True
@@ -543,7 +543,7 @@ def main():
             try:
                 success &= future.result()
             except Exception as ex:
-                logging.exception(f"Failed to cleanup machine. Additional info: {str(ex)}")
+                logging.exception(f"Failed to cleanup machine. Additional info: {ex!s}")
                 success = False
 
     if not success:

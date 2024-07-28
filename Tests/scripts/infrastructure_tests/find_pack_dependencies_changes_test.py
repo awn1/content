@@ -1,4 +1,5 @@
 import pytest
+
 from Tests.scripts.find_pack_dependencies_changes import compare
 
 

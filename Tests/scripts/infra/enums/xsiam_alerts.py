@@ -1,6 +1,5 @@
 from enum import Enum
 from typing import Any
-from typing import Optional
 
 
 class SearchTableOperator(Enum):
@@ -51,7 +50,7 @@ class SearchTableField(Enum):
         field.field = field_name  # type: ignore[misc]
         return field
 
-    def create_search_filter(self, search_value: Any, search_type: Optional[SearchTableOperator] = None) -> dict:
+    def create_search_filter(self, search_value: Any, search_type: SearchTableOperator | None = None) -> dict:
         search_type = search_type or self.search_type
         return {"SEARCH_FIELD": self.value, "SEARCH_TYPE": search_type.value, "SEARCH_VALUE": search_value}
 

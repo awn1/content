@@ -1,7 +1,6 @@
 import argparse
 
 import demisto_client
-
 from demisto_sdk.commands.test_content.tools import update_server_configuration
 
 if __name__ == "__main__":

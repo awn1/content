@@ -5,34 +5,36 @@ import subprocess
 import sys
 import uuid
 import zipfile
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from enum import IntEnum
+from pathlib import Path
 from pprint import pformat
 from time import sleep
 from typing import Any
 from urllib.parse import quote_plus
-from packaging.version import Version
-from ruamel import yaml
+
 import demisto_client
 from demisto_sdk.commands.common.constants import FileType, MarketplaceVersions
-from demisto_sdk.commands.common.tools import run_command, get_yaml, str2bool, format_version, find_type, listdir_fullpath
-from demisto_sdk.commands.test_content.constants import SSH_USER
-from demisto_sdk.commands.test_content.mock_server import MITMProxy, run_with_mock, RESULT
-from demisto_sdk.commands.test_content.tools import update_server_configuration, is_redhat_instance
 from demisto_sdk.commands.common.git_util import GitUtil
+from demisto_sdk.commands.common.tools import find_type, format_version, get_yaml, listdir_fullpath, run_command, str2bool
+from demisto_sdk.commands.test_content.constants import SSH_USER
+from demisto_sdk.commands.test_content.mock_server import RESULT, MITMProxy, run_with_mock
+from demisto_sdk.commands.test_content.tools import is_redhat_instance, update_server_configuration
+from packaging.version import Version
+from ruamel import yaml
+
+from SecretActions.google_secret_manager_handler import get_secrets_from_gsm
+from Tests.Marketplace.common import get_json_file, get_packs_with_higher_min_version
+from Tests.Marketplace.marketplace_services import get_last_commit_from_index
 from Tests.Marketplace.search_and_install_packs import search_and_install_packs_and_their_dependencies, upload_zipped_packs
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 from Tests.test_content import get_server_numeric_version
-from Tests.test_integration import test_integration_instance, disable_all_integrations
 from Tests.test_integration import __get_integration_config as get_integration_config
+from Tests.test_integration import disable_all_integrations, test_integration_instance
 from Tests.tools import run_with_proxy_configured
-from Tests.Marketplace.common import get_json_file, get_packs_with_higher_min_version
-from Tests.Marketplace.marketplace_services import get_last_commit_from_index
-from pathlib import Path
-from SecretActions.google_secret_manager_handler import get_secrets_from_gsm
 
 MARKET_PLACE_MACHINES = ("master",)
 SKIPPED_PACKS = ["NonSupported", "ApiModules"]
@@ -606,7 +608,6 @@ class Server:
         """
         For cloud build we need to add core rest api params differently
         """
-        pass
 
     def set_integration_params(self, integrations, secret_params, instance_names, placeholders_map, logging_module=logging):
         """
@@ -1570,7 +1571,7 @@ class Build(ABC):
                 try:
                     results.append(future.result())
                 except Exception as e:
-                    logging.exception(f"Failed to run function with error: {str(e)}")
+                    logging.exception(f"Failed to run function with error: {e!s}")
                     success = False
             return success, results
 
@@ -1692,7 +1693,7 @@ class CloudBuild(Build):
         logging.info("Starting server creation")
         servers = []
         for machine, info in self.machine_assignment_json.items():
-            logging.info(f"working on machine {str(machine)}")
+            logging.info(f"working on machine {machine!s}")
 
             packs_to_install = info.get("packs_to_install")
             tests_to_run = info.get("playbooks_to_run")
@@ -1834,7 +1835,7 @@ def main():
             try:
                 success &= future.result()
             except Exception as e:
-                logging.exception(f"Failed to run function with error: {str(e)}")
+                logging.exception(f"Failed to run function with error: {e!s}")
                 success = False
 
     if not success:

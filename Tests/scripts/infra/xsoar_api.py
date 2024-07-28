@@ -1,10 +1,9 @@
 import contextlib
+import logging
 import re
 from functools import cached_property
-from http.client import HTTPException
-from http.client import RemoteDisconnected
+from http.client import HTTPException, RemoteDisconnected
 from json import JSONDecodeError
-from typing import Optional
 from urllib.parse import unquote
 
 import pendulum
@@ -15,27 +14,13 @@ from more_itertools import first
 from pendulum import DateTime
 
 # from pydantic import parse_obj_as
-from requests import ConnectionError
-from requests import HTTPError
-from requests import TooManyRedirects
+from requests import ConnectionError, HTTPError, TooManyRedirects
 from urllib3.util import Retry
 
+from Tests.scripts.infra.enums.papi import KeySecurityLevel
 from Tests.scripts.infra.enums.tables import XdrTables
-
-# from infra.enums.layouts import LayoutObjectType
-# from infra.enums.papi import KeySecurityLevel
-# from infra.enums.tables import XdrTables
-# from infra.enums.xsiam_alerts import AlertStatus
-# from infra.enums.xsiam_alerts import SearchTableField
-# from infra.enums.xsiam_alerts import SearchTableOperator
-# from infra.exceptions import GetTableDataException
-# from infra.exceptions import InviteUserError
-# from infra.exceptions import MissingIncident
-# from infra.exceptions import RocketEnvException
-# from infra.exceptions import SetupException
-# from infra.exceptions import TeardownException
-# from infra.firestore_connector import Firestore
-from Tests.scripts.infra.utils.firestore_connector import lock_and_read, Firestore
+from Tests.scripts.infra.enums.xsiam_alerts import SearchTableField
+from Tests.scripts.infra.models import PublicApiKey
 
 # from infra.logger import log
 # from infra.logger import session_log
@@ -54,27 +39,34 @@ from Tests.scripts.infra.utils.firestore_connector import lock_and_read, Firesto
 # from infra.models.user import NewUserData
 # from infra.models.user import User
 # from infra.models.xsoar_settings.layout import Layout
-from Tests.scripts.infra.resources.constants import DEFAULT_USER_AGENT
-from Tests.scripts.infra.resources.constants import OKTA_AUTH_URL
-from Tests.scripts.infra.resources.constants import OKTA_HEADERS
-from Tests.scripts.infra.resources.constants import OKTA_PROD_AUTH_URL
-from Tests.scripts.infra.resources.constants import TokenCache
+from Tests.scripts.infra.resources.constants import (
+    DEFAULT_USER_AGENT,
+    OKTA_AUTH_URL,
+    OKTA_HEADERS,
+    OKTA_PROD_AUTH_URL,
+    TokenCache,
+)
 from Tests.scripts.infra.utils.env import is_production
-from Tests.scripts.infra.utils.html import find_html_attribute
-from Tests.scripts.infra.utils.html import find_html_form_action
-from Tests.scripts.infra.utils.requests_handler import raise_for_status
-from Tests.scripts.infra.utils.requests_handler import TimeoutHTTPAdapter
+
+# from infra.enums.layouts import LayoutObjectType
+# from infra.enums.papi import KeySecurityLevel
+# from infra.enums.tables import XdrTables
+# from infra.enums.xsiam_alerts import AlertStatus
+# from infra.enums.xsiam_alerts import SearchTableField
+# from infra.enums.xsiam_alerts import SearchTableOperator
+# from infra.exceptions import GetTableDataException
+# from infra.exceptions import InviteUserError
+# from infra.exceptions import MissingIncident
+# from infra.exceptions import RocketEnvException
+# from infra.exceptions import SetupException
+# from infra.exceptions import TeardownException
+# from infra.firestore_connector import Firestore
+from Tests.scripts.infra.utils.firestore_connector import Firestore, lock_and_read
+from Tests.scripts.infra.utils.html import find_html_attribute, find_html_form_action
+from Tests.scripts.infra.utils.requests_handler import TimeoutHTTPAdapter, raise_for_status
 from Tests.scripts.infra.utils.rocket_retry import retry
 from Tests.scripts.infra.utils.text import to_list
-from Tests.scripts.infra.utils.time_utils import time_now
-from Tests.scripts.infra.utils.time_utils import to_epoch_timestamp
-
-import logging
-
-from Tests.scripts.infra.enums.papi import KeySecurityLevel
-from Tests.scripts.infra.enums.xsiam_alerts import SearchTableField
-from Tests.scripts.infra.models import PublicApiKey
-
+from Tests.scripts.infra.utils.time_utils import time_now, to_epoch_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -685,7 +677,7 @@ class XsoarClient(XsoarOnPremClient):
     #     return keys
 
     def create_api_key(
-        self, rbac_roles: list[str] | None = None, expiration: DateTime | None = None, comment: Optional[str] = None, **kwargs
+        self, rbac_roles: list[str] | None = None, expiration: DateTime | None = None, comment: str | None = None, **kwargs
     ) -> PublicApiKey:
         """
         Calls XSOAR API to create an API key

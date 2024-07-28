@@ -1,24 +1,24 @@
-from datetime import timedelta
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 from _pytest.fixtures import SubRequest
-from requests.exceptions import RequestException
 from demisto_client.demisto_api.models.feed_indicator import FeedIndicator
 from demisto_client.demisto_api.rest import ApiException
 from demisto_sdk.commands.common.clients import XsoarSaasClient
-from Tests.tools import get_integration_params, get_json_response
-from Tests.scripts.utils.log_util import install_logging
+from demisto_sdk.commands.common.constants import IncidentState, InvestigationPlaybookState
+from requests.exceptions import RequestException
+
 from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
 from Tests.tests_e2e.client_utils import (
-    get_integration_instance_name,
     get_fetched_incident,
-    save_integration_instance,
+    get_integration_instance_name,
     save_incident,
-    save_playbook,
     save_indicators,
+    save_integration_instance,
+    save_playbook,
 )
-from demisto_sdk.commands.common.constants import InvestigationPlaybookState, IncidentState
+from Tests.tools import get_integration_params, get_json_response
 
 install_logging("e2e-xsoar-saas.log", logger=logging)
 

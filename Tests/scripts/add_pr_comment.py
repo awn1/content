@@ -1,7 +1,6 @@
 import os
-from demisto_sdk.commands.test_content.execute_test_content import _add_pr_comment
-from demisto_sdk.commands.test_content.execute_test_content import ParallelLoggingManager
 
+from demisto_sdk.commands.test_content.execute_test_content import ParallelLoggingManager, _add_pr_comment
 
 JOB_ID = os.environ.get("CIRCLE_WORKFLOW_JOB_ID")
 COVERAGE_LINK = (

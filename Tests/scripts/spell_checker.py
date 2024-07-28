@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-import sys
-import yaml
 import argparse
+import sys
 
+import yaml
 from spellchecker import SpellChecker
 
 DISPLAYABLE_LINES = ["description", "name", "display", "comment"]
@@ -40,12 +40,12 @@ def spell_checker(path, is_md=False):
     spellchecker.word_frequency.load_text_file("Tests/known_words.txt")
 
     if is_md:
-        with open(path, "r") as md_file:
+        with open(path) as md_file:
             md_data = md_file.readlines()
 
         check_md_file(spellchecker, md_data, unknown_words)
     else:
-        with open(path, "r") as yaml_file:
+        with open(path) as yaml_file:
             yml_info = yaml.safe_load(yaml_file)
 
         check_yaml(spellchecker, yml_info, unknown_words)

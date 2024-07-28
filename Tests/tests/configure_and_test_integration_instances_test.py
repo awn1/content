@@ -2,13 +2,14 @@ import os
 
 import demisto_client
 import pytest
+
 from Tests.configure_and_test_integration_instances import (
+    CloudBuild,
+    Server,
     XSOARBuild,
     create_build_object,
     options_handler,
-    CloudBuild,
     packs_names_to_integrations_names,
-    Server,
 )
 
 XSIAM_SERVERS = {

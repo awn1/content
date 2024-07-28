@@ -14,36 +14,36 @@ from junitparser import JUnitXml
 from tabulate import tabulate
 
 from Tests.scripts.common import (
+    FAILED_TO_COLOR_NAME,
+    FAILED_TO_MSG,
+    TEST_PLAYBOOKS_REPORT_FILE_NAME,
+    TEST_SUITE_CELL_EXPLANATION,
     calculate_results_table,
     get_all_failed_results,
     get_test_results_files,
-    TEST_PLAYBOOKS_REPORT_FILE_NAME,
-    TEST_SUITE_CELL_EXPLANATION,
-    FAILED_TO_COLOR_NAME,
-    FAILED_TO_MSG,
 )
 from Tests.scripts.jira_issues import (
+    JiraTicketInfo,
     find_existing_jira_ticket,
-    generate_ticket_summary,
     generate_build_markdown_link,
-    jira_server_information,
-    jira_search_all_by_query,
     generate_query_by_component_and_issue_type,
-    jira_file_link,
-    jira_sanitize_file_name,
-    jira_color_text,
-    transition_jira_ticket_to_unresolved,
+    generate_ticket_summary,
     get_jira_server_info,
     get_jira_ticket_info,
-    JiraTicketInfo,
+    jira_color_text,
+    jira_file_link,
+    jira_sanitize_file_name,
+    jira_search_all_by_query,
+    jira_server_information,
+    transition_jira_ticket_to_unresolved,
 )
 from Tests.scripts.test_playbooks_report import (
-    calculate_test_playbooks_results,
     TEST_PLAYBOOKS_BASE_HEADERS,
-    get_jira_tickets_for_playbooks,
     TEST_PLAYBOOKS_JIRA_BASE_HEADERS,
-    write_test_playbook_to_jira_mapping,
     TEST_PLAYBOOKS_TO_JIRA_TICKETS_CONVERTED,
+    calculate_test_playbooks_results,
+    get_jira_tickets_for_playbooks,
+    write_test_playbook_to_jira_mapping,
 )
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging

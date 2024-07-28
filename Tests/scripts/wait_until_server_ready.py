@@ -5,16 +5,16 @@ import logging
 import os
 import sys
 import time
+from argparse import ArgumentParser
 from subprocess import CalledProcessError, check_output
 from time import sleep
-from argparse import ArgumentParser
 
 import requests
 import urllib3.util
 from demisto_sdk.commands.common.tools import str2bool
+from demisto_sdk.commands.test_content.constants import SSH_USER
 
 from Tests.scripts.utils.log_util import install_logging
-from demisto_sdk.commands.test_content.constants import SSH_USER
 
 # Disable insecure warnings
 urllib3.disable_warnings()
@@ -97,7 +97,7 @@ def main():
                     try:
                         res = requests.request(method="GET", url=url, verify=False)
                     except (requests.exceptions.RequestException, requests.exceptions.HTTPError) as exp:
-                        logging.error(f"{ami_instance_name} encountered an error: {str(exp)}\n")
+                        logging.error(f"{ami_instance_name} encountered an error: {exp!s}\n")
                         if 60 * 10 != SETUP_TIMEOUT:
                             logging.warning("Setting SETUP_TIMEOUT to 10 minutes.")
                             SETUP_TIMEOUT = 60 * 10

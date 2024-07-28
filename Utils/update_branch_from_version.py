@@ -1,12 +1,13 @@
-import subprocess
 import argparse
 import os
+import shutil
+import subprocess
+
 import click
 import ujson
+from pkg_resources import parse_version
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import FoldedScalarString
-from pkg_resources import parse_version
-import shutil
 
 ryaml = YAML()
 ryaml.preserve_quotes = True  # type: ignore[assignment]
@@ -144,7 +145,7 @@ def edit_json_content_entity_directory(new_from_version, dir_path):
             and file_name.endswith(".json")
             and file_path != "Packs/NonSupported/IndicatorTypes/reputations.json"
         ):
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 json_content = ujson.load(f)
 
             if should_keep_json_file(json_content, new_from_version):
@@ -168,7 +169,7 @@ def edit_scripts_or_integrations_directory(new_from_version, dir_path):
 
         # prevent going to pipfiles and non yml content
         if yml_file_path.endswith(".yml"):
-            with open(yml_file_path, "r") as yml_file:
+            with open(yml_file_path) as yml_file:
                 yml_content = ryaml.load(yml_file)
 
             if should_keep_yml_file(yml_content, new_from_version):
@@ -186,7 +187,7 @@ def edit_playbooks_directory(new_from_version, dir_path):
 
         if os.path.isfile(file_path):
             if file_path.endswith(".yml"):
-                with open(file_path, "r") as yml_file:
+                with open(file_path) as yml_file:
                     yml_content = ryaml.load(yml_file)
 
                 if should_keep_yml_file(yml_content, new_from_version):
@@ -202,7 +203,7 @@ def edit_playbooks_directory(new_from_version, dir_path):
             for inner_file_name in os.listdir(inner_dir_path):
                 file_path = os.path.join(inner_dir_path, inner_file_name)
                 if file_path.endswith(".yml"):
-                    with open(file_path, "r") as yml_file:
+                    with open(file_path) as yml_file:
                         yml_content = ryaml.load(yml_file)
 
                     if should_keep_yml_file(yml_content, new_from_version):

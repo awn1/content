@@ -1,8 +1,8 @@
 import argparse
 import logging
-from google.auth.exceptions import DefaultCredentialsError
 
-from google_secret_manager_handler import GoogleSecreteManagerModule, ExpirationData  # noqa: E402
+from google.auth.exceptions import DefaultCredentialsError
+from google_secret_manager_handler import ExpirationData, GoogleSecreteManagerModule
 
 DEV_PROJECT_ID = "269994096945"
 DATE_FORMAT = "%Y-%m-%d"

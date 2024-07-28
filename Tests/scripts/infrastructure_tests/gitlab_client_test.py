@@ -1,13 +1,12 @@
 import io
 import json
+import zipfile
 from pathlib import Path
 from typing import Any
-import zipfile
 
 import pytest
 
 from Tests.scripts.gitlab_client import GitlabClient
-
 
 SHA = "mock_sha"
 JOB_NAME = "mock_job_name"

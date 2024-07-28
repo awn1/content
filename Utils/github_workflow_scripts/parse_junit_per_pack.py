@@ -1,8 +1,8 @@
-from collections import defaultdict
+import csv
 import operator
 import xml.etree.ElementTree as ET
+from collections import defaultdict
 from pathlib import Path
-import csv
 
 
 class PackNameParseError(Exception):

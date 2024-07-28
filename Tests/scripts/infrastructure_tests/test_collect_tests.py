@@ -1,7 +1,7 @@
 import os
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
-from collections.abc import Callable, Iterable
 
 import pytest
 from demisto_sdk.commands.common.constants import MarketplaceVersions
@@ -11,17 +11,17 @@ from Tests.scripts.collect_tests import collect_tests
 # importing Machine,FileType from collect_tests (rather than utils) to compare class member values
 from Tests.scripts.collect_tests.collect_tests import (
     BranchTestCollector,
-    NightlyTestCollector,
     FileType,
     Machine,
+    NightlyTestCollector,
     UploadAllCollector,
 )
 from Tests.scripts.collect_tests.constants import (
     ALWAYS_INSTALLED_PACKS_MARKETPLACE_V2,
     MODELING_RULE_COMPONENT_FILES,
-    XSOAR_SANITY_TEST_NAMES,
     NON_CODE_FILE_TYPES_TO_COLLECT,
     XSIAM_COMPONENT_FILES,
+    XSOAR_SANITY_TEST_NAMES,
 )
 from Tests.scripts.collect_tests.path_manager import PathManager
 from Tests.scripts.collect_tests.utils import FilesToCollect, PackManager

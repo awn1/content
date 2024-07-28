@@ -1,22 +1,20 @@
 import argparse
-import os
-import coloredlogs
-import io
 import logging
+import os
 
+import coloredlogs
 import json5
-from google.api_core.exceptions import NotFound, PermissionDenied, InvalidArgument
+from google.api_core.exceptions import InvalidArgument, NotFound, PermissionDenied
 from google.auth.exceptions import DefaultCredentialsError
-
 from google_secret_manager_handler import (
-    GoogleSecreteManagerModule,
     DEV_PROJECT_ID,
-    ExpirationData,
     SYNC_GSM_LABEL,
+    ExpirationData,
+    GoogleSecreteManagerModule,
     create_github_client,
 )
-from Tests.scripts.github_client import GithubPullRequest, GithubClient
 
+from Tests.scripts.github_client import GithubClient, GithubPullRequest
 
 EXPIRATION_LABELS = [
     ExpirationData.CREDS_EXPIRATION_LABEL_NAME,
@@ -47,12 +45,12 @@ def validate_secret(
     """
     # Validate file exist and json 5 format
     try:
-        with io.open(secret, "r", encoding="utf-8") as json_file:
+        with open(secret, encoding="utf-8") as json_file:
             json_object = json5.load(json_file)
     except FileNotFoundError:
         raise Exception(f"Could not find the file at: {secret}")
     except ValueError as e:
-        raise Exception(f"Could not convert to json5, got the following error: {str(e)}")
+        raise Exception(f"Could not convert to json5, got the following error: {e!s}")
 
     # Validate mandatory properties in the secret
     missing_attrs = [attr for attr in attr_validation if attr not in json_object]
@@ -81,8 +79,7 @@ def validate_secret(
                 github_client.get_pr_from_pr_number(options.pr_number)
         except Exception as e:
             raise Exception(
-                f"Pull Request was not found for {options.pr_number} - "
-                f"{str(e)} . Make sure the PR number you provided is valid."
+                f"Pull Request was not found for {options.pr_number} - " f"{e!s} . Make sure the PR number you provided is valid."
             )
 
     elif project_id == DEV_PROJECT_ID:

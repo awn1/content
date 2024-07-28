@@ -1,15 +1,16 @@
 import argparse
 import json
 import os
-from pathlib import Path
-from google.cloud import storage  # type: ignore[attr-defined]
 import xml.etree.ElementTree as ET
+from pathlib import Path
+
+from google.cloud import storage  # type: ignore[attr-defined]
+
 from Tests.Marketplace.common import fetch_pack_ids_to_install
 from Tests.Marketplace.marketplace_services import load_json
 from Tests.scripts.collect_tests.constants import ALWAYS_INSTALLED_PACKS_MAPPING, MarketplaceVersions
-from Tests.scripts.utils.log_util import install_logging
 from Tests.scripts.utils import logging_wrapper as logging
-
+from Tests.scripts.utils.log_util import install_logging
 
 ARTIFACTS_FOLDER_SERVER_TYPE = Path(os.getenv("ARTIFACTS_FOLDER_SERVER_TYPE", "."))
 ARTIFACTS_BUCKET = "xsoar-ci-artifacts"
@@ -75,15 +76,15 @@ def machine_assignment(
         f"Sorted packs by execution times are: "
         f"{[(pack.name, pack.total_expected_execution_time) for pack in sorted_packs_by_execution_time]}"
     )
-    logging.info(f"packs to install from file: {str(packs_to_install_from_file)}")
+    logging.info(f"packs to install from file: {packs_to_install_from_file!s}")
     for pack in sorted_packs_by_execution_time:
-        logging.debug(f"current load on machines is {str(machine_loads)}")
+        logging.debug(f"current load on machines is {machine_loads!s}")
         min_load_machine = min(machine_loads, key=lambda machine: machine_loads[machine])
         machine_assignments[min_load_machine]["packs_to_install"].update({pack.name, *pack.dependencies})
         machine_assignments[min_load_machine]["playbooks_to_run"].update({*pack.test_playbooks_to_run})
         machine_loads[min_load_machine] += pack.total_expected_execution_time
-        logging.debug(f"load on machines after assigning: {str(machine_loads)}")
-        logging.debug(f"assignment on machines after assigning: {str(machine_assignments)}")
+        logging.debug(f"load on machines after assigning: {machine_loads!s}")
+        logging.debug(f"assignment on machines after assigning: {machine_assignments!s}")
 
         if pack.name in packs_to_install_from_file:
             packs_to_install_from_file.remove(pack.name)
@@ -102,7 +103,7 @@ def machine_assignment(
         for machine, machine_dict in machine_assignments.items()
     }
 
-    logging.info(f"final assignment: {str(final_assignments)}")
+    logging.info(f"final assignment: {final_assignments!s}")
     return final_assignments
 
 

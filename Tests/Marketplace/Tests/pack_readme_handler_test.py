@@ -1,12 +1,14 @@
 import os
+from pathlib import Path
+
 import pytest
 from google.cloud.storage.blob import Blob
-from pathlib import Path
-from Tests.Marketplace.marketplace_constants import GCPConfig, BucketUploadFlow
+
+from Tests.Marketplace.marketplace_constants import BucketUploadFlow, GCPConfig
 from Tests.Marketplace.pack_readme_handler import (
     copy_markdown_images,
-    download_markdown_images_from_artifacts,
     decode_before_upload,
+    download_markdown_images_from_artifacts,
 )
 
 

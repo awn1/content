@@ -1,18 +1,19 @@
 import argparse
+import json
 import logging
 import os
-from pathlib import Path
-import time
-from ruamel.yaml import YAML
-import git.exc
-import git
-import requests
 import sys
-import json
-import urllib3
+import time
+from pathlib import Path
 
-from urllib3.exceptions import InsecureRequestWarning
 import common
+import git
+import git.exc
+import requests
+import urllib3
+from ruamel.yaml import YAML
+from urllib3.exceptions import InsecureRequestWarning
+
 from Tests.scripts.utils.log_util import install_logging
 
 urllib3.disable_warnings(InsecureRequestWarning)
@@ -61,7 +62,7 @@ class TestBranch:
             repo = git.Repo.clone_from(url=url, to_path="./content", depth=1)
             print("Cloned Content repo")
         except Exception as e:
-            print(f"Cloning Content repo failed, Error: {str(e)}")
+            print(f"Cloning Content repo failed, Error: {e!s}")
             sys.exit(ExitCode.FAILED)
 
         print("Sleeping 5 seconds")
@@ -267,7 +268,7 @@ class PipelineManager:
                     )
             return ExitCode.SUCCESS
         except Exception as e:
-            logging.exception(f"Error: {str(e)}")
+            logging.exception(f"Error: {e!s}")
             if output_file:
                 with open(output_file, "w") as f:
                     title = f"Failed to trigger build type: {build_type}"
@@ -292,7 +293,7 @@ class PipelineManager:
         if res.status_code != 200:
             logging.info(
                 f"Failed to get status of pipeline {self.pipeline_id}, request to "
-                f"{GITLAB_CONTENT_PIPELINES_BASE_URL} failed with error: {str(res.content)}"
+                f"{GITLAB_CONTENT_PIPELINES_BASE_URL} failed with error: {res.content!s}"
             )
             sys.exit(ExitCode.FAILED)
 

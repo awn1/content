@@ -289,7 +289,7 @@ if __name__ == "__main__":
     )
     options = parser.parse_args()
     if options.test_data:
-        with open(WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME, "r") as f:
+        with open(WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME) as f:
             slack_messages = json.load(f)
     else:
         client = WebClient(token=os.environ["SLACK_TOKEN"])
