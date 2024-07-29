@@ -399,6 +399,8 @@ class Pack:
             Metadata.TAGS: list(self._tags or []),
             Metadata.SEARCH_RANK: self._search_rank,
             Metadata.INTEGRATIONS: self._related_integration_images,
+            Metadata.CREATED: self._create_date,
+            Metadata.UPDATED: self._update_date,
         }
 
         update_metadata_fields = {}
@@ -407,25 +409,12 @@ class Pack:
                 f: self.pack_metadata.get(f) for f in self.pack_metadata if f not in PACK_METADATA_REQUIRE_RN_FIELDS
             }
             logging.debug(
-                f"Updating metadata with statistics and metadata changes because {self._pack_name=} "
-                f"{self.is_modified=} {self.is_metadata_updated=}"
-            )
-        elif self.is_modified:
-            update_metadata_fields = {
-                Metadata.CREATED: self._create_date,
-                Metadata.UPDATED: self._update_date,
-            }
-            logging.debug(
-                f"Updating metadata with statistics, created, updated fields because {self._pack_name=} "
-                f"{self.is_modified=} {self.is_metadata_updated=}"
-            )
-        else:
-            logging.debug(
-                f"Updating metadata only with statistics because {self._pack_name=} {self.is_modified=} "
-                f"{self.is_metadata_updated=}"
+                f"Updating metadata fields that are not listed in PACK_METADATA_REQUIRE_RN_FIELDS, because "
+                f"{self._pack_name=} {self.is_modified=} {self.is_metadata_updated=}"
             )
 
         updated_metadata = update_metadata_fields | update_statistics_metadata
+        logging.debug(f"Updating metadata fields because " f"{self._pack_name=} {self.is_modified=} {self.is_metadata_updated=}")
         logging.debug(f"Updating the following metadata fields: {updated_metadata}")
         return updated_metadata
 

@@ -69,6 +69,8 @@ class TestUpdateIndexAndPack:
         Metadata.SEARCH_RANK: None,
         Metadata.TAGS: [],
         Metadata.INTEGRATIONS: None,
+        Metadata.CREATED: "",
+        Metadata.UPDATED: None,
     }
 
     def test_update_index_folder_new_version(self, mocker):
@@ -239,7 +241,7 @@ class TestUpdateIndexAndPack:
             call_args
             == (
                 (
-                    "Updating metadata only with statistics because self._pack_name='HelloWorld' "
+                    "Updating metadata fields because self._pack_name='HelloWorld' "
                     "self.is_modified=False self.is_metadata_updated=False"
                 ),
             )
@@ -305,8 +307,8 @@ class TestUpdateIndexAndPack:
             call_args
             == (
                 (
-                    "Updating metadata with statistics and metadata changes because self._pack_name='HelloWorld' "
-                    "self.is_modified=False self.is_metadata_updated=True"
+                    "Updating metadata fields because self._pack_name='HelloWorld'"
+                    " self.is_modified=False self.is_metadata_updated=True"
                 ),
             )
             for call_args, _ in logging_mock.call_args_list
