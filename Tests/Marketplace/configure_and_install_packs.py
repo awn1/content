@@ -27,7 +27,6 @@
 #     parser.add_argument('--cloud_machine', help='cloud machine to use, if it is cloud build.')
 #     parser.add_argument('--cloud_servers_path', help='Path to the secret cloud server metadata file.')
 #     parser.add_argument('-pl', '--pack_ids_to_install', help='Path to the packs to install file.')
-#     parser.add_argument('--cloud_servers_api_keys', help='Path to the file with cloud Servers api keys.')
 #     parser.add_argument('--gsm_service_account',
 #                         help=("Path to gcloud service account, for circleCI usage. "
 #                               "For local development use your personal account and "
@@ -155,8 +154,7 @@
 #     cloud_machine = options.cloud_machine
 #     api_key, server_numeric_version, base_url, xdr_auth_id, _ = CloudBuild.get_cloud_configuration(
 #         cloud_machine,
-#         options.cloud_servers_path,
-#         options.cloud_servers_api_keys)
+#         options.cloud_servers_path)
 #     # Configure the Server
 #     server = CloudServer(api_key, server_numeric_version, base_url, xdr_auth_id, cloud_machine, build_number)
 #     CloudBuild.set_marketplace_url(servers=[server], branch_name=branch_name, ci_build_number=build_number)

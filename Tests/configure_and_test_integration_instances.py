@@ -16,6 +16,7 @@ from typing import Any
 from urllib.parse import quote_plus
 
 import demisto_client
+import json5
 from demisto_sdk.commands.common.constants import FileType, MarketplaceVersions
 from demisto_sdk.commands.common.git_util import GitUtil
 from demisto_sdk.commands.common.tools import find_type, format_version, get_yaml, listdir_fullpath, run_command, str2bool
@@ -25,10 +26,12 @@ from demisto_sdk.commands.test_content.tools import is_redhat_instance, update_s
 from packaging.version import Version
 from ruamel import yaml
 
+from SecretActions.add_build_machine import BUILD_MACHINE_GSM_API_KEY, BUILD_MACHINE_GSM_AUTH_ID
 from SecretActions.google_secret_manager_handler import get_secrets_from_gsm
 from Tests.Marketplace.common import get_json_file, get_packs_with_higher_min_version
 from Tests.Marketplace.marketplace_services import get_last_commit_from_index
 from Tests.Marketplace.search_and_install_packs import search_and_install_packs_and_their_dependencies, upload_zipped_packs
+from Tests.scripts.infra.secret_manager import SecretManager
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 from Tests.test_content import get_server_numeric_version
@@ -1672,14 +1675,23 @@ class CloudBuild(Build):
         self.marketplace_buckets = options.marketplace_buckets
 
     @staticmethod
-    def get_cloud_configuration(cloud_machine, cloud_servers_path, cloud_servers_api_keys_path):
+    def get_cloud_configuration(cloud_machine: str, cloud_servers_path):
         logging.info("getting cloud configuration")
 
         cloud_servers = get_json_file(cloud_servers_path)
         conf = cloud_servers.get(cloud_machine)
-        cloud_servers_api_keys = get_json_file(cloud_servers_api_keys_path)
-        api_key = cloud_servers_api_keys.get(cloud_machine)
-        return api_key, conf.get("demisto_version"), conf.get("base_url"), conf.get("x-xdr-auth-id"), conf.get("ui_url")
+        cloud_machine_details = CloudBuild.get_cloud_machine_from_gsm(cloud_machine)
+        logging.info(f"Got '{cloud_machine}' details from GSM")
+        api_key = cloud_machine_details.get(BUILD_MACHINE_GSM_API_KEY)
+        auth_id = cloud_machine_details.get(BUILD_MACHINE_GSM_AUTH_ID)
+        return api_key, conf.get("demisto_version"), conf.get("base_url"), auth_id, conf.get("ui_url")
+
+    @staticmethod
+    def get_cloud_machine_from_gsm(cloud_machine) -> dict:
+        secret_manager = SecretManager()
+        cloud_machine_details = secret_manager.get_secret(secret_id=cloud_machine)
+        cloud_machine_details = json5.loads(cloud_machine_details)
+        return cloud_machine_details
 
     @property
     def marketplace_name(self) -> str:
@@ -1701,7 +1713,7 @@ class CloudBuild(Build):
             logging.info(f"{tests_to_run=}")
 
             api_key, server_numeric_version, base_url, xdr_auth_id, _ = self.get_cloud_configuration(
-                machine, options.cloud_servers_path, options.cloud_servers_api_keys
+                machine, options.cloud_servers_path
             )
             servers.append(
                 CloudServer(
@@ -1746,7 +1758,6 @@ def options_handler(args=None):
         "--server_type", help=f'Server type running, choices: {",".join(SERVER_TYPES)}', default=Build.run_environment
     )
     parser.add_argument("--cloud_servers_path", help="Path to secret cloud server metadata file.")
-    parser.add_argument("--cloud_servers_api_keys", help="Path to file with cloud Servers api keys.")
     parser.add_argument("--marketplace_name", help="the name of the marketplace to use.")
     parser.add_argument("--artifacts_folder", help="the artifacts folder to use.")
     parser.add_argument("--marketplace_buckets", help="the path to the marketplace buckets.")

@@ -15,7 +15,6 @@ from Tests.configure_and_test_integration_instances import CloudBuild
 def pytest_addoption(parser):
     parser.addoption("--cloud_machine", action="store", default=None)
     parser.addoption("--cloud_servers_path", action="store", default=None)
-    parser.addoption("--cloud_servers_api_keys", action="store", default=None)
     parser.addoption(
         "--gsm_service_account",
         help=(
@@ -42,9 +41,8 @@ def get_cloud_machine_credentials(request):
     """
     cloud_machine = request.config.option.cloud_machine
     cloud_servers_path = request.config.option.cloud_servers_path
-    cloud_servers_api_keys = request.config.option.cloud_servers_api_keys
 
-    if not cloud_machine or not cloud_servers_path or not cloud_servers_api_keys:
+    if not cloud_machine or not cloud_servers_path:
         url = os.getenv("DEMISTO_BASE_URL")
         api_key = os.getenv("DEMISTO_API_KEY")
         api_key_id = os.getenv("XSIAM_AUTH_ID")
@@ -59,9 +57,7 @@ def get_cloud_machine_credentials(request):
                 raise ValueError(message)
             pytest.skip(message)
     else:
-        api_key, _, url, api_key_id, _ = CloudBuild.get_cloud_configuration(
-            cloud_machine, cloud_servers_path, cloud_servers_api_keys
-        )
+        api_key, _, url, api_key_id, _ = CloudBuild.get_cloud_configuration(cloud_machine, cloud_servers_path)
     return url, api_key, api_key_id
 
 

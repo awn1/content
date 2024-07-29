@@ -335,7 +335,6 @@ xpanse-prepare-testing-bucket:
   - section_start "Run Tests"
   # - |
   #   if [[ "${IS_NIGHTLY}" == "true" && "${SERVER_TYPE}" == "XSIAM" ]]; then
-  #     cat "${CLOUD_API_KEYS}" > "cloud_api_keys.json"
   #     ./Tests/scripts/run_e2e_tests.sh || EXIT_CODE=$?
   #   fi
   - |
@@ -739,8 +738,6 @@ xsiam_server_ga:
     GCS_QUEUE_FILE: "queue-ga"
     GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga"
     CLOUD_SERVERS_FILE: "xsiam_servers_path"
-    CLOUD_API_KEYS: $XSIAM_API_KEYS
-    CLOUD_API_TOKENS: $XSIAM_TOKENS
     ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_MPV2}"
     ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER_MPV2}/instance_xsiam"
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_MPV2}/server_type_${SERVER_TYPE}"
@@ -791,8 +788,6 @@ xsoar_ng_server_ga:
     GCS_QUEUE_FILE: "queue-ga"
     GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng"
     CLOUD_SERVERS_FILE: "xsoar_ng_servers_path"
-    CLOUD_API_KEYS: $XSOAR_NG_API_KEYS
-    CLOUD_API_TOKENS: $XSIAM_TOKENS
     ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_XSOAR}"
     ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER_XSOAR}/instance_saas"
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_XSOAR}/server_type_${SERVER_TYPE}"

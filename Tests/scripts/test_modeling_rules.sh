@@ -69,18 +69,6 @@ if [[ -z "${MODELING_RULES_TO_TEST}" ]]; then
     exit_on_error 1 "There was a problem reading the list of modeling rules that require testing from '${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.txt'"
 fi
 
-if [ -n "${CLOUD_API_KEYS}" ]; then
-  cat "${CLOUD_API_KEYS}" > "cloud_api_keys.json"
-else
-  exit_on_error 1 "CLOUD_API_KEYS is empty"
-fi
-
-if [ -n "${CLOUD_API_TOKENS}" ]; then
-  cat "${CLOUD_API_TOKENS}" > "cloud_api_tokens.json"
-else
-  exit_on_error 1 "CLOUD_API_TOKENS is empty"
-fi
-
 if [ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]; then
 
 XSIAM_SERVERS_PATH=$(cat "${CI_PROJECT_DIR}/xsiam_servers_path")
@@ -92,10 +80,12 @@ XSIAM_SERVERS_PATH=$(cat "${CI_PROJECT_DIR}/xsiam_servers_path")
 
     # Get XSIAM Tenant Config Details
     XSIAM_SERVER_CONFIG=$(jq -r ".[\"${CLOUD_CHOSEN_MACHINE_ID}\"]" < "${XSIAM_SERVERS_PATH}")
+    XSIAM_MACHINE_DETAILS=$(python Tests/scripts/get_cloud_machines_details.py --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_ID}" | jq -r ".[\"${CLOUD_CHOSEN_MACHINE_ID}\"]")
+
     XSIAM_URL=$(echo "${XSIAM_SERVER_CONFIG}" | jq -r ".[\"base_url\"]")
-    AUTH_ID=$(echo "${XSIAM_SERVER_CONFIG}" | jq -r ".[\"x-xdr-auth-id\"]")
-    API_KEY=$(jq -r ".[\"${CLOUD_CHOSEN_MACHINE_ID}\"]" < "cloud_api_keys.json")
-    XSIAM_TOKEN=$(jq -r ".[\"${CLOUD_CHOSEN_MACHINE_ID}\"]" < "cloud_api_tokens.json")
+    AUTH_ID=$(echo "${XSIAM_MACHINE_DETAILS}" | jq -r ".[\"x-xdr-auth-id\"]")
+    API_KEY=$(echo "${XSIAM_MACHINE_DETAILS}" | jq -r ".[\"api-key\"]")
+    XSIAM_TOKEN=$(echo "${XSIAM_MACHINE_DETAILS}" | jq -r ".[\"token\"]")
 
     # shellcheck disable=SC2086
     demisto-sdk modeling-rules test --xsiam-url="${XSIAM_URL}" --auth-id="${AUTH_ID}" --api-key="${API_KEY}" \

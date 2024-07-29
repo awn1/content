@@ -21,10 +21,6 @@ if [[ ! -f "$GCS_MARKET_KEY" ]]; then
     exit_on_error 1 "GCS_MARKET_KEY not set aborting pack installation"
 fi
 
-if [ -n "${CLOUD_API_KEYS}" ]; then
-  cat "${CLOUD_API_KEYS}" > "cloud_api_keys.json"
-fi
-
 echo "Trying to authenticate with GCS..."
 gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
 exit_on_error $? "Failed to authenticate with GCS"
@@ -38,7 +34,7 @@ if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; 
     exit_code=0
     IFS=', ' read -r -a CLOUD_CHOSEN_MACHINE_ID_ARRAY <<< "${CLOUD_CHOSEN_MACHINE_IDS}"
     for CLOUD_CHOSEN_MACHINE_ID in "${CLOUD_CHOSEN_MACHINE_ID_ARRAY[@]}"; do
-python3 ./Tests/Marketplace/configure_and_install_packs.py --ami_env "${INSTANCE_ROLE}" --branch "${CI_COMMIT_BRANCH}" --build_number "${CI_PIPELINE_ID}" --service_account "${GCS_MARKET_KEY}" -e "${EXTRACT_FOLDER}" --cloud_machine "${CLOUD_CHOSEN_MACHINE_ID}" --cloud_servers_path "${XSIAM_SERVERS_PATH}" --pack_ids_to_install "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" --cloud_servers_api_keys cloud_api_keys.json --gsm_service_account "$GSM_SERVICE_ACCOUNT" --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" -u "$DEMISTO_USERNAME" -p "$DEMISTO_PASSWORD" --github_token "$GITHUB_TOKEN"
+python3 ./Tests/Marketplace/configure_and_install_packs.py --ami_env "${INSTANCE_ROLE}" --branch "${CI_COMMIT_BRANCH}" --build_number "${CI_PIPELINE_ID}" --service_account "${GCS_MARKET_KEY}" -e "${EXTRACT_FOLDER}" --cloud_machine "${CLOUD_CHOSEN_MACHINE_ID}" --cloud_servers_path "${XSIAM_SERVERS_PATH}" --pack_ids_to_install "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" --gsm_service_account "$GSM_SERVICE_ACCOUNT" --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" -u "$DEMISTO_USERNAME" -p "$DEMISTO_PASSWORD" --github_token "$GITHUB_TOKEN"
       if [ $? -ne 0 ]; then
         exit_code=1
         echo "Failed to install packs on machine ${CLOUD_CHOSEN_MACHINE_ID}"

@@ -69,13 +69,16 @@ def create_build_object_with_mock(mocker, server_type):
         json_data += [{"xsoar-machine": {"packs_to_install": ["TEST"]}}]
     else:
         json_data += [{"qa2-test-111111": {"packs_to_install": ["TEST"]}, "qa2-test-222222": {"packs_to_install": ["TEST2"]}}]
-    json_data += [XSIAM_SERVERS, {}] * 2
+    json_data += [XSIAM_SERVERS, XSIAM_SERVERS, {}] * 2
 
     mocker.patch("Tests.configure_and_test_integration_instances.get_json_file", side_effect=json_data)
     mocker.patch("Tests.configure_and_test_integration_instances.options_handler", return_value=options)
     mocker.patch("Tests.configure_and_test_integration_instances.XSOARBuild.get_servers", return_value=({"1.1.1.1": "7000"}))
     mocker.patch("Tests.configure_and_test_integration_instances.get_secrets_from_gsm", return_value={})
     mocker.patch("Tests.configure_and_test_integration_instances.XSOARServer.server_numeric_version", return_value="6.5.0")
+    mocker.patch(
+        "Tests.scripts.infra.secret_manager.SecretManager.get_secret", return_value='{"api_key": "1234567890","x-xdr-auth-id": 1}'
+    )
     build = create_build_object()
     return build
 

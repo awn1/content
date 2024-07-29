@@ -93,11 +93,6 @@ build-machines-cleanup:
       if [[ -n "$OLD_PIPELINE" ]]; then
         echo "triggered by pipeline: ${OLD_PIPELINE}"
       fi
-      if [[ "${CLOUD_SERVERS_FILE}" == "xsiam_servers_path" ]]; then
-        export CLOUD_API_KEYS=${XSIAM_API_KEYS}
-      else
-        export CLOUD_API_KEYS=${XSOAR_NG_API_KEYS}
-      fi
       echo "lock machine name ${LOCK_MACHINE_NAME}"
     - if [[ -n "$LOCK_MACHINE_NAME" ]]; then
     -   echo "Check if lock file already exist "
@@ -142,8 +137,6 @@ build-machines-cleanup:
     SERVER_TYPE: "XSIAM"
     GCS_QUEUE_FILE: "queue-ga"
     CLOUD_SERVERS_FILE: $CLOUD_SERVERS_FILE
-    CLOUD_API_KEYS: ${XSIAM_API_KEYS}
-    CLOUD_API_TOKENS: $XSIAM_TOKENS
     ARTIFACTS_FOLDER_MPV2: "${CI_PROJECT_DIR}/artifacts/marketplacev2"
     ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_MPV2}"
     ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER_MPV2}/instance_${INSTANCE_ROLE}"

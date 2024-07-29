@@ -471,7 +471,6 @@ def options_handler() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Utility for cleaning Cloud machines.")
     parser.add_argument("--cloud_machine", help="cloud machine to use, if it is cloud build.")
     parser.add_argument("--cloud_servers_path", help="Path to secret cloud server metadata file.")
-    parser.add_argument("--cloud_servers_api_keys", help="Path to the file with cloud Servers api keys.")
     parser.add_argument("--non-removable-packs", help="List of packs that cant be removed.")
     parser.add_argument("--one-by-one", help="Uninstall pack one pack at a time.", action="store_true")
     parser.add_argument("--build-number", help="CI job number where the instances were created", required=True)
@@ -490,9 +489,7 @@ def options_handler() -> argparse.Namespace:
 
 
 def clean_machine(options: argparse.Namespace, cloud_machine: str) -> bool:
-    api_key, _, base_url, xdr_auth_id, ui_url = CloudBuild.get_cloud_configuration(
-        cloud_machine, options.cloud_servers_path, options.cloud_servers_api_keys
-    )
+    api_key, _, base_url, xdr_auth_id, ui_url = CloudBuild.get_cloud_configuration(cloud_machine, options.cloud_servers_path)
 
     client = demisto_client.configure(base_url=base_url, verify_ssl=False, api_key=api_key, auth_id=xdr_auth_id)
     client.api_client.user_agent = get_custom_user_agent(options.build_number)
