@@ -103,7 +103,7 @@ class GCPConfig:
 
     @staticmethod
     def get_core_pack_files(file_name: str) -> tuple[list, list]:
-        path = Path(__file__).resolve().parent / file_name
+        path = Path(__file__).resolve().parent.parent.parent / "Config" / file_name
         if not path.exists():
             return [], []
         packs_list = json.load(path.open())
@@ -114,7 +114,7 @@ class GCPConfig:
     CORE_PACKS_XPANSE_LIST, CORE_PACKS_XPANSE_LIST_TO_UPDATE = get_core_pack_files("core_packs_xpanse_list.json")
 
     server_versions_metadata = Path(__file__).resolve().parent / VERSIONS_METADATA_FILE
-    corepacks_override_file = Path(__file__).resolve().parent / COREPACKS_OVERRIDE_FILE
+    corepacks_override_file = Path(__file__).resolve().parent.parent.parent / "Config" / COREPACKS_OVERRIDE_FILE
 
     if server_versions_metadata.exists():
         versions_metadata_contents = json.load(server_versions_metadata.open())
