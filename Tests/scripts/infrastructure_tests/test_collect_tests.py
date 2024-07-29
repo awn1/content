@@ -1642,7 +1642,7 @@ def test_get_tpb_dependencies_packs(monkeypatch, mocker):
         BranchTestCollector,
         "_get_git_diff",
         return_value=FilesToCollect(
-            ("Packs/bothMarketplacesPackOnlyXSIAMIntegration/Integrations" "/onlyXSIAMIntegration/onlyXSIAMIntegration.yml",), ()
+            ("Packs/bothMarketplacesPackOnlyXSIAMIntegration/Integrations/onlyXSIAMIntegration/onlyXSIAMIntegration.yml",), ()
         ),
     )
 
