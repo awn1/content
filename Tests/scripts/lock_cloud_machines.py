@@ -32,7 +32,7 @@ def send_slack_notification(text: list[str]):
     """
 
     slack_token = get_env_var("SLACK_TOKEN")
-    slack_channel = get_env_var("WAIT_SLACK_CHANNEL", "dmst-test-wait-in-line")
+    slack_channel = get_env_var("WAIT_SLACK_CHANNEL", "dmst-wait-in-line")
 
     text = "\n".join(text)
     client = SlackWebClient(token=slack_token)
