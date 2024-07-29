@@ -103,6 +103,7 @@ class IdSet(DictFileBased):
         self.implemented_scripts_to_tests: dict[str, list] = defaultdict(list)
         self.implemented_playbooks_to_tests: dict[str, list] = defaultdict(list)
         self.api_modules_to_integrations: dict[str, list] = defaultdict(list)
+        self.pack_test_dependencies: dict[str, set] = defaultdict(set)
 
         for test in self.test_playbooks:
             for script in test.implementing_scripts:
@@ -181,7 +182,9 @@ class Graph:
             playbooks = content_graph_interface.search(marketplace=marketplace, content_type=ContentType.PLAYBOOK)
             modeling_rules = content_graph_interface.search(marketplace=marketplace, content_type=ContentType.MODELING_RULE)
             parsing_rules = content_graph_interface.search(marketplace=marketplace, content_type=ContentType.PARSING_RULE)
-            # maps content_items to test playbook where they are used recursively
+            pack_dependencies = content_graph_interface.search(
+                marketplace=marketplace, all_level_dependencies=True, content_type=ContentType.PACK
+            )
 
             self.id_to_integration = {integration.object_id: IdSetItem.from_model(integration) for integration in integrations}
             self.id_to_script = {script.object_id: IdSetItem.from_model(script) for script in scripts}
@@ -203,6 +206,12 @@ class Graph:
             self.modeling_rules = self.path_to_modeling_rule.values()
             self.parsing_rules = self.path_to_parsing_rule.values()
             self.api_modules_to_integrations = {script.object_id: script.imported_by for script in scripts}
+
+            self.pack_test_dependencies: dict[str, set] = defaultdict(set)
+            self.pack_test_dependencies = {
+                pack.object_id: {dependency.content_item_to.object_id for dependency in pack.depends_on if dependency.is_test}
+                for pack in pack_dependencies
+            }
 
     @property
     def artifact_iterator(self) -> Iterable[IdSetItem]:

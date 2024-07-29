@@ -132,6 +132,7 @@ class CollectionResult:
         :param pack_to_reinstall: pack name to collect for reinstall test modeling rules
         """
         self.tests: set[str] = set()
+        self.tpb_dependencies_packs: dict[str, dict[str, list[str]]] = {}
         self.modeling_rules_to_test: set[str | Path] = set()
         self.packs_to_install: set[str] = set()
         self.packs_to_upload: set[str] = set()
@@ -139,7 +140,6 @@ class CollectionResult:
         self.version_range: set[VersionRange] = set()
         self.machines: tuple[Machine, ...] | None = None
         self.packs_to_reinstall: set[str] = set()
-        self.tpb_dependencies_packs: dict | None = {}
 
         try:
             # raises if invalid
@@ -286,6 +286,7 @@ class CollectionResult:
             return self
         result = self.__empty_result()
         result.tests = self.tests | other.tests  # type: ignore[operator]
+        result.tpb_dependencies_packs = self.tpb_dependencies_packs | other.tpb_dependencies_packs  # type: ignore[operator]
         result.modeling_rules_to_test = self.modeling_rules_to_test | other.modeling_rules_to_test
         result.packs_to_install = self.packs_to_install | other.packs_to_install  # type: ignore[operator]
         result.packs_to_upload = self.packs_to_upload | other.packs_to_upload
@@ -399,59 +400,51 @@ class TestCollector(ABC):
             result += self._always_installed_packs  # type: ignore[operator]
         result += self._collect_test_dependencies(result.tests if result else ())  # type: ignore[union-attr]
         result.machines = Machine.get_suitable_machines(result.version_range)  # type: ignore[union-attr]
-        result.tpb_dependencies_packs = self.get_tpb_dependencies_packs(result.tests)
         return result
 
-    def get_tpb_dependencies_packs(self, test_ids: Iterable[str]) -> dict:
+    def _collect_test_dependencies(self, test_ids: Iterable[str]) -> CollectionResult | None:
         """
-        Generate a dictionary of test playbooks with their associated packs and dependencies.
-
+        Collects and returns the dependencies required for the specified test IDs.
         Args:
-            test_ids (Iterable[str]): A collection of test IDs.
+            test_ids (Iterable[str]): A collection of test IDs to collect dependencies for.
 
         Returns:
-            Dict[str, Dict[str, list[str]]]: A dictionary where each key is a test ID, and the value
-                                             is a dictionary containing the pack ID and a list of dependencies.
-                                             {{ "playbook_id": { "pack": "pack_id", "dependencies": TPB_dependencies },}
+            CollectionResult | None: A CollectionResult object containing the collected dependencies
+            or None if no dependencies were found.
+            Additionally, initializes the tpb_dependencies_packs dict -
+            A dictionary where each key is a test ID, and the value is a dictionary containing the pack ID
+            and a list of dependencies: {{ "playbook_id": { "pack": "pack_id", "dependencies": TPB_dependencies },}
         """
-        tpb_dict = {}
-        for test_id in test_ids:
-            pack_id = self.id_set.id_to_test_playbook[test_id].pack_id
-            dependencies_packs: set[str] = set()
-            if test_object := self.conf.get_test(test_id):
-                dependencies_packs.update(
-                    str(integration_object.pack_id)
-                    for integration in test_object.integrations
-                    if (integration_object := self.id_set.id_to_integration.get(integration))
-                )
-
-                dependencies_packs.update(
-                    str(script_object.pack_id)
-                    for script in test_object.scripts
-                    if (script_object := self.id_set.id_to_script.get(script))
-                )
-            tpb_dict[test_id] = {"pack": pack_id, "dependencies": list(dependencies_packs)}
-
-        return tpb_dict
-
-    def _collect_test_dependencies(self, test_ids: Iterable[str]) -> CollectionResult | None:
         result = []
-
+        tests_dependencies_packs: dict[str, dict[str, list[str]]] = {}
         for test_id in test_ids:
             if not (test_object := self.conf.get_test(test_id)):
                 continue
 
+            test_dependencies_packs: set[str] = set()
             # collect the pack containing the test playbook
-            pack_id = self.id_set.id_to_test_playbook[test_id].pack_id
+            test_pack_id = self.id_set.id_to_test_playbook[test_id].pack_id
             result.append(
                 self._collect_pack(
-                    pack_id=pack_id,  # type: ignore[arg-type]
+                    pack_id=test_pack_id,  # type: ignore[arg-type]
                     reason=CollectionReason.PACK_TEST_DEPENDS_ON,
-                    reason_description=f"test {test_id} is saved under pack {pack_id}",
+                    reason_description=f"test {test_id} is saved under pack {test_pack_id}",
                     content_item_range=test_object.version_range,
                     only_to_install=True,
                 )
             )
+
+            # collect from the graph packs that used in the test
+            for pack_id in self.id_set.pack_test_dependencies[test_pack_id]:
+                result.append(
+                    self._collect_test_dependency(
+                        dependency_name=pack_id,
+                        test_id=test_id,
+                        pack_id=pack_id,
+                        dependency_type="pack",
+                    )
+                )
+                test_dependencies_packs |= {pack_id}
 
             # collect integrations used in the test
             for integration in test_object.integrations:
@@ -465,6 +458,7 @@ class TestCollector(ABC):
                             dependency_type="integration",
                         )
                     )
+                    test_dependencies_packs |= {pack_id}
                 else:
                     logger.warning(
                         f"could not find integration {integration} in id_set"
@@ -483,13 +477,17 @@ class TestCollector(ABC):
                             dependency_type="script",
                         )
                     )
+                    test_dependencies_packs |= {pack_id}
                 else:
                     logger.warning(
                         f"Could not find script {script} in id_set"
                         f" when searching for integrations the {test_id} test depends on"
                     )
 
-        return CollectionResult.union(tuple(result))
+            tests_dependencies_packs[test_id] = {"pack": test_pack_id, "dependencies": list(test_dependencies_packs)}
+        result = CollectionResult.union(tuple(result))
+        result.tpb_dependencies_packs = tests_dependencies_packs
+        return result
 
     def _collect_test_dependency(
         self, dependency_name: str, test_id: str, pack_id: str, dependency_type: str
@@ -1373,7 +1371,7 @@ class NightlyTestCollector(BranchTestCollector, ABC):
             [
                 self._collect_changed_packs_from_last_upload(),
                 self._collect_nightly_packs_and_tests(),
-                self._collect_modeling_rules_for_marketplaceV2(),
+                self._collect_modeling_rules_for_marketplace_v2(),
             ]
         )
         return result
@@ -1399,7 +1397,7 @@ class NightlyTestCollector(BranchTestCollector, ABC):
             return nightly_packs
         return None
 
-    def _collect_modeling_rules_for_marketplaceV2(self) -> CollectionResult | None:
+    def _collect_modeling_rules_for_marketplace_v2(self) -> CollectionResult | None:
         if self.marketplace == MarketplaceVersions.MarketplaceV2:
             modeling_rules = CollectionResult.union([self._collect_modeling_rule_packs(), self.sanity_tests_xsiam()])
             if modeling_rules:
@@ -1547,6 +1545,7 @@ def output(result: CollectionResult | None):
     writes to both log and files
     """
     tests = sorted(result.tests, key=lambda x: x.lower()) if result else ()
+    tpb_dependencies_packs = result.tpb_dependencies_packs if result and result.tpb_dependencies_packs else ""
     packs_to_install = sorted(result.packs_to_install, key=lambda x: x.lower()) if result else ()
     packs_to_upload = sorted(result.packs_to_upload, key=lambda x: x.lower()) if result else []
     packs_to_update_metadata = sorted(result.packs_to_update_metadata, key=lambda x: x.lower()) if result else []
@@ -1558,16 +1557,15 @@ def output(result: CollectionResult | None):
     modeling_rules_to_test = [x.as_posix() if isinstance(x, Path) else str(x) for x in modeling_rules_to_test]
     machines = result.machines if result and result.machines else ()
     packs_to_reinstall_test = sorted(result.packs_to_reinstall, key=lambda x: x.lower()) if result else ()
-    tpb_dependencies_packs = result.tpb_dependencies_packs if result and result.tpb_dependencies_packs else ""
 
     test_str = "\n".join(tests)
+    tpb_dependencies_packs_str = json.dumps(tpb_dependencies_packs) if tpb_dependencies_packs else ""
     packs_to_install_str = "\n".join(packs_to_install)
     packs_to_upload_str = "\n".join(packs_to_upload)
     packs_to_update_metadata_str = "\n".join(packs_to_update_metadata)
     modeling_rules_to_test_str = "\n".join(modeling_rules_to_test)
     machine_str = ", ".join(sorted(map(str, machines)))
     packs_to_reinstall_test_str = "\n".join(packs_to_reinstall_test)
-    tpb_dependencies_packs_str = json.dumps(tpb_dependencies_packs) if tpb_dependencies_packs else ""
 
     logger.info(f"collected {len(tests)} test playbooks:\n{test_str}")
     logger.info(f"collected {len(packs_to_install)} packs to install:\n{packs_to_install_str}")
