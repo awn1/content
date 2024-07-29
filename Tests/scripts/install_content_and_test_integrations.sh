@@ -22,9 +22,6 @@ if [ -n "${CLOUD_SERVERS_FILE}" ]; then
   CLOUD_SERVERS_PATH=$(cat "${CLOUD_SERVERS_FILE}")
   echo "CLOUD_SERVERS_PATH is set to: ${CLOUD_SERVERS_PATH}"
 fi
-if [ -n "${CLOUD_API_KEYS}" ]; then
-  cat "${CLOUD_API_KEYS}" > "cloud_api_keys.json"
-fi
 
 CONF_PATH="./Tests/conf.json"
 
@@ -41,7 +38,7 @@ if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; 
       --pack_ids_to_install "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" -g "$GIT_SHA1" --ami_env "${INSTANCE_ROLE}" \
       --sdk-nightly "${DEMISTO_SDK_NIGHTLY}" --branch "$CI_COMMIT_BRANCH" --build_number "$CI_PIPELINE_ID" -sa "$GCS_MARKET_KEY" \
       --server_type "${SERVER_TYPE}" --cloud_servers_path "$CLOUD_SERVERS_PATH" \
-      --cloud_servers_api_keys "cloud_api_keys.json" --marketplace_name "$MARKETPLACE_NAME" \
+      --marketplace_name "$MARKETPLACE_NAME" \
       --artifacts_folder "$ARTIFACTS_FOLDER" --marketplace_buckets "$GCS_MACHINES_BUCKET" \
       --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_to_install_by_machine.json" \
       --gsm_service_account "$GSM_SERVICE_ACCOUNT" \
@@ -62,7 +59,7 @@ elif [[ "${SERVER_TYPE}" == "XSOAR" ]]; then
       --pack_ids_to_install "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" -g "$GIT_SHA1" --ami_env "${INSTANCE_ROLE}" \
       --branch "$CI_COMMIT_BRANCH" --build_number "$CI_PIPELINE_ID" -sa "$GCS_MARKET_KEY" \
       --server_type "${SERVER_TYPE}" \
-      --cloud_servers_path "$CLOUD_SERVERS_PATH" --cloud_servers_api_keys "cloud_api_keys.json" \
+      --cloud_servers_path "$CLOUD_SERVERS_PATH" \
       --marketplace_name "$MARKETPLACE_NAME" --artifacts_folder "$ARTIFACTS_FOLDER" --marketplace_buckets "$GCS_MACHINES_BUCKET" \
       --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_to_install_by_machine.json" \
       --gsm_service_account "$GSM_SERVICE_ACCOUNT" \

@@ -14,10 +14,6 @@ else
   exit_on_error 1 "CLOUD_SERVERS_FILE is not set"
 fi
 
-if [ -n "${CLOUD_API_KEYS}" ]; then
-  cat "${CLOUD_API_KEYS}" > "cloud_api_keys.json"
-fi
-
 if [[ -z "${CLOUD_CHOSEN_MACHINE_IDS}" ]]; then
   exit_on_error 1 "CLOUD_CHOSEN_MACHINE_IDS is not defined"
 else
@@ -40,7 +36,7 @@ else
 
 
   poetry run python3 -u ./Tests/Marketplace/search_and_uninstall_pack.py --cloud_machine "${CLOUD_CHOSEN_MACHINE_IDS}" \
-    --cloud_servers_path "${CLOUD_SERVERS_PATH}" --cloud_servers_api_keys "cloud_api_keys.json" \
+    --cloud_servers_path "${CLOUD_SERVERS_PATH}" \
     --non-removable-packs "${NON_REMOVABLE_PACKS}" --one-by-one --build-number "${CI_PIPELINE_ID}" \
     --modeling_rules_to_test_files "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.txt" \
     --reset-core-pack-version "${RESET_CORE_PACK_VERSION}" --only_to_be_installed \

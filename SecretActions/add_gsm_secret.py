@@ -6,14 +6,14 @@ import coloredlogs
 import json5
 from google.api_core.exceptions import InvalidArgument, NotFound, PermissionDenied
 from google.auth.exceptions import DefaultCredentialsError
-from google_secret_manager_handler import (
+
+from SecretActions.google_secret_manager_handler import (
     DEV_PROJECT_ID,
     SYNC_GSM_LABEL,
     ExpirationData,
     GoogleSecreteManagerModule,
     create_github_client,
 )
-
 from Tests.scripts.github_client import GithubClient, GithubPullRequest
 
 EXPIRATION_LABELS = [

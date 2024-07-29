@@ -14,14 +14,10 @@ else
   exit_on_error 1 "CLOUD_SERVERS_FILE is not set"
 fi
 
-if [ -n "${CLOUD_API_KEYS}" ]; then
-  cat "${CLOUD_API_KEYS}" > "cloud_api_keys.json"
-fi
-
 
 
 python3 ./Tests/Marketplace/reinstall_packs.py --cloud_machine "${CLOUD_CHOSEN_MACHINE_IDS}" \
-  --cloud_servers_path "${CLOUD_SERVERS_PATH}" --cloud_servers_api_keys "cloud_api_keys.json" \
+  --cloud_servers_path "${CLOUD_SERVERS_PATH}" \
   --non-removable-packs "${NON_REMOVABLE_PACKS}" --build-number "${CI_PIPELINE_ID}" \
   --packs_to_reinstall "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_reinstall_to_test.txt"
 exit_on_error $? "Failed to re-install packs for cloud machines:${CLOUD_CHOSEN_MACHINE_IDS}"
