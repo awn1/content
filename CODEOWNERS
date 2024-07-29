@@ -1,6 +1,0 @@
-*.json @tmalache
-
-# Secrets Related
-/BlacklistValidation @aedri
-/SecretActions @aedri
-/SecretActions/SecretExpirationReport @jgranot
