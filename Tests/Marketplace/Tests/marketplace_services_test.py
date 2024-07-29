@@ -194,7 +194,7 @@ class TestMetadataParsing:
             call_args
             == (
                 (
-                    "Updating metadata with statistics, created, updated fields because self._pack_name='Test Pack Name' "
+                    "Updating metadata fields because self._pack_name='Test Pack Name' "
                     "self.is_modified=True self.is_metadata_updated=False"
                 ),
             )
@@ -2172,8 +2172,7 @@ class TestLoadPackMetadata:
             call_args
             == (
                 (
-                    "Updating metadata with statistics and metadata changes "
-                    "because self._pack_name='TestPack' self.is_modified=None"
+                    "Updating metadata fields because self._pack_name='TestPack' self.is_modified=None"
                     " self.is_metadata_updated=True"
                 ),
             )
