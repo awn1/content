@@ -238,10 +238,14 @@
     [ ! -d "${CI_PROJECT_DIR}/config" ] && mkdir -p "${CI_PROJECT_DIR}/config" || echo "config directory already exists"
     [ ! -d "${CI_PROJECT_DIR}/SecretActions" ] && mkdir -p "${CI_PROJECT_DIR}/SecretActions" || echo "SecretActions directory already exists"
     [ ! -d "${CI_PROJECT_DIR}/gcp" ] && mkdir -p "${CI_PROJECT_DIR}/gcp" || echo "gcp directory already exists"
+    # COPY DIRECTORIES
     cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/Tests/"* "${CI_PROJECT_DIR}/Tests"
     cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/Utils/"* "${CI_PROJECT_DIR}/Utils"
     cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/SecretActions/"* "${CI_PROJECT_DIR}/SecretActions"
     cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/gcp/"* "${CI_PROJECT_DIR}/gcp"
+    # COPY FILES
+    cp -f "${CI_PROJECT_DIR}/artifacts/repositories/infra/pyproject.toml"* "${CI_PROJECT_DIR}"
+    cp -f "${CI_PROJECT_DIR}/artifacts/repositories/infra/poetry.lock"* "${CI_PROJECT_DIR}"
 
     set -e
     echo "Successfully cloned content-test-conf and infra repositories"
@@ -744,6 +748,7 @@
     # temp solution not to spam the build
     - SHOULD_PRE_COMMIT_ALL=$(./Tests/scripts/should_pre_commit_all.sh)
     # SHOULD_PRE_COMMIT_ALL is a string and therefore might come back empty from should_pre_commit_all.sh
+    - poetry install --only mypy
     - echo "in .run-pre-commit, SHOULD_PRE_COMMIT_ALL = $SHOULD_PRE_COMMIT_ALL"
     - PRE_COMMIT_SUCCESS=0
     - |
