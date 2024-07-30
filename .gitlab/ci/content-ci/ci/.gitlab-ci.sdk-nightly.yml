@@ -161,6 +161,7 @@ demisto-sdk-nightly:check-idset-dependent-commands:
     - echo "successfully merged public and private ID sets"
     - section_end "Merge public and private ID sets"
     - section_start "Common Server Documentation" --collapsed
+    - poetry install --with documentation
     - ./Documentation/commonServerDocs.sh
     - section_end "Common Server Documentation"
     - section_start "Collect Test List and Content Packs" --collapsed
