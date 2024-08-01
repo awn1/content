@@ -976,8 +976,17 @@ upload-id-set-bucket:
 
 sync-buckets-between-projects:
   extends: .sync-buckets-between-projects
-  needs: ["upload-packs-to-marketplace", "upload-packs-to-marketplace-v2", "upload-packs-to-xpanse-marketplace", "upload-packs-to-xsoar-saas-marketplace"]
-
+  needs:
+    - job: upload-packs-to-marketplace
+      artifacts: false
+    - job: upload-packs-to-marketplace-v2
+      artifacts: false
+    - job: upload-packs-to-xpanse-marketplace
+      artifacts: false
+    - job: upload-packs-to-xsoar-saas-marketplace
+      artifacts: false
+    - job: cloning-repositories-upload-flow
+      artifacts: true
 
 force-upload-sync-buckets-between-projects:
   rules:
