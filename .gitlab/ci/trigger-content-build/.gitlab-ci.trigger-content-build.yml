@@ -3,6 +3,8 @@
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         paths:
+          - pyproject.toml
+          - poetry.lock
           - Tests/**/*
           - Utils/**/*
           - gcp/**/*
