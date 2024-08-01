@@ -22,6 +22,7 @@ CONTENT_PR_NUMBER_FILE = "CONTENT_PR.txt"
 TIMEOUT = 60 * 60  # 1 hour
 
 PRS_LIST_TEMPLATE = "https://api.github.com/repos/demisto/{repo}/pulls"
+EDIT_PR_TEMPLATE = "https://api.github.com/repos/demisto/content/pulls/{pr_number}"
 UPDATE_SDK_VERSION_WORKFLOW = (
     "https://api.github.com/repos/demisto/content/actions" "/workflows/update-demisto-sdk-version.yml/dispatches"
 )
@@ -48,6 +49,23 @@ def get_pr_from_branch(repository, branch, access_token):
     if prs_list:
         return prs_list[0]
     return None
+
+
+def edit_pr_body(pr_number, access_token, body):
+    url = EDIT_PR_TEMPLATE.format(pr_number=pr_number)
+    data = {"body": body}
+    response = requests.patch(
+        url,
+        headers={"Authorization": f"Bearer {access_token}", "Accept": "application/vnd.github.v3+json"},
+        data=json.dumps(data),
+        verify=False,
+    )
+
+    if response.status_code != requests.codes.ok:
+        logging.error(f"Failed to update PR body. Status code: {response.status_code}, Response: {response.text}")
+        sys.exit(1)
+
+    logging.success("The PR body has been successfully updated.")
 
 
 def options_handler():
@@ -82,7 +100,6 @@ def main():
         "reviewer": reviewer,
         "release_version": release_branch_name,
         "is_draft": is_draft,
-        "release_changes": get_changelog_text(release_branch_name),
     }
 
     data = {"ref": "master", "inputs": inputs}
@@ -110,6 +127,7 @@ def main():
         content_pr = get_pr_from_branch("content", release_branch_name, access_token)
         if content_pr:
             logging.success(f'content pull request created: {content_pr.get("html_url")}')
+            edit_pr_body(content_pr.get("number"), access_token, get_changelog_text(release_branch_name))
             break
 
         logging.info("content pull request not created yet")
