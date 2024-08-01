@@ -2429,13 +2429,14 @@ class Pack:
         finally:
             return task_status
 
-    def upload_relative_path_markdown_images(self, markdown_relative_paths_data_dict: dict, storage_bucket):
+    def upload_relative_path_markdown_images(self, markdown_relative_paths_data_dict: dict, storage_bucket, storage_base_path):
         """
         Iterates over the markdown_url_data_list and calls the download_markdown_image_from_url_and_upload_to_gcs
         Args:
             markdown_relative_paths_data_dict (dict): the dict generated in SDK prepare-content of all markdown images
                                                 that need to be uploaded to GCS.
             storage_bucket: The storage bucket to upload the images to.
+            storage_base_path: The storage bucket base path.
         """
         pack_markdown_images = markdown_relative_paths_data_dict.get(self.name)
         if pack_markdown_images:
@@ -2443,7 +2444,7 @@ class Pack:
                 if current_markdown_file_images := pack_markdown_images.get(key, []):
                     for image in current_markdown_file_images:
                         try:
-                            self.process_and_upload_image(image, storage_bucket)
+                            self.process_and_upload_image(image, storage_bucket, storage_base_path)
                         except Exception as e:
                             logging.exception(f"Failed uploading {self.name} image, reason: {e!s}")
                             return False
@@ -2451,21 +2452,27 @@ class Pack:
             logging.debug(f"No markdown relative path images were found in pack {self.name}")
         return True
 
-    def process_and_upload_image(self, image: dict, storage_bucket):
+    def process_and_upload_image(self, image: dict, storage_bucket, storage_base_path):
         """
         Extract all the relevant data from the image dict and upload the image.
 
         Args:
             image (dict): The image info.
             storage_bucket: The storage bucket to upload the images to.
+            storage_base_path: The storage bucket base path.
         """
         final_dst_image_path = str(image.get("final_dst_image_path"))
         image_name = str(image.get("image_name"))
-        logging.debug(f"Uploading markdown relative path image '{image_name}' for pack '{self.name}' to {final_dst_image_path=}")
+        storage_image_path = os.path.join(storage_base_path, image.get("relative_image_path", ""))
+
+        logging.debug(
+            f"Uploading markdown relative path image '{image_name}' for pack '{self.name}' to {final_dst_image_path=}"
+            f"and {storage_image_path=}"
+        )
         image_path = os.path.join(self.path, "doc_files", image_name if image_name.endswith(".png") else f"{image_name}.png")
 
         if os.path.exists(image_path):
-            markdown_image_blob = storage_bucket.blob(final_dst_image_path)
+            markdown_image_blob = storage_bucket.blob(storage_image_path)
             with open(image_path, "rb") as image_file:
                 markdown_image_blob.upload_from_file(image_file)
             logging.debug(f"Uploaded successfully markdown relative path image '{image_name}'")
@@ -2568,7 +2575,9 @@ class Pack:
             self.cleanup()
             return False
 
-        task_status = self.upload_relative_path_markdown_images(markdown_relative_path_data_dict, storage_bucket)
+        task_status = self.upload_relative_path_markdown_images(
+            markdown_relative_path_data_dict, storage_bucket, storage_base_path
+        )
         if not task_status:
             self._status = PackStatus.FAILED_markdown_IMAGE_UPLOAD.name  # type: ignore[misc]
             self.cleanup()

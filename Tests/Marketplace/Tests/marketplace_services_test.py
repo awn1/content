@@ -1908,7 +1908,7 @@ class TestImagesUpload:
         }
         dummy_storage_bucket = mocker.MagicMock()
         mocker.patch.object(dummy_pack, "process_and_upload_image", return_value=True)
-        task_status = dummy_pack.upload_relative_path_markdown_images(images, dummy_storage_bucket)
+        task_status = dummy_pack.upload_relative_path_markdown_images(images, dummy_storage_bucket, "")
 
         assert task_status
 
@@ -1934,7 +1934,7 @@ class TestImagesUpload:
         }
         dummy_storage_bucket = mocker.MagicMock()
         mocker.patch.object(dummy_pack, "process_and_upload_image", side_effect=Exception())
-        task_status = dummy_pack.upload_relative_path_markdown_images(images, dummy_storage_bucket)
+        task_status = dummy_pack.upload_relative_path_markdown_images(images, dummy_storage_bucket, "")
 
         assert not task_status
 
