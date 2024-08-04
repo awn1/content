@@ -4,6 +4,7 @@ import os
 from collections.abc import Iterable
 from urllib.parse import urljoin
 
+import git
 import requests
 
 PER_PAGE = 100  # value of `per_page` request parameter
@@ -25,7 +26,12 @@ def main():
     github_token = args.github_token
 
     print(
-        f"args received in Utils/update_contribution_pack_in_base_branch.py script: {pr_number=}, {username=}, {repo=}, {branch=}"
+        "### Running update_contribution_pack_in_base_branch.py script which fetches changes from the",
+        "contribution PR and overrides them locally in the build machine.\n",
+    )
+    print(
+        "Arguments received in Utils/update_contribution_pack_in_base_branch.py script:"
+        f"{pr_number=}, {username=}, {repo=}, {branch=}"
     )
 
     packs_dir_names = get_files_from_github(username, branch, pr_number, repo, github_token)
@@ -74,6 +80,7 @@ def get_files_from_github(username: str, branch: str, pr_number: str, repo: str,
     Returns:
         A list of packs names, if found.
     """
+    contribution_files_relative_paths = []
     print("Getting files from Github")
     content_path = os.getcwd()
     print(f"content_path: {content_path}")
@@ -82,11 +89,9 @@ def get_files_from_github(username: str, branch: str, pr_number: str, repo: str,
     base_url = f"https://raw.githubusercontent.com/{username}/{repo}/{branch}/"
     print(f"base url: {base_url}")
     for file_path in get_pr_files(pr_number, github_token):
-        print(f"file_path: {file_path}")
+        contribution_files_relative_paths.append(file_path)
         abs_file_path = os.path.join(content_path, file_path)
-        print(f"abs_file_path: {abs_file_path}")
         abs_dir = os.path.dirname(abs_file_path)
-        print(f"abs_dir: {abs_dir}")
         if not os.path.isdir(abs_dir):
             os.makedirs(abs_dir)
         with (
@@ -103,7 +108,36 @@ def get_files_from_github(username: str, branch: str, pr_number: str, repo: str,
                 changed_file.write(data)
 
         files_list.add(file_path.split(os.path.sep)[1])
-    print(f"list(files_list): {list(files_list)}")
+
+    print(f"Modified Packs: {list(files_list)}")
+
+    # Stage changed files for pre-commit hooks
+    print("### Staging contribution related files (no commit). ###")
+    repo = git.Repo(content_path)
+    try:
+        index = repo.index
+        index.add(contribution_files_relative_paths)
+        print(f"Staged files in the VM: {contribution_files_relative_paths}")
+    except Exception as e:
+        print(f"An error occurred while staging the files: {e}")
+
+    # Write stage files paths (from contribution PR) to temporary contribution_files_relative_paths.txt
+    print(
+        "### Writing the following contribution related files paths locally to the VM in",
+        f"{os.path.abspath(path='contribution_files_relative_paths.txt')}: ",
+        f"{contribution_files_relative_paths} ###",
+    )
+    with open("contribution_files_relative_paths.txt", "w") as file:
+        for line in contribution_files_relative_paths:
+            file.write(f"{line}\n")
+
+    # write contribution_files_relative_paths list to job artifact
+    if ARTIFACTS_FOLDER := os.getenv("ARTIFACTS_FOLDER"):
+        print("### Writing contribution related files paths to contribution_files_relative_paths.log ###")
+        with open(f"{ARTIFACTS_FOLDER}/logs/contribution_files_relative_paths.log", "w") as file:
+            for line in contribution_files_relative_paths:
+                file.write(f"{line}\n")
+
     return list(files_list)
 
 
