@@ -37,6 +37,7 @@ from Tests.scripts.common import (
     get_pipeline_by_commit,
     get_pipelines_and_commits,
     get_properties_for_test_suite,
+    get_slack_user_name,
     get_test_results_files,
     is_pivot,
     replace_escape_characters,
@@ -199,7 +200,7 @@ def machines_saas_and_xsiam(failed_jobs):
                 "xsiam-test_playbooks_results",
                 "xsiam-test_modeling_rule_results",
             },
-            f"Used {len(machines)} machine(s)",
+            f"Used {len(machines)} machine types",
         )
         + machines
     )
@@ -674,13 +675,13 @@ def get_pipeline_by_id(gitlab_client: Gitlab, project_id: str, pipeline_id: str)
 
 def get_slack_downstream_pipeline_id(pipeline: ProjectPipeline):
     for bridge in pipeline.bridges.list(all=True):
-        if SLACK_NOTIFY in bridge.name.lower():
+        if SLACK_NOTIFY in bridge.name.lower() and bridge.downstream_pipeline:
             pipeline_id = bridge.downstream_pipeline.get("id")
             return pipeline_id
     return None
 
 
-def get_pipeline_slack_data(gitlab_client, pipeline_id, project_id):
+def get_pipeline_slack_data(gitlab_client: Gitlab, pipeline_id: str, project_id: str) -> tuple[list, list, dict, ProjectPipeline]:
     pipeline = get_pipeline_by_id(gitlab_client, project_id, pipeline_id)
     slack_message = []
     slack_message_threads = []
@@ -718,7 +719,7 @@ def get_pipeline_slack_data(gitlab_client, pipeline_id, project_id):
             except GitlabGetError as e:
                 logging.error(f"Failed to download artifacts for slack notify job: {slack_notify_job.id} with error: {e}")
 
-    return slack_message, slack_message_threads, slack_message_channel_to_thread
+    return slack_message, slack_message_threads, slack_message_channel_to_thread, pipeline
 
 
 def main():
@@ -756,7 +757,7 @@ def main():
             author = pull_request.data.get("user", {}).get("login")
             if triggering_workflow in {CONTENT_NIGHTLY, CONTENT_PR}:
                 # This feature is only supported for content nightly and content pr workflows.
-                computed_slack_channel = f"{computed_slack_channel}{author}"
+                computed_slack_channel = f"@{get_slack_user_name(author, author, options.name_mapping_path)}"
             else:
                 logging.info(f"Not supporting custom Slack channel for {triggering_workflow} workflow")
             logging.info(
@@ -836,27 +837,39 @@ def main():
     test_upload_flow_pipeline_id_file = ROOT_ARTIFACTS_FOLDER / TEST_UPLOAD_FLOW_PIPELINE_ID
     if test_upload_flow_pipeline_id_file.exists():
         test_upload_flow_pipeline_id = test_upload_flow_pipeline_id_file.read_text().strip()
-        test_upload_flow_slack_message, test_upload_flow_slack_message_threads, _ = get_pipeline_slack_data(
-            gitlab_client, test_upload_flow_pipeline_id, project_id
+        test_upload_flow_slack_message, test_upload_flow_slack_message_threads, _, test_upload_flow_pipeline = (
+            get_pipeline_slack_data(gitlab_client, test_upload_flow_pipeline_id, project_id)
         )
         logging.info(f"Got Slack data from test upload flow pipeline: {test_upload_flow_pipeline_id}")
+        test_upload_flow_pipeline_title = f"Test Upload Flow Slack message - Pipeline Status:{test_upload_flow_pipeline.status}"
         threaded_messages.append(
             {
-                "color": "good",
-                "fallback": "Test Upload Flow Slack message",
-                "title": "Test Upload Flow Slack message",
+                "title_link": test_upload_flow_pipeline.web_url,
+                "color": "good" if test_upload_flow_pipeline.status == "success" else "danger",
+                "fallback": test_upload_flow_pipeline_title,
+                "title": test_upload_flow_pipeline_title,
             }
         )
+        if not test_upload_flow_slack_message or not test_upload_flow_slack_message_threads:
+            logging.error(f"Failed to get Slack message or threads for test upload flow pipeline: {test_upload_flow_pipeline_id}")
+            threaded_messages.append(
+                {
+                    "fallback": "Failed to get Slack message or threads for test upload flow pipeline",
+                    "title": "Failed to get Slack message or threads for test upload flow pipeline",
+                    "color": "danger",
+                }
+            )
+
         threaded_messages.extend(test_upload_flow_slack_message)
         threaded_messages.extend(test_upload_flow_slack_message_threads)
 
     # We only need the channel mapping from the parent pipeline, so we can append it to the current pipeline's messages.
-    parent_slack_message_channel_to_thread = {}
+    parent_slack_message_channel_to_thread: dict = {}
     if (parent_pipeline_id := os.getenv("SLACK_PARENT_PIPELINE_ID")) and (
         parent_project_id := os.getenv("SLACK_PARENT_PROJECT_ID")
     ):
         logging.info(f"Parent pipeline data found: {parent_pipeline_id} in project {parent_project_id}")
-        _, _, parent_slack_message_channel_to_thread = get_pipeline_slack_data(
+        _, _, parent_slack_message_channel_to_thread, _ = get_pipeline_slack_data(
             gitlab_client, parent_pipeline_id, parent_project_id
         )
         logging.info(f"Got Slack data from parent pipeline: {parent_pipeline_id} in project {parent_project_id}")
