@@ -62,3 +62,27 @@ repos:
     types: [python]
     #duplicate here and in pyproject.toml because https://github.com/python/mypy/issues/13916
     exclude: BlacklistValidation*|SecretActions*|artifacts*|.*infrastructure_tests*|.*_test|test_.*|test_data|tests_data|.venv
+- repo: local
+  hooks:
+    - id: towncrier-draft
+      name: towncrier-draft
+      language: system
+      description: Makes sure .changelogs/ files render properly
+      entry: towncrier
+      files: .changelogs/
+      pass_filenames: false
+      args:
+        - --draft
+        - --version
+        - 99.99.99
+
+    - id: towncrier-check
+      name: towncrier-check
+      language: system
+      description: Check that at least one changelog was added
+      entry: towncrier
+      pass_filenames: false
+      args:
+        - check
+        - --compare-with
+        - origin/master
