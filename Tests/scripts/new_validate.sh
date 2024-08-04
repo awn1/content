@@ -18,6 +18,8 @@ if [[ $CI_COMMIT_BRANCH = master ]] || [[ "${IS_NIGHTLY}" == "true" ]] || [[ -n 
         fi
         python3 -m demisto_sdk validate -a --prev-ver $PREV_VER --config-path validation_config.toml
     fi
+elif [ -n "${CONTRIB_BRANCH}" ]; then
+    python3 -m demisto_sdk validate -g --config-path validation_config.toml
 else
     python3 -m demisto_sdk validate -g --post-commit --config-path validation_config.toml
 fi
