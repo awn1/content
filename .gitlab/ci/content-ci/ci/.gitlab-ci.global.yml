@@ -296,6 +296,7 @@
     if [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]] || [[ "${IS_NIGHTLY}" == "true" ]] || [[ -n "${BUCKET_UPLOAD}" ]] || [[ -n "${SLACK_JOB}" ]] || [[ "${BUILD_MACHINES_CLEANUP}" == "true" ]] || [[ "${DELETE_MISMATCHED_BRANCHES}" == "true" ]] || [[ "${SECURITY_SCANS}" == "true" ]] || [[ "${DEMISTO_TEST_NATIVE_CANDIDATE}" == "true" ]] || [[ "${CI_COMMIT_BRANCH}" == "master" ]] || [[ "${SDK_RELEASE}" == "true" ]] || [[ "${TRIGGER_CONTRIBUTION_BUILD}" == "true" ]]; then
       echo "Running a build which doesn't require build files check validation"
     else
+      git fetch origin master # allows `git diff`ing, otherwise there's no origin/master
       ./Tests/scripts/is_file_up_to_date.sh .gitlab $CI_COMMIT_BRANCH
       # we want to checkout if it's not up-to-date
       ./Tests/scripts/is_file_up_to_date.sh poetry.lock $CI_COMMIT_BRANCH true
