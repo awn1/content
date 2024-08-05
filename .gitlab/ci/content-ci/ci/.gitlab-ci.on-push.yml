@@ -774,7 +774,7 @@ xsoar_ng_server_ga:
     - if: '$IS_NIGHTLY == "true" && $SCHEDULED_NIGHTLY == "true"'
       when: always
       variables:
-        CLOUD_MACHINES_TYPE: "build-effort"
+        CLOUD_MACHINES_TYPE: "nightly"
         CLEAN_MACHINE_NEEDED: "true"
         CLOUD_MACHINES_COUNT: 6
         GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng-nightly"
