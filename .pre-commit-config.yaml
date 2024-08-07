@@ -62,6 +62,11 @@ repos:
     types: [python]
     #duplicate here and in pyproject.toml because https://github.com/python/mypy/issues/13916
     exclude: BlacklistValidation*|SecretActions*|artifacts*|.*infrastructure_tests*|.*_test|test_.*|test_data|tests_data|.venv
+-   repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.10.0
+    hooks:
+    -   id: shellcheck
+        args: ["--severity=error"]
 - repo: local
   hooks:
     - id: towncrier-draft

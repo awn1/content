@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Generating the ips and ports with the following form: <instance-ip> <tunnel-port>
 IPS_AND_PORTS=$(cat $ENV_RESULTS_PATH | jq ".[] | select(.Role==\"$INSTANCE_ROLE\")" | jq -r '[.InstanceDNS, .TunnelPort] | @tsv' | sed "s/\"//g")
 # Handling the ip & port pairs line by line

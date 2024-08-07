@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # ====== BUILD CONFIGURATION ======
 
 if [[ -z "$3" ]]; then

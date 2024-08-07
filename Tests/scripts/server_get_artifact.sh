@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 ACCEPT_TYPE="Accept: application/json"
 SERVER_API_URI="https://circleci.com/api/v1/project/demisto/server"
 TOKEN_ATTR="circle-token=$1"
