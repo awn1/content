@@ -9,7 +9,7 @@ GSM_SERVICE_ACCOUNT = Path(os.environ["GSM_SERVICE_ACCOUNT"]) if "GSM_SERVICE_AC
 MAX_API_KEY_EXPIRATION_TIME_IN_DAYS = 180
 IS_PROD_ENV_PATH = "is_production_tenant"
 DEFAULT_USER_AGENT = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) " "Chrome/110.0.0.0 Safari/537.36"
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
 )
 OKTA_HEADERS = {"Accept": "application/json", "Content-Type": "application/json"}
 OKTA_AUTH_URL = "https://ssopreview.paloaltonetworks.com/api/v1/authn"
