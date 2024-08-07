@@ -1,18 +1,23 @@
-Every infra MR must have a changelog. Changelogs are saved under the `.changelogs` folder until the next infra release.
+# Infra Merge Request Changelog Guidelines
+
+Every infra merge request (MR) must have a changelog. Changelogs are stored in the `.changelogs` folder until the next infra release.
+
 To create a changelog, choose one of:
 
-**Manually**
-Create a file using the following format: `<Jira issue number>.<category>.md` under `.changelogs`. (e.g. `CIAC-11444.doc.md`)
-The _category_ can be one of `feature`, `bugfix`, `doc`, `removal` or `misc`.
-In the file, type a brief one-line changelog for each change.
+## Manually
 
-**Interactively**
-0. Make sure you're in an updated Poetry environment (pull from infra master, `poetry install`)
-1. Run `poetry run towncrier create` _(or `poetry shell` and then `towncrier create`)_
-2. Insert the relevant Jira issue as the issue (e.g. `CIAC-0000`) - this will be the file name
-3. Choose the issue type (feature, bugfix, etc)
-4. Briefly describe every change in a separate own line.
-A file will be added to `.changelogs/`.
+1. Create a file in the `.changelogs` folder using the format: `<Jira issue number>.<category>.md` (e.g., `CIAC-11444.doc.md`).
+2. The _category_ can be one of the following: `feature`, `bugfix`, `doc`, `removal`, or `misc`.
+3. In the file, write a brief one-line changelog for each change.
+
+## Interactively
+
+1. Make sure you're in an updated Poetry environment (pull from infra master, `poetry install`)
+2. Run `poetry run towncrier create` _(or `poetry shell` and then `towncrier create`)_
+3. Insert the relevant Jira issue as the issue (e.g. `CIAC-0000`) - this will be the file name.
+4. Choose the issue type (`feature`, `bugfix`, etc)
+5. Briefly describe each change on a separate line.
+6. A file will be added to `.changelogs/`.
 
 ---
 
