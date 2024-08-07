@@ -29,6 +29,6 @@ images=(
     "demisto/unrar:1.4"
 )
 
-for i in ${images[@]}; do
+for i in "${images[@]}"; do
     ssh -t ${USER}@${PUBLIC_IP} "sudo docker pull ${i}"
 done

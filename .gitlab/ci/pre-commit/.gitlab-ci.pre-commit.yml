@@ -15,6 +15,7 @@ pre-commit:
   extends:
   - .pre-commit-rule
   - .before-script-pre-commit
+  - .docker_services
   script:
     - !reference [.check-is-force-merged-allowed]
     - git fetch origin master -q # allows `git diff`ing in towncrier-check (otherwise there's no origin/master)

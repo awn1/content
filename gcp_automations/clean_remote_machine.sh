@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Usage: clean_remote_machine.sh --zone [zone] --tenant-id [tentnat-id]
 
 zone=zone
