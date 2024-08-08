@@ -58,7 +58,6 @@ repos:
       - types-python-dateutil
       - types-tabulate
       - types-dateparser
-      - types-pkg-resources
     types: [python]
     #duplicate here and in pyproject.toml because https://github.com/python/mypy/issues/13916
     exclude: BlacklistValidation*|SecretActions*|artifacts*|.*infrastructure_tests*|.*_test|test_.*|test_data|tests_data|.venv
