@@ -41,9 +41,7 @@ from Tests.scripts.infra.models import PublicApiKey
 # from infra.models.xsoar_settings.layout import Layout
 from Tests.scripts.infra.resources.constants import (
     DEFAULT_USER_AGENT,
-    OKTA_AUTH_URL,
     OKTA_HEADERS,
-    OKTA_PROD_AUTH_URL,
     TokenCache,
 )
 from Tests.scripts.infra.utils.env import is_production
@@ -480,7 +478,7 @@ class XsoarOnPremClient:
         #     return parse_obj_as(list[AuditTrail], data)
         #
         # def export_data(self, **kwargs) -> str:
-        raise NotImplementedError("Export data is not implemented at this env yet")
+        # raise NotImplementedError("Export data is not implemented at this env yet")
 
     #
     # def get_all_layouts(self, **kwargs) -> list[Layout]:
@@ -515,7 +513,7 @@ class XsoarClient(XsoarOnPremClient):
         self.xsoar_webapp_url = f"https://{self.xsoar_host_base}/api/webapp"
         self.token_cache = Firestore(project_id)
 
-    def update_user_data(self):
+    def update_user_data(self, body: dict):
         raise NotImplementedError("Update user data is not implemented at this env")
 
     def login_via_okta(self, is_prod: bool):
@@ -536,18 +534,35 @@ class XsoarClient(XsoarOnPremClient):
             raise Exception(f"Failed extracting stateToken for {self.xsoar_user=} on {self.xsoar_base_url}\n{res.text}")
         state_token = unquote(matches[0])  # Replace %xx escapes by their single-character equivalent
 
+        OKTA_IDENTIFY_URL = "https://ssopreview.paloaltonetworks.com/idp/idx/identify"  # TODO move to constants
+        OKTA_PROD_IDENTIFY_URL = "https://ssopreview.paloaltonetworks.com/idp/idx/identify"  # TODO GABI PRODUCTION?
+        identify_url = OKTA_PROD_IDENTIFY_URL if is_prod else OKTA_IDENTIFY_URL
+        identify_params = {"identifier": self.xsoar_user, "stateHandle": state_token}
+        identify_res = self.session.post(identify_url, json=identify_params, headers=OKTA_HEADERS, verify=False)
+        raise_for_status(identify_res)
+        identify_json = identify_res.json()
+        answer_params = {"credentials": {"passcode": self.xsoar_pass}, "stateHandle": identify_json.get("stateHandle")}
+        answer_res = self.session.post(
+            "https://ssopreview.paloaltonetworks.com/idp/idx/challenge/answer",
+            json=answer_params,
+            headers=OKTA_HEADERS,
+            verify=False,
+        )
+        raise_for_status(answer_res)
+        credentials_res_json = answer_res.json()
+        okta_redirect = credentials_res_json["success"].get("href")
         # Do login
-        okta_params = {
-            "username": self.xsoar_user,
-            "password": self.xsoar_pass,
-            "stateToken": state_token,
-            "options": {"multiOptionalFactorEnroll": True, "warnBeforePasswordExpired": True},
-        }
-        okta_path = OKTA_PROD_AUTH_URL if is_prod else OKTA_AUTH_URL
-        okta_res = self.session.post(url=okta_path, json=okta_params, headers=OKTA_HEADERS)
-        raise_for_status(okta_res)
-        if not (okta_redirect := okta_res.json().get("_links", {}).get("next", {}).get("href")):
-            raise Exception(f"Failed extracting okta redirect link from {okta_res.json()}")
+        # okta_params = {
+        #     "username": self.xsoar_user,
+        #     "password": self.xsoar_pass,
+        #     "stateToken": state_token,
+        #     "options": {"multiOptionalFactorEnroll": True, "warnBeforePasswordExpired": True},
+        # }
+        # okta_path = OKTA_PROD_AUTH_URL if is_prod else OKTA_AUTH_URL
+        # okta_res = self.session.post(url=okta_path, json=okta_params, headers=OKTA_HEADERS)
+        # raise_for_status(okta_res)
+        # if not (okta_redirect := okta_res.json().get("_links", {}).get("next", {}).get("href")):
+        #     raise SetupException(f'Failed extracting okta redirect link from {okta_res.json()}')
 
         # Follow redirect
         res = self.session.get(okta_redirect)

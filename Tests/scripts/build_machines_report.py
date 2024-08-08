@@ -61,7 +61,14 @@ WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME = "wait_in_line_slack_messages.json"
 
 
 def create_column(
-    tenants: bool, key: str, data: str, exportable: bool, visible: bool, add_class: bool, filterable: bool, **kwargs
+    tenants: bool,
+    key: str,
+    data: str,
+    exportable: bool,
+    visible: bool,
+    add_class: bool,
+    filterable: bool,
+    **kwargs,
 ) -> dict:
     return {
         "tenants": tenants,
@@ -77,7 +84,18 @@ def create_column(
 
 def generate_columns(without_viso: bool) -> list[dict]:
     columns = [
-        create_column(False, "", "", False, True, False, False, className="dt-control", orderable="false", defaultContent=""),
+        create_column(
+            False,
+            "",
+            "",
+            False,
+            True,
+            False,
+            False,
+            className="dt-control",
+            orderable="false",
+            defaultContent="",
+        ),
         create_column(False, "host", "Host", True, True, False, False),
         create_column(False, "machine_name", "Machine Name", True, True, False, False),
         create_column(False, "enabled", "Enabled", True, True, True, True),
@@ -101,7 +119,11 @@ def generate_columns(without_viso: bool) -> list[dict]:
 
 
 def create_report_html(
-    current_date: str, records: list[dict], columns: list[dict], columns_filterable: list[int], managers: list[str]
+    current_date: str,
+    records: list[dict],
+    columns: list[dict],
+    columns_filterable: list[int],
+    managers: list[str],
 ) -> str:
     template_path = Path(__file__).parent / "BuildMachines" / "templates"
     env = Environment(loader=FileSystemLoader(template_path))
@@ -125,17 +147,42 @@ def create_report_html(
 
 def options_handler() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Script to generate a report for the build machines.")
-    parser.add_argument("--xsiam-json", type=str, action="store", required=True, help="Tenant json for xsiam tenants")
-    parser.add_argument("--xsoar-ng-json", type=str, action="store", required=True, help="Tenant files for xsoar-ng tenants")
+    parser.add_argument(
+        "--xsiam-json",
+        type=str,
+        action="store",
+        required=True,
+        help="Tenant json for xsiam tenants",
+    )
+    parser.add_argument(
+        "--xsoar-ng-json",
+        type=str,
+        action="store",
+        required=True,
+        help="Tenant files for xsoar-ng tenants",
+    )
     parser.add_argument("-o", "--output-path", required=True, help="The path to save the report to.")
     parser.add_argument("-n", "--name-mapping_path", help="Path to name mapping file.", required=False)
-    parser.add_argument("-t", "--test-data", help="Use test data and don't connect to the servers.", required=False)
+    parser.add_argument(
+        "-t",
+        "--test-data",
+        help="Use test data and don't connect to the servers.",
+        required=False,
+    )
     parser.add_argument(
         "-wv",
         "--without-viso",
         type=common.string_to_bool,
         default=WITHOUT_VISO,
         help="Don't connect to Viso to get tenants data.",
+        required=False,
+    )
+    parser.add_argument(
+        "-ws",
+        "--without-statistics",
+        type=common.string_to_bool,
+        default=False,
+        help="Don't generate statistics.",
         required=False,
     )
     return parser.parse_args()
@@ -178,7 +225,11 @@ def generate_ttl_class(expired: bool | None = None):
 def generate_ttl_cell(ttl: str, current_date: datetime) -> dict:
     ttl_date = get_datetime_from_epoch(ttl)
     expired = ttl_date <= current_date + TTL_EXPIRED_DAYS
-    return generate_cell(ttl_date.strftime("%Y-%m-%dT%H-%M"), ttl_date.strftime("%Y-%m-%d"), generate_ttl_class(expired))
+    return generate_cell(
+        ttl_date.strftime("%Y-%m-%dT%H-%M"),
+        ttl_date.strftime("%Y-%m-%d"),
+        generate_ttl_class(expired),
+    )
 
 
 def tenant_status_has_error(status: str) -> bool:
@@ -195,7 +246,10 @@ def get_record_for_tenant(tenant, current_date: datetime):
         slack_link_cell = generate_cell(generate_html_link("Slack thread", slack_link), tenant["thread_ts"])
     else:
         slack_link = build_link_to_channel(XDR_UPGRADE_CHANNEL_ID_DEV)
-        slack_link_cell = generate_cell(generate_html_link("Upgrade Channel", slack_link), XDR_UPGRADE_CHANNEL_ID_DEV)
+        slack_link_cell = generate_cell(
+            generate_html_link("Upgrade Channel", slack_link),
+            XDR_UPGRADE_CHANNEL_ID_DEV,
+        )
     return {
         "owner": generate_cell(tenant["owner"]),
         "disposable": generate_cell(tenant["disposable"]),
@@ -207,7 +261,11 @@ def get_record_for_tenant(tenant, current_date: datetime):
 
 
 def get_version_from(
-    xsoar_admin_user: XSOARAdminUser, client_type: type[XsoarClient], host: str, key: str, project_id: str
+    xsoar_admin_user: XSOARAdminUser,
+    client_type: type[XsoarClient],
+    host: str,
+    key: str,
+    project_id: str,
 ) -> dict | None:
     try:
         client = client_type(
@@ -310,7 +368,13 @@ def generate_records(
                 "build_machine": generate_cell(False),
                 "comment": generate_cell(""),
             }
-            versions = get_version_from(xsoar_admin_user, client_type, host_url, host_url, AUTOMATION_GCP_PROJECT)
+            versions = get_version_from(
+                xsoar_admin_user,
+                client_type,
+                host_url,
+                host_url,
+                AUTOMATION_GCP_PROJECT,
+            )
             if versions is not None:
                 record |= {key: generate_cell(value) for key, value in versions.items()}
                 record["connectable"] = generate_cell(True)
@@ -399,7 +463,13 @@ def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], l
                 "color": "danger",
                 "title": title,
                 "fallback": title,
-                "fields": [{"title": "Machine Name(s)", "value": ", ".join(non_connectable_machines_count), "short": True}],
+                "fields": [
+                    {
+                        "title": "Machine Name(s)",
+                        "value": ", ".join(non_connectable_machines_count),
+                        "short": True,
+                    }
+                ],
             }
         )
     if disabled_machines_count:
@@ -409,7 +479,13 @@ def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], l
                 "color": "warning",
                 "title": title,
                 "fallback": title,
-                "fields": [{"title": "Machine Name(s)", "value": ", ".join(disabled_machines_count), "short": True}],
+                "fields": [
+                    {
+                        "title": "Machine Name(s)",
+                        "value": ", ".join(disabled_machines_count),
+                        "short": True,
+                    }
+                ],
             }
         )
     if ttl_expired_count:
@@ -419,7 +495,13 @@ def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], l
                 "color": "danger",
                 "title": title,
                 "fallback": title,
-                "fields": [{"title": "Machine Name(s)", "value": ", ".join(ttl_expired_count), "short": True}],
+                "fields": [
+                    {
+                        "title": "Machine Name(s)",
+                        "value": ", ".join(ttl_expired_count),
+                        "short": True,
+                    }
+                ],
             }
         )
     if build_machines_requiring_an_agent:
@@ -430,7 +512,11 @@ def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], l
                 "title": title,
                 "fallback": title,
                 "fields": [
-                    {"title": f"Flow Type - {key}", "value": ", ".join(value), "short": True}
+                    {
+                        "title": f"Flow Type - {key}",
+                        "value": ", ".join(value),
+                        "short": True,
+                    }
                     for key, value in build_machines_requiring_an_agent.items()
                 ],
             }
@@ -511,35 +597,59 @@ def main() -> None:
 
         current_date = datetime.utcnow()
         current_date_str = current_date.strftime("%Y-%m-%d")
+        attachments_json = []
+        wait_in_line_slack_messages: list = []
 
         if args.test_data:
             test_data_path = Path(args.test_data)
             records: list[dict] = load_json_file((test_data_path / RECORDS_FILE_NAME).as_posix())  # type: ignore[assignment]
-            wait_in_line_slack_messages: list = load_json_file(
-                (test_data_path / WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME).as_posix()
-            )  # type: ignore[assignment]
+            wait_in_line_slack_messages = load_json_file((test_data_path / WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME).as_posix())  # type: ignore[assignment]
         else:
             admin_user = Settings.xsoar_admin_user
             xsiam_json: dict = load_json_file(args.xsiam_json)  # type: ignore[assignment]
             xsoar_ng_json: dict = load_json_file(args.xsoar_ng_json)  # type: ignore[assignment]
-            records_xsoar_ng = generate_records(xsoar_ng_json, admin_user, XsoarClient, tenants, args.without_viso, current_date)
-            records_xsiam = generate_records(xsiam_json, admin_user, XsiamClient, tenants, args.without_viso, current_date)
+            records_xsoar_ng = generate_records(
+                xsoar_ng_json,
+                admin_user,
+                XsoarClient,
+                tenants,
+                args.without_viso,
+                current_date,
+            )
+            records_xsiam = generate_records(
+                xsiam_json,
+                admin_user,
+                XsiamClient,
+                tenants,
+                args.without_viso,
+                current_date,
+            )
             records = records_xsoar_ng + records_xsiam
-            client = WebClient(token=SLACK_TOKEN)
-            wait_in_line_slack_messages = get_messages_from_slack(client, WAIT_IN_LINE_CHANNEL_ID)
-
             # Save the records to a json file for future use and debugging.
             with open(output_path / RECORDS_FILE_NAME, "w") as f:
                 json.dump(records, f, indent=4, default=str, sort_keys=True)
 
-            with open(output_path / WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME, "w") as f:
-                json.dump(wait_in_line_slack_messages, f, indent=4, default=str, sort_keys=True)
+            if not args.without_statistics:
+                client = WebClient(token=SLACK_TOKEN)
+                wait_in_line_slack_messages = get_messages_from_slack(client, WAIT_IN_LINE_CHANNEL_ID)
+                with open(output_path / WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME, "w") as f:
+                    json.dump(
+                        wait_in_line_slack_messages,
+                        f,
+                        indent=4,
+                        default=str,
+                        sort_keys=True,
+                    )
+
+        if args.without_statistics:
+            logging.info("Skipping generating statistics.")
+        else:
+            logging.info("Generating statistics.")
+            attachments_json = generate_graphs(output_path, wait_in_line_slack_messages)
 
         logging.info(f"Creating report for {current_date_str}")
         columns, columns_filterable, managers, slack_msg_append_report = generate_report(args, records, tenants, tokens_count)
         slack_msg_append.extend(slack_msg_append_report)
-
-        attachments_json = generate_graphs(output_path, wait_in_line_slack_messages)
 
         report = create_report_html(current_date_str, records, columns, columns_filterable, managers)
         report_file_name = f"Report_{current_date_str}.html"
