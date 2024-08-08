@@ -624,6 +624,12 @@ def check_if_index_is_updated(
             logging.warning(f"Index commit {index_commit.hexsha} committed time: {index_commit.committed_datetime}")
             logging.warning("Index is already updated.")
             logging.warning(skipping_build_task_message)
+            if current_commit.committed_datetime < index_commit.committed_datetime:
+                logging.exception(
+                    f"{current_commit.committed_datetime=} < {index_commit.committed_datetime=}."
+                    " Please retry the whole pipeline, as the current commit is behind the last upload commit"
+                )
+                sys.exit(1)
             sys.exit()
 
         for changed_file in current_commit.diff(index_commit):
