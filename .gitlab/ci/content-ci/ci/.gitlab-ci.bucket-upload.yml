@@ -939,7 +939,9 @@ upload-id-set-bucket:
   script:
     - |
       if [[ $TEST_UPLOAD == "true" ]]; then
+        echo -n "skipped" >> ${ARTIFACTS_FOLDER}/logs/trigger_sync_all_buckets_status_code.log
         echo "Skipping syncing buckets in test upload-flow"
+        job-done
         exit 0
       fi
 
@@ -971,8 +973,19 @@ upload-id-set-bucket:
 
         ./Tests/scripts/validate_synced_buckets.sh "prod-us"
 
-        echo "Bucket sync completed"
+        echo "Bucket prod-us sync completed"
       fi
+
+    # The next step triggers a pipeline by the DevOps team that synchronizes between the `prod us` bucket and all other buckets.
+    # If this step fails, a message will appear in the Slack channel `dmst-build`.
+    # If the step is successful, a message will appear in the thread under the upload message.
+    # Note: Failure of this step indicates an issue with triggering the pipeline, not with its process.
+    # For job status updates see xdr-content-sync channel.
+    - section_start "Trigger sync for all buckets" --collapsed
+    - poetry run python3 -u ./Tests/scripts/trigger_jenkins_job.py --url $JENKINS_SYNC_BUCKETS_JOB_URL --username $JENKINS_USER --token $JENKINS_TOKEN
+    - section_end "Trigger sync for all buckets"
+    - job-done
+
 
 sync-buckets-between-projects:
   extends: .sync-buckets-between-projects

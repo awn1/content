@@ -66,6 +66,7 @@ GITLAB_SERVER_URL = os.getenv("CI_SERVER_URL", "https://gitlab.xdr.pan.local")  
 GITLAB_PROJECT_ID = os.getenv("CI_PROJECT_ID") or 1061
 GITLAB_SSL_VERIFY = bool(strtobool(os.getenv("GITLAB_SSL_VERIFY", "true")))
 CONTENT_CHANNEL = "dmst-build-test"
+XDR_CONTENT_SYNC_CHANNEL_ID = os.getenv("XDR_CONTENT_SYNC_CHANNEL_ID", "")
 SLACK_USERNAME = "Content GitlabCI"
 SLACK_WORKSPACE_NAME = os.getenv("SLACK_WORKSPACE_NAME", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
@@ -404,6 +405,64 @@ def test_playbooks_results(artifact_folder: Path, pipeline_url: str, title: str)
     return test_playbook_slack_msg, has_failed_tests
 
 
+def bucket_sync_msg_builder(artifact_path: Path) -> tuple[list, list]:
+    bucket_sync_results = get_artifact_data(
+        artifact_folder=artifact_path / "logs",
+        artifact_relative_path="trigger_sync_all_buckets_status_code.log",
+    )
+
+    if not bucket_sync_results:
+        logging.error("The Sync all buckets job was not triggered for any reason, file for status_code not found")
+        title = "The Sync all buckets job was not triggered for any reason"
+        return [], [
+            {
+                "fallback": title,
+                "title": title,
+                "color": "danger",
+            }
+        ]
+
+    if bucket_sync_results == "skipped":
+        # In case the run is `test-upload-flow`
+        logging.debug("Skipping `Sync all buckets` msg in test upload-flow")
+        return [], []
+
+    if bucket_sync_results == "201":
+        # Triggered successfully
+        title = f"Sync all buckets pipeline triggered successfully. Status Code: {bucket_sync_results}"
+        field_value = f"Check the {slack_link(XDR_CONTENT_SYNC_CHANNEL_ID, 'xdr-content-sync')} channel for job status updates."
+        return [], [
+            {
+                "fallback": title,
+                "title": title,
+                "color": "good",
+                "fields": [
+                    {
+                        "title": "",
+                        "value": field_value,
+                        "short": False,
+                    }
+                ],
+            }
+        ]
+
+    # Triggered fail
+    title = ":alert: Failed to triggered Sync all buckets pipeline,"
+    if bucket_sync_results.startswith("Some Error"):
+        # Some error
+        title += f" Error: {bucket_sync_results}"
+    else:
+        # HTTP Error
+        title += f" Status Code: {bucket_sync_results}"
+    return [
+        {
+            "fallback": title,
+            "title": title,
+            "color": "danger",
+        }
+    ], []
+
+
 def bucket_upload_results(
     bucket_artifact_folder: Path, marketplace_name: str
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -495,6 +554,9 @@ def construct_slack_msg(
             slack_msg, threaded_message = bucket_upload_results(*bucket)
             threaded_messages.extend(threaded_message)
             slack_msg_append.extend(slack_msg)
+        bucket_sync_failure, bucket_sync_success = bucket_sync_msg_builder(ROOT_ARTIFACTS_FOLDER)
+        threaded_messages.extend(bucket_sync_success)
+        slack_msg_append.extend(bucket_sync_failure)
 
     has_failed_tests = False
     # report failing test-playbooks and test modeling rules.
