@@ -413,7 +413,7 @@
   - npm list --json >> "${ARTIFACTS_FOLDER}/logs/installations_node.log" 2>&1
   - npm link jsdoc-to-markdown@5.0.3  >> "${ARTIFACTS_FOLDER}/logs/installations_node.log" 2>&1 || EXIT_CODE=$?  # disable-secrets-detection
   - if [ ${EXIT_CODE} -ne 0 ]; then
-      cp /root/.npm/_logs/*.log "${ARTIFACTS_FOLDER}/logs/"
+      cp /root/.npm/_logs/*.log "${ARTIFACTS_FOLDER}/logs/";
       exit ${EXIT_CODE};
     fi
   - section_end "Installing node modules"
