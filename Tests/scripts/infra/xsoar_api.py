@@ -669,6 +669,11 @@ class XsoarClient(XsoarOnPremClient):
         versions.update(demisto_version)
         return versions
 
+    def get_configuration(self) -> dict:
+        response = self.session.get(f"{self.xsoar_api_url}/get_config")
+        raise_for_status(response)
+        return response.json()
+
     def set_log_level(self, xsoar_log_level: str | None = None):
         logger.debug("Not setting log level for XSOAR NG environment.")
 
