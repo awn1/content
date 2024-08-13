@@ -340,7 +340,7 @@
     if [[ -f "$BASH_ENV" ]]; then
       source "$BASH_ENV"
     fi
-  - source .circleci/content_release_vars.sh
+  - source Utils/content_release_vars.sh
   # DEMISTO_SDK_GRAPH_FORCE_CREATE set to true to create graph from scratch.
   - |
     if [[ "${IS_NIGHTLY}" == "true" ]]; then
