@@ -51,6 +51,9 @@ WAIT_IN_LINE_CHANNEL_ID: str = os.environ["WAIT_IN_LINE_CHANNEL_ID"]
 CONTENT_TENANTS_GROUP_OWNER = os.getenv("CONTENT_TENANTS_GROUP_OWNER")
 TTL_EXPIRED_DAYS_DEFAULT = 5
 TTL_EXPIRED_DAYS = timedelta(days=int(os.getenv("TTL_EXPIRED_DAYS", TTL_EXPIRED_DAYS_DEFAULT)))
+LICENSE_EXPIRED_DAYS_DEFAULT = 5
+LICENSE_EXPIRED_DAYS = timedelta(days=int(os.getenv("LICENSE_EXPIRED_DAYS", LICENSE_EXPIRED_DAYS_DEFAULT)))
+LICENSE_DATE_FORMAT = "%Y %b %d"
 TOKENS_COUNT_PERCENTAGE_THRESHOLD_DEFAULT = 80  # % of the disposable tenants tokens usage to raise a warning.
 TOKENS_COUNT_PERCENTAGE_THRESHOLD = int(os.getenv("TOKENS_COUNT_PERCENTAGE_THRESHOLD", TOKENS_COUNT_PERCENTAGE_THRESHOLD_DEFAULT))
 MAX_OWNERS_TO_NOTIFY_DISPLAY = 5
@@ -104,6 +107,7 @@ def generate_columns(without_viso: bool) -> list[dict]:
         create_column(False, "version", "Server Version", True, True, True, True),
         create_column(False, "lcaas_id", "LCAAS ID", True, True, True, False),
         create_column(True, "ttl", "TTL", True, True, True, False),
+        create_column(False, "license", "License", True, False, True, False),
         create_column(True, "owner", "Owner", True, False, True, True),
         create_column(True, "tenant_status", "Tenant Status", True, False, True, True),
         create_column(False, "build_machine", "Build Machine", True, False, True, True),
@@ -192,14 +196,14 @@ def generate_html_link(text: str, url: str) -> str:
     return f'<a href="{url}" target="_blank">{text}</a>'
 
 
-def generate_cell(display: Any, sort: Any | None = None, column_class: str | None = None) -> dict:
+def generate_cell(display: Any, sort: Any | None = None, column_class: str | None = None, **kwargs) -> dict:
     data = {
         "display": display,
         "sort": sort if sort is not None else display,
     }
     if column_class:
         data["column_class"] = column_class
-    return data
+    return data | kwargs
 
 
 def get_message_p_from_ts(ts: str) -> str:
@@ -218,17 +222,32 @@ def get_datetime_from_epoch(epoch: str) -> datetime:
     return datetime.fromtimestamp(float(epoch))
 
 
-def generate_ttl_class(expired: bool | None = None):
+def generate_expired_class(expired: bool | None = None):
     return "expired" if expired else "ok" if expired is not None else "na"
 
 
-def generate_ttl_cell(ttl: str, current_date: datetime) -> dict:
+def generate_ttl_cell(ttl: str, current_date: datetime, **kwargs) -> dict:
     ttl_date = get_datetime_from_epoch(ttl)
     expired = ttl_date <= current_date + TTL_EXPIRED_DAYS
     return generate_cell(
         ttl_date.strftime("%Y-%m-%dT%H-%M"),
         ttl_date.strftime("%Y-%m-%d"),
-        generate_ttl_class(expired),
+        generate_expired_class(expired),
+        expired=expired,
+        **kwargs,
+    )
+
+
+def generate_expired_cell(
+    expire_date: datetime, current_date: datetime, notice_days: timedelta, sort: Any | None = None, **kwargs
+) -> dict:
+    expired = expire_date <= current_date + notice_days
+    return generate_cell(
+        expire_date.strftime("%Y-%m-%dT%H-%M"),
+        sort,
+        generate_expired_class(expired),
+        expired=expired,
+        **kwargs,
     )
 
 
@@ -260,13 +279,13 @@ def get_record_for_tenant(tenant, current_date: datetime):
     }
 
 
-def get_version_from(
+def get_client(
     xsoar_admin_user: XSOARAdminUser,
     client_type: type[XsoarClient],
     host: str,
     key: str,
     project_id: str,
-) -> dict | None:
+) -> XsoarClient | None:
     try:
         client = client_type(
             xsoar_host=host,
@@ -276,10 +295,44 @@ def get_version_from(
             project_id=project_id,
         )
         client.login_auth(force_login=True)
-        return client.get_version_info()
-    except Exception as e:
-        logging.error(f"Failed to get data for {key}: {e}")
+        return client
+    except Exception:
+        logging.exception(f"Failed connect to server:{host}")
     return None
+
+
+def get_version_info(client: XsoarClient) -> dict | None:
+    try:
+        return client.get_version_info()
+    except Exception:
+        logging.exception("Failed to get versions from server")
+    return None
+
+
+def get_get_configuration(client: XsoarClient) -> dict | None:
+    try:
+        return client.get_configuration()
+    except Exception:
+        logging.exception("Failed to get configuration from server")
+    return None
+
+
+def get_licenses_data(configurations: dict) -> dict:
+    licenses = configurations.get("reply", {}).get("license", {}).get("licenses", {})
+    licenses_data = {}
+    for license_main_type, license_main_data in licenses.items():
+        if license_main_data:
+            # XSIAM license data
+            if license_main_data.get("enable", False):
+                if expiration_data_int := license_main_data.get("expiration_date"):
+                    expiration_date = get_datetime_from_epoch(str(expiration_data_int))
+                    licenses_data[f"license_{license_main_type}"] = expiration_date
+            # XSOAR license data SOAR/TIM
+            for license_sub_type, license_sub_data in license_main_data.get("license", {}).items():
+                licenses_data[f"license_{license_main_type}_{license_sub_type}"] = datetime.strptime(
+                    license_sub_data["validTil"], LICENSE_DATE_FORMAT
+                )
+    return licenses_data
 
 
 def generate_cell_dict_key(record: dict, key: str, default_value: Any = NOT_AVAILABLE) -> dict:
@@ -330,19 +383,21 @@ def generate_records(
                 "disposable": generate_cell(NOT_AVAILABLE),
                 "tenant_status": generate_cell(NOT_AVAILABLE),
                 "viso_version": generate_cell(NOT_AVAILABLE),
-                "ttl": generate_cell(NOT_AVAILABLE, "", generate_ttl_class()),
+                "ttl": generate_cell(NOT_AVAILABLE, "", generate_expired_class()),
                 "slack_link": generate_cell(build_link_to_channel(XDR_UPGRADE_CHANNEL_ID_DEV)),
             }
-        versions = get_version_from(xsoar_admin_user, client_type, host, key, AUTOMATION_GCP_PROJECT)
-        if versions is not None:
-            record |= {key: generate_cell(value) for key, value in versions.items()}
-            record["connectable"] = generate_cell(True)
-            lcaas_id = versions["lcaas_id"]
-            lcaas_ids.add(lcaas_id)
-            if not without_viso:
-                tenant = tenants.get(lcaas_id)
-                if tenant:
-                    record |= get_record_for_tenant(tenant, current_date)
+        if client := get_client(xsoar_admin_user, client_type, host, key, AUTOMATION_GCP_PROJECT):
+            if (versions := get_version_info(client)) is not None:
+                record |= {key: generate_cell(value) for key, value in versions.items()}
+                record["connectable"] = generate_cell(True)
+                lcaas_id = versions["lcaas_id"]
+                lcaas_ids.add(lcaas_id)
+                if not without_viso:
+                    tenant = tenants.get(lcaas_id)
+                    if tenant:
+                        record |= get_record_for_tenant(tenant, current_date)
+            record |= get_licenses_cells(client, current_date)
+
         records.append(record)
 
     # Going over machines which aren't listed within the infra configuration files.
@@ -368,24 +423,38 @@ def generate_records(
                 "build_machine": generate_cell(False),
                 "comment": generate_cell(""),
             }
-            versions = get_version_from(
-                xsoar_admin_user,
-                client_type,
-                host_url,
-                host_url,
-                AUTOMATION_GCP_PROJECT,
-            )
-            if versions is not None:
-                record |= {key: generate_cell(value) for key, value in versions.items()}
-                record["connectable"] = generate_cell(True)
-                tenant = tenants.get(tenant["lcaas_id"])
-                if tenant:
-                    record |= get_record_for_tenant(tenant, current_date)
+            if client := get_client(xsoar_admin_user, client_type, host_url, host_url, AUTOMATION_GCP_PROJECT):
+                if (versions := get_version_info(client)) is not None:
+                    record |= {key: generate_cell(value) for key, value in versions.items()}
+                    record["connectable"] = generate_cell(True)
+                    tenant = tenants.get(tenant["lcaas_id"])
+                    if tenant:
+                        record |= get_record_for_tenant(tenant, current_date)
+                record |= get_licenses_cells(client, current_date)
 
             record |= get_record_for_tenant(tenant, current_date)
             records.append(record)
 
     return records
+
+
+def get_licenses_cells(client: XsoarClient, current_date: datetime) -> dict:
+    if (configuration := get_get_configuration(client)) is not None:
+        if licenses := get_licenses_data(configuration):
+            records = {}
+            min_date = None
+            for key, value in licenses.items():
+                cell = generate_expired_cell(value, current_date, LICENSE_EXPIRED_DAYS)
+                records[key] = cell
+                if min_date is None or value < min_date:
+                    min_date = value
+
+            if min_date is not None:
+                # Aggregate the licenses expiration dates to a single cell.
+                records["license"] = generate_expired_cell(min_date, current_date, LICENSE_EXPIRED_DAYS, field_type="license")
+                return records
+
+    return {"license": generate_cell(NOT_AVAILABLE)}
 
 
 def load_json_file(file_path: str) -> dict | list:
@@ -409,6 +478,7 @@ def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], l
     disabled_machines_count = set()
     non_connectable_machines_count = set()
     ttl_expired_count = set()
+    licenses_expired_count = set()
     owners_to_machines: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     build_machines_requiring_an_agent = defaultdict(set)
     for record in records:
@@ -421,8 +491,11 @@ def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], l
                 disabled_machines_count.add(machine_name)
             if not record.get("connectable", {}).get("display", True):
                 non_connectable_machines_count.add(machine_name)
-            if record.get("ttl", {}).get("column_class") == generate_ttl_class(True):
+            if record.get("ttl", {}).get("expired"):
                 ttl_expired_count.add(machine_name)
+            for value in record.values():
+                if value.get("field_type") == "license" and value.get("expired"):
+                    licenses_expired_count.add(machine_name)
             if (
                 record.get("agent_host_name", {}).get("display") == NOT_AVAILABLE
                 and platform_type in BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT
@@ -499,6 +572,22 @@ def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], l
                     {
                         "title": "Machine Name(s)",
                         "value": ", ".join(ttl_expired_count),
+                        "short": True,
+                    }
+                ],
+            }
+        )
+    if licenses_expired_count:
+        title = f"Build Machines - With Expired License:{len(licenses_expired_count)}"
+        slack_msg_append.append(
+            {
+                "color": "danger",
+                "title": title,
+                "fallback": title,
+                "fields": [
+                    {
+                        "title": "Machine Name(s)",
+                        "value": ", ".join(licenses_expired_count),
                         "short": True,
                     }
                 ],
