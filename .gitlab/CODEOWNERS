@@ -30,7 +30,7 @@ Tests/scripts/collect_tests @dschwartz @mdagan
 .gitlab/ci/* @yucohen
 .gitlab/* @yucohen
 .gitlab-ci.yml @yucohen
-Tests/scripts/wait_in_line_for_cloud_env.sh @yucohen
+Tests/scripts/lock_cloud_machines.sh @yucohen
 Tests/scripts/uninstall_packs_and_reset_bucket_cloud.sh @yucohen
 Tests/Marketplace/search_and_uninstall_pack.py @yucohen
 Tests/scripts/install_content_and_test_integrations.sh @yucohen
