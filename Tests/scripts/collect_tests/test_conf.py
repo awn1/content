@@ -46,7 +46,7 @@ class TestConf(DictFileBased):
 
         tests_to_integration_set: dict[str, set[str]] = defaultdict(set)
         self.marketplace = marketplace
-        self.tests_to_marketplace_set: dict[str, set[str]] = defaultdict(set)
+        self.tests_to_marketplace_set: dict[str, set[MarketplaceVersions]] = defaultdict(set)
         for test in self.tests:
             tests_to_integration_set[test.playbook_id].update(test.integrations)
             self.tests_to_marketplace_set[test.playbook_id].update(test.marketplaces or DEFAULT_MARKETPLACES_WHEN_MISSING)

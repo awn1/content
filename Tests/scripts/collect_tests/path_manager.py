@@ -5,6 +5,8 @@ from pathlib import Path
 
 from git import InvalidGitRepositoryError, Repo
 
+from Tests.scripts.collect_tests.constants import MODELING_RULES_TO_TEST_FILE, TPB_DEPENDENCIES_FILE
+
 _SANITY_FILES_FOR_GLOB = (
     # if any of the files under this list (or descendants) is changed, and no other files are changed,
     # sanity test will be run. All other files NOT under /Packs are ignored.
@@ -48,18 +50,18 @@ class PathManager:
         self.id_set_path = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "id_set.json"
         self.conf_path = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "conf.json"
         self.output_tests_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "filter_file.txt"
-        self.output_modeling_rules_to_test_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "modeling_rules_to_test.txt"
+        self.output_modeling_rules_to_test_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / MODELING_RULES_TO_TEST_FILE
         self.output_packs_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "content_packs_to_install.txt"
         self.output_packs_to_upload_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "content_packs_to_upload.json"
         self.output_machines_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "filter_envs.json"
         self.output_packs_to_reinstall_test_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "packs_reinstall_to_test.txt"
-        self.output_tpb_dependencies_packs = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "tpb_dependencies_packs.json"
+        self.output_tpb_dependencies_packs = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / TPB_DEPENDENCIES_FILE
 
     def _glob_single(self, relative_path: str) -> set[Path]:
         """
         :param relative_path: string representing a path relative to content
         :return: all files under the path (if folder)
-                OR all files matching the pattern (if '*' in path)
+                OR all files matching the pattern (if '*' in path.)
                 OR a set including the file (in case it's a single file)
         """
         result: set[Path] = set()

@@ -31,6 +31,7 @@ from SecretActions.google_secret_manager_handler import get_secrets_from_gsm
 from Tests.Marketplace.common import get_json_file, get_packs_with_higher_min_version
 from Tests.Marketplace.marketplace_services import get_last_commit_from_index
 from Tests.Marketplace.search_and_install_packs import search_and_install_packs_and_their_dependencies, upload_zipped_packs
+from Tests.scripts.collect_tests.constants import TEST_PLAYBOOKS
 from Tests.scripts.infra.secret_manager import SecretManager
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
@@ -305,6 +306,7 @@ class Server:
         self.build = None
         self.__client = None
         self.test_pack_path = None
+        self._server_numeric_version = None
 
     @abstractmethod
     def install_packs(self, pack_ids: list | None = None, install_packs_in_batches=False, production_bucket: bool = True) -> bool:
@@ -320,6 +322,11 @@ class Server:
     @abstractmethod
     def reconnect_client(self):
         pass
+
+    @property
+    @abstractmethod
+    def server_numeric_version(self) -> str:
+        return self._server_numeric_version
 
     # ------------------------- Calculate Pre packs to install ----------------------------------
 
@@ -938,7 +945,7 @@ class Server:
             pre_update: Whether this instance testing is before or after the content update on the server.
             use_mock: Whether to use mock while testing mockable integrations. Should be used mainly with
             private content build which aren't using the mocks.
-            first_call: indicates if its the first time the function is called from the same place
+            first_call: indicates if it's the first time the function is called from the same place
 
         Returns:
             A set of the successful tests containing the instance name and the integration name
@@ -971,7 +978,7 @@ class Server:
             else:
                 successful_tests.add((instance_name, integration_of_instance))
 
-        # in case some tests failed post update, wait a 15 secs, runs the tests again
+        # in case some tests failed post update, wait 15 secs, runs the tests again
         if failed_instances and not pre_update and first_call:
             logging.info("Sleep - some post-update tests failed, sleeping for 15 seconds, then running the failed tests again")
             sleep(15)
@@ -1049,16 +1056,16 @@ class Server:
 
         Args:
             preupdate_fails (set): List of tuples of integrations that failed the "Test" button prior to content
-                being updated on the demisto instance where each tuple is comprised of the integration name and the
+                being updated on the demisto instance where each tuple consists of the integration name and the
                 name of the instance that was configured for that integration which failed.
             postupdate_fails (set): List of tuples of integrations that failed the "Test" button after content was
-                updated on the demisto instance where each tuple is comprised of the integration name and the name
+                updated on the demisto instance where each tuple consists of the integration name and the name
                 of the instance that was configured for that integration which failed.
             preupdate_success (set): List of tuples of integrations that succeeded the "Test" button prior to content
-                being updated on the demisto instance where each tuple is comprised of the integration name and the
+                being updated on the demisto instance where each tuple consists of the integration name and the
                 name of the instance that was configured for that integration which failed.
             postupdate_success (set): List of tuples of integrations that succeeded the "Test" button after content was
-                updated on the demisto instance where each tuple is comprised of the integration name and the name
+                updated on the demisto instance where each tuple consists of the integration name and the name
                 of the instance that was configured for that integration which failed.
             new_integrations_names (list): List of the names of integrations that are new since the last official
                 content release and that will only be present on the demisto instance after the content update is
@@ -1337,7 +1344,7 @@ class CloudServer(Server):
         super().__init__()
         self.name = name
         self.api_key = api_key
-        self.server_numeric_version = server_numeric_version
+        self._server_numeric_version = server_numeric_version
         self.base_url = base_url
         self.xdr_auth_id = xdr_auth_id
         self.pack_ids_to_install = pack_ids_to_install
@@ -1351,6 +1358,10 @@ class CloudServer(Server):
 
     def __str__(self):
         return self.name
+
+    @property
+    def server_numeric_version(self) -> str:
+        return self._server_numeric_version
 
     def reconnect_client(self):
         self.__client = demisto_client.configure(
@@ -1372,7 +1383,7 @@ class CloudServer(Server):
         Args:
             pack_ids (list | None, optional): Packs to install on the server.
                 If no packs provided, installs packs that were provided by the previous step of the build.
-            install_packs_in_batches: Whether to install packs in barches.
+            install_packs_in_batches: Whether to install packs in batches.
             production_bucket (bool): Whether the installation is using production bucket for packs metadata. Defaults to True.
 
         Returns:
@@ -1593,7 +1604,7 @@ class XSOARBuild(Build):
     @property
     def proxy(self) -> MITMProxy:
         """
-        A property method that should create and return a single proxy instance through out the build
+        A property method that should create and return a single proxy instance throughout the build
         Returns:
             The single proxy instance that should be used in this build.
         """
@@ -1642,7 +1653,7 @@ class XSOARBuild(Build):
         servers = []
 
         packs_to_install = self.machine_assignment_json.get("xsoar-machine").get("packs_to_install")
-        tests_to_run = self.machine_assignment_json.get("xsoar-machine").get("playbooks_to_run")
+        tests_to_run = self.machine_assignment_json.get("xsoar-machine").get("tests", {}).get(TEST_PLAYBOOKS, [])
         logging.info(f"{packs_to_install=}")
         logging.info(f"{tests_to_run=}")
 
@@ -1708,7 +1719,7 @@ class CloudBuild(Build):
             logging.info(f"working on machine {machine!s}")
 
             packs_to_install = info.get("packs_to_install")
-            tests_to_run = info.get("playbooks_to_run")
+            tests_to_run = info.get("tests", {}).get(TEST_PLAYBOOKS, [])
             logging.info(f"{packs_to_install=}")
             logging.info(f"{tests_to_run=}")
 
@@ -1762,7 +1773,7 @@ def options_handler(args=None):
     parser.add_argument("--artifacts_folder", help="the artifacts folder to use.")
     parser.add_argument("--marketplace_buckets", help="the path to the marketplace buckets.")
     parser.add_argument(
-        "--machine_assignment", help="the path to the machine assignment file.", default="./packs_to_install_by_machine.json"
+        "--machine_assignment", help="the path to the machine assignment file.", default="./machine_assignment.json"
     )
     parser.add_argument(
         "-sa",

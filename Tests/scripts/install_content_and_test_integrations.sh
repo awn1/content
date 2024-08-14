@@ -17,7 +17,6 @@ if [[ ! -f "$GCS_MARKET_KEY" ]]; then
     exit_on_error 1 "GCS_MARKET_KEY not set aborting pack installation"
 fi
 
-SECRET_CONF_PATH=$(cat secret_conf_path)
 if [ -n "${CLOUD_SERVERS_FILE}" ]; then
   CLOUD_SERVERS_PATH=$(cat "${CLOUD_SERVERS_FILE}")
   echo "CLOUD_SERVERS_PATH is set to: ${CLOUD_SERVERS_PATH}"
@@ -40,7 +39,7 @@ if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; 
       --server_type "${SERVER_TYPE}" --cloud_servers_path "$CLOUD_SERVERS_PATH" \
       --marketplace_name "$MARKETPLACE_NAME" \
       --artifacts_folder "$ARTIFACTS_FOLDER" --marketplace_buckets "$GCS_MACHINES_BUCKET" \
-      --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_to_install_by_machine.json" \
+      --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
       --gsm_service_account "$GSM_SERVICE_ACCOUNT" \
       --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN"
     if [ $? -ne 0 ]; then
@@ -61,7 +60,7 @@ elif [[ "${SERVER_TYPE}" == "XSOAR" ]]; then
       --server_type "${SERVER_TYPE}" \
       --cloud_servers_path "$CLOUD_SERVERS_PATH" \
       --marketplace_name "$MARKETPLACE_NAME" --artifacts_folder "$ARTIFACTS_FOLDER" --marketplace_buckets "$GCS_MACHINES_BUCKET" \
-      --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_to_install_by_machine.json" \
+      --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
       --gsm_service_account "$GSM_SERVICE_ACCOUNT" \
       --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN"
     exit_on_error $? "Failed to run $0 script"

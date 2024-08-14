@@ -10,8 +10,6 @@ Tests/Marketplace/versions-metadata.json @ypreisler @ad-groups/demisto-lead
 # Marketplace & Upload-Flow
 Tests/scripts/create_artifacts_graph/create_artifacts.py @yrosenberg
 Tests/Marketplace/upload_git_snapshot.py @ypreisler
-Tests/Marketplace/install_packs.sh @ypreisler
-Tests/Marketplace/configure_and_install_packs.py @ypreisler
 Tests/Marketplace/copy_and_upload_packs.py @ypreisler
 Tests/Marketplace/marketplace_services.py @ypreisler @yrosenberg
 Tests/Marketplace/marketplace_statistics.py @ypreisler

@@ -38,7 +38,7 @@ else
   poetry run python3 -u ./Tests/Marketplace/search_and_uninstall_pack.py --cloud_machine "${CLOUD_CHOSEN_MACHINE_IDS}" \
     --cloud_servers_path "${CLOUD_SERVERS_PATH}" \
     --non-removable-packs "${NON_REMOVABLE_PACKS}" --one-by-one --build-number "${CI_PIPELINE_ID}" \
-    --modeling_rules_to_test_files "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.txt" \
+    --modeling_rules_to_test_files "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.json" \
     --reset-core-pack-version "${RESET_CORE_PACK_VERSION}" --only_to_be_installed \
     --pack_ids_to_install "${PACKS_TO_INSTALL}"
   exit_on_error $? "Failed to uninstall packs from cloud machines:${CLOUD_CHOSEN_MACHINE_IDS}"
