@@ -449,14 +449,13 @@ install-packs-in-server-master:
     - echo "Authenticating GCP"
     - gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
     - echo "Auth done successfully"
-    - ./Tests/scripts/wait_in_line_for_cloud_env.sh "$CLOUD_MACHINES_TYPE"
-    - source CloudEnvVariables
-    - echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}" | tee "${ARTIFACTS_FOLDER}/logs/lock_file.txt"
+    - ./Tests/scripts/lock_cloud_machines.sh
+    - export CLOUD_CHOSEN_MACHINE_IDS=$(cat "${ARTIFACTS_FOLDER}/locked_machines_list.txt")
+    - echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}"
     - section_end "Lock Machine"
 
     - !reference [.update-content-graph]
 
-    - CLOUD_SERVERS_PATH=$(cat $CLOUD_SERVERS_FILE)
     - !reference [.uninstall-packs-and-reset-bucket-cloud]
 
     - section_start "Get Instance Variables" --collapsed
@@ -496,13 +495,14 @@ install-packs-in-xsiam-ga:
   variables:
     GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-upload"
     CLOUD_MACHINES_TYPE: "upload"
-    CLOUD_MACHINES_COUNT: 1
+    CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">0" # don't run the job if there are no machines available.
+    CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">0" # stop waiting on the timeout if we got at least one machine.
+    CLOUD_MACHINES_TIMEOUT: 0  # Wait indefinitely for the machines.
     CLEAN_MACHINE_NEEDED: "true"
     INSTANCE_ROLE: "XSIAM"
     GCS_QUEUE_FILE: "queue-ga"
     GCS_SOURCE_BUCKET: "$GCS_PRODUCTION_V2_BUCKET"
     GCS_MACHINES_BUCKET: "marketplace-v2-dist-dev/upload-flow/builds-xsiam"
-    CLOUD_SERVERS_FILE: "xsiam_servers_path"
     NON_REMOVABLE_PACKS: "Base"
     MARKETPLACE_NAME: "marketplacev2"
     PRODUCT_TYPE: "XSIAM"
@@ -538,13 +538,14 @@ install-packs-in-xsoar-ng-ga:
   variables:
     GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng-upload"
     CLOUD_MACHINES_TYPE: "upload"
-    CLOUD_MACHINES_COUNT: 1
+    CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">0" # don't run the job if there are no machines available.
+    CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">0" # stop waiting on the timeout if we got at least one machine.
+    CLOUD_MACHINES_TIMEOUT: 0  # Wait indefinitely for the machines.
     CLEAN_MACHINE_NEEDED: "true"
     INSTANCE_ROLE: "XSOAR SAAS"
     GCS_QUEUE_FILE: "queue-ga"
     GCS_SOURCE_BUCKET: "${GCS_PRODUCTION_XSOAR_SAAS_BUCKET}"
     GCS_MACHINES_BUCKET: "marketplace-saas-dist-dev/upload-flow/builds-xsoar-ng"
-    CLOUD_SERVERS_FILE: "xsoar_ng_servers_path"
     NON_REMOVABLE_PACKS: "Base"
     MARKETPLACE_NAME: "xsoar_saas"
     PRODUCT_TYPE: "XSOAR"

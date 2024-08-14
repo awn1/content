@@ -7,17 +7,8 @@ function exit_on_error {
     fi
 }
 
-if [ -n "${CLOUD_SERVERS_FILE}" ]; then
-  CLOUD_SERVERS_PATH=$(cat "${CLOUD_SERVERS_FILE}")
-  echo "CLOUD_SERVERS_PATH is set to: ${CLOUD_SERVERS_PATH}"
-else
-  exit_on_error 1 "CLOUD_SERVERS_FILE is not set"
-fi
-
-
-
 python3 ./Tests/Marketplace/reinstall_packs.py --cloud_machine "${CLOUD_CHOSEN_MACHINE_IDS}" \
-  --cloud_servers_path "${CLOUD_SERVERS_PATH}" \
+  --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" \
   --non-removable-packs "${NON_REMOVABLE_PACKS}" --build-number "${CI_PIPELINE_ID}" \
   --packs_to_reinstall "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_reinstall_to_test.txt"
 exit_on_error $? "Failed to re-install packs for cloud machines:${CLOUD_CHOSEN_MACHINE_IDS}"
