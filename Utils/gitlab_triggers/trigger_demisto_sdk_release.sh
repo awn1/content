@@ -20,14 +20,16 @@ if [ "$#" -lt "1" ]; then
   [-rv, --release-version]    The release version.
   [-r, --reviewer]            Github username of the release owner.
   [-ch, --slack-channel]      A Slack channel to send notifications to. Default is dmst-sdk-release.
-  [-b, --branch]              The infra branch name to run the .gitlab-ci.sdk-release.yml workflow. Default is master branch.
+  [-ib, --infra-branch]       The infra branch name to run the .gitlab-ci.sdk-release.yml workflow. Default is master branch.
+  [-cb, --content-branch]     The content branch name to run the .gitlab-ci.sdk-release.yml workflow. Default is master branch.
   [-d, --is-draft]            Whether to create draft release and draft pull requests or not. Default is FALSE.
   [-s, --sdk-branch-name]     From which branch in demisto-sdk we want to create the release. Default is master.
   "
   exit 1
 fi
 
-_branch="master"
+_content_branch="master"
+_infra_branch="master"
 _slack_channel="dmst-sdk-release"
 _is_draft="FALSE"
 _sdk_branch_name="master"
@@ -45,7 +47,11 @@ while [[ "$#" -gt 0 ]]; do
     shift
     shift;;
 
-  -b|--branch) _branch="$2"
+  -ib|--infra-branch) _infra_branch="$2"
+    shift
+    shift;;
+
+  -cb|--content-branch) _content_branch="$2"
     shift
     shift;;
 
@@ -64,6 +70,10 @@ while [[ "$#" -gt 0 ]]; do
   -s|--sdk-branch-name) _sdk_branch_name="$2"
     shift
     shift;;
+  *)
+    echo "Unknown parameter passed: $1"
+    exit 1
+    ;;
 
   esac
 done
@@ -90,10 +100,11 @@ CI_SERVER_URL=${CI_SERVER_URL:-https://gitlab.xdr.pan.local} # disable-secrets-d
 export BUILD_TRIGGER_URL="${CI_SERVER_URL}/api/v4/projects/${CONTENT_PROJECT_ID}/trigger/pipeline"
 
 export URL=$(
-curl "$BUILD_TRIGGER_URL" --form "ref=${_branch}" --form "token=${_ci_token}" \
+curl "$BUILD_TRIGGER_URL" --form "ref=${_content_branch}" --form "token=${_ci_token}" \
     --form "variables[SDK_RELEASE]=true" \
     --form "variables[CI_TOKEN]=${_ci_token}" \
     --form "variables[REVIEWER]=${_reviewer}" \
+    --form "variables[INFRA_BRANCH]=${_infra_branch}" \
     --form "variables[RELEASE_VERSION]=${_release_version}" \
     --form "variables[IS_DRAFT]=${_is_draft}" \
     --form "variables[SDK_BRANCH_NAME]=${_sdk_branch_name}" \

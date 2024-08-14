@@ -143,7 +143,7 @@ def _test(
     expected_packs: Iterable[str],
     expected_packs_to_upload: Iterable[str],
     expected_machines: Iterable[Machine] | None,
-    expected_modeling_rules_to_test: Iterable[str | Path] | None,
+    expected_modeling_rules_to_test: dict[Path, dict] | None,
     collector_class_args: tuple[Any, ...] = (),
     disable_collect_packs_diff_master_bucket=True,
 ):
@@ -203,7 +203,7 @@ def _test(
         assert set(collected.machines) == set(expected_machines)
 
     if expected_modeling_rules_to_test is not None:
-        assert collected.modeling_rules_to_test == set(expected_modeling_rules_to_test)
+        assert collected.modeling_rules_to_test == expected_modeling_rules_to_test
 
     # assert Machine.MASTER in collected.machines
 
@@ -440,7 +440,7 @@ NIGHTLY_EXPECTED_TESTS_XSIAM = NIGHTLY_EXPECTED_TESTS | {"Sanity Test - Playbook
             (),
             ("MyXSIAMPack", "CoreAlertFields"),
             None,
-            (Path("MyXSIAMPack/ModelingRules/HarryRule"),),
+            {"MyXSIAMPack/ModelingRules/HarryRule": {"pack": "MyXSIAMPack"}},
             XSIAM_BRANCH_ARGS,
             (),
             [],
@@ -945,7 +945,7 @@ def test_nightly(
                 "CoreAlertFields",
             ),
             None,
-            (Path("MyXSIAMPack/ModelingRules/HarryRule"),),
+            {"MyXSIAMPack/ModelingRules/HarryRule": {"pack": "MyXSIAMPack"}},
             XSIAM_BRANCH_ARGS,
             ("Packs/MyXSIAMPack/ModelingRules/HarryRule/HarryRule.yml",),
             (),
@@ -961,7 +961,7 @@ def test_nightly(
                 "CoreAlertFields",
             ),
             None,
-            (Path("MyXSIAMPack/ModelingRules/HarryRule"),),
+            {"MyXSIAMPack/ModelingRules/HarryRule": {"pack": "MyXSIAMPack"}},
             XSIAM_BRANCH_ARGS,
             ("Packs/MyXSIAMPack/ModelingRules/HarryRule/HarryRule_schema.json",),
             (),
@@ -977,7 +977,7 @@ def test_nightly(
                 "CoreAlertFields",
             ),
             None,
-            (Path("MyXSIAMPack/ModelingRules/HarryRule"),),
+            {"MyXSIAMPack/ModelingRules/HarryRule": {"pack": "MyXSIAMPack"}},
             XSIAM_BRANCH_ARGS,
             ("Packs/MyXSIAMPack/ModelingRules/HarryRule/HarryRule.xif",),
             (),
@@ -993,7 +993,7 @@ def test_nightly(
                 "CoreAlertFields",
             ),
             None,
-            (Path("MyXSIAMPack/ModelingRules/HarryRule"),),
+            {"MyXSIAMPack/ModelingRules/HarryRule": {"pack": "MyXSIAMPack"}},
             XSIAM_BRANCH_ARGS,
             ("Packs/MyXSIAMPack/ModelingRules/HarryRule/HarryRule_testdata.json",),
             (),
@@ -1238,7 +1238,7 @@ def test_nightly(
             (),
             ("MyXSIAMPack", "CoreAlertFields"),
             None,
-            (Path("MyXSIAMPack/ModelingRules/HarryRule"),),
+            {"MyXSIAMPack/ModelingRules/HarryRule": {"pack": "MyXSIAMPack"}},
             XSIAM_BRANCH_ARGS,
             ("Packs/MyXSIAMPack/ModelingRules/HarryRule/HarryRule_testdata.json",),
             (),
@@ -1254,7 +1254,7 @@ def test_branch(
     expected_tests: set[str] | None,
     expected_packs: tuple[str, ...] | None,
     expected_machines: tuple[Machine, ...] | None,
-    expected_modeling_rules_to_test: Iterable[str | Path] | None,
+    expected_modeling_rules_to_test: dict[Path, dict] | None,
     collector_class_args: tuple[str, ...],
     mocked_changed_files: tuple[str, ...],
     mocked_packs_files_were_moved_from: tuple[str, ...],
@@ -1298,7 +1298,7 @@ def test_branch_test_missing_from_conf(mocker, monkeypatch):
     mocker.patch.object(BranchTestCollector, "_sort_packs_to_upload")
 
     with pytest.raises(ValueError) as e:
-        _test(mocker, monkeypatch, MockerCases.M1, BranchTestCollector, (), (), (), (), (), XSOAR_BRANCH_ARGS)
+        _test(mocker, monkeypatch, MockerCases.M1, BranchTestCollector, (), (), (), (), {}, XSOAR_BRANCH_ARGS)
     assert "is (1) missing from conf.json" in str(e.value)  # checking it's the right error
 
 
@@ -1410,7 +1410,7 @@ def test_no_file_type_and_non_content_dir_files_are_ignored(mocker, monkeypatch)
         case_mocker=MockerCases.A_xsoar,
         collector_class=BranchTestCollector,
         expected_tests=(),
-        expected_modeling_rules_to_test=(),
+        expected_modeling_rules_to_test={},
         expected_packs=(),
         expected_packs_to_upload=(),
         expected_machines=None,

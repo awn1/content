@@ -156,3 +156,8 @@ XSOAR_SAAS = "server_type_XSOAR SAAS"
 XSOAR_ON_PREM = "server_type_XSOAR"
 CONF_FILE = "conf.json"
 TPB_DEPENDENCIES_FILE = "tpb_dependencies_packs.json"
+MODELING_RULES_TO_TEST_FILE = "modeling_rules_to_test.json"
+
+# Test types:
+TEST_PLAYBOOKS = "TestPlaybooks"
+TEST_MODELING_RULES = "TestModelingRules"

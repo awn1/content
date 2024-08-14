@@ -242,7 +242,7 @@ validate-content-conf:
     - *check_bypass_url_label
     - |
       if [[ "${BUCKET_UPLOAD}" == "true" || "${IS_NIGHTLY}" == "true" ||
-      -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.txt" ||
+      -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.json" ||
       -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" || "${has_label}" == "true" ]]; then
 
         section_start "Prepare Content Packs for Testing" --collapsed
@@ -391,7 +391,7 @@ xpanse-prepare-testing-bucket:
       cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json" "./artifacts/env_results.json"
       cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" "./artifacts/filter_file.txt"
     - section_end "Copy env results to artifacts folder"
-    - !reference [ .install_packs_by_machines ]
+    - !reference [.install_packs_by_machines]
     - section_start "Avoid running playbooks on nightly" --collapsed
     - |
       if [[ "${IS_NIGHTLY}" == "true" ]]; then
@@ -671,7 +671,7 @@ slack-notify-on-merge:
 
     - section_start "Are there tests to run?" --collapsed
     - |
-      if ! [[ -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.txt" || -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" ]]; then
+      if ! [[ -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.json" || -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" ]]; then
         # The files are empty.
         echo "Not running the instance flow, no tests to run were found."
         ./Tests/scripts/run_tests.sh --generate-empty-result-file
@@ -721,12 +721,17 @@ xsiam_server_ga:
     - !reference [.filter-non-nightly-docker-updates-rule, rules]
     - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
     - if: '$TRIGGER_TEST_BRANCH == "true"'
-    - if: '$IS_NIGHTLY == "true"'
+    - if: '$IS_NIGHTLY == "true" && $SCHEDULED_NIGHTLY == "false"'
       when: always
       variables:
         CLOUD_MACHINES_TYPE: "nightly"
-        CLEAN_MACHINE_NEEDED: "true"
         CLOUD_MACHINES_COUNT: 1
+        GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-nightly"
+    - if: '$IS_NIGHTLY == "true" && $SCHEDULED_NIGHTLY == "true"'  # On scheduled nightly, we want to run the build-effort machines.
+      when: always
+      variables:
+        CLOUD_MACHINES_TYPE: "build-effort"
+        CLOUD_MACHINES_COUNT: 3
         GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-nightly"
   timeout: 12 hours
   variables:

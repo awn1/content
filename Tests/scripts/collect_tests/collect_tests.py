@@ -120,20 +120,20 @@ class CollectionResult:
 
         :param test: test playbook id
         :param modeling_rule_to_test: path to containing directory of a modeling rule that should be marked for
-            testing, e.g. PackName/ModelingRules/MyModelingRule
-        :param pack: pack name to install/upload
-        :param reason: CollectionReason explaining the collection
-        :param version_range: XSOAR6 versions on which the content should be tested, matching the from/toversion fields.
+            testing, e.g. PackName/ModelingRules/MyModelingRule.
+        :param pack: pack name to install/upload.
+        :param reason: CollectionReason explaining the collection.
+        :param version_range: XSOAR6 versions on which the content should be tested, matching the from/to version fields.
         :param reason_description: free text elaborating on the collection, e.g. path of the changed file.
         :param conf: a ConfJson object. It may be None only when reason in VALIDATION_BYPASSING_REASONS.
         :param id_set: an IdSet object. It may be None only when reason in VALIDATION_BYPASSING_REASONS.
         :param is_sanity: whether the test is a sanity test. Sanity tests do not have to be in the id_set.
         :param only_to_install: whether to collect the pack only to install it without upload to the bucket.
-        :param pack_to_reinstall: pack name to collect for reinstall test modeling rules
+        :param pack_to_reinstall: pack name to collect for reinstall test modeling rules.
         """
         self.tests: set[str] = set()
         self.tpb_dependencies_packs: dict[str, dict[str, list[str]]] = {}
-        self.modeling_rules_to_test: set[str | Path] = set()
+        self.modeling_rules_to_test: dict[str, dict] = {}
         self.packs_to_install: set[str] = set()
         self.packs_to_upload: set[str] = set()
         self.packs_to_update_metadata: set[str] = set()
@@ -183,8 +183,8 @@ class CollectionResult:
                 logger.info(f"collected {pack=} to upload, {reason} ({reason_description}, {version_range=})")
 
         if modeling_rule_to_test:
-            self.modeling_rules_to_test = {modeling_rule_to_test}
             self.packs_to_install = {pack} if pack else set()
+            self.modeling_rules_to_test[modeling_rule_to_test.as_posix()] = {"pack": pack}
             logger.info(f"collected {modeling_rule_to_test=}, {reason} ({reason_description}, {version_range=})")
 
         if pack_to_reinstall:
@@ -406,7 +406,7 @@ class TestCollector(ABC):
         """
         Collects and returns the dependencies required for the specified test IDs.
         Args:
-            test_ids (Iterable[str]): A collection of test IDs to collect dependencies for.
+            test_ids (Iterable[str]): A collection of test IDs.
 
         Returns:
             CollectionResult | None: A CollectionResult object containing the collected dependencies
@@ -700,7 +700,7 @@ class TestCollector(ABC):
         content_item_range: VersionRange | None = None,
         reason: CollectionReason | None = None,
     ) -> CollectionResult:
-        """Create a CollectionResult for a pack because of an xsiam component.
+        """Create a CollectionResult for a pack because of an XSIAM component.
 
         Marks the pack being collected and the modeling rule that needs to be tested
 
@@ -1099,7 +1099,7 @@ class BranchTestCollector(TestCollector):
                 content_item_range=content_item_range,
             )
 
-        # if the file is an xsiam component and is not a modeling rule
+        # if the file is an XSIAM component and is not a modeling rule
         return self._collect_pack_for_xsiam_component(
             pack_id=pack_id, reason_description=reason_description, changed_file_path=path, content_item_range=content_item_range
         )
@@ -1549,29 +1549,23 @@ def output(result: CollectionResult | None):
     packs_to_install = sorted(result.packs_to_install, key=lambda x: x.lower()) if result else ()
     packs_to_upload = sorted(result.packs_to_upload, key=lambda x: x.lower()) if result else []
     packs_to_update_metadata = sorted(result.packs_to_update_metadata, key=lambda x: x.lower()) if result else []
-    modeling_rules_to_test = (
-        sorted(result.modeling_rules_to_test, key=lambda x: x.casefold() if isinstance(x, str) else x.as_posix().casefold())
-        if result
-        else ()
-    )
-    modeling_rules_to_test = [x.as_posix() if isinstance(x, Path) else str(x) for x in modeling_rules_to_test]
+    modeling_rules_to_test = result.modeling_rules_to_test if result else {}
     machines = result.machines if result and result.machines else ()
     packs_to_reinstall_test = sorted(result.packs_to_reinstall, key=lambda x: x.lower()) if result else ()
 
     test_str = "\n".join(tests)
-    tpb_dependencies_packs_str = json.dumps(tpb_dependencies_packs) if tpb_dependencies_packs else ""
     packs_to_install_str = "\n".join(packs_to_install)
     packs_to_upload_str = "\n".join(packs_to_upload)
     packs_to_update_metadata_str = "\n".join(packs_to_update_metadata)
-    modeling_rules_to_test_str = "\n".join(modeling_rules_to_test)
     machine_str = ", ".join(sorted(map(str, machines)))
     packs_to_reinstall_test_str = "\n".join(packs_to_reinstall_test)
+    tpb_dependencies_packs_str = json.dumps(tpb_dependencies_packs) if tpb_dependencies_packs else ""
 
     logger.info(f"collected {len(tests)} test playbooks:\n{test_str}")
     logger.info(f"collected {len(packs_to_install)} packs to install:\n{packs_to_install_str}")
     logger.info(f"collected {len(packs_to_upload)} packs to upload:\n{packs_to_upload_str}")
     logger.info(f"collected {len(packs_to_update_metadata)} packs to update:\n{packs_to_update_metadata_str}")
-    logger.info(f"collected {len(modeling_rules_to_test)} modeling rules to test:\n{modeling_rules_to_test_str}")
+    logger.info(f"collected {len(modeling_rules_to_test)} modeling rules to test:\n{modeling_rules_to_test.keys()}")
     logger.info(f"collected {len(machines)} XSOAR6 machines: {machine_str}")
     logger.info(f"collected {len(packs_to_reinstall_test)} packs to reinstall to test:\n{packs_to_reinstall_test_str}")
 
@@ -1580,10 +1574,11 @@ def output(result: CollectionResult | None):
     PATHS.output_packs_to_upload_file.write_text(
         json.dumps({"packs_to_upload": packs_to_upload, "packs_to_update_metadata": packs_to_update_metadata})
     )
-    PATHS.output_modeling_rules_to_test_file.write_text(modeling_rules_to_test_str)
+    if modeling_rules_to_test:
+        # Don't write modeling rules to test if there are none.
+        PATHS.output_modeling_rules_to_test_file.write_text(json.dumps(modeling_rules_to_test))
     PATHS.output_machines_file.write_text(json.dumps({str(machine): (machine in machines) for machine in Machine}))
     PATHS.output_packs_to_reinstall_test_file.write_text(packs_to_reinstall_test_str)
-
     PATHS.output_tpb_dependencies_packs.write_text(tpb_dependencies_packs_str)
 
 

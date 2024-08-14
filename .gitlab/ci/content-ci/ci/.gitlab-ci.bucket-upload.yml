@@ -392,7 +392,7 @@ xpanse-prepare-testing-bucket-upload-flow:
     - section_start "Wait Until Server Ready"
     - python3 ./Tests/scripts/wait_until_server_ready.py  -n ${IS_NIGHTLY} --instance-role "${INSTANCE_ROLE}" || EXIT_CODE=$?
     - section_end "Wait Until Server Ready"
-    - !reference [ .install_packs_by_machines ]
+    - !reference [.install_packs_by_machines]
     - section_start "Create Build_Pass file"
     - |
       if [ "${EXIT_CODE}" -eq 0 ]; then
@@ -464,7 +464,7 @@ install-packs-in-server-master:
     - echo INSTANCE_CREATED="$INSTANCE_CREATED"
     - section_end "Get Instance Variables"
 
-    - !reference [ .install_packs_by_machines ]
+    - !reference [.install_packs_by_machines]
 
     - job-done
     - exit "$EXIT_CODE"

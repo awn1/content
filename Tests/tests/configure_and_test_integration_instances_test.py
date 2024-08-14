@@ -61,7 +61,7 @@ def create_build_object_with_mock(mocker, server_type):
         "--marketplace_name",
         "marketplacev2",
         "--machine_assignment",
-        "$ARTIFACTS_FOLDER_SERVER_TYPE/packs_to_install_by_machine.json",
+        "$ARTIFACTS_FOLDER_SERVER_TYPE/machine_assignment.json",
     ]
     options = options_handler(args=args)
     json_data = [{"tests": [], "skipped_integrations": [], "unmockable_integrations": []}]
@@ -260,7 +260,7 @@ def test_get_packs_with_higher_min_version(mocker, pack_version, expected_result
     mocker.patch("Tests.Marketplace.common.get_json_file", return_value={"serverMinVersion": "6.6.0"})
     server = Server()
     server.pack_ids_to_install = ["TestPack"]
-    server.server_numeric_version = pack_version
+    server._server_numeric_version = pack_version
 
     packs_with_higher_min_version = get_packs_with_higher_min_version(server.pack_ids_to_install, server.server_numeric_version)
     assert packs_with_higher_min_version == expected_results

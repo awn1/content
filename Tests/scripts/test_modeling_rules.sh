@@ -7,6 +7,11 @@ function exit_on_error {
     fi
 }
 
+if [[ "${SERVER_TYPE}" != "XSIAM" ]]; then
+  echo "This script is only supported for XSIAM server type"
+  exit 0
+fi
+
 MODELING_RULES_RESULTS_FILE_NAME="${ARTIFACTS_FOLDER_INSTANCE}/test_modeling_rules_report.xml"
 
 function write_empty_test_results_file() {
@@ -32,85 +37,50 @@ if [[ "${generate_empty_results_file,,}" == "true" ]]; then
   exit 0
 fi
 
-if [[ ! -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.txt" ]]; then
+if [[ ! -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.json" ]]; then
   echo "No modeling rules were marked for testing during test collection - writing empty junit file to ${MODELING_RULES_RESULTS_FILE_NAME}"
   write_empty_test_results_file
   exit 0
 fi
 
 echo "Found modeling rules to test, starting test modeling rules"
-
+exit_code=0
 CURRENT_DIR=$(pwd)
 echo "CURRENT_DIR: ${CURRENT_DIR}"
 echo "IS_NIGHTLY: ${IS_NIGHTLY}"
-
-MODELING_RULES_ARRAY=($(cat "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.txt"))
-
-echo "MODELING_RULES_ARRAY size:${#MODELING_RULES_ARRAY[@]}"
-count=0
-for modeling_rule in "${MODELING_RULES_ARRAY[@]}"; do
-  MODELING_RULE_TEST_FILE_PATTERN="${CURRENT_DIR}/Packs/${modeling_rule}/*_testdata.json"
-  # If it is nightly, run `test modeling rules` only on modeling rules that have `_testdata.json` file.
-  # globbing is needed here, don't quote the variable.
-  # shellcheck disable=SC2086
-  if [ "${IS_NIGHTLY}" == "false" ] || [ -e ${MODELING_RULE_TEST_FILE_PATTERN} ]; then
-    count=$((count+1))
-    if [[ -n "${MODELING_RULES_TO_TEST}" ]]; then
-        MODELING_RULES_TO_TEST="${MODELING_RULES_TO_TEST} Packs/${modeling_rule}"
-    else
-        MODELING_RULES_TO_TEST="Packs/${modeling_rule}"
-    fi
-  fi
-done
-
-echo "Found ${count} modeling rules to test out of ${#MODELING_RULES_ARRAY[@]} modeling rules"
-
-if [[ -z "${MODELING_RULES_TO_TEST}" ]]; then
-    exit_on_error 1 "There was a problem reading the list of modeling rules that require testing from '${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.txt'"
+if [ -n "${CLOUD_SERVERS_FILE}" ]; then
+  CLOUD_SERVERS_PATH=$(cat "${CLOUD_SERVERS_FILE}")
+  echo "CLOUD_SERVERS_PATH is set to: ${CLOUD_SERVERS_PATH}"
 fi
 
 if [ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]; then
 
-XSIAM_SERVERS_PATH=$(cat "${CI_PROJECT_DIR}/xsiam_servers_path")
+  echo "Getting cloud machine details for: ${CLOUD_CHOSEN_MACHINE_IDS}"
+  python Tests/scripts/get_cloud_machines_details.py --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" > "cloud_machines_details.json"
+  exit_on_error $? "Failed to get cloud machine details"
+  echo "Saved cloud machine details for: ${CLOUD_CHOSEN_MACHINE_IDS} under 'cloud_machines_details.json'"
+
   echo "Testing Modeling Rules - Results will be saved to ${MODELING_RULES_RESULTS_FILE_NAME}"
 
-  IFS=', ' read -r -a CLOUD_CHOSEN_MACHINE_ID_ARRAY <<< "${CLOUD_CHOSEN_MACHINE_IDS}"
-  exit_code=0
-  for CLOUD_CHOSEN_MACHINE_ID in "${CLOUD_CHOSEN_MACHINE_ID_ARRAY[@]}"; do
-
-    # Get XSIAM Tenant Config Details
-    XSIAM_SERVER_CONFIG=$(jq -r ".[\"${CLOUD_CHOSEN_MACHINE_ID}\"]" < "${XSIAM_SERVERS_PATH}")
-    XSIAM_MACHINE_DETAILS=$(python Tests/scripts/get_cloud_machines_details.py --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_ID}" | jq -r ".[\"${CLOUD_CHOSEN_MACHINE_ID}\"]")
-
-    XSIAM_URL=$(echo "${XSIAM_SERVER_CONFIG}" | jq -r ".[\"base_url\"]")
-    AUTH_ID=$(echo "${XSIAM_MACHINE_DETAILS}" | jq -r ".[\"x-xdr-auth-id\"]")
-    API_KEY=$(echo "${XSIAM_MACHINE_DETAILS}" | jq -r ".[\"api-key\"]")
-    XSIAM_TOKEN=$(echo "${XSIAM_MACHINE_DETAILS}" | jq -r ".[\"token\"]")
-
-    # shellcheck disable=SC2086
-    demisto-sdk modeling-rules test --xsiam-url="${XSIAM_URL}" --auth-id="${AUTH_ID}" --api-key="${API_KEY}" \
-      --xsiam-token="${XSIAM_TOKEN}" --non-interactive --junit-path="${MODELING_RULES_RESULTS_FILE_NAME}" \
-      ${MODELING_RULES_TO_TEST}
-    command_exit_code=$?
-    if [ "${command_exit_code}" -ne 0 ]; then
-      echo "Failed testing Modeling Rules on machine ${CLOUD_CHOSEN_MACHINE_ID} with exit code:${command_exit_code}"
-      exit_code=1
-    fi
-  done
-  if [ "${exit_code}" -eq 0 ]; then
-    echo "Successfully tested Modeling Rules on all chosen machines"
-  else
-    echo "Failed testing Modeling Rules on at least one of the chosen machines"
-  fi
+  demisto-sdk modeling-rules test --non-interactive \
+    --junit-path="${MODELING_RULES_RESULTS_FILE_NAME}" \
+    --service_account "${GCS_ARTIFACTS_KEY}" \
+    --cloud_servers_path "${CLOUD_SERVERS_PATH}" \
+    --cloud_servers_api_keys "cloud_machines_details.json" \
+    --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
+    --branch_name "${CI_COMMIT_BRANCH}" \
+    --build_number "${CI_PIPELINE_ID}" \
+    --artifacts_bucket "${GCS_ARTIFACTS_BUCKET}" \
+    --nightly "${IS_NIGHTLY}"
+  exit_code=$?
 
   if [ -n "${FAIL_ON_ERROR}" ]; then
     if [ "${exit_code}" -eq 0 ]; then
-      echo "Finish running test modeling rules, exiting with code 0"
-      exit 0
+      echo "Finish running test modeling rules without errors on instance role: ${INSTANCE_ROLE}, server type:${SERVER_TYPE} - exiting with code ${exit_code}"
     else
-      echo "Finish running test modeling rules with errors on instance role: ${INSTANCE_ROLE}, server type:${SERVER_TYPE} - exiting with code 1"
-      exit 1
+      echo "Finish running test modeling rules with errors on instance role: ${INSTANCE_ROLE}, server type:${SERVER_TYPE} - exiting with code ${exit_code}"
     fi
+    exit "${exit_code}"
   else
     echo "Finish running test modeling rules, error handling will be done on the results job, exiting with code 0"
     exit 0
