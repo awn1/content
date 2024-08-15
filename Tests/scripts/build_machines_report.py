@@ -61,14 +61,6 @@ BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT = {XsiamClient.PLATFORM_TYPE: ["build", "
 COMMENT_FIELD_NAME = "__comment__"
 RECORDS_FILE_NAME = "records.json"
 WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME = "wait_in_line_slack_messages.json"
-SERVER_TYPE_TO_CLIENT_TYPE: dict[str, type[XsoarClient]] = {
-    XsoarClient.SERVER_TYPE: XsiamClient,
-    XsiamClient.SERVER_TYPE: XsiamClient,
-}
-PRODUCT_TYPE_TO_SERVER_TYPE: dict[str, str] = {
-    XsoarClient.PRODUCT_TYPE: XsoarClient.SERVER_TYPE,
-    XsiamClient.PRODUCT_TYPE: XsiamClient.SERVER_TYPE,
-}
 
 
 def create_column(
@@ -159,7 +151,20 @@ def create_report_html(
 
 def options_handler() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Script to generate a report for the build machines.")
-    parser.add_argument("--cloud_servers_path", help="Path to secret cloud server metadata file.")
+    parser.add_argument(
+        "--xsiam-json",
+        type=str,
+        action="store",
+        required=True,
+        help="Tenant json for xsiam tenants",
+    )
+    parser.add_argument(
+        "--xsoar-ng-json",
+        type=str,
+        action="store",
+        required=True,
+        help="Tenant files for xsoar-ng tenants",
+    )
     parser.add_argument("-o", "--output-path", required=True, help="The path to save the report to.")
     parser.add_argument("-n", "--name-mapping_path", help="Path to name mapping file.", required=False)
     parser.add_argument(
@@ -338,23 +343,22 @@ def generate_cell_dict_key(record: dict, key: str, default_value: Any = NOT_AVAI
 
 
 def generate_records(
-    cloud_servers_path_json: dict,
+    configuration_file_json_records: dict,
     xsoar_admin_user: XSOARAdminUser,
+    client_type: type[XsoarClient],
     tenants: dict,
     without_viso: bool,
     current_date: datetime,
 ) -> list[dict]:
     records = []
     lcaas_ids = set()
-    client_type: type[XsoarClient]
-    for key, value in cloud_servers_path_json.items():
+    for key, value in configuration_file_json_records.items():
         if key == COMMENT_FIELD_NAME:
             logging.debug("Skipping comment field.")
             continue
         logging.info(f"Processing machine: {key}")
         # ui_url is in the format of https://<host>/ we need just the host.
         host = value.get("ui_url").replace("https://", "").replace("/", "")
-        client_type = SERVER_TYPE_TO_CLIENT_TYPE[value["server_type"]]
         record = {
             "host": generate_cell(generate_html_link(host, value.get("ui_url")), value.get("ui_url")),
             "ui_url": generate_cell_dict_key(value, "ui_url"),
@@ -398,8 +402,8 @@ def generate_records(
 
     # Going over machines which aren't listed within the infra configuration files.
     for tenant in tenants.values():
-        server_type = PRODUCT_TYPE_TO_SERVER_TYPE[tenant["product_type"]]
-        client_type = SERVER_TYPE_TO_CLIENT_TYPE[server_type]
+        if tenant["product_type"] != client_type.PRODUCT_TYPE:
+            continue
         if tenant["lcaas_id"] not in lcaas_ids:
             logging.info(f"Processing tenant: {tenant['lcaas_id']}")
             host_url = tenant.get("fqdn")
@@ -590,25 +594,20 @@ def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], l
             }
         )
     if build_machines_requiring_an_agent:
-        build_machines_requiring_an_agent_count = 0
-        fields = []
-        for key, value in build_machines_requiring_an_agent.items():
-            fields.append(
-                {
-                    "title": f"Flow Type - {key}",
-                    "value": ", ".join(value),
-                    "short": True,
-                }
-            )
-            build_machines_requiring_an_agent_count += len(value)
-
-        title = f"Build Machines - Requiring an Agent:{build_machines_requiring_an_agent_count}"
+        title = f"Build Machines - Requiring an Agent:{len(build_machines_requiring_an_agent)}"
         slack_msg_append.append(
             {
                 "color": "danger",
                 "title": title,
                 "fallback": title,
-                "fields": fields,
+                "fields": [
+                    {
+                        "title": f"Flow Type - {key}",
+                        "value": ", ".join(value),
+                        "short": True,
+                    }
+                    for key, value in build_machines_requiring_an_agent.items()
+                ],
             }
         )
     if tokens_count is not None:
@@ -696,8 +695,25 @@ def main() -> None:
             wait_in_line_slack_messages = load_json_file((test_data_path / WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME).as_posix())  # type: ignore[assignment]
         else:
             admin_user = Settings.xsoar_admin_user
-            cloud_servers_path_json: dict = load_json_file(args.cloud_servers_path)  # type: ignore[assignment]
-            records = generate_records(cloud_servers_path_json, admin_user, tenants, args.without_viso, current_date)
+            xsiam_json: dict = load_json_file(args.xsiam_json)  # type: ignore[assignment]
+            xsoar_ng_json: dict = load_json_file(args.xsoar_ng_json)  # type: ignore[assignment]
+            records_xsoar_ng = generate_records(
+                xsoar_ng_json,
+                admin_user,
+                XsoarClient,
+                tenants,
+                args.without_viso,
+                current_date,
+            )
+            records_xsiam = generate_records(
+                xsiam_json,
+                admin_user,
+                XsiamClient,
+                tenants,
+                args.without_viso,
+                current_date,
+            )
+            records = records_xsoar_ng + records_xsiam
             # Save the records to a json file for future use and debugging.
             with open(output_path / RECORDS_FILE_NAME, "w") as f:
                 json.dump(records, f, indent=4, default=str, sort_keys=True)

@@ -500,7 +500,6 @@ class XsoarClient(XsoarOnPremClient):
     CSRF_TOKEN_NAME = "csrf_token"
     PLATFORM_TYPE = "xsoar-ng"
     PRODUCT_TYPE = "XSOAR"
-    SERVER_TYPE = "XSOAR SAAS"
 
     def __init__(
         self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, project_id: str, cache: Cache | None = None
@@ -1127,7 +1126,6 @@ class OppClient(XsoarClient):
 class XsiamClient(XsoarClient):
     PLATFORM_TYPE = "xsiam"
     PRODUCT_TYPE = "XSIAM"
-    SERVER_TYPE = "XSIAM"
 
     def __init__(
         self, xsoar_host: str, xsoar_user: str, xsoar_pass: str, tenant_name: str, project_id: str, cache: Cache | None = None

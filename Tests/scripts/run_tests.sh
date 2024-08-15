@@ -28,6 +28,10 @@ if [[ "${generate_empty_results_file,,}" == "true" ]]; then
 fi
 
 SECRET_CONF_PATH=$(cat secret_conf_path)
+if [ -n "${CLOUD_SERVERS_FILE}" ]; then
+  CLOUD_SERVERS_PATH=$(cat "${CLOUD_SERVERS_FILE}")
+  echo "CLOUD_SERVERS_PATH is set to: ${CLOUD_SERVERS_PATH}"
+fi
 
 echo "Getting cloud machine details for: ${CLOUD_CHOSEN_MACHINE_IDS}"
 python Tests/scripts/get_cloud_machines_details.py --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" > "cloud_machines_details.json"
@@ -48,7 +52,7 @@ if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; 
   if [ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]; then
     demisto-sdk test-content -k "$DEMISTO_API_KEY" -c "$CONF_PATH" -e "$SECRET_CONF_PATH" -n "${IS_NIGHTLY}" -t "$SLACK_TOKEN" \
         -b "${CI_PIPELINE_ID}" -g "$CI_COMMIT_BRANCH" -m "${MEM_CHECK}" --is-ami "${IS_AMI_RUN}" -d "${INSTANCE_ROLE}" \
-        --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" --server-type "${SERVER_TYPE}" \
+        --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" --cloud_servers_path "$CLOUD_SERVERS_PATH" --server-type "${SERVER_TYPE}" \
         --use-retries --cloud_servers_api_keys "cloud_machines_details.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" --product-type="${PRODUCT_TYPE}" --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
         --service_account "${GCS_ARTIFACTS_KEY}" --artifacts_bucket "${GCS_ARTIFACTS_BUCKET}"
     command_exit_code=$?
@@ -64,7 +68,7 @@ if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; 
 elif [[ "${SERVER_TYPE}" == "XSOAR" ]]; then
     demisto-sdk test-content -k "$DEMISTO_API_KEY" -c "$CONF_PATH" -e "$SECRET_CONF_PATH" -n "${IS_NIGHTLY}" -t "$SLACK_TOKEN" \
       -b "${CI_PIPELINE_ID}" -g "$CI_COMMIT_BRANCH" -m "${MEM_CHECK}" --is-ami "${IS_AMI_RUN}" -d "${INSTANCE_ROLE}" \
-      --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" --server-type "${SERVER_TYPE}" \
+      --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" --cloud_servers_path "$CLOUD_SERVERS_PATH" --server-type "${SERVER_TYPE}" \
       --use-retries --cloud_servers_api_keys "cloud_machines_details.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" --product-type="${PRODUCT_TYPE}" --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
       --service_account "${GCS_ARTIFACTS_KEY}" --artifacts_bucket "${GCS_ARTIFACTS_BUCKET}"
     exit_code=$?

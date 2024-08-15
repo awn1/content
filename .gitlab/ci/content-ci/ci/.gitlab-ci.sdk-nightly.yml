@@ -403,13 +403,13 @@ demisto-sdk-nightly:run-end-to-end-tests-xsiam:
     - .docker_services
   variables:
       CLOUD_MACHINES_TYPE: "build"
-      CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">0" # don't run the job if there are no machines available.
-      CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">0" # stop waiting on the timeout if we got at least one machine.
-      CLOUD_MACHINES_TIMEOUT: 0  # Wait indefinitely for the machines.
+      CLOUD_MACHINES_COUNT: 1
       INSTANCE_ROLE: "xsiam"
       CLEAN_MACHINE_NEEDED: "true"
       GCS_QUEUE_FILE: "queue-ga"
       GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga"
+      CLOUD_SERVERS_FILE: "xsiam_servers_path"
+      XSIAM_SERVERS_PATH: "xsiam_servers.json"
       ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_MPV2}"
       ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER_MPV2}/instance_${INSTANCE_ROLE}"
       GCS_MARKET_BUCKET: "${GCS_MARKET_V2_BUCKET}"
@@ -467,14 +467,13 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar-saas:
     - .docker_services
   variables:
     CLOUD_MACHINES_TYPE: "build"
-    CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">0" # don't run the job if there are no machines available.
-    CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">0" # stop waiting on the timeout if we got at least one machine.
-    CLOUD_MACHINES_TIMEOUT: 0  # Wait indefinitely for the machines.
+    CLOUD_MACHINES_COUNT: 1
     INSTANCE_ROLE: "xsoar_saas"
     CLEAN_MACHINE_NEEDED: "true"
     SERVER_TYPE: "XSOAR SAAS"
     GCS_QUEUE_FILE: "queue-ga"
     GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng"
+    CLOUD_SERVERS_FILE: "xsoar_ng_servers_path"
     GCS_SOURCE_BUCKET: "${GCS_PRODUCTION_XSOAR_SAAS_BUCKET}"
     ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_XSOAR}"
     ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER}/instance_${INSTANCE_ROLE}"

@@ -27,6 +27,9 @@ if [[ "${generate_empty_results_file,,}" == "true" ]]; then
   exit 0
 fi
 
+
+CLOUD_SERVERS_PATH=$(cat $CLOUD_SERVERS_FILE)
+
 echo "Getting cloud machine details for: ${CLOUD_CHOSEN_MACHINE_IDS}"
 python Tests/scripts/get_cloud_machines_details.py --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" > "cloud_machines_details.json"
 echo "Saved cloud machine details for: ${CLOUD_CHOSEN_MACHINE_IDS} under 'cloud_machines_details.json'"
@@ -46,7 +49,7 @@ if [[ -n "$test_path" ]]; then
     IFS=', ' read -r -a CLOUD_CHOSEN_MACHINE_ID_ARRAY <<< "${CLOUD_CHOSEN_MACHINE_IDS}"
     for CLOUD_CHOSEN_MACHINE_ID in "${CLOUD_CHOSEN_MACHINE_ID_ARRAY[@]}"; do
       echo "Running end-to-end tests on ${CLOUD_CHOSEN_MACHINE_ID} from ${test_path}"
-      python3 -m pytest "${test_path}" -v --cloud_machine "${CLOUD_CHOSEN_MACHINE_ID}" --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" --cloud_servers_api_keys "cloud_machines_details.json" --disable-warnings --junitxml="${ARTIFACTS_FOLDER_INSTANCE}/e2e_tests_result.xml"  --gsm_service_account "$GSM_SERVICE_ACCOUNT" --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" -u "$DEMISTO_USERNAME" -p "$DEMISTO_PASSWORD" --github_token "$GITHUB_TOKEN"
+      python3 -m pytest "${test_path}" -v --cloud_machine "${CLOUD_CHOSEN_MACHINE_ID}" --cloud_servers_path "${CLOUD_SERVERS_PATH}" --cloud_servers_api_keys "cloud_machines_details.json" --disable-warnings --junitxml="${ARTIFACTS_FOLDER_INSTANCE}/e2e_tests_result.xml"  --gsm_service_account "$GSM_SERVICE_ACCOUNT" --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" -u "$DEMISTO_USERNAME" -p "$DEMISTO_PASSWORD" --github_token "$GITHUB_TOKEN"
       # since xsiam e2e is in upload and not in nightly, we want to fail the job if its tests failed
       if [[ "${test_path}" == "./Tests/tests_e2e/content/xsiam" ]] && [[ $? -ne 0 ]]; then
         exit_code=1

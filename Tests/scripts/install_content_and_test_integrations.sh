@@ -17,6 +17,11 @@ if [[ ! -f "$GCS_MARKET_KEY" ]]; then
     exit_on_error 1 "GCS_MARKET_KEY not set aborting pack installation"
 fi
 
+if [ -n "${CLOUD_SERVERS_FILE}" ]; then
+  CLOUD_SERVERS_PATH=$(cat "${CLOUD_SERVERS_FILE}")
+  echo "CLOUD_SERVERS_PATH is set to: ${CLOUD_SERVERS_PATH}"
+fi
+
 CONF_PATH="./Tests/conf.json"
 
 echo "Copying test_pack_*.zip to artifacts folder:${ARTIFACTS_FOLDER}"
@@ -53,7 +58,7 @@ elif [[ "${SERVER_TYPE}" == "XSOAR" ]]; then
       --pack_ids_to_install "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" -g "$GIT_SHA1" --ami_env "${INSTANCE_ROLE}" \
       --branch "$CI_COMMIT_BRANCH" --build_number "$CI_PIPELINE_ID" -sa "$GCS_MARKET_KEY" \
       --server_type "${SERVER_TYPE}" \
-      --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" \
+      --cloud_servers_path "$CLOUD_SERVERS_PATH" \
       --marketplace_name "$MARKETPLACE_NAME" --artifacts_folder "$ARTIFACTS_FOLDER" --marketplace_buckets "$GCS_MACHINES_BUCKET" \
       --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
       --gsm_service_account "$GSM_SERVICE_ACCOUNT" \
