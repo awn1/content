@@ -725,32 +725,25 @@ xsiam_server_ga:
       when: always
       variables:
         CLOUD_MACHINES_TYPE: "nightly"
-        CLEAN_MACHINE_NEEDED: "true"
-        CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">0" # don't run the job if there are no machines available.
-        CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">0" # stop waiting on the timeout if we got at least one machine.
-        CLOUD_MACHINES_TIMEOUT: 0  # Wait indefinitely for the machines.
+        CLOUD_MACHINES_COUNT: 1
         GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-nightly"
     - if: '$IS_NIGHTLY == "true" && $SCHEDULED_NIGHTLY == "true"'  # On scheduled nightly, we want to run the build-effort machines.
       when: always
       variables:
         CLOUD_MACHINES_TYPE: "build-effort"
-        CLEAN_MACHINE_NEEDED: "true"
-        CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">=2" # don't run the job if there are less than 2 machines available.
-        CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">=50%" # stop waiting on the timeout if we got 50% of the machines.
-        CLOUD_MACHINES_TIMEOUT: 1200  # 20 minutes
-        GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-build-effort"
+        CLOUD_MACHINES_COUNT: 3
+        GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-nightly"
   timeout: 12 hours
   variables:
     CLOUD_MACHINES_TYPE: "build"
     CLEAN_MACHINE_NEEDED: "true"
-    CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">0" # don't run the job if there are no machines available.
-    CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">0" # stop waiting on the timeout if we got at least one machine.
-    CLOUD_MACHINES_TIMEOUT: 0  # Wait indefinitely for the machines.
+    CLOUD_MACHINES_COUNT: 1
     INSTANCE_ROLE: "XSIAM"
     SERVER_TYPE: "XSIAM"
     PRODUCT_TYPE: "XSIAM"
     GCS_QUEUE_FILE: "queue-ga"
     GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga"
+    CLOUD_SERVERS_FILE: "xsiam_servers_path"
     ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_MPV2}"
     ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER_MPV2}/instance_xsiam"
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_MPV2}/server_type_${SERVER_TYPE}"
@@ -788,22 +781,19 @@ xsoar_ng_server_ga:
       variables:
         CLOUD_MACHINES_TYPE: "nightly"
         CLEAN_MACHINE_NEEDED: "true"
-        CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">=3" # don't run the job if there are less than 3 machines available.
-        CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">=50%" # stop waiting on the timeout if we got 50% of the machines.
-        CLOUD_MACHINES_TIMEOUT: 1200 # 20 minutes
+        CLOUD_MACHINES_COUNT: 6
         GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng-nightly"
     - if: '$IS_NIGHTLY == "true"'
   variables:
     CLEAN_MACHINE_NEEDED: "true"
     CLOUD_MACHINES_TYPE: "build"
-    CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">0" # don't run the job if there are no machines available.
-    CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">0" # stop waiting on the timeout if we got at least one machine.
-    CLOUD_MACHINES_TIMEOUT: 0  # Wait indefinitely for the machines.
+    CLOUD_MACHINES_COUNT: 1
     INSTANCE_ROLE: "XSOAR SAAS"
     PRODUCT_TYPE: "XSOAR"
     SERVER_TYPE: "XSOAR SAAS"
     GCS_QUEUE_FILE: "queue-ga"
     GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng"
+    CLOUD_SERVERS_FILE: "xsoar_ng_servers_path"
     ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_XSOAR}"
     ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER_XSOAR}/instance_saas"
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_XSOAR}/server_type_${SERVER_TYPE}"

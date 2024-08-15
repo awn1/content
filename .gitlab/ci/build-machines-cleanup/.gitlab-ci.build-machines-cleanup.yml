@@ -44,15 +44,9 @@
   - echo "Authenticating GCP"
   - gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
   - echo "Auth done successfully"
-  - ./Tests/scripts/lock_cloud_machines.sh
-  - |
-    if [ ! -s "${ARTIFACTS_FOLDER}/locked_machines_list.txt" ]; then
-      echo "No machines were locked, exiting..."
-      job-done
-      exit 0
-    fi
-  - export CLOUD_CHOSEN_MACHINE_IDS=$(cat "${ARTIFACTS_FOLDER}/locked_machines_list.txt")
-  - echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}"
+  - ./Tests/scripts/wait_in_line_for_cloud_env.sh "$CLOUD_MACHINES_TYPE"
+  - source CloudEnvVariables
+  - echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}" | tee "${ARTIFACTS_FOLDER}/logs/lock_file.txt"
   - section_end "Lock Machine"
 
 .uninstall-packs-and-reset-bucket-cloud:
@@ -68,11 +62,11 @@
 .unlock-machine:
   - section_start "Unlock Machine" --collapsed
   - |
-    if [[ -f "${ARTIFACTS_FOLDER}/locked_machines_list.txt" ]]; then
-      export CLOUD_CHOSEN_MACHINE_IDS=$(cat "${ARTIFACTS_FOLDER}/locked_machines_list.txt")
+    if [[ -f "CloudEnvVariables" ]]; then
+      source CloudEnvVariables
 
       if [[ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]]; then
-        if [[ -e "${ARTIFACTS_FOLDER}/locked_machines_list.txt" ]]; then
+        if [[ -e "${ARTIFACTS_FOLDER}/logs/lock_file.txt" ]]; then
           echo "Job finished, removing lock file for machine ids:${CLOUD_CHOSEN_MACHINE_IDS}"
           gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
           gsutil rm "gs://xsoar-ci-artifacts/$GCS_LOCKS_PATH/machines_locks/*-lock-$CI_PIPELINE_ID*"
@@ -84,7 +78,7 @@
         echo "No machine ids were chosen, skipping unlocking"
       fi
     else
-      echo "No locked_machines_list.txt file found, skipping unlocking"
+      echo "No CloudEnvVariables file found, skipping unlocking"
     fi
   - section_end "Unlock Machine"
 
@@ -109,8 +103,8 @@ build-machines-cleanup:
           if gsutil -q stat "gs://xsoar-ci-artifacts/$GCS_LOCKS_PATH/machines_locks/*-${LOCK_MACHINE_NAME}-lock-${CI_PIPELINE_ID}" 2>/dev/null; then
             echo "File found in GCS bucket."
             export CLOUD_CHOSEN_MACHINE_IDS=${LOCK_MACHINE_NAME}
-            echo "${LOCK_MACHINE_NAME}" > "${ARTIFACTS_FOLDER}/locked_machines_list.txt"
-            echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}"
+            echo 'export CLOUD_CHOSEN_MACHINE_IDS=${LOCK_MACHINE_NAME}' > CloudEnvVariables
+            echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}" | tee "${ARTIFACTS_FOLDER}/logs/lock_file.txt"
             export FILE_FOUND=true
             break
           else
@@ -136,14 +130,13 @@ build-machines-cleanup:
   timeout: 4 hours
   variables:
     CLOUD_MACHINES_TYPE: $CLOUD_MACHINES_TYPE
-    CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: $CLOUD_MACHINES_COUNT_MINIMUM_CONDITION
-    CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: $CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION
-    CLOUD_MACHINES_TIMEOUT: $CLOUD_MACHINES_TIMEOUT
+    CLOUD_MACHINES_COUNT: $CLOUD_MACHINES_COUNT
     GCS_LOCKS_PATH: $GCS_LOCKS_PATH
     INSTANCE_ROLE: "XSIAM"
     PRODUCT_TYPE: "XSIAM"
     SERVER_TYPE: "XSIAM"
     GCS_QUEUE_FILE: "queue-ga"
+    CLOUD_SERVERS_FILE: $CLOUD_SERVERS_FILE
     ARTIFACTS_FOLDER_MPV2: "${CI_PROJECT_DIR}/artifacts/marketplacev2"
     ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_MPV2}"
     ARTIFACTS_FOLDER_INSTANCE: "${ARTIFACTS_FOLDER_MPV2}/instance_${INSTANCE_ROLE}"

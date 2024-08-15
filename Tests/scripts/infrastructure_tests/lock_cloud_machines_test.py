@@ -119,7 +119,8 @@ def test_get_my_place_in_the_queue(mocker):
             MockResponse("test/queue/1061-queue-1237", "03/04/2000"),
         ],
     )
-    my_place_in_the_queue, previous_build_in_queue = get_my_place_in_the_queue(None, storage, "test", "1235", None)
+
+    my_place_in_the_queue, previous_build_in_queue = get_my_place_in_the_queue(storage, "test", "1235", None)
 
     assert my_place_in_the_queue == 1
     assert previous_build_in_queue == "1061-queue-1237"
@@ -128,14 +129,14 @@ def test_get_my_place_in_the_queue(mocker):
 def test_get_my_place_in_the_queue_exception(mocker):
     """
     given:  The job id.
-    when:   checking the place in the queue, and if it exists in the queue.
+    when:   checking the place in teh queue and its not existing in the queue.
     then:   assert Exception is returned.
     """
     storage = MockResponse()
     mocker.patch.object(storage, "list_blobs", return_value=[MockResponse("test/queue/1234", "08/04/2000")])
     mocker.patch("Tests.scripts.lock_cloud_machines.send_slack_notification")
     with pytest.raises(Exception) as excinfo:
-        get_my_place_in_the_queue(None, storage, "test", "1238", None)
+        get_my_place_in_the_queue(storage, "test", "1238", None)
     assert str(excinfo.value) == "Unable to find the queue lock file, probably a problem creating the file"
 
 
@@ -180,11 +181,9 @@ def test_wait_for_build_to_be_first_in_queue(mocker):
     )
     mock_job_status = mocker.patch("Tests.scripts.lock_cloud_machines.check_job_status", side_effect=["running", "failed"])
     mock_remove_file = mocker.patch("Tests.scripts.lock_cloud_machines.remove_file")
-    mocker.patch("Tests.scripts.lock_cloud_machines.sleep", return_value=None)
-    mocker.patch("Tests.scripts.lock_cloud_machines.send_slack_notification")
 
     storage = MockResponse()
-    wait_for_build_to_be_first_in_queue(None, storage, storage, "test", "1234", "12345")
+    wait_for_build_to_be_first_in_queue(storage, storage, "test", "1234", "12345")
     assert mock_my_place.call_count == 3
     assert mock_job_status.call_count == 2
     assert mock_remove_file.call_count == 1
@@ -192,7 +191,7 @@ def test_wait_for_build_to_be_first_in_queue(mocker):
 
 def test_get_and_lock_all_needed_machines(mocker):
     """
-    given:  the 2 available machines, machines_count_minimum_condition >=2 and the job id.
+    given:  the 2 available machines, number_machines_to_lock = 2 and the job id.
     when:   the first loop of the machines the machine1 will be busy and the machine2 will be available to lock.
             then the busy_machines will be [machine1] and the function sleep for 60 seconds.
             the second loop of the machines the machine1 will be available to lock.
@@ -204,9 +203,8 @@ def test_get_and_lock_all_needed_machines(mocker):
     mock_try_to_lock_machine = mocker.patch(
         "Tests.scripts.lock_cloud_machines.try_to_lock_machine", side_effect=["", "machine2", "machine1"]
     )
-    mocker.patch("Tests.scripts.lock_cloud_machines.sleep", return_value=None)
     lock_machine_list = get_and_lock_all_needed_machines(
-        storage, storage, ["machine1", "machine2"], "gcs_locks_path", "job_id", "gitlab_status_token", float("inf"), ">=2", ">=2"
+        storage, storage, ["machine1", "machine2"], "gcs_locks_path", 2, "job_id", "gitlab_status_token"
     )
     assert mock_try_to_lock_machine.call_count == 3
     assert lock_machine_list == ["machine2", "machine1"]

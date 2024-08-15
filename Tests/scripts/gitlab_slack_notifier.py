@@ -3,6 +3,7 @@ import contextlib
 import json
 import logging
 import os
+import re
 import sys
 import tempfile
 import zipfile
@@ -61,7 +62,6 @@ ARTIFACTS_FOLDER_XSOAR_SERVER_TYPE = ARTIFACTS_FOLDER_XSOAR / "server_type_XSOAR
 ARTIFACTS_FOLDER_XSOAR_SAAS_SERVER_TYPE = ARTIFACTS_FOLDER_XSOAR / "server_type_XSOAR SAAS"
 ARTIFACTS_FOLDER_XPANSE_SERVER_TYPE = ARTIFACTS_FOLDER_XPANSE / "server_type_XPANSE"
 ARTIFACTS_FOLDER_XSIAM_SERVER_TYPE = ARTIFACTS_FOLDER_XSIAM / "server_type_XSIAM"
-LOCKED_MACHINES_LIST_FILE_NAME = "locked_machines_list.txt"
 GITLAB_SERVER_URL = os.getenv("CI_SERVER_URL", "https://gitlab.xdr.pan.local")  # disable-secrets-detection
 GITLAB_PROJECT_ID = os.getenv("CI_PROJECT_ID") or 1061
 GITLAB_SSL_VERIFY = bool(strtobool(os.getenv("GITLAB_SSL_VERIFY", "true")))
@@ -83,7 +83,9 @@ UPLOAD_BUCKETS = [
     (ARTIFACTS_FOLDER_XSIAM_SERVER_TYPE, "XSIAM"),
     (ARTIFACTS_FOLDER_XPANSE_SERVER_TYPE, "XPANSE"),
 ]
+REGEX_EXTRACT_MACHINE = re.compile(r"qa2-test-\d+")
 TEST_UPLOAD_FLOW_PIPELINE_ID = "test_upload_flow_pipeline_id.txt"
+# FIXME
 SLACK_MESSAGE = "slack_message.json"
 SLACK_MESSAGE_THREADS = "slack_message_threads.json"
 SLACK_MESSAGE_CHANNEL_TO_THREAD = "slack_message_channel_to_thread.json"
@@ -159,31 +161,27 @@ def get_msg_machines(failed_jobs: dict, job_cause_fail: set[str], job_cause_warn
 
 
 def machines_saas_and_xsiam(failed_jobs):
-    lock_xsoar_machine_raw_txt = split_results_file(
-        get_artifact_data(ARTIFACTS_FOLDER_XSOAR, LOCKED_MACHINES_LIST_FILE_NAME), ","
-    )
-    lock_xsiam_machine_raw_txt = split_results_file(
-        get_artifact_data(ARTIFACTS_FOLDER_XSIAM, LOCKED_MACHINES_LIST_FILE_NAME), ","
-    )
+    lock_xsoar_machine_raw_txt = get_artifact_data(ARTIFACTS_FOLDER_XSOAR / "logs", "lock_file.txt")
+    lock_xsiam_machine_raw_txt = get_artifact_data(ARTIFACTS_FOLDER_XSIAM / "logs", "lock_file.txt")
     machines = []
 
-    if lock_xsoar_machine_raw_txt:
+    if lock_xsoar_machine_raw_txt and (xsoar_machine := REGEX_EXTRACT_MACHINE.findall(lock_xsoar_machine_raw_txt)):
         machines.extend(
             get_msg_machines(
                 failed_jobs,
                 {"xsoar_ng_server_ga"},
                 {"xsoar-test_playbooks_results"},
-                f"XSOAR SAAS:\n{','.join(lock_xsoar_machine_raw_txt)}",
+                f"XSOAR SAAS:\n{','.join(xsoar_machine)}",
             )
         )
 
-    if lock_xsiam_machine_raw_txt:
+    if lock_xsiam_machine_raw_txt and (xsiam_machine := REGEX_EXTRACT_MACHINE.findall(lock_xsiam_machine_raw_txt)):
         machines.extend(
             get_msg_machines(
                 failed_jobs,
                 {"xsiam_server_ga", "install-packs-in-xsiam-ga", "install-packs-in-xsoar-ng-ga"},
                 {"xsiam-test_playbooks_results", "xsiam-test_modeling_rule_results"},
-                f"XSIAM:\n{','.join(lock_xsiam_machine_raw_txt)}",
+                f"XSIAM:\n{','.join(xsiam_machine)}",
             )
         )
 
@@ -348,8 +346,8 @@ def test_playbooks_results_to_slack_msg(
     ], False
 
 
-def split_results_file(tests_data: str | None, delim: str = "\n") -> list[str]:
-    return list(filter(None, tests_data.split(delim))) if tests_data else []
+def split_results_file(tests_data: str | None) -> list[str]:
+    return list(filter(None, tests_data.split("\n"))) if tests_data else []
 
 
 def get_playbook_tests_data(artifact_folder: Path) -> tuple[set[str], set[str], set[str], set[str]]:

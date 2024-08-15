@@ -1,8 +1,6 @@
 import argparse
 import random
-import sys
 import time
-from collections.abc import Iterable
 from datetime import datetime
 from time import sleep
 from typing import Any
@@ -11,8 +9,6 @@ import requests
 from google.cloud import storage  # type: ignore[attr-defined]
 from slack_sdk import WebClient as SlackWebClient
 
-from Tests.Marketplace.common import get_json_file
-from Tests.scripts.common import evaluate_condition
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 from Utils.github_workflow_scripts.utils import get_env_var
@@ -24,25 +20,23 @@ MACHINES_LOCKS_REPO = "machines_locks"
 JOB_STATUS_URL = "{}/api/v4/projects/{}/jobs/{}"  # disable-secrets-detection
 PIPELINE_STATUS_URL = "{}/api/v4/projects/{}/pipelines/{}"  # disable-secrets-detection
 GITLAB_PROJECT_ID = get_env_var("CI_PROJECT_ID", "1061")  # default is Content
-COMMENT_FIELD_NAME = "__comment__"
-SLACK_TOKEN = get_env_var("SLACK_TOKEN", "")
-SLACK_CHANNEL = get_env_var("WAIT_SLACK_CHANNEL", "dmst-wait-in-line")
 
 
-def send_slack_notification(slack_client: SlackWebClient, text_list: list[str]):
+def send_slack_notification(text: list[str]):
     """
     Sends a Slack notification with a list of items.
 
     Args:
-        slack_client(SlackWebClient): The Slack client.
-        text_list (List[str]): A list of items to be included in the Slack notification.
+        text (List[str]): A list of items to be included in the Slack notification.
 
     """
-    try:
-        text: str = "\n".join(text_list)
-        slack_client.chat_postMessage(channel=SLACK_CHANNEL, text=text)
-    except Exception as e:
-        logging.info(f"Failed to send Slack notification. Reason: {e!s}")
+
+    slack_token = get_env_var("SLACK_TOKEN")
+    slack_channel = get_env_var("WAIT_SLACK_CHANNEL", "dmst-wait-in-line")
+
+    text = "\n".join(text)
+    client = SlackWebClient(token=slack_token)
+    client.chat_postMessage(channel=slack_channel, text=text)
 
 
 def options_handler() -> argparse.Namespace:
@@ -55,20 +49,15 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument("--gcs_locks_path", help="Path to lock repo.")
     parser.add_argument("--ci_job_id", help="the job id.")
     parser.add_argument("--ci_pipeline_id", help="the pipeline id.")
-    parser.add_argument("--cloud_servers_path", help="Path to secret cloud server metadata file.")
-    parser.add_argument("--flow_type", help="The flow type.")
-    parser.add_argument("--server_type", help="The server type.")
+    parser.add_argument(
+        "--test_machines",
+        help="comma separated string contains all available machines.",
+    )
     parser.add_argument("--gitlab_status_token", help="gitlab token to get the job status.")
     parser.add_argument("--response_machine", help="file to update the chosen machine.")
     parser.add_argument("--lock_machine_name", help="a machine name to lock the specific machine")
-    parser.add_argument("--lock_timeout", help="the lock timeout, set to 0 to disable the lock timeout.")
-    parser.add_argument(
-        "--machines-count-minimum-condition",
-        help="The minimum condition to locked machines count to allow the build to properly operate.",
-    )
-    parser.add_argument(
-        "--machines-count-timeout-condition", help="The condition to keep searching for machines until the timeout is reached."
-    )
+    parser.add_argument("--number_machines_to_lock", help="the needed machines number.", type=int)
+
     options = parser.parse_args()
     return options
 
@@ -153,7 +142,6 @@ def check_job_status(
     get the status of a job in gitlab.
 
     Args:
-        project_id(str): the project id.
         token(str): the gitlab token.
         job_id(str): the job id to check.
         num_of_retries (int): num of retries to establish a connection to gitlab in case of a connection error.
@@ -230,7 +218,6 @@ def adding_build_to_the_queue(storage_bucket: Any, lock_repository_name: str, jo
 
 
 def get_my_place_in_the_queue(
-    slack_client: SlackWebClient,
     storage_client: storage.Client,
     gcs_locks_path: str,
     job_id: str,
@@ -239,7 +226,6 @@ def get_my_place_in_the_queue(
     """
     get the place in the queue for job-id by the time-created of lock-file time-created.
     Args:
-        slack_client(SlackWebClient): The Slack client.
         storage_client(storage.Client): The GCP storage client.
         gcs_locks_path(str): the lock repository name.
         job_id(str): the job id to check.
@@ -270,13 +256,12 @@ def get_my_place_in_the_queue(
     try:
         if my_place_in_the_queue != my_prev_place:
             send_slack_notification(
-                slack_client,
                 [
                     f"{gcs_locks_path}",
                     f"{datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')}",
                     f"Job ID: {job_id}",
                     f"{len(builds_in_queue)}",
-                ],
+                ]
             )
     except Exception as e:
         logging.info(f"Failed to send Slack notification. Reason: {e!s}")
@@ -357,11 +342,9 @@ def get_and_lock_all_needed_machines(
     storage_bucket: storage.bucket.Bucket,
     list_machines: list[str],
     gcs_locks_path: str,
+    number_machines_to_lock: int,
     job_id: str,
     gitlab_status_token: str,
-    lock_timeout: float,
-    machines_count_timeout_condition: str,
-    machines_count_minimum_condition: str,
     sleep_interval: int = 60,
 ):
     """
@@ -373,22 +356,18 @@ def get_and_lock_all_needed_machines(
         storage_bucket(google.cloud.storage.bucket.Bucket): google storage bucket where lock machine is stored.
         list_machines (list): all the exiting machines.
         gcs_locks_path(str): the lock repository name.
+        number_machines_to_lock(int): the number of the requested machines.
         job_id(str): the job id to lock.
         gitlab_status_token(str): the gitlab token.
-        lock_timeout(float): the lock timeout, set to 0 to disable the lock timeout.
-        machines_count_minimum_condition(str): The minimum condition to locked machines count to allow the build to
-        properly operate.
-        machines_count_timeout_condition(str): The condition to keep searching for machines until the timeout is reached.
         sleep_interval(int): the interval to sleep between runs.
 
     Returns: the machine name if locked.
     """
 
     logging.debug("getting all machines lock files")
-    hundred_percent = len(list_machines)
-    locked_machine_list: list[str] = []
-    start_time = time.time()
-    while not evaluate_condition(len(locked_machine_list), machines_count_timeout_condition, hundred_percent):
+
+    locked_machine_list = []
+    while number_machines_to_lock > 0:
         busy_machines = []
         for machine in list_machines:
             machines_locks = get_machines_locks_details(storage_client, LOCKS_BUCKET, gcs_locks_path, MACHINES_LOCKS_REPO)
@@ -404,62 +383,54 @@ def get_and_lock_all_needed_machines(
             # We managed to lock a machine
             if lock_machine_name:
                 locked_machine_list.append(lock_machine_name)
-                if evaluate_condition(len(locked_machine_list), machines_count_timeout_condition, hundred_percent):
-                    logging.info(f"Locked {len(locked_machine_list)} machines, condition: {machines_count_timeout_condition}")
+                number_machines_to_lock -= 1
+                # If we don't need more machines to lock we end the loop
+                if not number_machines_to_lock:
                     break
-            else:
+
                 # If the machine was busy we save it to try it again later
+            else:
                 busy_machines.append(machine)
 
         # Next round we will try and lock only the busy machines
         list_machines = busy_machines
 
-        if evaluate_condition(len(locked_machine_list), machines_count_timeout_condition, hundred_percent):
-            logging.info(f"Locked {len(locked_machine_list)} machines, condition: {machines_count_timeout_condition}")
-            break
-
-        if lock_timeout and lock_timeout < time.time() - start_time:
-            logging.error(f"Lock timeout of {lock_timeout:.2f} seconds reached")
-            break
-
-        logging.debug(f"Locked {len(locked_machine_list)} machines, sleeping for {sleep_interval} seconds")
-        sleep(sleep_interval)
-
-    if not evaluate_condition(len(locked_machine_list), machines_count_minimum_condition, hundred_percent):
-        logging.error(
-            f"Failed to lock the minimum number of machines. Locked {len(locked_machine_list)} machines, "
-            f"condition: {machines_count_minimum_condition}"
-        )
-        sys.exit(1)
-
+        # we need more machines but all machines where busy in this round
+        if number_machines_to_lock:
+            logging.info(
+                f"Missing {number_machines_to_lock} available machine/s in order to continue, "
+                f"sleeping for {sleep_interval} seconds"
+            )
+            sleep(sleep_interval)
     return locked_machine_list
 
 
-def create_list_of_machines_to_run(lock_machine_name: str, test_machines: Iterable[str]) -> list[str]:
+def create_list_of_machines_to_run(lock_machine_name: str, test_machines: str, number_machines_to_lock: int) -> list[str]:
     """
     get the list of the available machines (or one specific given machine for debugging).
     Args:
         lock_machine_name(str): the name of the file with the list of the test machines.
-        test_machines(Iterable[str]): the list of the available machines.
-
-    Returns:
-        list: the machines list.
+        test_machines(str): all the exiting machines.
+        number_machines_to_lock(int): the number of the requested machines.
 
     Returns: the machines list.
     """
     if lock_machine_name:  # For debugging: We got a name of a specific machine to use.
         logging.info(f"trying to lock the given machine: {lock_machine_name}")
-        return [lock_machine_name]
+        list_machines = [lock_machine_name]
+    else:
+        logging.info("getting all machine names")  # We are looking for a free machine in all the available machines.
+        list_machines = test_machines.split(",")
+        random.shuffle(list_machines)
 
-    logging.info("getting all machine names")  # We are looking for a free machine in all the available machines.
-    list_machines = list(test_machines)
-    random.shuffle(list_machines)
-
+    if number_machines_to_lock > len(list_machines):
+        err = f"This build requested {number_machines_to_lock} but there are only {len(list_machines)} active machines"
+        logging.error(err)
+        raise Exception(err)
     return list_machines
 
 
 def wait_for_build_to_be_first_in_queue(
-    slack_client: SlackWebClient,
     storage_client: storage.Client,
     storage_bucket: storage.bucket.Bucket,
     gcs_locks_path: str,
@@ -471,7 +442,6 @@ def wait_for_build_to_be_first_in_queue(
     in case he is not the first it will check if the build before it is alive and cancel it in case it is not,
     between runs it will sleep for a random amount of seconds.
     Args:
-        slack_client(SlackWebClient): The Slack client.
         storage_client(storage.Client): The GCP storage client.
         storage_bucket(google.cloud.storage.bucket.Bucket): google storage bucket where lock machine is stored.
         gcs_locks_path(str): the lock repository name.
@@ -482,7 +452,7 @@ def wait_for_build_to_be_first_in_queue(
     my_place_in_the_queue = None
     while True:
         my_place_in_the_queue, previous_build = get_my_place_in_the_queue(
-            slack_client, storage_client, gcs_locks_path, job_id, my_place_in_the_queue
+            storage_client, gcs_locks_path, job_id, my_place_in_the_queue
         )
         logging.info(f"My place in the queue is: {my_place_in_the_queue}")
 
@@ -507,56 +477,10 @@ def wait_for_build_to_be_first_in_queue(
 def main():
     start_time = time.time()
     install_logging("lock_cloud_machines.log", logger=logging)
+    logging.info("Starting to search for a CLOUD machine/s to lock")
     options = options_handler()
-    logging.info(
-        f"Starting to search for a CLOUD machine/s to lock, flow type: {options.flow_type}, "
-        f"server type: {options.server_type}"
-    )
     storage_client = storage.Client.from_service_account_json(options.service_account)
     storage_bucket = storage_client.bucket(LOCKS_BUCKET)
-
-    cloud_servers_path_json = get_json_file(options.cloud_servers_path)
-    available_machines = {}
-    for machine, machine_details in cloud_servers_path_json.items():
-        if (
-            machine != COMMENT_FIELD_NAME
-            and machine_details["enabled"]
-            and machine_details["flow_type"] == options.flow_type
-            and machine_details["server_type"] == options.server_type
-        ):
-            available_machines[machine] = machine_details
-
-    if not available_machines:
-        logging.error(
-            f"No available machines found for the given flow type: {options.flow_type} and server type: {options.server_type}"
-        )
-        sys.exit(1)
-
-    if options.lock_machine_name:
-        if options.lock_machine_name not in available_machines:
-            logging.error(f"The machine name {options.lock_machine_name} is not in the available machines list")
-            sys.exit(1)
-        logging.info(f"Trying to lock the specific machine: {options.lock_machine_name}")
-    else:
-        logging.info(f"Available machines: {available_machines.keys()}")
-        logging.info(f"Number of available machines: {len(available_machines)}")
-
-    lock_timeout: float = float(options.lock_timeout)
-    if lock_timeout > 0:
-        logging.info(f"Lock timeout: {lock_timeout:.2f} seconds")
-    else:
-        logging.info("Lock timeout is disabled")
-        lock_timeout = float("inf")
-
-    logging.info(f"machines_count_timeout_condition: {options.machines_count_timeout_condition}")
-    logging.info(f"machines_count_minimum_condition: {options.machines_count_minimum_condition}")
-
-    if not evaluate_condition(len(available_machines), options.machines_count_minimum_condition, len(available_machines)):
-        logging.error(
-            f"Won't be able to lock the minimum number of machines. Available machines: {len(available_machines)}, "
-            f"condition: {options.machines_count_minimum_condition}"
-        )
-        sys.exit(1)
 
     logging.info(f"job_id={options.ci_job_id} " f"pipeline_id={options.ci_pipeline_id}")
     if options.ci_job_id:
@@ -565,11 +489,9 @@ def main():
         options.ci_job_id = options.pipeline_id
     logging.info(f"Adding job_id/pipeline_id:{options.ci_job_id} to the queue")
     adding_build_to_the_queue(storage_bucket, options.gcs_locks_path, options.ci_job_id)
-    slack_client: SlackWebClient = SlackWebClient(token=SLACK_TOKEN)
 
     # running until the build is the first in queue
     wait_for_build_to_be_first_in_queue(
-        slack_client,
         storage_client,
         storage_bucket,
         options.gcs_locks_path,
@@ -581,7 +503,8 @@ def main():
 
     list_machines = create_list_of_machines_to_run(
         options.lock_machine_name,
-        available_machines.keys(),
+        options.test_machines,
+        options.number_machines_to_lock,
     )
 
     lock_machine_list = get_and_lock_all_needed_machines(
@@ -589,11 +512,9 @@ def main():
         storage_bucket,
         list_machines,
         options.gcs_locks_path,
+        options.number_machines_to_lock,
         options.ci_job_id,
         options.gitlab_status_token,
-        lock_timeout,
-        options.machines_count_timeout_condition,
-        options.machines_count_minimum_condition,
     )
 
     # remove build from queue
@@ -603,31 +524,32 @@ def main():
     )
 
     with open(options.response_machine, "w") as f:
-        f.write(f"{','.join(lock_machine_list)}")
+        f.write(f"export CLOUD_CHOSEN_MACHINE_IDS={','.join(lock_machine_list)}")
 
     end_time = time.time()
     duration_minutes = (end_time - start_time) // 60
-    send_slack_notification(
-        slack_client,
-        [
-            "Lock Duration:",
-            f"{datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')}",
-            f"{options.gcs_locks_path}",
-            f"Job ID: {options.ci_job_id}",
-            "Duration:",
-            f"{duration_minutes}",
-        ],
-    )
-    send_slack_notification(
-        slack_client,
-        [
-            f"{options.gcs_locks_path}",
-            f"{datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')}",
-            f"Job ID: {options.ci_job_id}",
-            "Available machines:",
-            f"{len(available_machines)}",
-        ],
-    )
+    try:
+        send_slack_notification(
+            [
+                "Lock Duration:",
+                f"{datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')}",
+                f"{options.gcs_locks_path}",
+                f"Job ID: {options.ci_job_id}",
+                "Duration:",
+                f"{duration_minutes}",
+            ]
+        )
+        send_slack_notification(
+            [
+                f"{options.gcs_locks_path}",
+                f"{datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')}",
+                f"Job ID: {options.ci_job_id}",
+                "Available machines:",
+                f"{len(options.test_machines.split(','))}",
+            ]
+        )
+    except Exception as e:
+        logging.info(f"Failed to send Slack notification. Reason: {e!s}")
 
 
 if __name__ == "__main__":
