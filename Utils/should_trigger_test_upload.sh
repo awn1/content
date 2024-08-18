@@ -5,6 +5,7 @@ if [[ $DEMISTO_SDK_NIGHTLY == "true" ]]; then
 fi
 
 if [[ $TRIGGER_TEST_BRANCH == "true" ]]; then
+    # In case the development is in Infra repo
     echo "TRIGGER_TEST_BRANCH is set to true, Will run test-upload-flow"
     exit 0
 fi
@@ -29,5 +30,5 @@ for i in "${IGNORED_FILES[@]}"; do
     DIFF_FILES_LIST=${DIFF_FILES_LIST[*]/$i}
 done
 
-echo "${DIFF_FILES_LIST[*]}" | grep -E "Tests/|Utils/|.gitlab/|poetry.lock|poetry.toml|pyproject.toml|package.json|package-lock.json|tox.ini|.pylintrc"
+echo "${DIFF_FILES_LIST[*]}" | grep -E "Tests/|Utils/|.gitlab/|package.json|package-lock.json|tox.ini|.pylintrc"
 exit 0
