@@ -6,7 +6,7 @@ workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       variables:
-        WORKFLOW_PIPELINE_NAME: 'Merge request #$CI_MERGE_REQUEST_IID pipeline for branch $CI_COMMIT_REF_NAME to $CI_MERGE_REQUEST_TARGET_BRANCH_NAME'
+        WORKFLOW_PIPELINE_NAME: 'Merge request !$CI_MERGE_REQUEST_IID pipeline for branch $CI_COMMIT_REF_NAME to $CI_MERGE_REQUEST_TARGET_BRANCH_NAME'
     - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_MACHINES_REPORT == "true"'
       variables:
         WORKFLOW_PIPELINE_NAME: 'Build machines report pipeline'

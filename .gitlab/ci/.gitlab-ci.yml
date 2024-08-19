@@ -15,6 +15,7 @@ stages:
   - secret-expiration-report
   - build-machines-report
   - unittests-and-validations
+  - trigger-content-build
   - content-build
   - create-release-branch
   - trigger-nightlies
