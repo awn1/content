@@ -27,6 +27,7 @@ from demisto_sdk.commands.common.constants import (
 from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import (
     Neo4jContentGraphInterface,
 )
+from demisto_sdk.commands.content_graph.parsers.base_content import BaseContentParser
 from google.cloud import storage
 from packaging.version import Version
 
@@ -1538,7 +1539,7 @@ class Pack:
                 )
 
             # Update change log entries with BC flag.
-            self.add_bc_entries_if_needed(release_notes_dir, changelog)
+            self.add_bc_entries_if_needed(release_notes_dir, changelog, marketplace)
 
             # Remove old entries from change log
             pack_versions_to_keep = remove_old_versions_from_changelog(changelog)
@@ -2673,7 +2674,7 @@ class Pack:
             ]
         )
 
-    def add_bc_entries_if_needed(self, release_notes_dir: str, changelog: dict[str, Any]) -> None:
+    def add_bc_entries_if_needed(self, release_notes_dir: str, changelog: dict[str, Any], marketplace="xsoar") -> None:
         """
         Receives changelog, checks if there exists a BC version in each changelog entry (as changelog entry might be
         zipped into few RN versions, check if at least one of the versions is BC).
@@ -2700,7 +2701,7 @@ class Pack:
         """
         if not os.path.exists(release_notes_dir):
             return
-        bc_version_to_text: dict[str, str | None] = self._breaking_changes_versions_to_text(release_notes_dir)
+        bc_version_to_text: dict[str, str | None] = self._breaking_changes_versions_to_text(release_notes_dir, marketplace)
         loose_versions: list[Version] = [Version(bc_ver) for bc_ver in bc_version_to_text]
         predecessor_version: Version = Version("0.0.0")
         for changelog_entry in sorted(changelog.keys(), key=Version):
@@ -2816,9 +2817,7 @@ class Pack:
         return text_of_bc_versions_with_tests, bc_versions_without_text
 
     @staticmethod
-    def _breaking_changes_versions_to_text(
-        release_notes_dir: str,
-    ) -> dict[str, str | None]:
+    def _breaking_changes_versions_to_text(release_notes_dir: str, marketplace="xsoar") -> dict[str, str | None]:
         """
         Calculates every BC version in given RN dir and maps it to text if exists.
         Currently, text from a BC version is calculated in the following way:
@@ -2837,11 +2836,22 @@ class Pack:
 
         for file_name in rn_config_file_names:
             file_data: dict = load_json(os.path.join(release_notes_dir, file_name))
+
+            # Check if marketplace is compatible
+            bc_marketplace: list[MarketplaceVersions] | MarketplaceVersions = file_data.get("marketplaces", [])
+            if not isinstance(bc_marketplace, list):
+                bc_marketplace = [bc_marketplace]
+            if bc_marketplace:
+                bc_marketplace = list(BaseContentParser.update_marketplaces_set_with_xsoar_values(set(bc_marketplace)))
+                if marketplace not in bc_marketplace:
+                    continue
+
             # Check if version is BC
             if file_data.get("breakingChanges"):
                 # Processing name for easier calculations later on
                 processed_name: str = underscore_file_name_to_dotted_version(file_name)
                 bc_version_to_text[processed_name] = file_data.get("breakingChangesNotes")
+
         return bc_version_to_text
 
     @staticmethod

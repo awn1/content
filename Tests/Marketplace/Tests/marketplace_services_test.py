@@ -2462,6 +2462,38 @@ class TestReleaseNotes:
 
         assert Pack._breaking_changes_versions_to_text(rn_dir) == expected
 
+    @pytest.mark.parametrize(
+        "marketplace, expected_output",
+        (
+            ("xsoar", {"1.0.1": None, "1.0.2": None, "1.0.5": None}),
+            ("marketplacev2", {"1.0.1": None, "1.0.2": None, "1.0.3": None}),
+            ("xsoar_saas", {"1.0.1": None, "1.0.2": None, "1.0.4": None}),
+            ("xpanse", {"1.0.1": None}),
+        ),
+    )
+    def test_breaking_changes_versions_to_text_with_marketplace(self, tmpdir, marketplace, expected_output):
+        """
+        Given:
+        - Release notes directory (class field)
+        - Marketplace for the current upload
+        - Expected breaking changes release note
+
+        When:
+        - Creating dict of BC version to mapping, with different marketplaces values.
+
+        Then:
+        - Ensure only breaking changes release notes that are related to the current marketplace show
+        """
+        rn_dir = f"{tmpdir}/ReleaseNotes"
+        Path(rn_dir).mkdir(parents=True, exist_ok=False)
+        create_rn_config_file(rn_dir, "1_0_1", {"breakingChanges": True})  # all marketplaces
+        create_rn_config_file(rn_dir, "1_0_2", {"breakingChanges": True, "marketplaces": ["xsoar", "marketplacev2"]})
+        create_rn_config_file(rn_dir, "1_0_3", {"breakingChanges": True, "marketplaces": ["marketplacev2"]})
+        create_rn_config_file(rn_dir, "1_0_4", {"breakingChanges": True, "marketplaces": ["xsoar_saas"]})
+        create_rn_config_file(rn_dir, "1_0_5", {"breakingChanges": True, "marketplaces": ["xsoar_on_prem"]})
+
+        assert Pack._breaking_changes_versions_to_text(rn_dir, marketplace=marketplace) == expected_output
+
     SPLIT_BC_VERSIONS_WITH_AND_WITHOUT_TEXT_INPUTS = [
         ({}, ([], [])),
         ({"1.0.2": "bc text 1"}, (["bc text 1"], [])),
