@@ -503,6 +503,7 @@
     - source .gitlab/helper_functions.sh
     - *setup-network-certs
     - *setup-artifactory
+    - *gitlab_ci_build_parameters
     - *create_artifacts_and_server_type_instance_folders
     - !reference [.create-artifacts-repositories-folder]
     - !reference [.clone-content-test-conf-and-infra]
@@ -514,7 +515,6 @@
     - *install_ssh_keys
     - *neo4j-setup
     - *build_parameters
-    - *gitlab_ci_build_parameters
     - *checkout-upload-commit-content-nightly
     - *extract_content_test_conf
 

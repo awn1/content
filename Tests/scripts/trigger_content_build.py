@@ -18,7 +18,6 @@ from Tests.scripts.utils.log_util import install_logging
 
 urllib3.disable_warnings(InsecureRequestWarning)
 
-yaml = YAML()
 
 GITLAB_SERVER_URL = os.getenv(
     "CI_SERVER_URL",
@@ -47,6 +46,7 @@ logger = logging.getLogger(__name__)
 
 class TestBranch:
     def __init__(self, url: str, branch_name: str, github_token: str, gitlab_token: str) -> None:
+        self.repo: git.Repo
         self.url = url
         self.branch_name = branch_name
         self.github_token = github_token
@@ -59,18 +59,15 @@ class TestBranch:
         """
         try:
             print("Cloning Content repo ...")
-            repo = git.Repo.clone_from(url=url, to_path="./content", depth=1)
+            self.repo = git.Repo.clone_from(url=url, to_path="./content", depth=1)
             print("Cloned Content repo")
+            print("Sleeping 5 seconds")
+            time.sleep(5.0)
+            self.repo.config_writer().set_value("user", "name", "bot-content").release()
+            self.repo.config_writer().set_value("user", "email", "bot@dummy.com").release()
         except Exception as e:
             print(f"Cloning Content repo failed, Error: {e!s}")
             sys.exit(ExitCode.FAILED)
-
-        print("Sleeping 5 seconds")
-        time.sleep(5.0)
-
-        self.repo = repo
-        self.repo.config_writer().set_value("user", "name", "bot-content").release()
-        self.repo.config_writer().set_value("user", "email", "bot@dummy.com").release()
 
     def is_there_pr_in_github(self):
         """
@@ -122,7 +119,7 @@ class TestBranch:
             url=GITLAB_CONTENT_REPO_URL + self.branch_name,
             headers=headers,
         )
-        return res.status_code == 200
+        return res.status_code == requests.status_codes.codes.OK
 
     def create_branch(self):
         """
@@ -138,7 +135,7 @@ class TestBranch:
 
         """
         if self.is_there_pr_in_github():
-            print("There is a PR in GitHub that belong to " f"the {self.branch_name} branch, no need to create a new branch")
+            print(f"There is a PR in GitHub that belong to the {self.branch_name} branch, no need to create a new branch")
             return
 
         self.clone(self.url)
@@ -171,6 +168,7 @@ class PipelineManager:
         gl_info_token,
         gl_cancel_token,
         branch_name,
+        project_name,
         is_nightly,
         is_sdk_nightly,
         slack_channel,
@@ -181,6 +179,7 @@ class PipelineManager:
         self.cancel_token = gl_cancel_token
         self.headers = {"Authorization": f"Bearer {gl_info_token}"}
         self.branch_name = branch_name
+        self.project_name = project_name
         self.is_nightly = is_nightly
         self.is_sdk_nightly = is_sdk_nightly
         self.slack_channel = slack_channel
@@ -223,24 +222,11 @@ class PipelineManager:
         files = {
             "token": (None, self.trigger_token),
             "ref": (None, self.branch_name),
-            "variables[INFRA_BRANCH]": (None, self.branch_name),
         }
-        if self.slack_channel:
-            slack_parent_pipeline_id = os.environ["CI_PIPELINE_ID"]
-            slack_parent_project_id = os.environ["CI_PROJECT_ID"]
-            files["variables[SLACK_CHANNEL]"] = (None, self.slack_channel)
-            files["variables[SLACK_PARENT_PIPELINE_ID]"] = (None, slack_parent_pipeline_id)
-            files["variables[SLACK_PARENT_PROJECT_ID]"] = (None, slack_parent_project_id)
-        build_type = common.CONTENT_PR
-        if self.is_nightly:
-            build_type = common.CONTENT_NIGHTLY
-            files["variables[IS_NIGHTLY]"] = (None, "true")
-            files["variables[NIGHTLY]"] = (None, "true")  # backward compatibility.
-        if self.is_sdk_nightly:
-            build_type = common.SDK_NIGHTLY
-            files["variables[DEMISTO_SDK_NIGHTLY]"] = (None, "true")
-        if not self.is_nightly and not self.is_sdk_nightly:
-            files["variables[TRIGGER_TEST_BRANCH]"] = (None, "true")
+        build_type, variables = self.generate_build_type_and_variables()
+        for key, value in variables.items():
+            files[f"variables[{key}]"] = (None, value)
+
         try:
             res = requests.post(url=self.trigger_url, files=files, verify=False).json()
             # When it fails and an exception is not raised, so we raise an exception.
@@ -286,11 +272,35 @@ class PipelineManager:
 
         return ExitCode.FAILED
 
+    def generate_build_type_and_variables(self):
+        variables = {
+            "INFRA_BRANCH": self.branch_name,
+        }
+
+        if self.slack_channel:
+            slack_parent_pipeline_id = os.environ["CI_PIPELINE_ID"]
+            slack_parent_project_id = os.environ["CI_PROJECT_ID"]
+            variables["SLACK_CHANNEL"] = self.slack_channel
+            variables["SLACK_PARENT_PIPELINE_ID"] = slack_parent_pipeline_id
+            variables["SLACK_PARENT_PROJECT_ID"] = slack_parent_project_id
+        build_type = common.CONTENT_PR
+
+        if self.is_nightly:
+            variables["IS_NIGHTLY"] = "true"
+            variables["NIGHTLY"] = "true"  # backward compatibility.
+            build_type = common.CONTENT_NIGHTLY
+        if self.is_sdk_nightly:
+            build_type = common.SDK_NIGHTLY
+            variables["DEMISTO_SDK_NIGHTLY"] = "true"
+        if not self.is_nightly and not self.is_sdk_nightly:
+            variables["TRIGGER_TEST_BRANCH"] = "true"
+        return build_type, variables
+
     def pipeline_info(self, field_info: str = "web_url"):
         job_suffix = "/jobs" if field_info == "status" else ""
         url = f"{GITLAB_CONTENT_PIPELINES_BASE_URL}{self.pipeline_id}{job_suffix}"
         res = requests.get(url, headers=self.headers)
-        if res.status_code != 200:
+        if res.status_code != requests.status_codes.codes.OK:
             logging.info(
                 f"Failed to get status of pipeline {self.pipeline_id}, request to "
                 f"{GITLAB_CONTENT_PIPELINES_BASE_URL} failed with error: {res.content!s}"
@@ -332,6 +342,26 @@ class PipelineManager:
         logging.info(f"Content pipeline has finished. See pipeline here: {pipeline_url}")
         return ExitCode.SUCCESS
 
+    def generate_yaml(self, yaml_file: str, wait: bool):
+        _, yaml_variables = self.generate_build_type_and_variables()
+        gitlab_job = {
+            "trigger-content-build": {
+                "when": "always",
+                "rules": [{"when": "on_success"}],
+                "variables": yaml_variables,
+                "inherit": {  # see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27775
+                    "variables": False
+                },
+                "trigger": {
+                    "strategy": "depend" if wait else "default",
+                    "project": self.project_name,
+                    "branch": self.branch_name,
+                },
+            }
+        }
+        YAML().dump(gitlab_job, Path(yaml_file))
+        logging.info(f"YAML file has been generated: {yaml_file}")
+
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -350,6 +380,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument("-w", "--wait", help="Wait for the pipeline to finish", action="store_true", default=False)
     parser.add_argument("-o", "--output", help="Output file for the slack message", default=None)
+    parser.add_argument("-y", "--yaml", help="Generate Gitlab CI yaml file", default="")
     return parser.parse_args()
 
 
@@ -378,7 +409,8 @@ def main():
     logging.info(f"Is SDK nightly: {args.sdk_nightly}")
     logging.info(f"Slack channel: {args.slack_channel}")
     logging.info(f"Wait for pipeline to finish: {args.wait}")
-    logging.info(f"Output file: {args.output}")
+    logging.info(f"Slack Output file: {args.output}")
+    logging.info(f"YAML file: {args.yaml}")
 
     # Managing and triggering the pipeline
     pipeline_manager = PipelineManager(
@@ -387,10 +419,16 @@ def main():
         token_info,
         token_cancel,
         branch_name,
+        project_name,
         args.is_nightly,
         args.sdk_nightly,
         args.slack_channel,
     )
+
+    if args.yaml:
+        pipeline_manager.generate_yaml(args.yaml, args.wait)
+        sys.exit(ExitCode.SUCCESS)
+
     if exit_code := pipeline_manager.initiate_pipeline(args.output) != ExitCode.SUCCESS:
         sys.exit(exit_code)
     if args.wait:

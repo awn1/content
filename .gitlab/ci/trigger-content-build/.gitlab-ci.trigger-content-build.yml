@@ -27,7 +27,7 @@
 
 
 trigger-content-build:
-  stage: content-build
+  stage: trigger-content-build
   needs: []
   extends:
     - .trigger_content_build_rule
@@ -35,5 +35,20 @@ trigger-content-build:
   script:
     - !reference [.check-is-force-merged-allowed]
     - section_start "Trigger Content-build"
-    - poetry run python3 -u ./Tests/scripts/trigger_content_build.py -pn "${CI_PROJECT_NAMESPACE}/content" -gt "$GITLAB_API_TOKEN_CONTENT" -bn "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" -gtt "$GITLAB_SVC_USER_TOKEN" -gct "$GITLAB_CONTENT_CANCEL_TOKEN" -ght "$GITHUB_TOKEN" -n "false" -sn "false" --wait
+    - poetry run python3 -u ./Tests/scripts/trigger_content_build.py -pn "${CI_PROJECT_NAMESPACE}/content" -gt "$GITLAB_API_TOKEN_CONTENT" -bn "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" -gtt "$GITLAB_SVC_USER_TOKEN" -gct "$GITLAB_CONTENT_CANCEL_TOKEN" -ght "$GITHUB_TOKEN" -n "false" -sn "false" --wait --yaml "${ARTIFACTS_FOLDER}/trigger-content-build.yml"
     - section_end "Trigger Content-build"
+  artifacts:
+    paths:
+      - "${ARTIFACTS_FOLDER}/trigger-content-build.yml"
+
+content-build:
+  extends:
+    - .trigger_content_build_rule
+  stage: content-build
+  needs:
+    - trigger-content-build
+  trigger:
+    strategy: depend
+    include:
+      - artifact: "${ARTIFACTS_FOLDER}/trigger-content-build.yml"
+        job: trigger-content-build
