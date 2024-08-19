@@ -25,7 +25,7 @@ from Tests.scripts.graph_lock_machine import (
     create_builds_waiting_in_queue_graph,
     create_lock_duration_graph,
 )
-from Tests.scripts.utils.slack import get_messages_from_slack
+from Tests.scripts.utils.slack import get_conversations_members_slack, get_messages_from_slack, get_slack_usernames_from_ids
 
 urllib3.disable_warnings(InsecureRequestWarning)
 warnings.filterwarnings("ignore", _default._CLOUD_SDK_CREDENTIALS_WARNING)
@@ -38,15 +38,16 @@ ARTIFACTS_FOLDER = os.environ["ARTIFACTS_FOLDER"]
 GITLAB_ARTIFACTS_URL = os.environ["GITLAB_ARTIFACTS_URL"]
 CI_JOB_ID = os.environ["CI_JOB_ID"]
 SLACK_WORKSPACE_NAME = os.getenv("SLACK_WORKSPACE_NAME", "")
+SLACK_TOKEN = os.getenv("SLACK_TOKEN")
 XDR_PERMISSIONS_DEV = os.environ["XDR_PERMISSIONS_DEV"]
 XDR_UPGRADE_CHANNEL_DEV = os.environ["XDR_UPGRADE_CHANNEL_DEV"]
 XDR_UPGRADE_CHANNEL_ID_DEV = os.environ["XDR_UPGRADE_CHANNEL_ID_DEV"]
+DMST_CONTENT_TEAM_ID = os.environ["DMST_CONTENT_TEAM_ID"]
 PERMISSION_ROLE = os.environ.get("PERMISSION_ROLE", "cortex-operator-data-access")
 NOT_AVAILABLE = "N/A"
 VISO_API_URL: str | None = os.getenv("VISO_API_URL")
 VISO_API_KEY = os.getenv("VISO_API_KEY")
 WITHOUT_VISO = os.getenv("WITHOUT_VISO")
-SLACK_TOKEN = os.getenv("SLACK_TOKEN")
 WAIT_IN_LINE_CHANNEL_ID: str = os.environ["WAIT_IN_LINE_CHANNEL_ID"]
 CONTENT_TENANTS_GROUP_OWNER = os.getenv("CONTENT_TENANTS_GROUP_OWNER")
 TTL_EXPIRED_DAYS_DEFAULT = 5
@@ -464,13 +465,12 @@ def load_json_file(file_path: str) -> dict | list:
     return {}
 
 
-def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], list[int], list[str], list[dict]]:
+def generate_report(
+    client: WebClient, without_viso: bool, name_mapping: dict, records: list, tenants: dict, tokens_count: int | None
+) -> tuple[list[dict], list[int], list[str], list[dict]]:
     slack_msg_append: list[dict[Any, Any]] = []
-    managers: list[Any] = []
-    if args.name_mapping_path:
-        name_mapping: dict = load_json_file(args.name_mapping_path)  # type: ignore[assignment]
-        managers.extend(name_mapping.get("managers", []))
-    columns = generate_columns(args.without_viso)
+    managers: list[Any] = name_mapping.get("managers", [])
+    columns = generate_columns(without_viso)
     static_columns = {column["key"] for column in columns if column["key"]}
     dynamic_columns = list({key for record in records for key in record.keys() if key not in static_columns})
     columns.extend([create_column(False, key, key, False, False, False, False) for key in dynamic_columns])
@@ -502,7 +502,7 @@ def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], l
                 and flow_type in BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT[platform_type]
             ):
                 build_machines_requiring_an_agent[flow_type].add(machine_name)
-        if not args.without_viso:
+        if not without_viso:
             # Count the number of machines per owner per machine type, only if they don't have a flow type.
             owner = record.get("owner", {}).get("display")
             flow_type = record.get("flow_type", {}).get("display")
@@ -625,6 +625,23 @@ def generate_report(args, records, tenants, tokens_count) -> tuple[list[dict], l
                 "fallback": title,
             }
         )
+
+    if missing_users_in_mapping := get_missing_users_in_mapping(client, name_mapping):
+        title = "Missing users in the name mapping"
+        slack_msg_append.append(
+            {
+                "color": "warning",
+                "title": title,
+                "fallback": title,
+                "fields": [
+                    {
+                        "title": "User(s)",
+                        "value": ", ".join(map(lambda u: f"@{u}", missing_users_in_mapping)),
+                        "short": True,
+                    }
+                ],
+            }
+        )
     return columns, columns_filterable, managers, slack_msg_append
 
 
@@ -678,9 +695,35 @@ def get_viso_tenants_data(without_viso: bool) -> tuple[dict, int | None, list[di
     return tenants, tokens_count, slack_msg_append
 
 
+def filter_comment_field(record: dict) -> dict:
+    return {k: v for k, v in record.items() if k != COMMENT_FIELD_NAME}
+
+
+def get_missing_users_in_mapping(client: WebClient, name_mapping: dict) -> list[str]:
+    try:
+        members = get_conversations_members_slack(client, DMST_CONTENT_TEAM_ID)
+        mapping_user_names = set(filter_comment_field(name_mapping.get("names", {})).values())
+        ignored_user_names = set(filter_comment_field(name_mapping.get("ignored_names", {})).keys())
+        slack_usernames = set(get_slack_usernames_from_ids(client, members).values())
+        missing = list(slack_usernames - mapping_user_names - ignored_user_names)
+        logging.info(f"Missing users in the name mapping: {missing}")
+    except Exception:
+        logging.exception("Failed to get slack members.")
+    return []
+
+
 def main() -> None:
     args = options_handler()
     output_path = Path(args.output_path)
+    try:
+        name_mapping: dict = load_json_file(args.name_mapping_path)  # type: ignore[assignment]
+        logging.info("Successfully loaded name mapping.")
+    except Exception:
+        logging.exception("Failed to load name mapping.")
+        name_mapping = {}
+
+    client: WebClient = WebClient(token=SLACK_TOKEN)
+
     try:
         tenants, tokens_count, slack_msg_append = get_viso_tenants_data(args.without_viso)
 
@@ -719,7 +762,6 @@ def main() -> None:
                 json.dump(records, f, indent=4, default=str, sort_keys=True)
 
             if not args.without_statistics:
-                client = WebClient(token=SLACK_TOKEN)
                 wait_in_line_slack_messages = get_messages_from_slack(client, WAIT_IN_LINE_CHANNEL_ID)
                 with open(output_path / WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME, "w") as f:
                     json.dump(
@@ -737,7 +779,9 @@ def main() -> None:
             attachments_json = generate_graphs(output_path, wait_in_line_slack_messages)
 
         logging.info(f"Creating report for {current_date_str}")
-        columns, columns_filterable, managers, slack_msg_append_report = generate_report(args, records, tenants, tokens_count)
+        columns, columns_filterable, managers, slack_msg_append_report = generate_report(
+            client, args.without_viso, name_mapping, records, tenants, tokens_count
+        )
         slack_msg_append.extend(slack_msg_append_report)
 
         report = create_report_html(current_date_str, records, columns, columns_filterable, managers)
@@ -745,9 +789,12 @@ def main() -> None:
         with open(output_path / report_file_name, "w") as report_file:
             report_file.write(report)
 
+        with open(output_path / "index.html", "w") as index_html:
+            index_html.write(report)
+
         with open(output_path / "slack_msg.txt", "w") as slack_msg_file:
+            title = f"View report for {current_date_str}"
             report_url = f"{GITLAB_ARTIFACTS_URL}/{CI_JOB_ID}/artifacts/{ARTIFACTS_FOLDER}/{report_file_name}"
-            title = f"Build machines report - {current_date_str} was created"
             json.dump(
                 [
                     {

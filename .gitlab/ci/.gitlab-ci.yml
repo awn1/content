@@ -14,6 +14,7 @@ stages:
   - bucket-logs
   - secret-expiration-report
   - build-machines-report
+  - build-machines-report-pages
   - unittests-and-validations
   - trigger-content-build
   - content-build

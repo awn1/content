@@ -38,3 +38,40 @@ def get_messages_from_slack(client: WebClient, channel_id: str, sleep_interval: 
     except SlackClientError as e:
         logger.error(f"Error while fetching the conversation history: {e}")
     return []
+
+
+@retry((SlackApiError,), delay=1, backoff=2)
+def get_conversations_members(
+    client: WebClient, channel_name: str, cursor: str | None, request_limit: int = 200
+) -> SlackResponse:
+    return client.conversations_members(channel=channel_name, limit=request_limit, cursor=cursor)
+
+
+def get_conversations_members_slack(client: WebClient, channel_id: str, sleep_interval: int = 5) -> list:
+    try:
+        members = []
+        cursor = None
+        while True:
+            result = get_conversations_members(client, channel_id, cursor)
+            cursor = result["response_metadata"]["next_cursor"]
+            members.extend(result["members"])
+            if not cursor or not result["has_more"]:
+                break
+            sleep(sleep_interval)  # Wait before the next call due to rate limits
+        return members
+    except SlackClientError as e:
+        logger.error(f"Error while fetching the conversation history: {e}")
+    return []
+
+
+def get_slack_usernames_from_ids(client: WebClient, user_ids: list[str]) -> dict[str, str | None]:
+    usernames = {}
+    for user_id in user_ids:
+        try:
+            response = client.users_info(user=user_id)
+            user_info = response["user"]
+            usernames[user_id] = user_info["name"]
+        except SlackApiError as e:
+            print(f"Error fetching user {user_id}: {e.response['error']}")
+            usernames[user_id] = None
+    return usernames
