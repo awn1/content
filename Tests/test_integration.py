@@ -73,21 +73,35 @@ def test_integration_instance(client, module_instance, logging_module=logging):
             )
             break
         except ApiException:
-            logging_module.exception("Failed to test integration instance, error trying to communicate with demisto server")
+            logging_module.exception(
+                f"Failed to test instance {instance_name} of integration {integration_of_instance},"
+                f"error trying to communicate with demisto server"
+            )
             return False, None
         except urllib3.exceptions.ReadTimeoutError:
-            logging_module.warning(f"Could not connect to demisto server. Trying to connect for the {i + 1} time")
+            logging_module.warning(
+                f"Failed to test instance {instance_name} of integration {integration_of_instance},"
+                f"Could not connect to demisto server. Trying to connect for the {i + 1} time"
+            )
 
     if int(response_code) != 200:
-        logging_module.error(f'Integration-instance test ("Test" button) failed. Bad status code: {response_code}')
+        logging_module.error(
+            f'Integration-instance test ("Test" button) failed for instance {instance_name} of integration'
+            f"{integration_of_instance}. Bad status code: {response_code}"
+        )
         return False, None
 
     result_object = ast.literal_eval(response_data)
     success, failure_message = bool(result_object.get("success")), result_object.get("message")
     if not success:
         server_url = client.api_client.configuration.host
-        test_failed_msg = f"Test integration failed - server: {server_url}."
-        test_failed_msg += f"\nFailure message: {failure_message}" if failure_message else " No failure message."
+        test_failed_msg = (
+            f"Test integration failed for instance {instance_name} of integration {integration_of_instance} -"
+            f"on server: {server_url}."
+        )
+        if "timeout while waiting for engine to answer" in failure_message:  # Test module reached timeout
+            test_failed_msg += '"test-module" has reached the timeout.'
+        test_failed_msg += f"Original failure message: {failure_message}" if failure_message else " No failure message."
         logging_module.error(test_failed_msg)
     return success, failure_message
 
