@@ -20,6 +20,7 @@ pre-commit:
     - !reference [.check-is-force-merged-allowed]
     - git fetch origin master -q # allows `git diff`ing in towncrier-check (otherwise there's no origin/master)
     - PRE_COMMIT_SUCCESS=0
+    - docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASSWORD
     - poetry run pre-commit run -a --color always || PRE_COMMIT_SUCCESS=1
     - echo "PRE_COMMIT_SUCCESS=$PRE_COMMIT_SUCCESS"
     - echo "job-done"
