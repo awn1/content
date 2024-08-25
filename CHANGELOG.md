@@ -1,3 +1,49 @@
+# Content Infrastructure 0.0.2 (2024-08-25)
+
+### Features
+
+- Added ShellCheck to pre-commit ([CIAC-6353](https://jira-dc.paloaltonetworks.com/browse/CIAC-6353))
+- Added a trigger to the sync all buckets pipeline in Jenkins in the 'sync-buckets-between-projects' job ([CIAC-10377](https://jira-dc.paloaltonetworks.com/browse/CIAC-10377))
+- Split the testing of modeling rules on XSIAM to multiple machines ([CIAC-11145](https://jira-dc.paloaltonetworks.com/browse/CIAC-11145))
+- CIAC-11303 Improve cleanup schedule pipeline ([CIAC-11303](https://jira-dc.paloaltonetworks.com/browse/CIAC-11303))
+- in clonse_repository_with_fallback_branch, search for existing tags (and not only existing branches), for cloning infra in content builds. ([CIAC-11473](https://jira-dc.paloaltonetworks.com/browse/CIAC-11473))
+- Copied Content Gold (content-internal-dist) Python dependencies into a dedicated, optional group in `pyproject.toml`. Gold will now use Infra's pyproject. ([CIAC-11495](https://jira-dc.paloaltonetworks.com/browse/CIAC-11495))
+- Changed infra to not trigger a test-upload-flow when content's pyproject.toml, poetry.lock or poetry.toml are modified ([CIAC-11507](https://jira-dc.paloaltonetworks.com/browse/CIAC-11507))
+- https://jira-dc.paloaltonetworks.com/browse/CIAC-11532
+  trigger content builds as a sub-pipeline instead of detached pipeline ([CIAC-11532](https://jira-dc.paloaltonetworks.com/browse/CIAC-11532))
+- Add licenses information into build machines report
+- Added support for copy relative path images.
+- Adding bootstrap script to infra
+- report missing users in the name mapping
+
+### Bugfixes
+
+- Removed the deprecated `types-pkg-resources` package dependency. We will use the `types-setuptools` package instead. Downgraded matplotlib to 3.9.0, as 3.9.1 was yanked. ([CIAC-11458](https://jira-dc.paloaltonetworks.com/browse/CIAC-11458))
+- Fix an issue where the ***Test Native Candidate*** pipeline fails if the **mypy** dependency is not installed. ([CIAC-11468](https://jira-dc.paloaltonetworks.com/browse/CIAC-11468))
+- Fail the upload flow if the current commit is behind the last upload commit. ([CIAC-11475](https://jira-dc.paloaltonetworks.com/browse/CIAC-11475))
+- Fixed an issue where shellcheck failed in master. For more info, see the Jira issue. ([CIAC-11508](https://jira-dc.paloaltonetworks.com/browse/CIAC-11508))
+- Added authenticate with Docker before running pre-commit. ([CIAC-11590](https://jira-dc.paloaltonetworks.com/browse/CIAC-11590))
+- fix Okta login, code taken from Rocket repository
+- fix build report user agent
+- fix npm installation error
+
+### Improved Documentation
+
+- Documented the process of releasing an infra version ([CIAC-9545](https://jira-dc.paloaltonetworks.com/browse/CIAC-9545))
+- documented using towncrier ([CIAC-11444](https://jira-dc.paloaltonetworks.com/browse/CIAC-11444))
+- Improve README for the Changelog folder to provide clearer instructions. ([CIAC-11470](https://jira-dc.paloaltonetworks.com/browse/CIAC-11470))
+- Improved the logs of the test integration instance runs.
+
+### Deprecations and Removals
+
+- Removed the automated _release-opening_ process (keeping only the release commit creation), see `infra_release/README.md`. ([CIAC-9545](https://jira-dc.paloaltonetworks.com/browse/CIAC-9545))
+- Reduced the value of JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE ([CIAC-11163](https://jira-dc.paloaltonetworks.com/browse/CIAC-11163))
+
+### Misc
+
+- [CIAC-10677](https://jira-dc.paloaltonetworks.com/browse/CIAC-10677), [CIAC-11495](https://jira-dc.paloaltonetworks.com/browse/CIAC-11495), [419](https://jira-dc.paloaltonetworks.com/browse/419), [447](https://jira-dc.paloaltonetworks.com/browse/447)
+
+
 # Content Infrastructure 0.0.1 (2024-08-04)
 
 ### Features
