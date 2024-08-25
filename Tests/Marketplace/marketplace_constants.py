@@ -68,6 +68,7 @@ class BucketUploadFlow:
     LATEST_VERSION = "latest_version"
     INTEGRATION_DIR_REGEX = r"^integration-(.+).yml$"
     MARKDOWN_IMAGES_ARTIFACT_FILE_NAME = "markdown_images.json"
+    MARKDOWN_RELATIVE_IMAGES_FILE_NAME = "markdown_relatve_path_images.json"
     MARKDOWN_IMAGES = "markdown_images"
 
 
@@ -404,6 +405,7 @@ class PackStatus(enum.Enum):
     FAILED_LOADING_PACK_METADATA = "Failed in loading user-defined pack metadata"
     FAILED_ENHANCING_PACK_ATTRIBUTES = "Failed in enhancing pack's object attributes"
     FAILED_IMAGES_UPLOAD = "Failed to upload pack integration images to gcs"
+    FAILED_RELATIVE_IMAGES_UPLOAD = "Failed to upload relative path images to gcs"
     FAILED_AUTHOR_IMAGE_UPLOAD = "Failed to upload pack author image to gcs"
     FAILED_PREVIEW_IMAGES_UPLOAD = "Failed to upload pack preview images to gcs"
     FAILED_DYNAMIC_DASHBOARD_IMAGES_UPLOAD = "Failed to upload pack dynamic dashboard images to gcs"

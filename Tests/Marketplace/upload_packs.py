@@ -989,7 +989,9 @@ def main():
     storage_bucket = storage_client.bucket(storage_bucket_name)
     uploaded_packs_dir = Path(option.artifacts_folder_server_type) / "uploaded_packs"
     markdown_images_data = Path(option.artifacts_folder_server_type) / BucketUploadFlow.MARKDOWN_IMAGES_ARTIFACT_FILE_NAME
-    markdown_relative_images_data = Path(option.artifacts_folder_server_type) / "markdown_relatve_path_images.json"
+    markdown_relative_images_data = (
+        Path(option.artifacts_folder_server_type) / BucketUploadFlow.MARKDOWN_RELATIVE_IMAGES_FILE_NAME
+    )
     uploaded_packs_dir.mkdir(parents=True, exist_ok=True)
     # Relevant when triggering test upload flow
     if storage_bucket_name:
