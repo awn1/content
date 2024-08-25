@@ -73,6 +73,9 @@ def create_release_branch(commit_to_release: str, version: Version) -> None:
     repo.git.commit("-m", title)
 
     repo.git.push(
+        "--set-upstream",
+        REMOTE_NAME,
+        branch_name,
         *itertools.chain.from_iterable(
             ("-o", option)
             for option in (
@@ -82,7 +85,7 @@ def create_release_branch(commit_to_release: str, version: Version) -> None:
                 f"merge_request.title={title}",
                 f"merge_request.label={MERGE_REQUEST_LABELS}",
             )
-        )
+        ),
     )
 
     commit_sha = subprocess.run(("git", "rev-parse", "HEAD"), capture_output=True, text=True).stdout
@@ -97,9 +100,9 @@ def create_release_branch(commit_to_release: str, version: Version) -> None:
 @app.command("release")
 def release(
     start_commit: str = typer.Option(
-        "The commit hash to start the release from. IMPORTANT: Make sure it passed nightly before running!"
+        ..., "-ref", help="The commit hash to start the release from. IMPORTANT: Make sure it passed nightly before running!"
     ),
-    version: Version = typer.Option("The version to release, e.g. 1.2.3", "-v", parser=Version),
+    version: Version = typer.Option(..., "-v", help="The version to release, e.g. 1.2.3", parser=Version),
 ):
     previous_branch = repo.active_branch.name
 
