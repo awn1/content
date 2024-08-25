@@ -1,4 +1,5 @@
 import json
+import operator
 from datetime import datetime, timedelta
 from itertools import pairwise
 from pathlib import Path
@@ -65,6 +66,13 @@ FAILED_TO_COLOR_NAME = {
 FAILED_TO_MSG = {
     True: "failed",
     False: "succeeded",
+}
+
+EVALUATE_CONDITION_SUPPORTED_OPERATORS = {
+    "<=": operator.le,
+    ">=": operator.ge,
+    "<": operator.lt,
+    ">": operator.gt,
 }
 
 # This is the GitHub username of the bot (and its reviewer) that pushes contributions and docker updates to the content repo.
@@ -591,3 +599,33 @@ def get_nearest_older_commit_with_pipeline(
         if previous_pipeline:
             return previous_pipeline, suspicious_commits
     return None, None
+
+
+def evaluate_condition(parameter: float, condition: str, hundred_percent: float = 1) -> bool:
+    """
+    Evaluates a parameter against a given condition string.
+
+    :param parameter: The value to evaluate.
+    :param condition: The condition string (e.g., "<=50%", ">10", "<=0").
+    :param hundred_percent: The value that represents 100% for percentage-based conditions.
+    :return: Boolean indicating if the parameter meets the condition.
+    """
+
+    # Determine the operator used in the condition
+    for op in EVALUATE_CONDITION_SUPPORTED_OPERATORS:
+        if op in condition:
+            operator_func = EVALUATE_CONDITION_SUPPORTED_OPERATORS[op]
+            condition_value_str = condition.split(op)[1].strip()
+            break
+    else:
+        raise ValueError(f"Unknown condition format: {condition}")
+
+    # Check if the condition contains a percentage
+    if "%" in condition_value_str:
+        condition_value = float(condition_value_str.replace("%", "").strip())
+        parameter = (parameter / hundred_percent) * 100
+    else:
+        condition_value = float(condition_value_str)
+
+    # Evaluate the condition
+    return operator_func(parameter, condition_value)
