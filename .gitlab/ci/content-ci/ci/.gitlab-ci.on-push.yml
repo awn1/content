@@ -730,15 +730,15 @@ xsiam_server_ga:
         CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">0" # stop waiting on the timeout if we got at least one machine.
         CLOUD_MACHINES_TIMEOUT: 0  # Wait indefinitely for the machines.
         GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-nightly"
-    - if: '$IS_NIGHTLY == "true" && $SCHEDULED_NIGHTLY == "true"'  # On scheduled nightly, we want to run the build-effort machines.
+    - if: '$IS_NIGHTLY == "true" && $SCHEDULED_NIGHTLY == "true"'  # On scheduled nightly, we want to run more machines.
       when: always
       variables:
-        CLOUD_MACHINES_TYPE: "build-effort"
+        CLOUD_MACHINES_TYPE: "nightly"
         CLEAN_MACHINE_NEEDED: "true"
         CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">=2" # don't run the job if there are less than 2 machines available.
         CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">=50%" # stop waiting on the timeout if we got 50% of the machines.
         CLOUD_MACHINES_TIMEOUT: 1200  # 20 minutes
-        GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-build-effort"
+        GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-nightly"
   timeout: 12 hours
   variables:
     CLOUD_MACHINES_TYPE: "build"
