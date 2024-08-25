@@ -393,6 +393,7 @@ def options_handler():
     parser = argparse.ArgumentParser(description="Store packs in cloud storage.")
     # disable-secrets-detection-start
     parser.add_argument("-a", "--artifacts_path", help="The full path of packs artifacts", required=True)
+    parser.add_argument("-ast", "--artifacts-folder-server-type", help="The artifacts folder server type", required=True)
     parser.add_argument("-e", "--extract_path", help="Full path of folder to extract wanted packs", required=True)
     parser.add_argument("-pb", "--production_bucket_name", help="Production bucket name", required=True)
     parser.add_argument("-bb", "--build_bucket_name", help="CircleCI Build bucket name", required=True)
@@ -503,6 +504,13 @@ def main():
 
         packs_for_current_marketplace.append(pack)
 
+    markdown_relative_images_data = (
+        Path(options.artifacts_folder_server_type) / BucketUploadFlow.MARKDOWN_RELATIVE_IMAGES_FILE_NAME
+    )
+    with open(markdown_relative_images_data) as f:
+        # reading the file generated in the sdk of all the packs readme images data.
+        markdown_relative_paths_data_dict = json.load(f)
+
     # Starting iteration over packs
     pack: Pack
     for pack in packs_for_current_marketplace:
@@ -518,6 +526,14 @@ def main():
         )
         if not task_status:
             pack.status = PackStatus.FAILED_IMAGES_UPLOAD.name  # type: ignore[misc]
+            pack.cleanup()
+            continue
+
+        task_status = pack.copy_relative_path_images(
+            production_bucket, build_bucket, markdown_relative_paths_data_dict, production_base_path, build_bucket_base_path
+        )
+        if not task_status:
+            pack.status = PackStatus.FAILED_RELATIVE_IMAGES_UPLOAD.name  # type: ignore[misc]
             pack.cleanup()
             continue
 

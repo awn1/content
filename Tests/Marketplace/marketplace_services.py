@@ -2393,6 +2393,76 @@ class Pack:
 
         return task_status
 
+    def copy_relative_path_images(
+        self,
+        production_bucket,
+        build_bucket,
+        markdown_relative_paths_data_dict,
+        storage_base_path,
+        build_bucket_base_path,
+    ):
+        """Copies all pack's integration images from the build bucket to the production bucket
+
+        Args:
+            production_bucket (google.cloud.storage.bucket.Bucket): The production bucket
+            build_bucket (google.cloud.storage.bucket.Bucket): The build bucket
+            markdown_relative_paths_data_dict (dict): The images data structure from Prepare Content step.
+            storage_base_path (str): The target destination of the upload in the target bucket.
+            build_bucket_base_path (str): The path of the build bucket in gcp.
+        Returns:
+            bool: Whether the operation succeeded.
+
+        """
+        task_status = True
+        num_copied_images = 0
+        err_msg = f"Failed copying {self._pack_name} pack relative images images."
+
+        if pack_markdown_images := markdown_relative_paths_data_dict.get(self.name):
+            for key in MARKDOWN_IMAGES_RELATIVE_PATH_IMAGE_KEYS:
+                if current_markdown_file_images := pack_markdown_images.get(key, []):
+                    for image in current_markdown_file_images:
+                        relative_path = image.get("relative_image_path", "")
+                        build_bucket_image_path = os.path.join(build_bucket_base_path, relative_path)
+                        build_bucket_image_blob = build_bucket.blob(build_bucket_image_path)
+                        image_name = image.get("image_name")
+
+                        if not build_bucket_image_blob.exists():
+                            logging.error(
+                                f"Couldn't upload relative path image {image_name}, {build_bucket_image_path} "
+                                f"does not exist in build bucket."
+                            )
+                            task_status = False
+                        else:
+                            logging.debug(f"Copying {self._pack_name} pack integration image: {image_name}")
+                            try:
+                                copied_blob = build_bucket.copy_blob(
+                                    blob=build_bucket_image_blob,
+                                    destination_bucket=production_bucket,
+                                    new_name=os.path.join(storage_base_path, relative_path),
+                                )
+                                if not copied_blob.exists():
+                                    logging.error(
+                                        f"Copy {self._pack_name} relative_path image: {build_bucket_image_blob.name} "
+                                        f"blob to {copied_blob.name} blob failed."
+                                    )
+                                    task_status = False
+                                else:
+                                    num_copied_images += 1
+
+                            except Exception as e:
+                                logging.exception(f"{err_msg}. Additional Info: {e!s}")
+                                return False
+
+        if not task_status:
+            logging.error(err_msg)
+        else:
+            if num_copied_images == 0:
+                logging.debug(f"No relative path images were detected in {self._pack_name} pack.")
+            else:
+                logging.success(f"Copied {num_copied_images} relative path images for {self._pack_name} pack.")
+
+        return task_status
+
     def upload_author_image(self, storage_bucket, storage_base_path):
         """
         Searches for `Author_image.png` and uploads pack author image to gcs.
@@ -2439,8 +2509,7 @@ class Pack:
             storage_bucket: The storage bucket to upload the images to.
             storage_base_path: The storage bucket base path.
         """
-        pack_markdown_images = markdown_relative_paths_data_dict.get(self.name)
-        if pack_markdown_images:
+        if pack_markdown_images := markdown_relative_paths_data_dict.get(self.name):
             for key in MARKDOWN_IMAGES_RELATIVE_PATH_IMAGE_KEYS:
                 if current_markdown_file_images := pack_markdown_images.get(key, []):
                     for image in current_markdown_file_images:
