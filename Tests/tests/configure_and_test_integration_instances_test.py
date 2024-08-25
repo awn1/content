@@ -57,7 +57,7 @@ def create_build_object_with_mock(mocker, server_type):
         "--server_type",
         server_type,
         "--cloud_servers_path",
-        "$XSIAM_SERVERS_PATH",
+        "$CLOUD_SAAS_SERVERS_PATH",
         "--marketplace_name",
         "marketplacev2",
         "--machine_assignment",

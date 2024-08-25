@@ -48,10 +48,6 @@ exit_code=0
 CURRENT_DIR=$(pwd)
 echo "CURRENT_DIR: ${CURRENT_DIR}"
 echo "IS_NIGHTLY: ${IS_NIGHTLY}"
-if [ -n "${CLOUD_SERVERS_FILE}" ]; then
-  CLOUD_SERVERS_PATH=$(cat "${CLOUD_SERVERS_FILE}")
-  echo "CLOUD_SERVERS_PATH is set to: ${CLOUD_SERVERS_PATH}"
-fi
 
 if [ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]; then
 
@@ -65,7 +61,7 @@ if [ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]; then
   demisto-sdk modeling-rules test --non-interactive \
     --junit-path="${MODELING_RULES_RESULTS_FILE_NAME}" \
     --service_account "${GCS_ARTIFACTS_KEY}" \
-    --cloud_servers_path "${CLOUD_SERVERS_PATH}" \
+    --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" \
     --cloud_servers_api_keys "cloud_machines_details.json" \
     --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
     --branch_name "${CI_COMMIT_BRANCH}" \
