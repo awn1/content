@@ -3,7 +3,7 @@
 ## How to release an Infra version
 1.  Get a commit hash you want to release.
     Make sure nightly has already passed on the commit hash! Otherwise, the release may break.
-2.  Run `poetry run .gitlab/ci/ci_resources/infra-release-ci/release_infra.py` with the necessary arguments. _(add ` --help` for more information)_
+2.  Run `poetry run python .gitlab/ci/ci_resources/infra-release-ci/release_infra.py` with the necessary arguments. _(add ` --help` for more information)_
 3.  A new branch `infra_v0.0.0` (matching your version) will be pushed & merge request will be created. Go to the infra repo _merge requests_ section, and ask a TL/manager to approve it.
 4.  Merge to master. Check  https://gitlab.xdr.pan.local/xdr/cortex-content/infra/-/commits/master/?ref_type=HEADS. You'll see two commits under your name. Copy the commit sha of the earlier one (NOT the `Merge branch...` one).
 5.  Go to https://gitlab.xdr.pan.local/xdr/cortex-content/infra/-/releases/new. Type in a new tag `v.0.0.0` and then the commit hash you copied in the previous step (don't use the default `master`). Choose Release title=`Infra v0.0.0`. Copy the top of `CHANGELOG.md` (the changes included in your release) to the `Description` field. Click `Create Release`.
