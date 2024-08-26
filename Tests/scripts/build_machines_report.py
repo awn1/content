@@ -63,7 +63,7 @@ COMMENT_FIELD_NAME = "__comment__"
 RECORDS_FILE_NAME = "records.json"
 WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME = "wait_in_line_slack_messages.json"
 SERVER_TYPE_TO_CLIENT_TYPE: dict[str, type[XsoarClient]] = {
-    XsoarClient.SERVER_TYPE: XsiamClient,
+    XsoarClient.SERVER_TYPE: XsoarClient,
     XsiamClient.SERVER_TYPE: XsiamClient,
 }
 PRODUCT_TYPE_TO_SERVER_TYPE: dict[str, str] = {
@@ -738,9 +738,10 @@ def main() -> None:
             records: list[dict] = load_json_file((test_data_path / RECORDS_FILE_NAME).as_posix())  # type: ignore[assignment]
             wait_in_line_slack_messages = load_json_file((test_data_path / WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME).as_posix())  # type: ignore[assignment]
         else:
-            admin_user = Settings.xsoar_admin_user
             cloud_servers_path_json: dict = load_json_file(args.cloud_servers_path)  # type: ignore[assignment]
-            records = generate_records(cloud_servers_path_json, admin_user, tenants, args.without_viso, current_date)
+            records = generate_records(
+                cloud_servers_path_json, Settings.xsoar_admin_user, tenants, args.without_viso, current_date
+            )
             # Save the records to a json file for future use and debugging.
             with open(output_path / RECORDS_FILE_NAME, "w") as f:
                 json.dump(records, f, indent=4, default=str, sort_keys=True)
