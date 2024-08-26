@@ -1577,7 +1577,9 @@ def output(result: CollectionResult | None):
     if modeling_rules_to_test:
         # Don't write modeling rules to test if there are none.
         PATHS.output_modeling_rules_to_test_file.write_text(json.dumps(modeling_rules_to_test))
-    PATHS.output_machines_file.write_text(json.dumps({str(machine): (machine in machines) for machine in Machine}))
+    PATHS.output_machines_file.write_text(
+        json.dumps({str(machine): (machine in machines) for machine in Machine.get_all_machines()})
+    )
     PATHS.output_packs_to_reinstall_test_file.write_text(packs_to_reinstall_test_str)
     PATHS.output_tpb_dependencies_packs.write_text(tpb_dependencies_packs_str)
 
