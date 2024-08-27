@@ -1173,7 +1173,7 @@ class Server:
             new_module_instances, modified_module_instances
         )
 
-        if not os.getenv("BUCKET_UPLOAD"):  # Don't need to upload test playbooks in upload flow
+        if not str2bool(os.getenv("BUCKET_UPLOAD")):  # Don't need to upload test playbooks in upload flow
             self.create_and_upload_test_pack()
 
         success &= self.report_tests_status(

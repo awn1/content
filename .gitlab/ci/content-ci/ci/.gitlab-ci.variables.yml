@@ -44,6 +44,8 @@ variables:
   OVERRIDE_SDK_REF: "false" # Whether to override the SDK ref defined in pyproject.toml, with the one defined in SDK_REF.
   OVERRIDE_ALL_PACKS: "false"
   TEST_UPLOAD: "true"
+  FORCE_BUCKET_UPLOAD: "false"
+  BUCKET_UPLOAD: "false"
   NATIVE_CANDIDATE_IMAGE: "latest"
   DEMISTO_SDK_LOG_FILE_PATH: "${ARTIFACTS_FOLDER}/logs"
   CONTENT_GITLAB_CI: "true"

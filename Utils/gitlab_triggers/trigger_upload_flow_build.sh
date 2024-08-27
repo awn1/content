@@ -56,7 +56,7 @@ while [[ "$#" -gt 0 ]]; do
     shift
     shift;;
 
-  -f|--force) _force=true
+  -f|--force) _force="true"
     shift
     shift;;
 

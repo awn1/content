@@ -299,7 +299,7 @@
 .check_build_files_are_up_to_date:
   - section_start "Check Build Files Are Up To Date"
   - |
-    if [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]] || [[ "${IS_NIGHTLY}" == "true" ]] || [[ -n "${BUCKET_UPLOAD}" ]] || [[ -n "${SLACK_JOB}" ]] || [[ "${BUILD_MACHINES_CLEANUP}" == "true" ]] || [[ "${DELETE_MISMATCHED_BRANCHES}" == "true" ]] || [[ "${SECURITY_SCANS}" == "true" ]] || [[ "${DEMISTO_TEST_NATIVE_CANDIDATE}" == "true" ]] || [[ "${CI_COMMIT_BRANCH}" == "master" ]] || [[ "${SDK_RELEASE}" == "true" ]] || [[ "${TRIGGER_CONTRIBUTION_BUILD}" == "true" ]]; then
+    if [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]] || [[ "${IS_NIGHTLY}" == "true" ]] || [[ "${BUCKET_UPLOAD}" == "true" ]] || [[ -n "${SLACK_JOB}" ]] || [[ "${BUILD_MACHINES_CLEANUP}" == "true" ]] || [[ "${DELETE_MISMATCHED_BRANCHES}" == "true" ]] || [[ "${SECURITY_SCANS}" == "true" ]] || [[ "${DEMISTO_TEST_NATIVE_CANDIDATE}" == "true" ]] || [[ "${CI_COMMIT_BRANCH}" == "master" ]] || [[ "${SDK_RELEASE}" == "true" ]] || [[ "${TRIGGER_CONTRIBUTION_BUILD}" == "true" ]]; then
       echo "Running a build which doesn't require build files check validation"
     else
       git fetch origin master # allows `git diff`ing, otherwise there's no origin/master
@@ -449,7 +449,7 @@
 .build_parameters: &build_parameters
   - section_start "Build Parameters" --collapsed
   - echo "Environment Variables:"
-  - set | grep -E "^ARTIFACTS_FOLDER.*=|^JIRA_.*=|^INSTANCE_TESTS=|^SERVER_BRANCH_NAME=|^ARTIFACT_BUILD_NUM=|^IS_NIGHTLY=|^TIME_TO_LIVE=|^CONTRIB_BRANCH=|^FORCE_PACK_UPLOAD=|^PACKS_TO_UPLOAD=|^BUCKET_UPLOAD=|^TEST_UPLOAD=|^STORAGE_BASE_PATH=|^OVERRIDE_ALL_PACKS=|^GCS_MARKET_BUCKET=|^GCS_MARKET_V2_BUCKET=|^GCS_MARKET_XPANSE_BUCKET=|^SLACK_.*=|^NVM_DIR=|^NODE_VERSION=|^PATH=|^ENV_RESULTS_PATH=|^LAST_UPLOAD_COMMIT=|^DEMISTO_SDK_LOG_FILE_SIZE=|^DEMISTO_SDK_LOG_FILE_COUNT=|^DEMISTO_SDK_LOG_FILE_PATH=|^DEMISTO_SDK_LOG_NO_COLORS=|^DEMISTO_SDK_LOG_NOTIFY_PATH=|^POETRY_VIRTUALENVS_OPTIONS_ALWAYS_COPY=|^DEMISTO_SDK_NIGHTLY=|^OVERRIDE_SDK_REF=|^SDK_REF=|^CURRENT_BRANCH_NAME=" | sort
+  - set | grep -E "^ARTIFACTS_FOLDER.*=|^JIRA_.*=|^INSTANCE_TESTS=|^SERVER_BRANCH_NAME=|^ARTIFACT_BUILD_NUM=|^IS_NIGHTLY=|^TIME_TO_LIVE=|^CONTRIB_BRANCH=|^FORCE_PACK_UPLOAD=|^PACKS_TO_UPLOAD=|^BUCKET_UPLOAD=|^TEST_UPLOAD=|^FORCE_BUCKET_UPLOAD=|^STORAGE_BASE_PATH=|^OVERRIDE_ALL_PACKS=|^GCS_MARKET_BUCKET=|^GCS_MARKET_V2_BUCKET=|^GCS_MARKET_XPANSE_BUCKET=|^SLACK_.*=|^NVM_DIR=|^NODE_VERSION=|^PATH=|^ENV_RESULTS_PATH=|^LAST_UPLOAD_COMMIT=|^DEMISTO_SDK_LOG_FILE_SIZE=|^DEMISTO_SDK_LOG_FILE_COUNT=|^DEMISTO_SDK_LOG_FILE_PATH=|^DEMISTO_SDK_LOG_NO_COLORS=|^DEMISTO_SDK_LOG_NOTIFY_PATH=|^POETRY_VIRTUALENVS_OPTIONS_ALWAYS_COPY=|^DEMISTO_SDK_NIGHTLY=|^OVERRIDE_SDK_REF=|^SDK_REF=|^CURRENT_BRANCH_NAME=" | sort
   - echo "Versions Installed:"
   - python --version
   - python3 --version
@@ -760,10 +760,10 @@
     - echo "in .run-pre-commit, SHOULD_PRE_COMMIT_ALL = $SHOULD_PRE_COMMIT_ALL"
     - PRE_COMMIT_SUCCESS=0
     - |
-      if [[ -n $BUCKET_UPLOAD && $TEST_UPLOAD == "true" ]]; then
+      if [[ "${BUCKET_UPLOAD}" == "true" ]] && [[ "${TEST_UPLOAD}" == "true" ]]; then
         echo "Skipping validations when uploading to a test bucket."
       else
-        if [[ -n $BUCKET_UPLOAD ]]; then
+        if [[ "${BUCKET_UPLOAD}" == "true" ]]; then
           demisto-sdk pre-commit -g --prev-version $LAST_UPLOAD_COMMIT --mode=nightly || PRE_COMMIT_SUCCESS=1
         else
           if [[ -n "${SHOULD_PRE_COMMIT_ALL}" ]]; then
