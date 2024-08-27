@@ -22,7 +22,7 @@ cloning-repositories-upload-flow:
 .check_user_permissions_to_upload_packs: &check_user_permissions_to_upload_packs
   - section_start "Check User Permissions to Upload Packs" # if bucket upload and uploading to marketplace-dist
   - |
-    if [[ -n "${BUCKET_UPLOAD}" || -n "${FORCE_BUCKET_UPLOAD}" ]] && [[ "$GCS_MARKET_BUCKET" == "$GCS_PRODUCTION_BUCKET" ]]; then
+    if [[ "${BUCKET_UPLOAD}" == "true" || "${FORCE_BUCKET_UPLOAD}" == "true" ]] && [[ "$GCS_MARKET_BUCKET" == "$GCS_PRODUCTION_BUCKET" ]]; then
       CONTENT_LEADERS=$(curl -sS "https://api.github.com/orgs/demisto/teams/content-leaders/members" -H "Authorization: token ${GITHUB_TOKEN}")
       echo "received content leaders"
       LEADER_NAMES=$(echo $CONTENT_LEADERS | jq -r ".[].login")
