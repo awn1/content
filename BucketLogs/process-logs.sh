@@ -55,6 +55,6 @@ cat logs_list.txt | xargs -n 20 | while read line; do
     i=$((i+20))
     echo $line | tr ' ' ',' | xargs $REPLACE '{}' bq -q --project_id oproxy-dev load --allow_quoted_newlines --max_bad_records=10 --skip_leading_rows=1 "$LOG_TABLE" {} "$SCRIPT_DIR/cloud_storage_usage_schema_v0.json"
     echo "Done loading via bq. Moving to processed..."
-    echo $line | tr ' ' '\n' | gsutil -m mv -I gs://oproxy-dev-logs/processed/
+    echo $line | tr ' ' '\n' | gsutil -m -q mv -I gs://oproxy-dev-logs/processed/
     echo "`date +%H:%M:%S`: total processed: $i"
 done

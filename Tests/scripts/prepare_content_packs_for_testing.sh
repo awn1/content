@@ -60,7 +60,7 @@ else
     SOURCE_PATH="upload-flow/builds/$CI_COMMIT_BRANCH/$CI_PIPELINE_ID/content"
     # ====== UPDATING TESTING BUCKET ======
     echo "Copying production bucket files at: gs://$GCS_PRODUCTION_BUCKET/content to dev bucket at path: gs://$GCS_MARKET_BUCKET/$SOURCE_PATH"
-    gsutil -m cp -r "gs://$GCS_PRODUCTION_BUCKET/content" "gs://$GCS_MARKET_BUCKET/$SOURCE_PATH" >> "${ARTIFACTS_FOLDER_SERVER_TYPE}/logs/Prepare_Content_Packs_For_Testing_gsutil.log" 2>&1
+    gsutil -m -q cp -r "gs://$GCS_PRODUCTION_BUCKET/content" "gs://$GCS_MARKET_BUCKET/$SOURCE_PATH" >> "${ARTIFACTS_FOLDER_SERVER_TYPE}/logs/Prepare_Content_Packs_For_Testing_gsutil.log" 2>&1
     echo "Finished copying successfully."
     # ====== UPDATING TESTING BUCKET ======
   else  # case 3: a test upload, the source is of an exiting target bucket, no need to copy from the prod bucket
@@ -70,7 +70,7 @@ else
 fi
 
 echo "Copying master files at: gs://$GCS_MARKET_BUCKET/$SOURCE_PATH to build bucket at target path: gs://$BUILD_BUCKET_CONTENT_DIR_FULL_PATH"
-gsutil -m cp -r "gs://$GCS_MARKET_BUCKET/$SOURCE_PATH" "gs://$BUILD_BUCKET_CONTENT_DIR_FULL_PATH" >> "${ARTIFACTS_FOLDER_SERVER_TYPE}/logs/Prepare_Content_Packs_For_Testing_gsutil.log" 2>&1
+gsutil -m -q cp -r "gs://$GCS_MARKET_BUCKET/$SOURCE_PATH" "gs://$BUILD_BUCKET_CONTENT_DIR_FULL_PATH" >> "${ARTIFACTS_FOLDER_SERVER_TYPE}/logs/Prepare_Content_Packs_For_Testing_gsutil.log" 2>&1
 echo "Finished copying successfully."
 
 CONTENT_PACKS_TO_UPLOAD_FILE="${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_upload.json"
