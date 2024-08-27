@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 import zipfile
+from collections.abc import Iterable
 from datetime import datetime, timedelta
 from distutils.util import strtobool
 from pathlib import Path
@@ -39,6 +40,7 @@ from Tests.scripts.common import (
     get_slack_user_name,
     get_test_results_files,
     is_pivot,
+    join_list_by_delimiter_in_chunks,
     replace_escape_characters,
     slack_link,
     was_message_already_sent,
@@ -236,7 +238,7 @@ def test_modeling_rules_results(artifact_folder: Path, pipeline_url: str, title:
             }
         ], False
 
-    failed_test_suites = []
+    failed_test_suites_tuples = []
     total_test_suites = 0
     for test_suites in modeling_rules_to_test_suite.values():
         for test_suite in test_suites.values():
@@ -244,22 +246,23 @@ def test_modeling_rules_results(artifact_folder: Path, pipeline_url: str, title:
             if test_suite.failures or test_suite.errors:
                 properties = get_properties_for_test_suite(test_suite)
                 if modeling_rule := get_summary_for_test_modeling_rule(properties):
-                    failed_test_suites.append(
+                    failed_test_suites_tuples.append(
                         failed_test_data_to_slack_link(modeling_rule, failed_test_to_jira_mapping.get(modeling_rule))
                     )
 
-    if failed_test_suites:
+    if failed_test_suites_tuples:
         if (artifact_folder / TEST_MODELING_RULES_TO_JIRA_TICKETS_CONVERTED).exists():
             title_suffix = ALL_FAILURES_WERE_CONVERTED_TO_JIRA_TICKETS
             color = "warning"
         else:
             title_suffix = ""
             color = "danger"
-
+        failed_test_suites = map(lambda x: x[1], sorted(failed_test_suites_tuples, key=lambda x: (x[0], x[1])))
         title = (
-            f"{title} - Failed Tests Modeling rules - Passed:{total_test_suites - len(failed_test_suites)}, "
-            f"Failed:{len(failed_test_suites)}"
+            f"{title} - Failed Tests Modeling rules - Passed:{total_test_suites - len(failed_test_suites_tuples)}, "
+            f"Failed:{len(failed_test_suites_tuples)}"
         )
+
         return [
             {
                 "fallback": title,
@@ -268,10 +271,11 @@ def test_modeling_rules_results(artifact_folder: Path, pipeline_url: str, title:
                 "title_link": get_test_report_pipeline_url(pipeline_url),
                 "fields": [
                     {
-                        "title": f"Failed Tests Modeling rules{title_suffix}",
-                        "value": " ,".join(failed_test_suites),
+                        "title": f"Failed Tests Modeling rules{title_suffix if i == 0 else ' - Continued'}",
+                        "value": chunk,
                         "short": False,
                     }
+                    for i, chunk in enumerate(join_list_by_delimiter_in_chunks(failed_test_suites))
                 ],
             }
         ], True
@@ -287,10 +291,10 @@ def test_modeling_rules_results(artifact_folder: Path, pipeline_url: str, title:
     ], False
 
 
-def failed_test_data_to_slack_link(failed_test: str, jira_ticket_data: dict[str, str] | None) -> str:
+def failed_test_data_to_slack_link(failed_test: str, jira_ticket_data: dict[str, str] | None) -> tuple[bool, str]:
     if jira_ticket_data:
-        return slack_link(jira_ticket_data["url"], f"{failed_test} [{jira_ticket_data['key']}]")
-    return failed_test
+        return True, slack_link(jira_ticket_data["url"], f"{failed_test} [{jira_ticket_data['key']}]")
+    return False, failed_test
 
 
 def test_playbooks_results_to_slack_msg(
@@ -315,6 +319,17 @@ def test_playbooks_results_to_slack_msg(
         else:
             title_suffix = ""
             color = "danger"
+
+        failed_playbooks: Iterable[str] = map(
+            lambda x: x[1],
+            sorted(
+                [
+                    failed_test_data_to_slack_link(playbook_id, playbook_to_jira_mapping.get(playbook_id))
+                    for playbook_id in failed_tests
+                ],
+                key=lambda x: (x[0], x[1]),
+            ),
+        )
         return [
             {
                 "fallback": title,
@@ -325,12 +340,10 @@ def test_playbooks_results_to_slack_msg(
                 "fields": [
                     {
                         "title": f"Failed Test Playbooks{title_suffix}",
-                        "value": ", ".join(
-                            failed_test_data_to_slack_link(playbook_id, playbook_to_jira_mapping.get(playbook_id))
-                            for playbook_id in failed_tests
-                        ),
+                        "value": chunk,
                         "short": False,
                     }
+                    for i, chunk in enumerate(join_list_by_delimiter_in_chunks(failed_playbooks))
                 ],
             }
         ], True
