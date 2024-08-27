@@ -1462,7 +1462,7 @@ class CloudServer(Server):
         output_file = f"{artifacts_folder}/Copy_custom_bucket_to_cloud_machine.log"
         success = True
         to_bucket = f"{marketplace_buckets}/{self.name}"
-        cmd = f"gsutil -m cp -r gs://{from_bucket} gs://{to_bucket}/"
+        cmd = f"gsutil -m -q cp -r gs://{from_bucket} gs://{to_bucket}/"
         with open(output_file, "w") as outfile:
             try:
                 subprocess.run(cmd.split(), stdout=outfile, stderr=outfile, check=True)

@@ -49,4 +49,4 @@ gcloud auth activate-service-account --key-file="${GCS_ARTIFACTS_KEY}" >> "${ART
 TARGET_PATH="content/$BRANCH/$CI_PIPELINE_ID$STAGING_SUFFIX"
 TARGET="gs://$GCS_ARTIFACTS_BUCKET/$TARGET_PATH"
 echo "auth loaded. uploading files at: $ARTIFACTS_DIR to target: ${TARGET}"
-gsutil -m cp -z html,md,json,log,txt -r "$ARTIFACTS_DIR" "${TARGET}"
+gsutil -m -q cp -z html,md,json,log,txt -r "$ARTIFACTS_DIR" "${TARGET}"
