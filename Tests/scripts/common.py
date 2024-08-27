@@ -1,5 +1,6 @@
 import json
 import operator
+from collections.abc import Iterable
 from datetime import datetime, timedelta
 from itertools import pairwise
 from pathlib import Path
@@ -629,3 +630,26 @@ def evaluate_condition(parameter: float, condition: str, hundred_percent: float 
 
     # Evaluate the condition
     return operator_func(parameter, condition_value)
+
+
+def join_list_by_delimiter_in_chunks(list_to_join: Iterable[str], delimiter: str = ", ", max_length: int = 2_000) -> list[str]:
+    """
+    Join a list of strings into chunks with a given delimiter and maximum length.
+    Args:
+        list_to_join (list): The list to split.
+        delimiter (str): The delimiter to join the chunks.
+        max_length (int): The maximum length of each chunk.
+
+    Returns:
+        list: The list of chunks.
+    """
+    chunks = []
+    current_chunk = ""
+    for item in list_to_join:
+        if len(current_chunk) + len(item) + len(delimiter) > max_length:
+            chunks.append(current_chunk)
+            current_chunk = ""
+        current_chunk += f"{item}{delimiter}"
+    if current_chunk:
+        chunks.append(current_chunk)
+    return chunks
