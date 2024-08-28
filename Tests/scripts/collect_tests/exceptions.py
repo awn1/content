@@ -130,11 +130,6 @@ class SkippedTestException(InvalidTestException):
         super().__init__(test_name, f"test is skipped in {skip_place}{skip_reason_suffix}")
 
 
-class PrivateTestException(InvalidTestException):
-    def __init__(self, test_name: str):
-        super().__init__(test_name, "test is private")
-
-
 class IncompatibleTestMarketplaceException(InvalidTestException):
     def __init__(self, test_name: str, test_marketplaces: set[MarketplaceVersions], expected_marketplace: MarketplaceVersions):
         super().__init__(

@@ -3593,7 +3593,6 @@ def get_recent_commits_data(
         content_repo (git.repo.base.Repo): content repo object.
         index_folder_path (str): the path to the local index folder
         is_bucket_upload_flow (bool): indicates whether its a run of bucket upload flow or regular build
-        is_private_build (bool): indicates whether its a run of private build or not
         circle_branch (str): CircleCi branch of current build
 
     Returns:
@@ -3614,7 +3613,6 @@ def get_previous_commit(content_repo, index_folder_path, is_bucket_upload_flow, 
         content_repo (git.repo.base.Repo): content repo object.
         index_folder_path (str): the path to the local index folder
         is_bucket_upload_flow (bool): indicates whether its a run of bucket upload flow or regular build
-        is_private_build (bool): indicates whether its a run of private build or not
         circle_branch (str): CircleCi branch of current build
 
     Returns:

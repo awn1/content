@@ -511,9 +511,7 @@ class Server:
         Returns:
             Tuple[List[str], List[str]]: The list of new integrations names and list of modified integrations names.
         """
-        new_integrations_files, modified_integrations_files = (
-            self.get_new_and_modified_integration_files() if not self.build.is_private else ([], [])
-        )
+        new_integrations_files, modified_integrations_files = self.get_new_and_modified_integration_files()
         new_integrations_names, modified_integrations_names = [], []
 
         if new_integrations_files:
@@ -943,8 +941,7 @@ class Server:
             self: An object containing the current server info.
             all_module_instances: The integration instances that should be tested
             pre_update: Whether this instance testing is before or after the content update on the server.
-            use_mock: Whether to use mock while testing mockable integrations. Should be used mainly with
-            private content build which aren't using the mocks.
+            use_mock: Whether to use mock while testing mockable integrations.
             first_call: indicates if it's the first time the function is called from the same place
 
         Returns:
@@ -1526,7 +1523,6 @@ class Build(ABC):
         self.secret_conf = get_secrets_from_gsm(options, self.branch_name)
         self.username = options.user if options.user else self.secret_conf.get("username")
         self.password = options.password if options.password else self.secret_conf.get("userPassword")
-        self.is_private = options.is_private
         conf = get_json_file(options.conf)
         self.tests = conf["tests"]
         self.skipped_integrations_conf = conf["skipped_integrations"]
@@ -1759,7 +1755,6 @@ def options_handler(args=None):
     parser.add_argument("-g", "--git_sha1", help="commit sha1 to compare changes with")
     parser.add_argument("-c", "--conf", help="Path to conf file", required=True)
     parser.add_argument("-sn", "--sdk-nightly", type=str2bool, help="Is SDK nightly build")
-    parser.add_argument("-pr", "--is_private", type=str2bool, help="Is private build")
     parser.add_argument("--branch", help="GitHub branch name", required=True)
     parser.add_argument("--build_number", help="CI job number where the instances were created", required=True)
     parser.add_argument(
