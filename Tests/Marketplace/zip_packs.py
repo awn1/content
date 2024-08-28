@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from zipfile import ZipFile
 
-from demisto_sdk.commands.common.tools import get_files_in_dir, str2bool
+from demisto_sdk.commands.common.tools import get_files_in_dir
 from packaging.version import Version
 
 from Tests.Marketplace.marketplace_constants import IGNORED_FILES, PACKS_FULL_PATH
@@ -39,14 +39,6 @@ def option_handler():
             "https://googleapis.dev/python/google-api-core/latest/auth.html"
         ),
         required=False,
-    )
-    parser.add_argument(
-        "-pvt",
-        "--private",
-        type=str2bool,
-        help="Indicates if the tools is running " "on a private build.",
-        required=False,
-        default=False,
     )
 
     return parser.parse_args()
@@ -145,19 +137,6 @@ def get_zipped_packs_names(zip_path):
     return zipped_packs
 
 
-def copy_zipped_packs_to_artifacts(zipped_packs, artifacts_path):
-    """
-    Copies zip files if needed
-    Args:
-        zipped_packs: A dictionary containing pack name as key and it's latest zip path as value
-        artifacts_path: Path of the artifacts folder
-    """
-    if os.path.exists(artifacts_path):
-        for key, value in zipped_packs.items():
-            logging.info(f"Copying pack from {value} to {artifacts_path}/packs/{key}.zip")
-            shutil.copy(value, f"{artifacts_path}/packs/{key}.zip")
-
-
 def cleanup(destination_path):
     """
     Cleans up the destination path directory by removing everything except the packs zip.
@@ -199,7 +178,6 @@ def main():
     option = option_handler()
     zip_path = option.zip_path
     artifacts_path = option.artifacts_path
-    private_build = option.private
 
     zipped_packs = {}
     success = True
@@ -208,13 +186,6 @@ def main():
     except Exception as e:
         logging.exception(f"Failed to get zipped packs names, {e}")
         success = False
-
-    if private_build:
-        try:
-            copy_zipped_packs_to_artifacts(zipped_packs, artifacts_path)
-        except Exception as e:
-            logging.exception(f"Failed to copy to artifacts, {e}")
-            success = False
 
     if zipped_packs and success:
         try:

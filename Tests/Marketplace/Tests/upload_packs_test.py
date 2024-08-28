@@ -585,18 +585,3 @@ class TestCorepacksFiles:
 
         # Remove the temp artifacts dir that was created for testing:
         shutil.rmtree(artifacts_dir)
-
-
-class TestUpdatedPrivatePacks:
-    @staticmethod
-    def get_pack_metadata():
-        metadata_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data", "metadata.json")
-        with open(metadata_path) as metadata_file:
-            pack_metadata = json.load(metadata_file)
-
-        return pack_metadata
-
-    @staticmethod
-    def get_index_folder_path():
-        index_json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data")
-        return index_json_path

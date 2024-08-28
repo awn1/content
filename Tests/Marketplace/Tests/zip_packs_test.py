@@ -4,7 +4,6 @@
 import pytest
 
 from Tests.Marketplace.zip_packs import (
-    copy_zipped_packs_to_artifacts,
     get_latest_pack_zip_from_pack_files,
     get_zipped_packs_names,
     remove_test_playbooks_from_signatures,
@@ -109,46 +108,6 @@ class TestZipPacks:
             mocker.patch("os.listdir", return_value=list_dir_result)
             mocker.patch("os.path.isdir", return_value=True)
             get_zipped_packs_names("content")
-
-    def test_copy_zipped_packs_to_artifacts(self, mocker):
-        """
-        Given:
-            A dict containing information about a single pack
-        When:
-            The information is valid
-        Then:
-            make a single call to the copy function
-        """
-        import shutil
-
-        zipped_packs = {"Slack": "content/packs/Slack/1.0.1/Slack.zip"}
-        artifacts_path = "dummy_path"
-        mocker.patch.object(shutil, "copy", side_effect=None)
-        mocker.patch("os.path.exists", return_value=True)
-
-        copy_zipped_packs_to_artifacts(zipped_packs, artifacts_path)
-
-        assert shutil.copy.call_count == 1
-
-    def test_copy_zipped_packs_to_artifacts_no_zipped_packs(self, mocker):
-        """
-        Given:
-            A dict containing no information about packs
-        When:
-            There are no packs to copy
-        Then:
-            make no calls to the copy function
-        """
-        import shutil
-
-        zipped_packs = {}
-        artifacts_path = "dummy_path"
-        mocker.patch.object(shutil, "copy", side_effect=None)
-        mocker.patch("os.path.exists", return_value=True)
-
-        copy_zipped_packs_to_artifacts(zipped_packs, artifacts_path)
-
-        assert shutil.copy.call_count == 0
 
     def test_zip_packs(self, mocker):
         """

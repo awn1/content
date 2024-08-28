@@ -49,7 +49,6 @@ class BucketUploadFlow:
     UPLOAD_PACKS_TO_MARKETPLACE_STORAGE = "upload_packs_to_marketplace_storage"
     SUCCESSFUL_PACKS = "successful_packs"
     SUCCESSFUL_UPLOADED_DEPENDENCIES_ZIP_PACKS = "successful_uploaded_dependencies_zip_packs"
-    SUCCESSFUL_PRIVATE_PACKS = "successful_private_packs"
     FAILED_PACKS = "failed_packs"
     STATUS = "status"
     AGGREGATED = "aggregated"
@@ -85,15 +84,12 @@ class GCPConfig:
     IMAGES_BASE_PATH = "content/packs"  # images packs prefix stored in metadata
     BUILD_PATH_PREFIX = "content/builds"
     BUILD_BASE_PATH = ""
-    PRIVATE_BASE_PATH = "content/packs"
     STORAGE_CONTENT_PATH = "content"  # base path for content in gcs
     USE_GCS_RELATIVE_PATH = True  # whether to use relative path in uploaded to gcs images
     GCS_PUBLIC_URL = "https://storage.googleapis.com"  # disable-secrets-detection
     PRODUCTION_BUCKET = "marketplace-dist"
     PRODUCTION_BUCKET_V2 = "marketplace-v2-dist"
     CI_BUILD_BUCKET = "marketplace-ci-build"
-    PRODUCTION_PRIVATE_BUCKET = "marketplace-dist-private"
-    CI_PRIVATE_BUCKET = "marketplace-ci-build-private"
     BASE_PACK = "Base"  # base pack name
     INDEX_NAME = "index"  # main index folder name
     CORE_PACK_FILE_NAME = "corepacks.json"  # core packs file name
