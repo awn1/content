@@ -222,13 +222,10 @@
       exit 1;
     fi
 
-    # Backward compatibility for old servers files, will be removed in the future.
-    XSIAM_SERVERS_PATH="${CI_PROJECT_DIR}/config/xsiam_servers.json"
-    XSOAR_NG_SERVERS_PATH="${CI_PROJECT_DIR}/config/xsoar_ng_servers.json"
     export CLOUD_SAAS_SERVERS_PATH="${CI_PROJECT_DIR}/config/saas_servers.json"
     if [ ! -f "${CLOUD_SAAS_SERVERS_PATH}" ]; then
-      echo "File ${CLOUD_SAAS_SERVERS_PATH} does not exist, creating it from ${XSIAM_SERVERS_PATH} and ${XSOAR_NG_SERVERS_PATH}"
-      jq -s '.[0] * .[1]' "${XSIAM_SERVERS_PATH}" "${XSOAR_NG_SERVERS_PATH}" > "${CLOUD_SAAS_SERVERS_PATH}"
+      echo "File ${CLOUD_SAAS_SERVERS_PATH} does not exist, exiting!"
+      exit 1
     fi
 
     echo "Cloning PrivatePacks"
