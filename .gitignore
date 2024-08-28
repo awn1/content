@@ -111,3 +111,5 @@ conf.json
 /records.json
 /Report_*.html
 /slack_msg.txt
+/slack_attachments.json
+/index.html
