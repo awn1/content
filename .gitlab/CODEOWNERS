@@ -1,7 +1,7 @@
 # Secrets
-BlacklistValidation @aedri
-SecretActions @aedri
-SecretActions/SecretExpirationReport @jgranot
+BlacklistValidation/ @aedri
+SecretActions/ @aedri
+SecretActions/SecretExpirationReport/ @jgranot
 
 # Marketplace - Marketplace PMs only
 Tests/Marketplace/landingPage_sections.json @ypreisler @bkatzir
@@ -21,15 +21,13 @@ Tests/scripts/prepare_content_packs_for_testing.sh @ypreisler
 Utils/trigger_test_upload_flow.sh @ypreisler
 Utils/trigger_upload_packs_to_production.sh @ypreisler
 Utils/should_trigger_test_upload.sh @ypreisler
-Utils/test_upload_flow/* @ypreisler
+Utils/test_upload_flow/** @ypreisler
 
 # Test Collection
-Tests/scripts/collect_tests @dschwartz @mdagan
+Tests/scripts/collect_tests/ @dschwartz @mdagan
 
 # Build related
-.gitlab/ci/* @yucohen
-.gitlab/* @yucohen
-.gitlab-ci.yml @yucohen
+.gitlab/** @yucohen
 Tests/scripts/lock_cloud_machines.sh @yucohen
 Tests/scripts/uninstall_packs_and_reset_bucket_cloud.sh @yucohen
 Tests/Marketplace/search_and_uninstall_pack.py @yucohen
