@@ -1,3 +1,28 @@
+# Content Infrastructure 0.0.3 (2024-08-28)
+
+### Bugfixes
+
+- Fixed an issue where releasing infra would fail pushing to gitlab ([CIAC-11621](https://jira-dc.paloaltonetworks.com/browse/CIAC-11621))
+- Fixed an issue where the filter_envs.json output was incorrect.
+- Hard code hybrid packs, since querying the graph using multi-threading can lead to unresolved searches for some threads.
+- fixed the CODEOWNERS syntax to match GitLab's
+- fixing build report machine type
+- fixing cases where the slack message is over 2000 chars limit
+- fixing upload flow workflow name and addressing upload variables only as "true" or "false"
+
+### Improved Documentation
+
+- Improved the infra release README - command mentioned wasn't complete
+
+### Misc
+
+- Added a value to ignore in secrets detection
+- Added the -q flag to use gsutil in quite mode
+- In the infra release script, added a `-ref` argument name to the commit hash released from.
+- Updated Demisto-SDK to 1.31.10
+- merging the build-effort machines pool into the nightly pool
+
+
 # Content Infrastructure 0.0.2 (2024-08-25)
 
 ### Features
