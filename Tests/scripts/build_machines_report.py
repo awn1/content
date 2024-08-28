@@ -5,6 +5,7 @@ import logging
 import os
 import warnings
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -58,6 +59,7 @@ LICENSE_DATE_FORMAT = "%Y %b %d"
 TOKENS_COUNT_PERCENTAGE_THRESHOLD_DEFAULT = 80  # % of the disposable tenants tokens usage to raise a warning.
 TOKENS_COUNT_PERCENTAGE_THRESHOLD = int(os.getenv("TOKENS_COUNT_PERCENTAGE_THRESHOLD", TOKENS_COUNT_PERCENTAGE_THRESHOLD_DEFAULT))
 MAX_OWNERS_TO_NOTIFY_DISPLAY = 5
+MAX_SERVER_VERSIONS_DISPLAY = 3
 BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT = {XsiamClient.PLATFORM_TYPE: ["build", "nightly"]}
 COMMENT_FIELD_NAME = "__comment__"
 RECORDS_FILE_NAME = "records.json"
@@ -461,6 +463,15 @@ def load_json_file(file_path: str) -> dict | list:
     return {}
 
 
+def get_record_display(record: dict, field: str, default: Any = None) -> str:
+    return record.get(field, {}).get("display", default)
+
+
+def join_list_with_ellipsis(items: Iterable[str], max_items: int) -> str:
+    items_list = list(items)
+    return f"{', '.join(items_list[:max_items])}{' ...' if len(items_list) > max_items else ''}"
+
+
 def generate_report(
     client: WebClient, without_viso: bool, name_mapping: dict, records: list, tenants: dict, tokens_count: int | None
 ) -> tuple[list[dict], list[int], list[str], list[dict]]:
@@ -476,16 +487,18 @@ def generate_report(
     ttl_expired_count = set()
     licenses_expired_count = set()
     owners_to_machines: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    platform_type_to_flow_type_to_server_versions: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     build_machines_requiring_an_agent = defaultdict(set)
     for record in records:
-        machine_name = record.get("machine_name", {}).get("display")
-        platform_type = record.get("platform_type", {}).get("display")
-        flow_type = record.get("flow_type", {}).get("display")
+        machine_name = get_record_display(record, "machine_name")
+        platform_type = get_record_display(record, "platform_type")
+        flow_type = get_record_display(record, "flow_type")
+        platform_type_to_flow_type_to_server_versions[platform_type][flow_type].add(get_record_display(record, "version"))
         # checking the TTL, enabled and connectable only for build machines.
-        if record.get("build_machine", {}).get("display", True):
-            if not record.get("enabled", {}).get("display", True):
+        if get_record_display(record, "build_machine", True):
+            if not get_record_display(record, "enabled", True):
                 disabled_machines_count.add(machine_name)
-            if not record.get("connectable", {}).get("display", True):
+            if not get_record_display(record, "connectable", True):
                 non_connectable_machines_count.add(machine_name)
             if record.get("ttl", {}).get("expired"):
                 ttl_expired_count.add(machine_name)
@@ -493,15 +506,15 @@ def generate_report(
                 if value.get("field_type") == "license" and value.get("expired"):
                     licenses_expired_count.add(machine_name)
             if (
-                record.get("agent_host_name", {}).get("display") == NOT_AVAILABLE
+                get_record_display(record, "agent_host_name", NOT_AVAILABLE) == NOT_AVAILABLE
                 and platform_type in BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT
                 and flow_type in BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT[platform_type]
             ):
                 build_machines_requiring_an_agent[flow_type].add(machine_name)
         if not without_viso:
             # Count the number of machines per owner per machine type, only if they don't have a flow type.
-            owner = record.get("owner", {}).get("display")
-            flow_type = record.get("flow_type", {}).get("display")
+            owner = get_record_display(record, "owner")
+            flow_type = get_record_display(record, "flow_type")
             if owner != NOT_AVAILABLE and flow_type == NOT_AVAILABLE:
                 owners_to_machines[owner][platform_type] += 1
     # Notify owners that have more than one machine per product type.
@@ -512,11 +525,7 @@ def generate_report(
                 owners_to_notify.add(owner)
                 break
     if owners_to_notify:
-        owners_to_notify_list = list(owners_to_notify)
-        owners_to_notify_str = (
-            f"{','.join(map(lambda o: f'@{o}', owners_to_notify_list[:MAX_OWNERS_TO_NOTIFY_DISPLAY]))}"
-            f"{' ...' if len(owners_to_notify_list) > MAX_OWNERS_TO_NOTIFY_DISPLAY else ''}"
-        )
+        owners_to_notify_str = join_list_with_ellipsis(map(lambda o: f"@{o}", owners_to_notify), MAX_OWNERS_TO_NOTIFY_DISPLAY)
         title = f"Owners with multiple machines: {owners_to_notify_str}"
         slack_msg_append.append(
             {
@@ -611,6 +620,31 @@ def generate_report(
                 "fields": fields,
             }
         )
+
+    if platform_type_to_flow_type_to_server_versions:
+        platform_type_to_flow_type_to_server_versions_fields = []
+        for platform_type, flow_type_to_server_versions in platform_type_to_flow_type_to_server_versions.items():
+            for flow_type, server_versions in flow_type_to_server_versions.items():
+                if len(server_versions) > 1:
+                    platform_type_to_flow_type_to_server_versions_fields.append(
+                        {
+                            "title": f"Platform:{platform_type}, Flow type:{flow_type} Versions:{len(server_versions)}",
+                            "value": join_list_with_ellipsis(server_versions, MAX_SERVER_VERSIONS_DISPLAY),
+                            "short": True,
+                        }
+                    )
+
+        if platform_type_to_flow_type_to_server_versions_fields:
+            title = "Build Machines - Divergence in their versions"
+            slack_msg_append.append(
+                {
+                    "color": "danger",
+                    "title": title,
+                    "fallback": title,
+                    "fields": platform_type_to_flow_type_to_server_versions_fields,
+                }
+            )
+
     if tokens_count is not None:
         tokens_percentage = int((len(tenants) / tokens_count) * 100)
         title = f"Disposable Tenants Tokens - Total:{tokens_count}, Used:{len(tenants)}"
