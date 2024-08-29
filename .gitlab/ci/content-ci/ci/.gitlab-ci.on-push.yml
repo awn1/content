@@ -151,7 +151,7 @@ validate-content-conf:
 
 .generic-prepare-testing-bucket:
   tags:
-    - gke
+    - gce
   extends:
     - .default-job-settings
   rules:
@@ -165,6 +165,8 @@ validate-content-conf:
     policy: pull-push
   variables:
     EXTRACT_PRIVATE_TESTDATA: "true"
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
   stage: prepare-testing-bucket
   script:
     - !reference [.create-release-notes-and-common-docs]
