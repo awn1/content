@@ -91,4 +91,6 @@ curl "$BUILD_TRIGGER_URL" --form "ref=${_branch}" --form "token=${_ci_token}" \
     --form "variables[TEST_MODELING_RULE_JIRA_TICKETS]=${TEST_MODELING_RULE_JIRA_TICKETS}" \
     --form "variables[TEST_PLAYBOOKS_JIRA_TICKETS]=${TEST_PLAYBOOKS_JIRA_TICKETS}" \
     --form "variables[SLACK_CHANNEL]=${_slack_channel}" \
-    --form "variables[BRANCH]=${_branch}" | jq
+    --form "variables[BRANCH]=${_branch}" \
+    --silent | jq
+
