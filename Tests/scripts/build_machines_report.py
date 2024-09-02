@@ -3,9 +3,10 @@ import contextlib
 import json
 import logging
 import os
+import re
 import warnings
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,7 @@ import urllib3
 from google.auth import _default
 from infra.resources.constants import AUTOMATION_GCP_PROJECT
 from jinja2 import Environment, FileSystemLoader
+from packaging.version import Version
 from slack_sdk import WebClient
 from urllib3.exceptions import InsecureRequestWarning
 
@@ -139,6 +141,7 @@ def create_report_html(
     columns: list[dict],
     columns_filterable: list[int],
     managers: list[str],
+    css_classes: dict[str, Any],
 ) -> str:
     template_path = Path(__file__).parent / "BuildMachines" / "templates"
     env = Environment(loader=FileSystemLoader(template_path))
@@ -152,6 +155,7 @@ def create_report_html(
         columns=columns,
         columns_filterable=columns_filterable,
         managers=managers,
+        css_classes=css_classes,
         xdr_permissions_dev=XDR_PERMISSIONS_DEV,
         xdr_upgrade_channel_dev=XDR_UPGRADE_CHANNEL_DEV,
         permission_role=PERMISSION_ROLE,
@@ -204,8 +208,33 @@ def generate_cell(display: Any, sort: Any | None = None, column_class: str | Non
     return data | kwargs
 
 
+def sanitize_css(css_class: str) -> str:
+    return re.sub(r"[^\w-]", "-", css_class).lower().strip("-")
+
+
 def get_message_p_from_ts(ts: str) -> str:
     return f"p{ts.replace('.', '')}"
+
+
+def generate_version_cell(version: str, platform_type: str | None = None, flow_type: str | None = None, **_) -> dict:
+    return generate_cell(version, column_class=generate_version_cell_css_class(version, platform_type, flow_type))
+
+
+def generate_version_cell_css_class(
+    version: str,
+    platform_type: str | None = None,
+    flow_type: str | None = None,
+    *,
+    with_prefix: bool = False,
+) -> str:
+    column_class = version
+    if flow_type is not None:
+        column_class = f"{flow_type}-{column_class}"
+    if platform_type is not None:
+        column_class = f"{platform_type}-{column_class}"
+    if with_prefix:
+        column_class = f"class-version-{column_class}"
+    return sanitize_css(column_class)
 
 
 def build_link_to_channel(channel_id: str) -> str:
@@ -354,7 +383,7 @@ def generate_records(
         if key == COMMENT_FIELD_NAME:
             logging.debug("Skipping comment field.")
             continue
-        logging.info(f"Processing machine: {key}")
+        logging.info(f"Processing tenant: {key} from the configuration")
         # ui_url is in the format of https://<host>/ we need just the host.
         host = value.get("ui_url").replace("https://", "").replace("/", "")
         client_type = SERVER_TYPE_TO_CLIENT_TYPE[value["server_type"]]
@@ -387,8 +416,9 @@ def generate_records(
             }
         if client := get_client(xsoar_admin_user, client_type, host, key, AUTOMATION_GCP_PROJECT):
             if (versions := get_version_info(client)) is not None:
-                record |= {key: generate_cell(value) for key, value in versions.items()}
-                record["connectable"] = generate_cell(True)
+                record |= generate_record_from_version_info(
+                    versions, flow_type=get_record_display(record, "flow_type"), platform_type=client_type.PLATFORM_TYPE
+                )
                 lcaas_id = versions["lcaas_id"]
                 lcaas_ids.add(lcaas_id)
                 if not without_viso:
@@ -401,12 +431,11 @@ def generate_records(
 
     # Going over machines which aren't listed within the infra configuration files.
     for tenant in tenants.values():
-        server_type = PRODUCT_TYPE_TO_SERVER_TYPE[tenant["product_type"]]
-        client_type = SERVER_TYPE_TO_CLIENT_TYPE[server_type]
         if tenant["lcaas_id"] not in lcaas_ids:
-            logging.info(f"Processing tenant: {tenant['lcaas_id']}")
+            logging.info(f"Processing tenant: {tenant['lcaas_id']} which isn't in the configuration")
             host_url = tenant.get("fqdn")
             ui_url = f"https://{host_url}"
+            client_type = SERVER_TYPE_TO_CLIENT_TYPE[PRODUCT_TYPE_TO_SERVER_TYPE[tenant["product_type"]]]
             record = {
                 "host": generate_cell(generate_html_link(host_url, ui_url), host_url),
                 "ui_url": generate_cell(ui_url),
@@ -424,17 +453,30 @@ def generate_records(
             }
             if client := get_client(xsoar_admin_user, client_type, host_url, host_url, AUTOMATION_GCP_PROJECT):
                 if (versions := get_version_info(client)) is not None:
-                    record |= {key: generate_cell(value) for key, value in versions.items()}
-                    record["connectable"] = generate_cell(True)
-                    tenant = tenants.get(tenant["lcaas_id"])
-                    if tenant:
+                    record |= generate_record_from_version_info(versions, platform_type=client_type.PLATFORM_TYPE)
+                    if tenant := tenants.get(tenant["lcaas_id"]):
                         record |= get_record_for_tenant(tenant, current_date)
                 record |= get_licenses_cells(client, current_date)
-
             record |= get_record_for_tenant(tenant, current_date)
             records.append(record)
 
     return records
+
+
+VERSION_GENERATE_CELL: dict[str, Callable] = {
+    "version": generate_version_cell,
+}
+
+
+def generate_cell_by_type(key, value, **kwargs):
+    generate = VERSION_GENERATE_CELL.get(key, generate_cell)
+    return generate(value, **kwargs)
+
+
+def generate_record_from_version_info(versions: dict, **kwargs) -> dict:
+    record = {key: generate_cell_by_type(key, value, **kwargs) for key, value in versions.items()}
+    record["connectable"] = generate_cell(True)
+    return record
 
 
 def get_licenses_cells(client: XsoarClient, current_date: datetime) -> dict:
@@ -472,9 +514,16 @@ def join_list_with_ellipsis(items: Iterable[str], max_items: int) -> str:
     return f"{', '.join(items_list[:max_items])}{' ...' if len(items_list) > max_items else ''}"
 
 
+def extract_full_version(version_string: str) -> Version | None:
+    # Extract version from "vA.B.C-D" pattern to A.B.C.D
+    if match := re.search(r"v([\d.]+)-(\d+)", version_string):
+        return Version(f"{match.group(1)}.{match.group(2)}")
+    return None
+
+
 def generate_report(
     client: WebClient, without_viso: bool, name_mapping: dict, records: list, tenants: dict, tokens_count: int | None
-) -> tuple[list[dict], list[int], list[str], list[dict]]:
+) -> tuple[list[dict], list[int], list[str], dict[str, Any], list[dict]]:
     slack_msg_append: list[dict[Any, Any]] = []
     managers: list[Any] = name_mapping.get("managers", [])
     columns = generate_columns(without_viso)
@@ -487,13 +536,15 @@ def generate_report(
     ttl_expired_count = set()
     licenses_expired_count = set()
     owners_to_machines: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    platform_type_to_flow_type_to_server_versions: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
+    platform_type_to_flow_type_to_server_versions: dict[str, dict[str, dict[str, int]]] = defaultdict(
+        lambda: defaultdict(lambda: defaultdict(int))
+    )
     build_machines_requiring_an_agent = defaultdict(set)
     for record in records:
         machine_name = get_record_display(record, "machine_name")
         platform_type = get_record_display(record, "platform_type")
         flow_type = get_record_display(record, "flow_type")
-        platform_type_to_flow_type_to_server_versions[platform_type][flow_type].add(get_record_display(record, "version"))
+        platform_type_to_flow_type_to_server_versions[platform_type][flow_type][get_record_display(record, "version")] += 1
         # checking the TTL, enabled and connectable only for build machines.
         if get_record_display(record, "build_machine", True):
             if not get_record_display(record, "enabled", True):
@@ -620,7 +671,7 @@ def generate_report(
                 "fields": fields,
             }
         )
-
+    css_classes = {}
     if platform_type_to_flow_type_to_server_versions:
         platform_type_to_flow_type_to_server_versions_fields = []
         for platform_type, flow_type_to_server_versions in platform_type_to_flow_type_to_server_versions.items():
@@ -633,6 +684,16 @@ def generate_report(
                             "short": True,
                         }
                     )
+                # We assume here that the version with the  highest version is the preferred version.
+                for index, version in enumerate(
+                    sorted(
+                        server_versions.keys(),
+                        key=extract_full_version,  # type: ignore[arg-type]
+                        reverse=True,
+                    )
+                ):
+                    css_class = generate_version_cell_css_class(version, platform_type, flow_type, with_prefix=True)
+                    css_classes[css_class] = {"color": "green" if index == 0 else "red", "font_weight": "bold"}
 
         if platform_type_to_flow_type_to_server_versions_fields:
             title = "Build Machines - Divergence in their versions"
@@ -649,7 +710,7 @@ def generate_report(
         tokens_percentage = int((len(tenants) / tokens_count) * 100)
         title = f"Disposable Tenants Tokens - Total:{tokens_count}, Used:{len(tenants)}"
         if tokens_percentage >= TOKENS_COUNT_PERCENTAGE_THRESHOLD:
-            title += f", Usage > {TOKENS_COUNT_PERCENTAGE_THRESHOLD}%"
+            title += f", Usage >= {TOKENS_COUNT_PERCENTAGE_THRESHOLD}%"
             color = "danger"
         else:
             color = "good"
@@ -677,7 +738,7 @@ def generate_report(
                 ],
             }
         )
-    return columns, columns_filterable, managers, slack_msg_append
+    return columns, columns_filterable, managers, css_classes, slack_msg_append
 
 
 def get_viso_tenants_data(without_viso: bool) -> tuple[dict, int | None, list[dict]]:
@@ -798,12 +859,12 @@ def main() -> None:
             attachments_json = generate_graphs(output_path, wait_in_line_slack_messages)
 
         logging.info(f"Creating report for {current_date_str}")
-        columns, columns_filterable, managers, slack_msg_append_report = generate_report(
+        columns, columns_filterable, managers, css_classes, slack_msg_append_report = generate_report(
             client, args.without_viso, name_mapping, records, tenants, tokens_count
         )
         slack_msg_append.extend(slack_msg_append_report)
 
-        report = create_report_html(current_date_str, records, columns, columns_filterable, managers)
+        report = create_report_html(current_date_str, records, columns, columns_filterable, managers, css_classes)
         report_file_name = f"Report_{current_date_str}.html"
         with open(output_path / report_file_name, "w") as report_file:
             report_file.write(report)
