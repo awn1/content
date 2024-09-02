@@ -1,3 +1,26 @@
+# Content Infrastructure 0.0.4 (2024-09-02)
+
+### Features
+
+- alerting when platform,flow type is running multiple server versions.
+- remove backward compatibility with XSIAM/NG server files
+
+### Bugfixes
+
+- Increased job memory of run-validations step
+
+### Deprecations and Removals
+
+- removed some leftovers related to private ([CIAC-11379](https://jira-dc.paloaltonetworks.com/browse/CIAC-11379))
+
+### Misc
+
+- Locking core packs for version 8.8.0 ([CIAC-11671](https://jira-dc.paloaltonetworks.com/browse/CIAC-11671))
+- Increased job memory of generic-prepare-testing-bucket step
+- Silence curl request in script to trigger content nightly build.
+  Add .envrc to gitignore.
+
+
 # Content Infrastructure 0.0.3 (2024-08-28)
 
 ### Bugfixes
