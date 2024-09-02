@@ -22,6 +22,10 @@
         },
         "8.8.0": {
             "core_packs_file": "corepacks-8.8.0.json",
+            "core_packs_file_is_locked": true
+        },
+        "8.9.0": {
+            "core_packs_file": "corepacks-8.9.0.json",
             "core_packs_file_is_locked": false
         }
     }
