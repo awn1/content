@@ -158,8 +158,6 @@ class TestBranch:
 
 
 # Trigger the test build in Content
-
-
 class PipelineManager:
     def __init__(
         self,
@@ -215,9 +213,12 @@ class PipelineManager:
                 exit(ExitCode.FAILED)
         logging.info(f"All pipelines for branch {self.branch_name} have been canceled")
 
-    def initiate_pipeline(self, output_file) -> int:
+    def cancel_running_pipelines(self):
         if pipelines_runs := self.is_exist_pipeline_runs():
             self.cancel_pipelines(pipelines_runs)
+
+    def initiate_pipeline(self, output_file) -> int:
+        self.cancel_running_pipelines()
 
         files = {
             "token": (None, self.trigger_token),
@@ -439,6 +440,7 @@ def main():
     )
 
     if args.yaml:
+        pipeline_manager.cancel_running_pipelines()
         if args.empty:
             pipeline_manager.generate_empty_yaml(args.yaml)
             sys.exit(ExitCode.SUCCESS)

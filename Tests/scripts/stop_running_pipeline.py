@@ -26,7 +26,7 @@ CI_PIPELINE_ID = os.getenv("CI_PIPELINE_ID", "")
 GITLAB_STATUSES_TO_CANCEL = ["created", "waiting_for_resource", "preparing", "pending", "running"]
 GITLAB_SSL_VERIFY = bool(strtobool(os.getenv("GITLAB_SSL_VERIFY", "true")))
 # Content build triggers are 'push' from a PR in content, or 'trigger' from MR on infra.
-CONTENT_BUILD_TRIGGERING_SOURCES = ["push", "trigger"]
+CONTENT_BUILD_TRIGGERING_SOURCES = ["push", "trigger", "pipeline"]
 
 
 def options_handler() -> argparse.Namespace:
@@ -54,12 +54,13 @@ def get_all_pipelines_for_all_statuses(
     for triggering_source in triggering_sources:
         for status in GITLAB_STATUSES_TO_CANCEL:
             with contextlib.suppress(Exception):
-                pipelines_for_status: list[ProjectPipeline] = project.pipelines.list(
-                    status=status,  # type: ignore[assignment]
+                pipeline: ProjectPipeline
+                for pipeline in project.pipelines.list(
+                    status=status,
                     ref=branch_name,
                     source=triggering_source,
-                )
-                for pipeline in pipelines_for_status:
+                    iterator=True,
+                ):
                     pipelines[pipeline.id] = pipeline
     return list(pipelines.values())
 
@@ -121,7 +122,7 @@ def cancel_pipelines_for_branch_name(
                             "current pipeline are not same sources, skipping..."
                         )
                         continue
-                    elif pipeline.source == "trigger":
+                    elif pipeline.source in ("trigger",):
                         variables = get_pipeline_variables(pipeline)
                         trigger_test_branch = variables.get("TRIGGER_TEST_BRANCH")
                         if trigger_test_branch is None:
