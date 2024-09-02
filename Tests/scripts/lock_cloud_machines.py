@@ -419,7 +419,7 @@ def get_and_lock_all_needed_machines(
             break
 
         if lock_timeout and lock_timeout < time.time() - start_time:
-            logging.error(f"Lock timeout of {lock_timeout:.2f} seconds reached")
+            logging.warning(f"Lock timeout of {lock_timeout:.2f} seconds reached")
             break
 
         logging.debug(f"Locked {len(locked_machine_list)} machines, sleeping for {sleep_interval} seconds")
@@ -538,7 +538,7 @@ def main():
             sys.exit(1)
         logging.info(f"Trying to lock the specific machine: {options.lock_machine_name}")
     else:
-        logging.info(f"Available machines: {available_machines.keys()}")
+        logging.info(f"Available machines: {','.join(available_machines.keys())}")
         logging.info(f"Number of available machines: {len(available_machines)}")
 
     lock_timeout: float = float(options.lock_timeout)

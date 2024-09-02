@@ -20,7 +20,7 @@ class SecretManager:
         if GSM_SERVICE_ACCOUNT is not None:
             self.client = SecretManagerServiceClient.from_service_account_file(GSM_SERVICE_ACCOUNT)
         else:
-            self.client = SecretManagerServiceClient()
+            self.client = SecretManagerServiceClient(client_options={"quota_project_id": project_id})
         logging.getLogger("google.auth.transport.requests").setLevel(logging.WARNING)
         logging.getLogger("google.auth._default").setLevel(logging.WARNING)
         # self.inc_metric = partial(metrics_client.incr, self.connector_name)

@@ -141,6 +141,13 @@
             font-weight: bold;
         }
 
+        {% for css_class in css_classes %}
+        .{{ css_class }} {
+            color: {{ css_classes[css_class]['color'] }};
+            font-weight: {{ css_classes[css_class]['font_weight'] }};
+        }
+        {% endfor %}
+
     </style>
     <script>
         function format(d) {
