@@ -60,18 +60,21 @@
   - section_end "Granting execute permissions on files"
 
 .check-is-force-merged-allowed:
-  - section_start "Check is force merged allowed" --collapsed
+  - section_start "Check is force merged allowed"
   - |
+    echo "Checking if the MR is a force merge, user login:${GITLAB_USER_LOGIN}, user name:${GITLAB_USER_NAME}, labels:${CI_MERGE_REQUEST_LABELS}"
     if echo "${CI_MERGE_REQUEST_LABELS}" | grep -q "Force Merge"; then
-      RESULT=$(poetry run python3 -u ./Tests/scripts/check_is_force_merge_allowed.py -pid "$CI_PIPELINE_ID" -gt "$GITLAB_STATUS_TOKEN" -jn "$CI_JOB_NAME" --allowed-users-force "$ALLOWED_USERS_FORCE")
-      ALLOWED_FORCE=$(echo $RESULT | cut -d ',' -f1)
-      if [[ "$ALLOWED_FORCE" == "true"  ]]; then
-        FORCE_MERGE_BY=$(echo $RESULT | cut -d ',' -f2)
-        echo "This MR is a force merge by ${FORCE_MERGE_BY}"
+      if [[ -z "${ALLOWED_USERS_FORCE}" ]]; then
+        echo "ALLOWED_USERS_FORCE is not set, exiting"
+        exit 1
+      fi
+      if echo "${ALLOWED_USERS_FORCE}" | grep -q "${GITLAB_USER_LOGIN}"; then
+        echo "The MR is a force merge by ${GITLAB_USER_LOGIN}"
         job-done
         exit 0
       else
-        echo "The pipeline was not triggered by one of the managers"
+        echo "The MR is a force merge, but the user ${GITLAB_USER_LOGIN} is not allowed to force merge"
+        exit 1
       fi
     else
       echo "The MR is not a force merge"

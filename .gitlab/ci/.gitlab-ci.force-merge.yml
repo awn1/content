@@ -1,0 +1,18 @@
+.force-merge-rules:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_LABELS =~ /Force Merge/
+
+.before-script-force-merge:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.setup-artifactory]
+    - !reference [.create_artifacts_folder]
+
+force-merge:
+  stage: force-merge
+  extends:
+    - .force-merge-rules
+    - .before-script-force-merge
+  script:
+    - !reference [.check-is-force-merged-allowed]

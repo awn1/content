@@ -1,6 +1,6 @@
 .trigger_content_build_rule:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_LABELS !~ /Force Merge/
       changes:
         paths:
           - pyproject.toml
@@ -24,13 +24,6 @@
     - !reference [.granting_execute_permissions_on_files]
     - !reference [.setup-artifactory]
     - !reference [.create_artifacts_folder]
-  after_script:
-    - source .gitlab/helper_functions.sh
-    - !reference [.setup-network-certs]
-    - !reference [.poetry-install]
-    - !reference [.granting_execute_permissions_on_files]
-    - !reference [.setup-artifactory]
-    - !reference [.create_artifacts_folder]
 
 trigger-content-build:
   stage: trigger-content-build
@@ -41,16 +34,9 @@ trigger-content-build:
     - .trigger_content_build_rule
     - .before-script-trigger-content-build
   script:
-    - !reference [.check-is-force-merged-allowed]
     - section_start "Trigger Content-build"
     - poetry run python3 -u ./Tests/scripts/trigger_content_build.py -pn "${CI_PROJECT_NAMESPACE}/content" -gt "$GITLAB_API_TOKEN_CONTENT" -bn "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" -gtt "$GITLAB_SVC_USER_TOKEN" -gct "$GITLAB_CONTENT_CANCEL_TOKEN" -ght "$GITHUB_TOKEN" -n "false" -sn "false" --wait --yaml "${TRIGGER_CONTENT_BUILD_YML}"
     - section_end "Trigger Content-build"
-  after_script:
-    - |
-      if [ ! -s "${TRIGGER_CONTENT_BUILD_YML}" ]; then
-        echo "Trigger content build wasn't created, creating an empty file"
-        poetry run python3 -u ./Tests/scripts/trigger_content_build.py -pn "${CI_PROJECT_NAMESPACE}/content" -gt "$GITLAB_API_TOKEN_CONTENT" -bn "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" -gtt "$GITLAB_SVC_USER_TOKEN" -gct "$GITLAB_CONTENT_CANCEL_TOKEN" -ght "$GITHUB_TOKEN" -n "false" -sn "false" --wait --yaml "${TRIGGER_CONTENT_BUILD_YML}" --empty "true"
-      fi
   artifacts:
     paths:
       - "${TRIGGER_CONTENT_BUILD_YML}"
