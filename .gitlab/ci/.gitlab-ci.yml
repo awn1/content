@@ -8,6 +8,7 @@ default:
     when: always
 
 stages:
+  - force-merge
   - build-server-images
   - delete-server-images
   - blacklist-validation
@@ -30,6 +31,7 @@ include:
   - local: .gitlab/ci/global.yml
   - local: .gitlab/ci/workflow.yml
   - local: .gitlab/ci/variables.yml
+  - local: .gitlab/ci/.gitlab-ci.force-merge.yml
   - local: .gitlab/ci/server-images-builds.yml
   - local: .gitlab/ci/blacklist-validation.yml
   - local: .gitlab/ci/bucket-logs.yml

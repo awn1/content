@@ -1,6 +1,6 @@
 .pre-commit-rule:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_LABELS !~ /Force Merge/
 
 .before-script-pre-commit:
   before_script:
@@ -17,7 +17,6 @@ pre-commit:
   - .before-script-pre-commit
   - .docker_services
   script:
-    - !reference [.check-is-force-merged-allowed]
     - git fetch origin master -q # allows `git diff`ing in towncrier-check (otherwise there's no origin/master)
     - PRE_COMMIT_SUCCESS=0
     - docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASSWORD

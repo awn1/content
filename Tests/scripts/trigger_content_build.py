@@ -363,18 +363,6 @@ class PipelineManager:
         YAML().dump(gitlab_job, Path(yaml_file))
         logging.info(f"YAML file has been generated: {yaml_file}")
 
-    def generate_empty_yaml(self, yaml_file: str):
-        _, yaml_variables = self.generate_build_type_and_variables()
-        gitlab_job = {
-            "trigger-content-build": {
-                "when": "always",
-                "rules": [{"when": "on_success"}],
-                "script": ["echo 'Triggering content build'"],
-            }
-        }
-        YAML().dump(gitlab_job, Path(yaml_file))
-        logging.info(f"YAML file has been generated: {yaml_file}")
-
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -394,7 +382,6 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("-w", "--wait", help="Wait for the pipeline to finish", action="store_true", default=False)
     parser.add_argument("-o", "--output", help="Output file for the slack message", default=None)
     parser.add_argument("-y", "--yaml", help="Generate Gitlab CI yaml file", default="")
-    parser.add_argument("-e", "--empty", help="Generate Empty Gitlab CI YAML file", type=common.string_to_bool, default=False)
     return parser.parse_args()
 
 
@@ -441,9 +428,6 @@ def main():
 
     if args.yaml:
         pipeline_manager.cancel_running_pipelines()
-        if args.empty:
-            pipeline_manager.generate_empty_yaml(args.yaml)
-            sys.exit(ExitCode.SUCCESS)
         pipeline_manager.generate_yaml(args.yaml, args.wait)
         sys.exit(ExitCode.SUCCESS)
 
