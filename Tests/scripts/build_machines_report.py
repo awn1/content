@@ -66,11 +66,11 @@ BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT = {XsiamClient.PLATFORM_TYPE: ["build", "
 COMMENT_FIELD_NAME = "__comment__"
 RECORDS_FILE_NAME = "records.json"
 WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME = "wait_in_line_slack_messages.json"
-SERVER_TYPE_TO_CLIENT_TYPE: dict[str, type[XsoarClient]] = {
+SERVER_TYPE_TO_CLIENT_TYPE: dict[str | None, type[XsoarClient]] = {
     XsoarClient.SERVER_TYPE: XsoarClient,
     XsiamClient.SERVER_TYPE: XsiamClient,
 }
-PRODUCT_TYPE_TO_SERVER_TYPE: dict[str, str] = {
+PRODUCT_TYPE_TO_SERVER_TYPE: dict[str | None, str] = {
     XsoarClient.PRODUCT_TYPE: XsoarClient.SERVER_TYPE,
     XsiamClient.PRODUCT_TYPE: XsiamClient.SERVER_TYPE,
 }
@@ -378,7 +378,7 @@ def generate_records(
 ) -> list[dict]:
     records = []
     lcaas_ids = set()
-    client_type: type[XsoarClient]
+    client_type: type[XsoarClient] | None
     for key, value in cloud_servers_path_json.items():
         if key == COMMENT_FIELD_NAME:
             logging.debug("Skipping comment field.")
@@ -435,14 +435,15 @@ def generate_records(
             logging.info(f"Processing tenant: {tenant['lcaas_id']} which isn't in the configuration")
             host_url = tenant.get("fqdn")
             ui_url = f"https://{host_url}"
-            client_type = SERVER_TYPE_TO_CLIENT_TYPE[PRODUCT_TYPE_TO_SERVER_TYPE[tenant["product_type"]]]
+            client_type = SERVER_TYPE_TO_CLIENT_TYPE.get(PRODUCT_TYPE_TO_SERVER_TYPE.get(tenant["product_type"]))
+            platform_type = client_type.PLATFORM_TYPE if client_type is not None else tenant["product_type"]
             record = {
                 "host": generate_cell(generate_html_link(host_url, ui_url), host_url),
                 "ui_url": generate_cell(ui_url),
                 "machine_name": generate_cell(tenant["subdomain"]),
                 "enabled": generate_cell(False),
                 "flow_type": generate_cell(NOT_AVAILABLE, ""),
-                "platform_type": generate_cell(client_type.PLATFORM_TYPE),
+                "platform_type": generate_cell(platform_type),
                 "lcaas_id": generate_cell(tenant["lcaas_id"]),
                 "version": generate_cell(NOT_AVAILABLE, ""),
                 "agent_host_name": generate_cell(NOT_AVAILABLE, ""),
@@ -451,7 +452,9 @@ def generate_records(
                 "build_machine": generate_cell(False),
                 "comment": generate_cell(""),
             }
-            if client := get_client(xsoar_admin_user, client_type, host_url, host_url, AUTOMATION_GCP_PROJECT):
+            if client_type is not None and (
+                client := get_client(xsoar_admin_user, client_type, host_url, host_url, AUTOMATION_GCP_PROJECT)
+            ):
                 if (versions := get_version_info(client)) is not None:
                     record |= generate_record_from_version_info(versions, platform_type=client_type.PLATFORM_TYPE)
                     if tenant := tenants.get(tenant["lcaas_id"]):
@@ -544,9 +547,9 @@ def generate_report(
         machine_name = get_record_display(record, "machine_name")
         platform_type = get_record_display(record, "platform_type")
         flow_type = get_record_display(record, "flow_type")
-        platform_type_to_flow_type_to_server_versions[platform_type][flow_type][get_record_display(record, "version")] += 1
         # checking the TTL, enabled and connectable only for build machines.
         if get_record_display(record, "build_machine", True):
+            platform_type_to_flow_type_to_server_versions[platform_type][flow_type][get_record_display(record, "version")] += 1
             if not get_record_display(record, "enabled", True):
                 disabled_machines_count.add(machine_name)
             if not get_record_display(record, "connectable", True):
