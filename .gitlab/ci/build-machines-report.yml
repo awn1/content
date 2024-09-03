@@ -2,6 +2,10 @@
   rules:
     - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_MACHINES_REPORT == "true"'
 
+.build-machines-report-schedule-rule-pages:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_MACHINES_REPORT == "true" && $BUILD_MACHINES_REPORT_PAGES == "true"'
+
 .build-machines-report-schedule-rule-always:
   rules:
     - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_MACHINES_REPORT == "true"'
@@ -46,7 +50,7 @@ build-machines-report-job:
 pages:
   stage: build-machines-report-pages
   extends:
-    - .build-machines-report-schedule-rule
+    - .build-machines-report-schedule-rule-pages
     - .before-script-build-machines-report
   needs:
     - build-machines-report-job
