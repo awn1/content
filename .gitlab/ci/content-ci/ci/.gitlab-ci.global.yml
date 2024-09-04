@@ -849,6 +849,11 @@
   stage: unittests-and-validations
   extends:
     - .default-job-settings
+  tags:
+    - gce
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
   artifacts:
     expire_in: 30 days
     paths:
