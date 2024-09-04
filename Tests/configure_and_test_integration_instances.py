@@ -1129,7 +1129,6 @@ class Server:
                     for instance_name, integration_of_instance in failed_only_after_update
                 ]
             )
-            testing_status = False
             logging.critical(
                 'Integration instances that had ("Test" Button) failures only after content was updated:\n'
                 f"{pformat(failed_only_after_update_string)}.\n"
