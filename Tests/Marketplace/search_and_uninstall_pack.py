@@ -395,7 +395,14 @@ def delete_datasets(dataset_names: set[str], base_url: str, api_key: str, auth_i
             return False
         return True
 
+    dataset_to_exclude = "manual_generic_alert_raw"
     success = True
+    # See CRTX-123428 for more info
+    dataset_names.discard(dataset_to_exclude)
+    logging.info(
+        f"Excluded the dataset {dataset_to_exclude} from the deletion process,"
+        " as the Correlation Rule `Manual Alerts (automatically generated)` requires it"
+    )
     for dataset in dataset_names:
         headers = {
             "x-xdr-auth-id": str(auth_id),
