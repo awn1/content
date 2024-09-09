@@ -7,6 +7,8 @@ set -e
 bq version
 gsutil --version
 
+MAX_BAD_RECORDS=${MAX_BAD_RECORDS:-40}
+
 SCRIPT_DIR=$(dirname ${BASH_SOURCE})
 if [[ "${SCRIPT_DIR}" != /* ]]; then
     SCRIPT_DIR="$(pwd)/${SCRIPT_DIR}"
@@ -50,10 +52,11 @@ if [ "$(uname)" = "Darwin" ]; then
 fi
 
 # we process in batches of 20
+echo "Running bq command to load data with up to ${MAX_BAD_RECORDS} bad records allowed to skip."
 i=0
 cat logs_list.txt | xargs -n 20 | while read line; do
     i=$((i+20))
-    echo $line | tr ' ' ',' | xargs $REPLACE '{}' bq -q --project_id oproxy-dev load --allow_quoted_newlines --max_bad_records=10 --skip_leading_rows=1 "$LOG_TABLE" {} "$SCRIPT_DIR/cloud_storage_usage_schema_v0.json"
+    echo $line | tr ' ' ',' | xargs $REPLACE '{}' bq -q --project_id oproxy-dev load --allow_quoted_newlines --max_bad_records=$MAX_BAD_RECORDS --skip_leading_rows=1 "$LOG_TABLE" {} "$SCRIPT_DIR/cloud_storage_usage_schema_v0.json"
     echo "Done loading via bq. Moving to processed..."
     echo $line | tr ' ' '\n' | gsutil -m -q mv -I gs://oproxy-dev-logs/processed/
     echo "`date +%H:%M:%S`: total processed: $i"
