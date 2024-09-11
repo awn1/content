@@ -6,8 +6,11 @@ from datetime import datetime, timedelta
 from distutils.util import strtobool
 from typing import Any
 
+import requests
 from jira import JIRA, Issue
 from jira.client import ResultList
+from requests.exceptions import HTTPError
+from tenacity import RetryCallState, retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from Tests.scripts.utils import logging_wrapper as logging
 
@@ -22,7 +25,34 @@ JiraTicketInfo = namedtuple(
 )
 
 
+def log_before_retry(retry_state: RetryCallState):
+    logging.info(
+        f"Retrying {retry_state.fn} due to {retry_state.outcome.exception()}. "  # type: ignore
+        f"Attempt {retry_state.attempt_number} will happen in {retry_state.next_action.sleep} seconds."  # type: ignore
+    )
+
+
+# Custom condition to retry on specific exceptions
+def should_retry(exception: BaseException) -> bool:
+    if isinstance(exception, HTTPError) and exception.response is not None:
+        return exception.response.status_code in [requests.codes.unauthorized, requests.codes.too_many_requests]
+    return False
+
+
+@retry(
+    retry=retry_if_exception(should_retry),  # Retry only on specific conditions
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=8),  # Exponential backoff: 2, 4, 8 seconds
+    before_sleep=log_before_retry,
+)
+def search_issues_with_retry(jira_server: JIRA, jql_query: str, max_results: int, start_at: int = 0) -> ResultList[Issue]:
+    return jira_server.search_issues(jql_query, maxResults=max_results, startAt=start_at)  # type: ignore[assignment]
+
+
 def get_jira_server_info() -> JiraServerInfo:
+    # Enable logging for 'requests' and 'urllib3' to help debug 4XX/5XX responses
+    logging.getLogger("requests").setLevel(logging.DEBUG)
+    logging.getLogger("urllib3").setLevel(logging.DEBUG)
     return JiraServerInfo(
         server_url=os.getenv("JIRA_SERVER_URL"),
         api_key=os.getenv("JIRA_API_KEY"),
@@ -156,10 +186,8 @@ def jira_search_all_by_query(
     start_at = 0  # Initialize pagination parameters
     issues: dict[str, list[Issue]] = defaultdict(list)
     while True:
-        issues_batch: ResultList[Issue] = jira_server.search_issues(
-            jql_query,  # type: ignore[assignment]
-            startAt=start_at,
-            maxResults=max_results_per_request,
+        issues_batch: ResultList[Issue] = search_issues_with_retry(
+            jira_server, jql_query, max_results=max_results_per_request, start_at=start_at
         )
         for issue in issues_batch:
             summary: str = issue.get_field("summary").lower()

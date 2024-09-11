@@ -7,6 +7,7 @@ import urllib3
 from jira import JIRA
 from tabulate import tabulate
 
+from Tests.configure_and_test_integration_instances import get_custom_user_agent
 from Tests.scripts.common import (
     TEST_MODELING_RULES_REPORT_FILE_NAME,
     TEST_SUITE_CELL_EXPLANATION,
@@ -34,11 +35,12 @@ urllib3.disable_warnings()  # Disable insecure warnings
 def options_handler() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Utility for printing the test modeling rule summary")
     parser.add_argument("--artifacts-path", help="Path to the artifacts directory", required=True)
+    parser.add_argument("--build-number", help="CI job number where the instances were created", required=True)
     parser.add_argument("--without-jira", help="Print the summary without Jira tickets", action="store_true")
     return parser.parse_args()
 
 
-def print_test_modeling_rule_summary(artifacts_path: Path, without_jira: bool) -> bool:
+def print_test_modeling_rule_summary(artifacts_path: Path, without_jira: bool, build_number: str) -> bool:
     logging.info(f"Printing test modeling rule summary - artifacts path: {artifacts_path}")
     # iterate over the artifacts path and find all the test modeling rule result files
     if not (test_modeling_rules_results_files := get_test_results_files(artifacts_path, TEST_MODELING_RULES_REPORT_FILE_NAME)):
@@ -62,7 +64,12 @@ def print_test_modeling_rule_summary(artifacts_path: Path, without_jira: bool) -
         logging.info(f"\tJira labels: {', '.join(jira_ticket_info.labels)}")
 
         jira_server = JIRA(
-            jira_server_info.server_url, token_auth=jira_server_info.api_key, options={"verify": jira_server_info.verify_ssl}
+            jira_server_info.server_url,
+            token_auth=jira_server_info.api_key,
+            options={
+                "verify": jira_server_info.verify_ssl,
+                "headers": {"User-Agent": get_custom_user_agent(build_number)},
+            },
         )
         jira_server_info = jira_server_information(jira_server)
         server_url = jira_server_info["baseUrl"]
@@ -104,7 +111,7 @@ def main():
         artifacts_path = Path(options.artifacts_path)
         logging.info(f"Printing test modeling rule summary - artifacts path: {artifacts_path}")
 
-        if print_test_modeling_rule_summary(artifacts_path, options.without_jira):
+        if print_test_modeling_rule_summary(artifacts_path, options.without_jira, options.build_number):
             logging.critical("Test modeling rule summary found errors")
             sys.exit(1)
 

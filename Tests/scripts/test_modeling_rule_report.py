@@ -22,6 +22,7 @@ from Tests.scripts.jira_issues import (
     jira_file_link,
     jira_sanitize_file_name,
     jira_ticket_to_json_data,
+    search_issues_with_retry,
     transition_jira_ticket_to_unresolved,
 )
 from Tests.scripts.utils import logging_wrapper as logging
@@ -49,7 +50,7 @@ def create_jira_issue_for_test_modeling_rule(
     description = generate_description_for_test_modeling_rule(ci_pipeline_id, properties, test_suite, junit_file_name_with_suffix)
     summary = generate_ticket_summary(get_summary_for_test_modeling_rule(properties))  # type: ignore[arg-type]
     jql_query = generate_query_with_summary(jira_ticket_info, summary)
-    search_issues: ResultList[Issue] = jira_server.search_issues(jql_query, maxResults=1)  # type: ignore[assignment]
+    search_issues: ResultList[Issue] = search_issues_with_retry(jira_server, jql_query, 1)
     jira_issue, link_to_issue, use_existing_issue, unresolved_transition_id = find_existing_jira_ticket(
         jira_ticket_info, jira_server, now, max_days_to_reopen, search_issues[0] if search_issues else None
     )

@@ -13,6 +13,7 @@ from jira.client import JIRA
 from junitparser import JUnitXml
 from tabulate import tabulate
 
+from Tests.configure_and_test_integration_instances import get_custom_user_agent
 from Tests.scripts.common import (
     FAILED_TO_COLOR_NAME,
     FAILED_TO_MSG,
@@ -175,7 +176,12 @@ def main():
         logging.info(f"\tBuild number: {options.build_number}")
 
         jira_server = JIRA(
-            jira_server_info.server_url, token_auth=jira_server_info.api_key, options={"verify": jira_server_info.verify_ssl}
+            jira_server_info.server_url,
+            token_auth=jira_server_info.api_key,
+            options={
+                "verify": jira_server_info.verify_ssl,
+                "headers": {"User-Agent": get_custom_user_agent(options.build_number)},
+            },
         )
         jira_server_info = jira_server_information(jira_server)
         server_url = jira_server_info["baseUrl"]
