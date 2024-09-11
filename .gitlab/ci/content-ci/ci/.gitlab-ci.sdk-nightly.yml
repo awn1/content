@@ -177,7 +177,7 @@ demisto-sdk-nightly:xsoar-prepare-testing-bucket:
   needs:
     - demisto-sdk-nightly:cloning-repositories
   tags:
-    - gke
+    - gce
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -191,6 +191,8 @@ demisto-sdk-nightly:xsoar-prepare-testing-bucket:
     IFRA_ENV_TYPE: "Server Master"
     MARKETPLACE_VERSION: "xsoar"
     MARKETPLACE_BUCKET: "$GCS_MARKET_BUCKET"
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
   cache:
     policy: pull-push
   stage: prepare-testing-bucket
@@ -202,7 +204,7 @@ demisto-sdk-nightly:mpv2-prepare-testing-bucket:
   needs:
     - demisto-sdk-nightly:cloning-repositories
   tags:
-    - gke
+    - gce
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -217,6 +219,8 @@ demisto-sdk-nightly:mpv2-prepare-testing-bucket:
     MARKETPLACE_BUCKET: "$GCS_MARKET_V2_BUCKET"
     PRODUCT_NAME: "Cortex XSIAM"
     IFRA_ENV_TYPE: "Server Master"
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
   cache:
     policy: pull-push
   stage: prepare-testing-bucket
@@ -228,7 +232,7 @@ demisto-sdk-nightly:xpanse-prepare-testing-bucket:
   needs:
     - demisto-sdk-nightly:cloning-repositories
   tags:
-    - gke
+    - gce
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -241,6 +245,8 @@ demisto-sdk-nightly:xpanse-prepare-testing-bucket:
     PRODUCT_NAME: "Cortex XPANSE"
     MARKETPLACE_BUCKET: "$GCS_MARKET_XPANSE_BUCKET"
     IFRA_ENV_TYPE: "Server Master"
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
   cache:
     policy: pull-push
   stage: prepare-testing-bucket
@@ -252,7 +258,7 @@ demisto-sdk-nightly:xsoar-saas-prepare-testing-bucket:
   needs:
     - demisto-sdk-nightly:cloning-repositories
   tags:
-    - gke
+    - gce
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -264,6 +270,8 @@ demisto-sdk-nightly:xsoar-saas-prepare-testing-bucket:
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_XSOAR}/server_type_${SERVER_TYPE}"
     MARKETPLACE_VERSION: "xsoar_saas"
     MARKETPLACE_BUCKET: "$GCS_MARKET_XSOAR_SAAS_BUCKET"
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
   cache:
     policy: pull-push
   stage: prepare-testing-bucket
