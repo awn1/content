@@ -9,7 +9,7 @@ function exit_on_error {
 
 echo "Starting the print test modeling rule summary script - Server type: ${SERVER_TYPE}, Product type: ${PRODUCT_TYPE}"
 
-python3 ./Tests/Marketplace/print_test_modeling_rule_summary.py --artifacts-path "${ARTIFACTS_FOLDER}"
+python3 ./Tests/Marketplace/print_test_modeling_rule_summary.py --artifacts-path "${ARTIFACTS_FOLDER}" --build-number "${CI_PIPELINE_ID}"
 summary_exit_code=$?
 
 if [ "${IS_NIGHTLY}" == "true" ]; then

@@ -8,6 +8,7 @@ from jira import JIRA
 from junitparser import JUnitXml, TestSuite
 from tabulate import tabulate
 
+from Tests.configure_and_test_integration_instances import get_custom_user_agent
 from Tests.scripts.common import (
     TEST_PLAYBOOKS_REPORT_FILE_NAME,
     TEST_SUITE_CELL_EXPLANATION,
@@ -36,6 +37,7 @@ urllib3.disable_warnings()  # Disable insecure warnings
 def options_handler() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Utility for printing the test playbooks summary")
     parser.add_argument("--artifacts-path", help="Path to the artifacts directory", required=True)
+    parser.add_argument("--build-number", help="CI job number where the instances were created", required=True)
     parser.add_argument("--without-jira", help="Print the summary without Jira tickets", action="store_true")
     parser.add_argument(
         "--fail-only-nightly-tests",
@@ -77,7 +79,7 @@ def filter_skipped_playbooks(playbooks_results: dict[str, dict[str, TestSuite]])
 
 
 def print_test_playbooks_summary(
-    artifacts_path: Path, without_jira: bool, fail_only_nightly_tests: bool, product_type: str
+    artifacts_path: Path, without_jira: bool, fail_only_nightly_tests: bool, product_type: str, build_number: str
 ) -> bool:
     test_playbooks_report = artifacts_path / TEST_PLAYBOOKS_REPORT_FILE_NAME
 
@@ -109,7 +111,9 @@ def print_test_playbooks_summary(
         logging.info(f"\tJira component: {jira_ticket_info.component}")
         logging.info(f"\tJira labels: {', '.join(jira_ticket_info.labels)}")
         jira_server = JIRA(
-            jira_server_info.server_url, token_auth=jira_server_info.api_key, options={"verify": jira_server_info.verify_ssl}
+            jira_server_info.server_url,
+            token_auth=jira_server_info.api_key,
+            options={"verify": jira_server_info.verify_ssl, "headers": {"User-Agent": get_custom_user_agent(build_number)}},
         )
         jira_server_info = jira_server_information(jira_server)
         server_url = jira_server_info["baseUrl"]
@@ -145,7 +149,9 @@ def main():
         fail_only_nightly_tests = options.fail_only_nightly_tests == "true"
         logging.info(f"Printing the value of {fail_only_nightly_tests=}")
 
-        if print_test_playbooks_summary(artifacts_path, options.without_jira, fail_only_nightly_tests, options.product_type):
+        if print_test_playbooks_summary(
+            artifacts_path, options.without_jira, fail_only_nightly_tests, options.product_type, options.build_number
+        ):
             logging.critical("Test playbook summary found errors")
             sys.exit(1)
 

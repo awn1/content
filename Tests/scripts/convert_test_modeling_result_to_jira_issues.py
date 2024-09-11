@@ -10,6 +10,7 @@ from jira import JIRA
 from junitparser import JUnitXml, TestSuite
 from tabulate import tabulate
 
+from Tests.configure_and_test_integration_instances import get_custom_user_agent
 from Tests.scripts.common import (
     TEST_MODELING_RULES_REPORT_FILE_NAME,
     TEST_SUITE_CELL_EXPLANATION,
@@ -91,7 +92,12 @@ def main():
         logging.info(f"\tMax days to reopen: {options.max_days_to_reopen}")
 
         jira_server = JIRA(
-            jira_server_info.server_url, token_auth=jira_server_info.api_key, options={"verify": jira_server_info.verify_ssl}
+            jira_server_info.server_url,
+            token_auth=jira_server_info.api_key,
+            options={
+                "verify": jira_server_info.verify_ssl,
+                "headers": {"User-Agent": get_custom_user_agent(options.build_number)},
+            },
         )
         jira_server_info = jira_server_information(jira_server)
         server_url = jira_server_info["baseUrl"]
