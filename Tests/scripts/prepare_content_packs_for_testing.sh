@@ -132,7 +132,7 @@ echo "jobs.marketplacepacks.schedule: 1m"
 
 echo -e "\nIn order to connect this build bucket to your XSIAM/NG machine, add the following server configuration in Google Cloud and sync marketplace:
 1. Navigate to 'Kubernetes Engine' -> 'Secrets & ConfigMaps' -> '<lcass_id>-configmap-xsoar-feature-flags', under 'data' add: "
-echo "   MARKETPLACE_BOOTSTRAP_BYPASS_URL: https://storage.googleapis.com/$BUILD_BUCKET_FULL_PATH"
+echo "   MARKETPLACE_BOOTSTRAP_BYPASS_URL: $BUILD_BUCKET_FULL_PATH"
 echo "2. Generate a standard API key. Once the Workloads pods are green, execute: "
 echo "   curl --request POST '<api_base_url>/xsoar/contentpacks/marketplace/sync?hard=true' --header 'Authorization: <api_key>' --header 'x-xdr-auth-id: <id>' --header 'Content-Type: application/json' -v"
 
