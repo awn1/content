@@ -1,3 +1,32 @@
+# Content Infrastructure 0.0.5 (2024-09-12)
+
+### Features
+
+- Added a retry mechanism when searching for Jira issues as part of the Test Modeling Rule Report.
+  Jira API calls are now configured with a custom user agent.
+- build machine report
+- simplifying force merge builds
+
+### Bugfixes
+
+- Avoid stopping running when test_module command crashed
+- Increased job memory of run-validations-new-validate-flow step
+- fix stop running pipelines after the sub-pipeline feature broken it.
+- increase --max_bad_records arg to allowed bad records to skip
+- support XDR in build machines report when connecting to viso.
+
+### Improved Documentation
+
+- Fixed docs of bypass url to not include the public prefix.
+- Improved the docs of bypass.url
+
+### Misc
+
+- Excluded the dataset manual_generic_alert_raw from the deletion process.
+- Increased job memory of multiple nightly SDK prepare testing buckets.
+- Updated Demisto-SDK to 1.31.11
+
+
 # Content Infrastructure 0.0.4 (2024-09-02)
 
 ### Features
