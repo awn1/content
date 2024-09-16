@@ -28,7 +28,7 @@ from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import (
     Neo4jContentGraphInterface,
 )
 from demisto_sdk.commands.content_graph.parsers.base_content import BaseContentParser
-from google.cloud import storage
+from google.cloud import storage  # type: ignore[attr-defined]
 from packaging.version import Version
 
 import Tests.Marketplace.marketplace_statistics as mp_statistics
