@@ -288,7 +288,7 @@ def clean_non_existing_packs(
         or (os.environ.get("CI_COMMIT_BRANCH") != "master" and storage_bucket.name == GCPConfig.PRODUCTION_BUCKET)
         or (
             os.environ.get("CI_COMMIT_BRANCH") == "master"
-            and storage_bucket.name not in (GCPConfig.PRODUCTION_BUCKET, GCPConfig.CI_BUILD_BUCKET)
+            and storage_bucket.name not in (GCPConfig.PRODUCTION_BUCKET, GCPConfig.CI_BUILD_BUCKETS[marketplace])
         )
     ):
         logging.debug("Skipping cleanup of packs in gcs.")  # skipping execution of cleanup in gcs bucket
@@ -596,7 +596,7 @@ def check_if_index_is_updated(
     logging.debug(f"{GCPConfig.PRODUCTION_BUCKET=}")
 
     try:
-        if storage_bucket.name not in (GCPConfig.CI_BUILD_BUCKET, GCPConfig.PRODUCTION_BUCKET):
+        if storage_bucket.name not in GCPConfig.CI_BUILD_BUCKETS and storage_bucket.name != GCPConfig.PRODUCTION_BUCKET:
             logging.debug("Skipping index update check in non production/build bucket")
             return
 
@@ -985,7 +985,7 @@ def main():
     is_regular_upload_flow = is_bucket_upload_flow and not any([force_upload, upload_specific_pack, override_all_packs])
 
     # google cloud storage client initialized
-    storage_client = init_storage_client(service_account)
+    storage_client = init_storage_client()
     storage_bucket = storage_client.bucket(storage_bucket_name)
     uploaded_packs_dir = Path(option.artifacts_folder_server_type) / "uploaded_packs"
     markdown_images_data = Path(option.artifacts_folder_server_type) / BucketUploadFlow.MARKDOWN_IMAGES_ARTIFACT_FILE_NAME

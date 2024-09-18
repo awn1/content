@@ -50,7 +50,7 @@ class TestGetPackNames:
 
 
 class TestRegex:
-    BUILD_BASE_PATH = f"{GCPConfig.GCS_PUBLIC_URL}/{GCPConfig.CI_BUILD_BUCKET}/content/builds"
+    BUILD_BASE_PATH = f"{GCPConfig.GCS_PUBLIC_URL}/{GCPConfig.CI_BUILD_BUCKETS['xsoar']}/content/builds"
     BUILD_PATTERN = "upload-packs-build-flow/169013/content/packs"
 
     @pytest.mark.parametrize(
@@ -159,7 +159,7 @@ class TestRegex:
         production_bucket.blob.return_value = production_bucket_blob
 
         build_bucket = mocker.MagicMock()
-        build_bucket.name = GCPConfig.CI_BUILD_BUCKET
+        build_bucket.name = GCPConfig.CI_BUILD_BUCKETS["xsoar"]
 
         build_bucket_base_path = "dummy-build-bucket-path"
         corepacks_version = "corepacks-8.3.0.json"
@@ -167,8 +167,8 @@ class TestRegex:
 
         corepacks_file = {
             "corePacks": [
-                "https://storage.googleapis.com/marketplace-ci-build/content/packs/pack_1/1.4.0/pack_1.zip",
-                "https://storage.googleapis.com/marketplace-ci-build/content/packs/pack_2/2.2.3/pack_2.zip",
+                "https://storage.googleapis.com/marketplace-ci-build-xsoar-dev/content/packs/pack_1/1.4.0/pack_1.zip",
+                "https://storage.googleapis.com/marketplace-ci-build-xsoar-dev/content/packs/pack_2/2.2.3/pack_2.zip",
             ],
             "upgradeCorePacks": ["pack_1"],
             "buildNumber": "123456",
