@@ -436,7 +436,6 @@ def main():
     extract_destination_path = options.extract_path
     production_bucket_name = options.production_bucket_name
     build_bucket_name = options.build_bucket_name
-    service_account = options.service_account
     build_number = options.ci_build_number
     circle_branch = options.circle_branch
     production_base_path = options.production_base_path
@@ -444,12 +443,12 @@ def main():
     marketplace = options.marketplace
 
     # Google cloud storage client initialized
-    storage_client = init_storage_client(service_account)
+    storage_client = init_storage_client()
     production_bucket = storage_client.bucket(production_bucket_name)
     build_bucket = storage_client.bucket(build_bucket_name)
 
     # Initialize build and prod base paths
-    build_bucket_path = os.path.join(GCPConfig.BUILD_PATH_PREFIX, circle_branch, build_number, marketplace)
+    build_bucket_path = os.path.join(GCPConfig.BUILD_PATH_PREFIX, circle_branch, build_number)
     build_bucket_base_path = os.path.join(build_bucket_path, GCPConfig.CONTENT_PACKS_PATH)
 
     # Relevant when triggering test upload flow

@@ -45,7 +45,7 @@ cloning-repositories-upload-flow:
       PACK_ARTIFACTS="${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs.zip"
       PACKS_DEPENDENCIES="${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json"
       CI_COMMIT_BRANCH=${CI_COMMIT_BRANCH:-unknown}
-      GCS_BUILD_BUCKET="marketplace-ci-build"
+      GCS_BUILD_BUCKET="marketplace-ci-build-xsoar-dev"
       if [[ $GCS_MARKET_BUCKET == $GCS_PRODUCTION_BUCKET ]] && [[ -z $STORAGE_BASE_PATH ]]; then
         STORAGE_BASE_PATH="content"
       fi
@@ -57,8 +57,6 @@ cloning-repositories-upload-flow:
       if [[ -z "${PACKS_TO_UPLOAD}" ]]; then
         PACKS_TO_UPLOAD="All"
       fi
-
-      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
 
       python3 ./Tests/Marketplace/copy_and_upload_packs.py -a "${PACK_ARTIFACTS}" -e $EXTRACT_FOLDER -pb "$GCS_MARKET_BUCKET" -bb "$GCS_BUILD_BUCKET" -s $GCS_MARKET_KEY -n $CI_PIPELINE_ID -c $CI_COMMIT_BRANCH -p "${PACKS_TO_UPLOAD}" -pbp "$STORAGE_BASE_PATH/packs" --marketplace xsoar --artifacts-folder-server-type "${ARTIFACTS_FOLDER_SERVER_TYPE}"
 
@@ -82,7 +80,7 @@ cloning-repositories-upload-flow:
       PACK_ARTIFACTS="${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs.zip"
       PACKS_DEPENDENCIES="${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json"
       CI_COMMIT_BRANCH=${CI_COMMIT_BRANCH:-unknown}
-      GCS_BUILD_BUCKET="marketplace-ci-build"
+      GCS_BUILD_BUCKET="marketplace-ci-build-xsoar-saas-dev"
       if [[ -z $STORAGE_BASE_PATH ]]; then
         if [[ "$GCS_MARKET_XSOAR_SAAS_BUCKET" == "$GCS_PRODUCTION_XSOAR_SAAS_BUCKET" ]]; then
           STORAGE_BASE_PATH="content"
@@ -91,7 +89,6 @@ cloning-repositories-upload-flow:
         fi
         echo "Set storage base path to $STORAGE_BASE_PATH"
       fi
-      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
 
       python3 ./Tests/Marketplace/copy_and_upload_packs.py -a "${PACK_ARTIFACTS}" -e $EXTRACT_FOLDER -pb "$GCS_MARKET_XSOAR_SAAS_BUCKET" -bb "$GCS_BUILD_BUCKET" -s $GCS_MARKET_KEY -n $CI_PIPELINE_ID -c $CI_COMMIT_BRANCH -pbp "$STORAGE_BASE_PATH/packs" --marketplace xsoar_saas --artifacts-folder-server-type "${ARTIFACTS_FOLDER_SERVER_TYPE}"
 
@@ -115,7 +112,7 @@ cloning-repositories-upload-flow:
       PACK_ARTIFACTS="${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs.zip"
       PACKS_DEPENDENCIES="${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json"
       CI_COMMIT_BRANCH=${CI_COMMIT_BRANCH:-unknown}
-      GCS_BUILD_BUCKET="marketplace-ci-build"
+      GCS_BUILD_BUCKET="marketplace-ci-build-v2-dev"
       if [[ -z $STORAGE_BASE_PATH ]]; then
         if [[ $GCS_MARKET_V2_BUCKET == $GCS_PRODUCTION_V2_BUCKET ]]; then
           STORAGE_BASE_PATH="content"
@@ -127,8 +124,6 @@ cloning-repositories-upload-flow:
       if [[ -z "${PACKS_TO_UPLOAD}" ]]; then
         PACKS_TO_UPLOAD="All"
       fi
-
-      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
 
       python3 ./Tests/Marketplace/copy_and_upload_packs.py -a "${PACK_ARTIFACTS}" -e $EXTRACT_FOLDER -pb "$GCS_MARKET_V2_BUCKET" -bb "$GCS_BUILD_BUCKET" -s $GCS_MARKET_KEY -n $CI_PIPELINE_ID -c $CI_COMMIT_BRANCH -p "${PACKS_TO_UPLOAD}" -pbp "$STORAGE_BASE_PATH/packs" --marketplace marketplacev2 --artifacts-folder-server-type "${ARTIFACTS_FOLDER_SERVER_TYPE}"
 
@@ -153,7 +148,7 @@ cloning-repositories-upload-flow:
       PACK_ARTIFACTS="${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs.zip"
       PACKS_DEPENDENCIES="${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json"
       CI_COMMIT_BRANCH=${CI_COMMIT_BRANCH:-unknown}
-      GCS_BUILD_BUCKET="marketplace-ci-build"
+      GCS_BUILD_BUCKET="marketplace-ci-build-xpanse-dev"
       if [[ -z $STORAGE_BASE_PATH ]]; then
         if [[ $GCS_MARKET_XPANSE_BUCKET == $GCS_PRODUCTION_XPANSE_BUCKET ]]; then
           STORAGE_BASE_PATH="content"
@@ -165,7 +160,6 @@ cloning-repositories-upload-flow:
       if [[ -z "${PACKS_TO_UPLOAD}" ]]; then
         PACKS_TO_UPLOAD="All"
       fi
-      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
 
       python3 ./Tests/Marketplace/copy_and_upload_packs.py -a "${PACK_ARTIFACTS}" -e $EXTRACT_FOLDER -pb "$GCS_MARKET_XPANSE_BUCKET" -bb "$GCS_BUILD_BUCKET" -s $GCS_MARKET_KEY -n $CI_PIPELINE_ID -c $CI_COMMIT_BRANCH -p "${PACKS_TO_UPLOAD}" -pbp "$STORAGE_BASE_PATH/packs" --marketplace xpanse --artifacts-folder-server-type "${ARTIFACTS_FOLDER_SERVER_TYPE}"
 
@@ -197,7 +191,6 @@ cloning-repositories-upload-flow:
   - section_start "Upload packs_dependencies.json to GCP" --collapsed
   - |
     if [[ "${TEST_UPLOAD}" == "false" ]]; then
-      gcloud auth activate-service-account --key-file="${GCS_ARTIFACTS_KEY}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
       gsutil cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json" "gs://xsoar-ci-artifacts/content-cache-docs/${MARKETPLACE_VERSION}/packs_dependencies.json"
     else
       echo "TEST_UPLOAD is set to true. Skipping upload_dependencies_file section."
@@ -209,7 +202,6 @@ cloning-repositories-upload-flow:
   - |
 
     if [[ $TEST_UPLOAD == "false" ]] && [[ -f "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_results_upload.json" ]]; then
-      gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
       gsutil cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_results_upload.json" "gs://xsoar-ci-artifacts/content/$CI_COMMIT_SHA/$MARKETPLACE_VERSION/packs_results_upload.json"
       echo "packs_results_upload.json upload successfully"
     fi
@@ -219,7 +211,6 @@ cloning-repositories-upload-flow:
   - section_start "Upload failed_to_upload Packs" --collapsed # saves the failed-to-upload packs in content_status.json
   - |
     if [[ "${TEST_UPLOAD}" == "false" ]]; then
-      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
       CONTENT_PACKS_TO_UPLOAD_JSON=$(cat "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_upload.json")
       python3 ./Tests/Marketplace/extract_and_upload_failed_packs.py -pru "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_results_upload.json" -s "${GCS_MARKET_KEY}" -mp "${MARKETPLACE_VERSION}" -pu "${CONTENT_PACKS_TO_UPLOAD_JSON}"
     else
@@ -344,7 +335,7 @@ xpanse-prepare-testing-bucket-upload-flow:
 
 .install_packs_in_xsoar_server:
   tags:
-    - gke
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   needs:
     - xsoar-prepare-testing-bucket-upload-flow
   stage: run-instances
@@ -438,7 +429,7 @@ install-packs-in-server-master:
 
 .install-packs-on-cloud-instances:
   tags:
-    - gke
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   stage: run-instances
   extends:
     - .default-job-settings
@@ -446,9 +437,6 @@ install-packs-in-server-master:
     - EXIT_CODE=0
 
     - section_start "Lock Machine" --collapsed
-    - echo "Authenticating GCP"
-    - gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-    - echo "Auth done successfully"
     - ./Tests/scripts/lock_cloud_machines.sh
     - export CLOUD_CHOSEN_MACHINE_IDS=$(cat "${ARTIFACTS_FOLDER}/locked_machines_list.txt")
     - echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}"
@@ -559,7 +547,7 @@ install-packs-in-xsoar-ng-ga:
 
 upload-packs-to-marketplace:
   tags:
-    - gke
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   needs:
     - run-validations-upload-flow
     - install-packs-in-server6_11
@@ -604,8 +592,6 @@ upload-packs-to-marketplace:
 
       PACKS_SRC="gs://$GCS_MARKET_BUCKET/$STORAGE_BASE_PATH/packs"
       ZIP_FOLDER=$(mktemp -d)
-      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-      echo "successfully activated google cloud service account"
       gsutil -m -q cp -r $PACKS_SRC $ZIP_FOLDER
       echo "successfully downloaded index.zip"
     - section_end "Download packs from GCP"
@@ -615,14 +601,11 @@ upload-packs-to-marketplace:
     - python3 ./Tests/Marketplace/zip_packs.py -z $ZIP_FOLDER -a $ARTIFACTS_FOLDER -s $GCS_MARKET_KEY
     - section_end "Zip Content Packs From GCS"
     - *upload_packs_results_upload
-    - section_start "Revoking GCP Auth"
-    - gcloud auth revoke "${GCS_ARTIFACTS_ACCOUNT_NAME}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-    - section_end "Revoking GCP Auth"
     - job-done
 
 upload-packs-to-marketplace-v2:
   tags:
-    - gke
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "mpv2-prepare-testing-bucket-upload-flow", "install-packs-in-xsiam-ga", "run-validations-upload-flow-new-validate-flow"]
   stage: upload-to-marketplace
   artifacts:
@@ -659,8 +642,6 @@ upload-packs-to-marketplace-v2:
 
       PACKS_SRC="gs://$GCS_MARKET_V2_BUCKET/$STORAGE_BASE_PATH/packs"
       ZIP_FOLDER=$(mktemp -d)
-      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-      echo "successfully activated google cloud service account"
       gsutil -m -q cp -r $PACKS_SRC $ZIP_FOLDER
       echo "successfully downloaded index.zip"
     - section_end "Download packs from GCP"
@@ -670,14 +651,11 @@ upload-packs-to-marketplace-v2:
     - python3 ./Tests/Marketplace/zip_packs.py -z $ZIP_FOLDER -a $ARTIFACTS_FOLDER -s $GCS_MARKET_KEY
     - section_end "Zip Content Packs From GCS"
     - *upload_packs_results_upload
-    - section_start "Revoking GCP Auth"
-    - gcloud auth revoke "${GCS_ARTIFACTS_ACCOUNT_NAME}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-    - section_end "Revoking GCP Auth"
     - job-done
 
 upload-packs-to-xpanse-marketplace:
   tags:
-    - gke
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "xpanse-prepare-testing-bucket-upload-flow", "run-validations-upload-flow-new-validate-flow"] # "install-packs-in-xpanse-dev"
   stage: upload-to-marketplace
   artifacts:
@@ -714,8 +692,6 @@ upload-packs-to-xpanse-marketplace:
 
       PACKS_SRC="gs://$GCS_MARKET_XPANSE_BUCKET/$STORAGE_BASE_PATH/packs"
       ZIP_FOLDER=$(mktemp -d)
-      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-      echo "successfully activated google cloud service account"
       gsutil -m -q cp -r $PACKS_SRC $ZIP_FOLDER
       echo "successfully downloaded index.zip"
     - section_end "Download packs from GCP"
@@ -725,14 +701,11 @@ upload-packs-to-xpanse-marketplace:
     - python3 ./Tests/Marketplace/zip_packs.py -z $ZIP_FOLDER -a $ARTIFACTS_FOLDER -s $GCS_MARKET_KEY
     - section_end "Zip Content Packs From GCS"
     - *upload_packs_results_upload
-    - section_start "Revoking GCP Auth"
-    - gcloud auth revoke "${GCS_ARTIFACTS_ACCOUNT_NAME}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-    - section_end "Revoking GCP Auth"
     - job-done
 
 upload-packs-to-xsoar-saas-marketplace:
   tags:
-    - gke
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "xsoar-saas-prepare-testing-bucket-upload-flow", "run-validations-upload-flow-new-validate-flow", "install-packs-in-xsoar-ng-ga"]
   stage: upload-to-marketplace
   artifacts:
@@ -769,8 +742,6 @@ upload-packs-to-xsoar-saas-marketplace:
 
       PACKS_SRC="gs://$GCS_MARKET_XSOAR_SAAS_BUCKET/$STORAGE_BASE_PATH/packs"
       ZIP_FOLDER=$(mktemp -d)
-      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-      echo "successfully activated google cloud service account"
       gsutil -m -q cp -r $PACKS_SRC $ZIP_FOLDER
       echo "successfully downloaded index.zip"
     - section_end "Download packs from GCP"
@@ -780,9 +751,6 @@ upload-packs-to-xsoar-saas-marketplace:
     - python3 ./Tests/Marketplace/zip_packs.py -z $ZIP_FOLDER -a $ARTIFACTS_FOLDER -s $GCS_MARKET_KEY
     - section_end "Zip Content Packs From GCS"
     - *upload_packs_results_upload
-    - section_start "Revoking GCP Auth"
-    - gcloud auth revoke "${GCS_ARTIFACTS_ACCOUNT_NAME}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-    - section_end "Revoking GCP Auth"
     - job-done
 
 xsoar-force-pack-upload:
@@ -839,7 +807,7 @@ xsoar-saas-force-pack-upload:
 
 .force-pack-upload:
   tags:
-    - gke
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   stage: upload-to-marketplace
   extends:
     - .default-job-settings

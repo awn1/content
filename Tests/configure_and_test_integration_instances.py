@@ -72,7 +72,12 @@ XSOAR_SERVER_TYPE = "XSOAR"
 XSOAR_SASS_SERVER_TYPE = "XSOAR SAAS"
 XSIAM_SERVER_TYPE = "XSIAM"
 SERVER_TYPES = [XSOAR_SERVER_TYPE, XSOAR_SASS_SERVER_TYPE, XSIAM_SERVER_TYPE]
-MARKETPLACE_TEST_BUCKET = "marketplace-ci-build/content/builds"
+MARKETPLACE_TEST_BUCKET = {
+    "xsoar": "marketplace-ci-build-xsoar-dev/content/builds",
+    "marketplacev2": "marketplace-ci-build-v2-dev/content/builds",
+    "xpanse": "marketplace-ci-build-xpanse-dev/content/builds",
+    "xsoar_saas": "marketplace-ci-build-xsoar-saas-dev/content/builds",
+}
 MARKETPLACE_XSIAM_BUCKETS = "marketplace-v2-dist-dev/upload-flow/builds-xsiam"
 ARTIFACTS_FOLDER_MPV2 = os.getenv("ARTIFACTS_FOLDER_MPV2", "/builds/xsoar/content/artifacts/marketplacev2")
 ARTIFACTS_FOLDER = os.getenv("ARTIFACTS_FOLDER")
@@ -1306,9 +1311,9 @@ class XSOARServer(Server):
         return installed_content_packs_successfully
 
     def set_marketplace_url(self, marketplace_name=None, artifacts_folder=None, marketplace_buckets=None):
-        url_suffix = f"{quote_plus(self.build.branch_name)}/{self.build.ci_build_number}/xsoar"
+        url_suffix = f"{quote_plus(self.build.branch_name)}/{self.build.ci_build_number}"
         config_path = "marketplace.bootstrap.bypass.url"
-        config = {config_path: f"https://storage.googleapis.com/marketplace-ci-build/content/builds/{url_suffix}"}
+        config = {config_path: f"https://xdr-xsoar-content-dev-01.uc.r.appspot.com/content/builds/{url_suffix}"}
         self.add_server_configuration(config, "failed to configure marketplace custom url ", True)
         logging.success("Updated marketplace url and restarted servers")
         logging.info("sleeping for 120 seconds")
@@ -1452,9 +1457,7 @@ class CloudServer(Server):
 
         logging.info("Copying custom build bucket to cloud_instance_bucket.")
         marketplace_name = marketplace_name
-        from_bucket = (
-            f"{MARKETPLACE_TEST_BUCKET}/{self.build.branch_name}/{self.build.ci_build_number}" f"/{marketplace_name}/content"
-        )
+        from_bucket = f"{MARKETPLACE_TEST_BUCKET[marketplace_name]}/{self.build.branch_name}/{self.build.ci_build_number}/content"
         output_file = f"{artifacts_folder}/Copy_custom_bucket_to_cloud_machine.log"
         success = True
         to_bucket = f"{marketplace_buckets}/{self.name}"

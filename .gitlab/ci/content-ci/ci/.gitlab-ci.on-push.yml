@@ -152,6 +152,7 @@ validate-content-conf:
 .generic-prepare-testing-bucket:
   tags:
     - gce
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   extends:
     - .default-job-settings
   rules:
@@ -198,7 +199,6 @@ validate-content-conf:
         python Tests/scripts/create_artifacts_graph/create_artifacts.py --marketplace "$MARKETPLACE_VERSION" --artifacts-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs" --dependencies-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json" --packs-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs.json" --bucket-upload "${BUCKET_UPLOAD}" --no-zip
       fi
 
-    - gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER_SERVER_TYPE}/logs/gcloud_auth.log" 2>&1
     - section_end "Create Content Artifacts and Update Conf"
 
     - section_start "Copy conf.json To Server Type Artifacts Folder"
@@ -350,7 +350,7 @@ xpanse-prepare-testing-bucket:
 
 .test_content_on_xsoar_server_instances_base:
   tags:
-    - gke
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   extends:
     - .default-job-settings
     - .push-rule
@@ -656,6 +656,7 @@ slack-notify-on-merge:
 
 .test_content_on_cloud_server_instances_base:
   tags:
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
     - gce
   extends:
     - .default-job-settings

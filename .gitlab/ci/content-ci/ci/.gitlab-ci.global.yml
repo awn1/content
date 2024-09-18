@@ -432,7 +432,6 @@
 
 .get_last_upload_commit: &get_last_upload_commit
   - section_start "Getting last bucket upload commit" --collapsed
-  - gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
   - gsutil cp "gs://$GCS_PRODUCTION_BUCKET/content/packs/index.json" "${ARTIFACTS_FOLDER_SERVER_TYPE}/previous_index.json"
   - export LAST_UPLOAD_COMMIT=$(cat "${ARTIFACTS_FOLDER_SERVER_TYPE}/previous_index.json" | jq -r ".\"commit\"")
   - section_end "Getting last bucket upload commit"
@@ -585,9 +584,6 @@
 
 .lock-machine:
   - section_start "Lock Machine" --collapsed
-  - echo "Authenticating GCP"
-  - gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-  - echo "Auth done successfully"
   - ./Tests/scripts/lock_cloud_machines.sh
   - export CLOUD_CHOSEN_MACHINE_IDS=$(cat "${ARTIFACTS_FOLDER}/locked_machines_list.txt")
   - echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}"
@@ -745,11 +741,10 @@
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_MEMORY_LIMIT: 16Gi
   script:
-    - section_start "Revoking GCP Auth and Configure Docker"
+    - section_start "Configure Docker"
     # we need to configure the docker with the registry in order to be able to pull the images
-    - gcloud auth revoke "${GCS_ARTIFACTS_ACCOUNT_NAME}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
     - gcloud auth configure-docker ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
-    - section_end "Revoking GCP Auth and Configure Docker"
+    - section_end "Configure Docker"
     # temp solution not to spam the build
     - SHOULD_PRE_COMMIT_ALL=$(./Tests/scripts/should_pre_commit_all.sh)
     # SHOULD_PRE_COMMIT_ALL is a string and therefore might come back empty from should_pre_commit_all.sh

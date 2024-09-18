@@ -1,4 +1,6 @@
 .build-machines-cleanup-rule:
+  tags:
+    - cortex-content-1738
   rules:
     - if: '$BUILD_MACHINES_CLEANUP == "true"'
 
@@ -102,7 +104,6 @@ build-machines-cleanup:
       echo "lock machine name ${LOCK_MACHINE_NAME}"
     - if [[ -n "$LOCK_MACHINE_NAME" ]]; then
     -   echo "Check if lock file already exist "
-    -   gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
     - |
         export FILE_FOUND=false
         for i in {1..3}; do

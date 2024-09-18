@@ -538,7 +538,7 @@ class TestCorepacksFiles:
         from Tests.Marketplace.upload_packs import create_corepacks_config
 
         dummy_storage_bucket = mocker.MagicMock()
-        dummy_storage_bucket.name = GCPConfig.CI_BUILD_BUCKET
+        dummy_storage_bucket.name = GCPConfig.CI_BUILD_BUCKETS["xsoar"]
         index_folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data")
 
         build_number = "123456"
@@ -573,8 +573,8 @@ class TestCorepacksFiles:
             corepacks_file_contents = json.load(corepacks_file)
             pack_paths = corepacks_file_contents.get("corePacks")
             assert set(pack_paths) == {
-                "https://storage.googleapis.com/marketplace-ci-build/content/packs" "/pack_1/1.4.0/pack_1.zip",
-                "https://storage.googleapis.com/marketplace-ci-build/content/packs" "/pack_2/2.2.3/pack_2.zip",
+                "https://storage.googleapis.com/marketplace-ci-build-xsoar-dev/content/packs" "/pack_1/1.4.0/pack_1.zip",
+                "https://storage.googleapis.com/marketplace-ci-build-xsoar-dev/content/packs" "/pack_2/2.2.3/pack_2.zip",
             }
 
         # Assert that the paths in the versioned corepacks file are relative paths:

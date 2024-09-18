@@ -89,7 +89,12 @@ class GCPConfig:
     GCS_PUBLIC_URL = "https://storage.googleapis.com"  # disable-secrets-detection
     PRODUCTION_BUCKET = "marketplace-dist"
     PRODUCTION_BUCKET_V2 = "marketplace-v2-dist"
-    CI_BUILD_BUCKET = "marketplace-ci-build"
+    CI_BUILD_BUCKETS = {
+        "xsoar": "marketplace-ci-build-xsoar-dev",
+        "marketplacev2": "marketplace-ci-build-v2-dev",
+        "xpanse": "marketplace-ci-build-xpanse-dev",
+        "xsoar_saas": "marketplace-ci-build-xsoar-saas-dev",
+    }
     BASE_PACK = "Base"  # base pack name
     INDEX_NAME = "index"  # main index folder name
     CORE_PACK_FILE_NAME = "corepacks.json"  # core packs file name

@@ -16,28 +16,30 @@ fi
 
 if [[ -z "$3" ]]; then
   MARKETPLACE_TYPE="xsoar"  # The default is "marketplace-dist"
+  GCS_BUILD_BUCKET=$GCS_BUILD_BUCKET
 else
   MARKETPLACE_TYPE=$3
 
   if [[ "$MARKETPLACE_TYPE" == "marketplacev2" ]]; then
     GCS_PRODUCTION_BUCKET=$GCS_PRODUCTION_V2_BUCKET
+    GCS_BUILD_BUCKET=$GCS_BUILD_V2_BUCKET
 
   elif [[ "$MARKETPLACE_TYPE" == "xpanse" ]]; then
     GCS_PRODUCTION_BUCKET=$GCS_PRODUCTION_XPANSE_BUCKET
+    GCS_BUILD_BUCKET=$GCS_BUILD_XPANSE_BUCKET
 
   elif [[ "$MARKETPLACE_TYPE" == "xsoar_saas" ]]; then
     GCS_PRODUCTION_BUCKET=$GCS_PRODUCTION_XSOAR_SAAS_BUCKET
+    GCS_BUILD_BUCKET=$GCS_BUILD_XSOAR_SAAS_BUCKET
+
   fi
 fi
 # We can freely use these buckets since its only reading the prod to the circle-ci bucket.
 
 echo "Preparing content packs for testing ..."
-gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER_SERVER_TYPE}/logs/gcloud_auth.log" 2>&1
-echo "Auth loaded successfully."
 
 # ====== BUILD CONFIGURATION ======
-GCS_BUILD_BUCKET="marketplace-ci-build"
-BUILD_BUCKET_PATH="content/builds/$CI_COMMIT_BRANCH/$CI_PIPELINE_ID$STAGING_SUFFIX/$MARKETPLACE_TYPE"
+BUILD_BUCKET_PATH="content/builds/$CI_COMMIT_BRANCH/$CI_PIPELINE_ID$STAGING_SUFFIX"
 BUILD_BUCKET_PACKS_DIR_PATH="$BUILD_BUCKET_PATH/content/packs"
 BUILD_BUCKET_CONTENT_DIR_FULL_PATH="$GCS_BUILD_BUCKET/$BUILD_BUCKET_PATH/content"
 BUILD_BUCKET_FULL_PATH="$GCS_BUILD_BUCKET/$BUILD_BUCKET_PATH"

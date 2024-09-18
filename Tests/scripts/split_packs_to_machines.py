@@ -9,7 +9,7 @@ from google.cloud import storage  # type: ignore[attr-defined]
 from junitparser import JUnitXml, TestSuite
 
 from Tests.Marketplace.common import fetch_pack_ids_to_install
-from Tests.Marketplace.marketplace_services import load_json
+from Tests.Marketplace.marketplace_services import init_storage_client, load_json
 from Tests.scripts.collect_tests.constants import (
     ALWAYS_INSTALLED_PACKS_MAPPING,
     MODELING_RULES_TO_TEST_FILE,
@@ -249,7 +249,7 @@ def main():
     install_logging("split_packs_to_machines.log", logger=logging)
 
     options = options_handler()
-    storage_client = storage.Client.from_service_account_json(options.service_account)
+    storage_client = init_storage_client()
 
     machine_list = set(options.cloud_machines.split(",") if options.cloud_machines else ("xsoar-machine",))
     logging.info(f"machines:{machine_list}")

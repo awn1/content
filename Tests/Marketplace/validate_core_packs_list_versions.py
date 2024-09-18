@@ -293,11 +293,9 @@ def main():
     build_bucket_base_path = os.path.join(build_bucket_path, GCPConfig.CONTENT_PACKS_PATH)
 
     # google cloud storage client initialized.
-    # Get the service account from the GCS_MARKET_KEY env var.
-    service_account = option.service_account
     logging.debug("init storage_client")
-    storage_client = init_storage_client(service_account)
-    storage_bucket = storage_client.bucket(GCPConfig.CI_BUILD_BUCKET)
+    storage_client = init_storage_client()
+    storage_bucket = storage_client.bucket(GCPConfig.CI_BUILD_BUCKETS[marketplace])
 
     # Get the index file from the bucket.
     index_folder_path, _, _ = download_and_extract_index(storage_bucket, extract_destination_path, build_bucket_base_path)
