@@ -10,6 +10,7 @@ import pendulum
 import requests
 from _pytest.cacheprovider import Cache
 from filelock import FileLock
+from google.cloud.exceptions import NotFound
 from more_itertools import first
 from pendulum import DateTime
 
@@ -17,6 +18,7 @@ from pendulum import DateTime
 from requests import ConnectionError, HTTPError, TooManyRedirects
 from urllib3.util import Retry
 
+from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule
 from Tests.scripts.infra.enums.papi import KeySecurityLevel
 from Tests.scripts.infra.enums.tables import XdrTables
 from Tests.scripts.infra.enums.xsiam_alerts import SearchTableField
@@ -40,7 +42,9 @@ from Tests.scripts.infra.models import PublicApiKey
 # from infra.models.user import User
 # from infra.models.xsoar_settings.layout import Layout
 from Tests.scripts.infra.resources.constants import (
+    AUTOMATION_GCP_PROJECT,
     DEFAULT_USER_AGENT,
+    GSM_SERVICE_ACCOUNT,
     OKTA_HEADERS,
     TokenCache,
 )
@@ -65,8 +69,17 @@ from Tests.scripts.infra.utils.requests_handler import TimeoutHTTPAdapter, raise
 from Tests.scripts.infra.utils.rocket_retry import retry
 from Tests.scripts.infra.utils.text import to_list
 from Tests.scripts.infra.utils.time_utils import time_now, to_epoch_timestamp
+from Tests.scripts.stop_running_pipeline import CI_PIPELINE_ID
 
 logger = logging.getLogger(__name__)
+
+
+class InvalidAPIKey(Exception):
+    def __init__(self, cloud_machine: str, msg: str):
+        self.message = f"Invalid API Key for machine {cloud_machine} was provided or generated. {msg}"
+
+    def __str__(self):
+        return self.message
 
 
 class XsoarOnPremClient:
@@ -517,6 +530,64 @@ class XsoarClient(XsoarOnPremClient):
     def update_user_data(self, body: dict):
         raise NotImplementedError("Update user data is not implemented at this env")
 
+    def get_gsm_cloud_machine_details(self) -> tuple[dict, str]:
+        secret_manager = GoogleSecreteManagerModule(GSM_SERVICE_ACCOUNT)  # type: ignore[arg-type]
+        return secret_manager.get_secret(project_id=AUTOMATION_GCP_PROJECT, secret_id=self.tenant_name, with_version=True)  # type: ignore[return-value]
+
+    def check_api_key_validity(self, cloud_machine_details: dict, secret_version: str):
+        from SecretActions.add_build_machine import BUILD_MACHINE_GSM_API_KEY, BUILD_MACHINE_GSM_AUTH_ID
+
+        required_api_fields = {BUILD_MACHINE_GSM_API_KEY, BUILD_MACHINE_GSM_AUTH_ID}
+        if not required_api_fields.issubset(set(cloud_machine_details.keys())):
+            raise InvalidAPIKey(
+                self.tenant_name, f"Required fields {required_api_fields} are missing from secret version {secret_version}."
+            )
+
+        try:
+            headers = {
+                BUILD_MACHINE_GSM_AUTH_ID: str(cloud_machine_details[BUILD_MACHINE_GSM_AUTH_ID]),
+                "Authorization": cloud_machine_details[BUILD_MACHINE_GSM_API_KEY],
+                "Content-Type": "application/json",
+            }
+            machine_health_response = requests.get(f"https://api-{self.xsoar_host_base}/xsoar/health", headers=headers)
+            health_check_success = machine_health_response.ok
+        except requests.exceptions.ConnectionError:
+            health_check_success = False
+        if not health_check_success:
+            raise InvalidAPIKey(
+                self.tenant_name, f"Health check was unsuccessful with the API key provided from secret version {secret_version}."
+            )
+        logger.info(f"Health check passed successfully for {self.tenant_name} with secret version {secret_version}.")
+
+    def create_and_save_api_key(self) -> tuple[dict, str]:
+        from SecretActions.add_build_machine import add_build_machine_secret_to_gsm
+
+        public_api_key = self.create_api_key(
+            expiration=time_now().add(years=1),
+            comment=f"Created by content build{f' (pipeline #{CI_PIPELINE_ID})' if CI_PIPELINE_ID else ''}",
+        )
+        logger.info(f"Created API key for {self.tenant_name}")
+        cloud_machine_details, secret_version = add_build_machine_secret_to_gsm(
+            server_id=self.tenant_name, machine_type=self.PLATFORM_TYPE, public_api_key=public_api_key
+        )
+        return cloud_machine_details, secret_version  # includes XSIAM token
+
+    def login_using_gsm(self) -> tuple[dict, str]:
+        """
+        Gets the cloud machine API key from GSM and checks it.
+        If it is not valid or doesn't exist, creates one and saves it to GSM.
+        """
+        try:
+            cloud_machine_details, secret_version = self.get_gsm_cloud_machine_details()
+            self.check_api_key_validity(cloud_machine_details, secret_version)
+        except (NotFound, InvalidAPIKey) as e:
+            logger.error(f"Got an error while fetching API key for {self.tenant_name} from GSM: {e}")
+            logger.info(f"Generating a new API key for {self.tenant_name}.")
+            self.login_auth(force_login=True)
+            cloud_machine_details, secret_version = self.create_and_save_api_key()
+            self.check_api_key_validity(cloud_machine_details, secret_version)
+        return cloud_machine_details, secret_version
+
     def login_via_okta(self, is_prod: bool):
         # self.inc_metric('login')
 
@@ -678,24 +749,24 @@ class XsoarClient(XsoarOnPremClient):
     def set_log_level(self, xsoar_log_level: str | None = None):
         logger.debug("Not setting log level for XSOAR NG environment.")
 
-    # def search_api_keys(self) -> list[PublicApiKey]:
-    #     """Search for API keys"""
-    #
-    #     table_filter = {
-    #         "extraData": None,
-    #         "filter_data": {
-    #             "sort": [{"FIELD": "API_KEY_CREATION_TIME", "ORDER": "DESC"}],
-    #             "filter": {},
-    #             "free_text": "",
-    #             "visible_columns": None,
-    #             "locked": None,
-    #             "paging": {"from": 0, "to": 100},
-    #         },
-    #         "jsons": [],
-    #     }
-    #     data = self.get_table_data(table_name=XdrTables.API_KEYS_TABLE, table_filter=table_filter)['DATA']
-    #     keys = [PublicApiKey.parse_api_key_from_table_data(key=key) for key in data]
-    #     return keys
+    def search_api_keys(self) -> list[PublicApiKey]:
+        """Search for API keys"""
+
+        table_filter: dict = {
+            "extraData": None,
+            "filter_data": {
+                "sort": [{"FIELD": "API_KEY_CREATION_TIME", "ORDER": "DESC"}],
+                "filter": {},
+                "free_text": "",
+                "visible_columns": None,
+                "locked": None,
+                "paging": {"from": 0, "to": 100},
+            },
+            "jsons": [],
+        }
+        data = self.get_table_data(table_name=XdrTables.API_KEYS_TABLE, table_filter=table_filter)["DATA"]
+        keys = [PublicApiKey.parse_api_key_from_table_data(key=key) for key in data]
+        return keys
 
     def create_api_key(
         self, rbac_roles: list[str] | None = None, expiration: DateTime | None = None, comment: str | None = None, **kwargs
@@ -709,7 +780,7 @@ class XsoarClient(XsoarOnPremClient):
         data = {
             "security_level": KeySecurityLevel.STANDARD.internal_name,
             "comment": comment,
-            "rbac_role": rbac_roles,
+            "rbac_roles": rbac_roles,
             "rbac_permissions": None,
             "expiration": timestamp,
         }
@@ -1348,3 +1419,9 @@ class XsoarBaseConnector:
         self.base_url = xsoar_client.xsoar_base_url
         self.webapp_url = xsoar_client.xsoar_webapp_url
         self.client = xsoar_client
+
+
+SERVER_TYPE_TO_CLIENT_TYPE: dict[str | None, type[XsoarClient]] = {
+    XsoarClient.SERVER_TYPE: XsoarClient,
+    XsiamClient.SERVER_TYPE: XsiamClient,
+}

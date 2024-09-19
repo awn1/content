@@ -33,6 +33,7 @@ from Tests.Marketplace.marketplace_services import get_last_commit_from_index
 from Tests.Marketplace.search_and_install_packs import search_and_install_packs_and_their_dependencies, upload_zipped_packs
 from Tests.scripts.collect_tests.constants import TEST_PLAYBOOKS
 from Tests.scripts.infra.secret_manager import SecretManager
+from Tests.scripts.infra.xsoar_api import XsiamClient, XsoarClient
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 from Tests.test_content import get_server_numeric_version
@@ -69,9 +70,7 @@ MARKET_PLACE_CONFIGURATION = {
 AVOID_DOCKER_IMAGE_VALIDATION = {"content.validate.docker.images": "false"}
 ID_SET_PATH = "./artifacts/id_set.json"
 XSOAR_SERVER_TYPE = "XSOAR"
-XSOAR_SASS_SERVER_TYPE = "XSOAR SAAS"
-XSIAM_SERVER_TYPE = "XSIAM"
-SERVER_TYPES = [XSOAR_SERVER_TYPE, XSOAR_SASS_SERVER_TYPE, XSIAM_SERVER_TYPE]
+SERVER_TYPES = [XSOAR_SERVER_TYPE, XsoarClient.SERVER_TYPE, XsiamClient.SERVER_TYPE]
 MARKETPLACE_TEST_BUCKET = {
     "xsoar": "marketplace-ci-build-xsoar-dev/content/builds",
     "marketplacev2": "marketplace-ci-build-v2-dev/content/builds",
@@ -1810,7 +1809,7 @@ def create_build_object() -> Build:
     logging.info(f"Server type: {options.server_type}")
     if options.server_type == XSOAR_SERVER_TYPE:
         return XSOARBuild(options)
-    elif options.server_type in [XSIAM_SERVER_TYPE, XSOAR_SASS_SERVER_TYPE]:
+    elif options.server_type in [XsiamClient.SERVER_TYPE, XsoarClient.SERVER_TYPE]:
         return CloudBuild(options)
     else:
         raise Exception(f"Wrong Server type {options.server_type}.")

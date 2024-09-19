@@ -16,7 +16,7 @@ XSIAM_SERVERS = {
     "qa2-test-111111": {
         "ui_url": "https://xsiam1.paloaltonetworks.com/",
         "instance_name": "qa2-test-111111",
-        "api_key": "1234567890",
+        "api-key": "1234567890",
         "x-xdr-auth-id": 1,
         "base_url": "https://api1.paloaltonetworks.com/",
         "xsiam_version": "3.2.0",
@@ -25,7 +25,7 @@ XSIAM_SERVERS = {
     "qa2-test-222222": {
         "ui_url": "https://xsoar-content-2.xdr-qa2-uat.us.paloaltonetworks.com/",
         "instance_name": "qa2-test-222222",
-        "api_key": "1234567890",
+        "api-key": "1234567890",
         "x-xdr-auth-id": 1,
         "base_url": "https://api-xsoar-content-2.xdr-qa2-uat.us.paloaltonetworks.com",
         "xsiam_version": "3.2.0",
@@ -77,7 +77,7 @@ def create_build_object_with_mock(mocker, server_type):
     mocker.patch("Tests.configure_and_test_integration_instances.get_secrets_from_gsm", return_value={})
     mocker.patch("Tests.configure_and_test_integration_instances.XSOARServer.server_numeric_version", return_value="6.5.0")
     mocker.patch(
-        "Tests.scripts.infra.secret_manager.SecretManager.get_secret", return_value='{"api_key": "1234567890","x-xdr-auth-id": 1}'
+        "Tests.scripts.infra.secret_manager.SecretManager.get_secret", return_value='{"api-key": "1234567890","x-xdr-auth-id": 1}'
     )
     build = create_build_object()
     return build
