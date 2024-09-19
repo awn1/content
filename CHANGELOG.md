@@ -1,3 +1,15 @@
+# Content Infrastructure 0.0.6 (2024-09-19)
+
+### Features
+
+- Divide the CI bucket into separate buckets per marketplace.
+
+### Bugfixes
+
+- Updated the build-machine-cleanup flow to use the GitLab runner tag instead of a Service Account. ([CIAC-11828](https://jira-dc.paloaltonetworks.com/browse/CIAC-11828))
+- fix mypy error flaky for google.cloud library
+
+
 # Content Infrastructure 0.0.5 (2024-09-12)
 
 ### Features
