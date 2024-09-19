@@ -521,13 +521,6 @@ def clean_machine(options: argparse.Namespace, cloud_machine: str) -> bool:
                 client, non_removable_packs
             )
     success &= sync_marketplace(client=client)
-    if os.getenv("SERVER_TYPE") == "XSIAM":
-        logging.info("Deleting datasets from the machine.")
-        success &= delete_datasets(
-            base_url=base_url, api_key=api_key, auth_id=xdr_auth_id, dataset_names=get_datasets_to_delete(ui_url)
-        )
-    else:
-        logging.info(f'Skipping datasets deletion as the server type:{os.getenv("SERVER_TYPE")} is not XSIAM')
     return success
 
 
@@ -549,6 +542,19 @@ def main():
             except Exception as ex:
                 logging.exception(f"Failed to cleanup machine. Additional info: {ex!s}")
                 success = False
+
+    # Deleting datasets from the machines, doing it one machine at a time, to avoid login issues from OKTA.
+    if os.getenv("SERVER_TYPE") == "XSIAM":
+        logging.info("Deleting datasets from the machines")
+        for cloud_machine in cloud_machines:
+            api_key, _, base_url, xdr_auth_id, ui_url = CloudBuild.get_cloud_configuration(
+                cloud_machine, options.cloud_servers_path
+            )
+            success &= delete_datasets(
+                base_url=base_url, api_key=api_key, auth_id=xdr_auth_id, dataset_names=get_datasets_to_delete(ui_url)
+            )
+    else:
+        logging.info(f'Skipping datasets deletion as the server type:{os.getenv("SERVER_TYPE")} is not XSIAM')
 
     if not success:
         logging.error("Failed to uninstall packs.")
