@@ -13,6 +13,8 @@ from Tests.Marketplace.marketplace_services import init_storage_client, load_jso
 from Tests.scripts.collect_tests.constants import (
     ALWAYS_INSTALLED_PACKS_MAPPING,
     MODELING_RULES_TO_TEST_FILE,
+    PLAYBOOK_FLOW_TO_TEST_FILE,
+    PLAYBOOKS_FLOW_TEST,
     TEST_MODELING_RULES,
     TEST_PLAYBOOKS,
     TPB_DEPENDENCIES_FILE,
@@ -26,6 +28,7 @@ XML_MIME_TYPE = "application/xml"
 MAX_REPORT_FILES = 15
 TEST_PLAYBOOKS_DEFAULT_EXECUTION_TIME = 600.0
 TEST_MODELING_RULES_DEFAULT_EXECUTION_TIME = 300.0
+PLAYBOOKS_FLOW_TEST_DEFAULT_EXECUTION_TIME = 600.0
 
 
 class PackInfo:
@@ -34,6 +37,7 @@ class PackInfo:
         self.tests: dict[str, set] = {
             TEST_PLAYBOOKS: set(),
             TEST_MODELING_RULES: set(),
+            PLAYBOOKS_FLOW_TEST: set(),
         }
         self.dependencies = set()
         self.total_expected_execution_time = 0.0
@@ -56,6 +60,7 @@ class MachineAssignment:
             {
                 TEST_PLAYBOOKS: set(),
                 TEST_MODELING_RULES: set(),
+                PLAYBOOKS_FLOW_TEST: set(),
             }
             if tests is None
             else tests
@@ -279,6 +284,17 @@ def main():
             max_files=MAX_REPORT_FILES,
             default_execution_time=TEST_MODELING_RULES_DEFAULT_EXECUTION_TIME,
         ),
+        calculate_average_execution_time(
+            bucket_name=ARTIFACTS_BUCKET,
+            download_prefix="content-playbooks-flow-test-reports",
+            matching_property="playbook_flow_test_path",
+            server_type=options.server_type,
+            tests_file=artifacts_path / PLAYBOOK_FLOW_TO_TEST_FILE,
+            test_type=PLAYBOOKS_FLOW_TEST,
+            storage_client=storage_client,
+            max_files=MAX_REPORT_FILES,
+            default_execution_time=PLAYBOOKS_FLOW_TEST_DEFAULT_EXECUTION_TIME,
+        ),
     ]
 
     logging.info("Calling build pack information")
@@ -290,6 +306,7 @@ def main():
     machine_assignments = machine_assignment(packs_objects_to_install, machine_list, packs_to_install, marketplace)
 
     # output files
+
     output_file = artifacts_path / "machine_assignment.json"
     logging.info(f"Final machine assignments written to:{output_file}")
     output_file.write_text(json.dumps(machine_assignments, cls=MachineAssignmentEncoder, indent=4, sort_keys=True))

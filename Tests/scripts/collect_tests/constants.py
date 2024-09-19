@@ -156,7 +156,12 @@ XSOAR_ON_PREM = "server_type_XSOAR"
 CONF_FILE = "conf.json"
 TPB_DEPENDENCIES_FILE = "tpb_dependencies_packs.json"
 MODELING_RULES_TO_TEST_FILE = "modeling_rules_to_test.json"
+PLAYBOOK_FLOW_TO_TEST_FILE = "playbook_flow_tests_to_test.json"
 
 # Test types:
 TEST_PLAYBOOKS = "TestPlaybooks"
 TEST_MODELING_RULES = "TestModelingRules"
+PLAYBOOKS_FLOW_TEST = "PlaybookFlowTest"
+
+
+FLOW_TEST_POSTFIX = "_flow_test"

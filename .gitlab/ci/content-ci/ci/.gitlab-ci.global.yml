@@ -485,10 +485,8 @@
 .extract_content_test_conf: &extract_content_test_conf
   - section_start "extract_content_test_conf" --collapsed
   - |
-    if [[ "${CI_JOB_NAME}" == "xsiam_server_ga" ]]; then
-      if [[ "${IS_NIGHTLY}" == "true" || "${EXTRACT_PRIVATE_TESTDATA}" == "true" ]]; then
-          python ./Tests/scripts/extract_content_test_conf.py --content-path "${CI_PROJECT_DIR}" --content-test-conf-path "${CI_PROJECT_DIR}/artifacts/repositories/content-test-conf" --missing-content-packs-test-conf "${ARTIFACTS_FOLDER_SERVER_TYPE}/missing_content_packs_test_conf.txt"
-      fi
+    if [[ "${IS_NIGHTLY}" == "true" || "${EXTRACT_PRIVATE_TESTDATA}" == "true" ]]; then
+        python ./Tests/scripts/extract_content_test_conf.py --content-path "${CI_PROJECT_DIR}" --content-test-conf-path "${CI_PROJECT_DIR}/artifacts/repositories/content-test-conf" --missing-content-packs-test-conf "${ARTIFACTS_FOLDER_SERVER_TYPE}/missing_content_packs_test_conf.txt"
     fi
   - section_end "extract_content_test_conf"
 
