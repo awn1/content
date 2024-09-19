@@ -23,7 +23,6 @@ JSON_FOLDERS = [
     "IndicatorFields",
     "Layouts",
     "Classifiers",
-    "Connections",
     "Dashboards",
     "IndicatorTypes",
     "Reports",

@@ -1330,7 +1330,6 @@ ONLY_COLLECT_PACK_TYPES = {
     FileType.GENERIC_DEFINITION,
     FileType.PRE_PROCESS_RULES,
     FileType.JOB,
-    FileType.CONNECTION,
     FileType.XSOAR_CONFIG,
     FileType.AUTHOR_IMAGE,
     FileType.CHANGELOG,

@@ -163,7 +163,6 @@ def construct_entities_block(entities_data: dict) -> str:
         for name, description in entities_description.items():
             new_description = squash_docker_updates(description)
             if entity_type in (
-                "Connections",
                 "IncidentTypes",
                 "IndicatorTypes",
                 "Layouts",

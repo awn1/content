@@ -70,7 +70,6 @@ NON_CODE_FILE_TYPES_TO_COLLECT: set[FileType] = {
     FileType.GENERIC_DEFINITION,
     FileType.PRE_PROCESS_RULES,
     FileType.JOB,
-    FileType.CONNECTION,
     FileType.XSOAR_CONFIG,
     FileType.AUTHOR_IMAGE,
     FileType.CHANGELOG,

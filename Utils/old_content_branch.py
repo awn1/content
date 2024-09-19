@@ -223,7 +223,6 @@ def edit_pack(new_to_version: str, pack_name: str):
             "IndicatorFields",
             "Layouts",
             "Classifiers",
-            "Connections",
             "Dashboards",
             "IndicatorTypes",
             "Reports",
