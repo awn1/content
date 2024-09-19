@@ -251,7 +251,6 @@ class PackFolders(enum.Enum):
     LAYOUTS = "Layouts"
     CLASSIFIERS = "Classifiers"
     INDICATOR_TYPES = "IndicatorTypes"
-    CONNECTIONS = "Connections"
     GENERIC_DEFINITIONS = "GenericDefinitions"
     GENERIC_FIELDS = "GenericFields"
     GENERIC_MODULES = "GenericModules"
@@ -319,7 +318,6 @@ class PackFolders(enum.Enum):
     def json_supported_folders(cls):
         return {
             PackFolders.CLASSIFIERS.value,
-            PackFolders.CONNECTIONS.value,
             PackFolders.DASHBOARDS.value,
             PackFolders.INCIDENT_FIELDS.value,
             PackFolders.INCIDENT_TYPES.value,
