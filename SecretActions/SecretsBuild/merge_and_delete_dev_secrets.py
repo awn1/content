@@ -1,5 +1,6 @@
 import argparse
 import logging
+from collections.abc import Iterable
 
 import json5
 import requests
@@ -149,13 +150,13 @@ def get_secrets_name(dev_secrets: list[dict]):
 
 
 def delete_dev_secrets(
-    secrets_to_delete: list[str],
+    secrets_to_delete: Iterable[str],
     secret_conf: GoogleSecreteManagerModule,
     project_id: str,
 ):
     """
     Deletes the merged dev secret from our dev store
-    :param secrets_to_delete: A list of secret names that need to be deleted
+    :param secrets_to_delete: An iterable of secret names that need to be deleted
     :param secret_conf: The GSM object to handle GSM API operations
     :param project_id: The GCP project ID
     """

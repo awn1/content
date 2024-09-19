@@ -7,6 +7,7 @@ import dateparser
 import json5
 from google.auth import default
 from google.cloud import secretmanager
+from google.cloud.secretmanager_v1 import AccessSecretVersionResponse, SecretVersion
 
 from Tests.scripts.common import BUCKET_UPLOAD_BRANCH_SUFFIX
 from Tests.scripts.github_client import GithubClient
@@ -95,21 +96,28 @@ class GoogleSecreteManagerModule:
             name = name[:GSM_MAXIMUM_LABEL_CHARS]
         return name.lower()
 
-    def get_secret(self, project_id: str, secret_id: str, version_id: str = "latest") -> dict:
+    def get_secret(
+        self, project_id: str, secret_id: str, version_id: str = "latest", with_version: bool = False
+    ) -> dict | tuple[dict, str]:
         """
         Gets a secret from GSM
         :param project_id: the ID of the GCP project
         :param secret_id: the ID of the secret we want to get
         :param version_id: the version of the secret we want to get
+        :param with_version: whether to return the version of the secret that we got
         :return: the secret as json5 object
         """
         name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
         response = self.client.access_secret_version(request={"name": name})
+        secret_version_number = self.extract_secret_version_number(response)
         try:
-            return json5.loads(response.payload.data.decode("UTF-8"))
+            secret_value = json5.loads(response.payload.data.decode("UTF-8"))
         except Exception as e:
-            logging.error(f'Secret json is malformed for: {secret_id} version: {response.name.split("/")[-1]}, got error: {e}')
-            return {}
+            logging.error(f"Secret json is malformed for: {secret_id} version: {secret_version_number}, " f"got error: {e}")
+            secret_value = {}
+        if with_version:
+            return secret_value, secret_version_number
+        return secret_value
 
     def list_secrets(
         self,
@@ -164,7 +172,7 @@ class GoogleSecreteManagerModule:
 
         return secrets
 
-    def add_secret_version(self, project_id: str, secret_id: str, payload: dict) -> None:
+    def add_secret_version(self, project_id: str, secret_id: str, payload: dict) -> str:
         """
         Add a new secret version to the given secret with the provided payload.
         :param project_id: The project ID for GCP
@@ -175,16 +183,22 @@ class GoogleSecreteManagerModule:
 
         payload = payload.encode("UTF-8")  # type: ignore
 
-        self.client.add_secret_version(
+        secret_version = self.client.add_secret_version(
             request={
                 "parent": parent,
                 "payload": {"data": payload},
             }
         )
+        secret_version_number = self.extract_secret_version_number(secret_version)
         logging.info(
-            f"Added a secret version: "
+            f"Added a secret version {secret_version_number}: "
             f"https://console.cloud.google.com/security/secret-manager/secret/{secret_id}/versions?project={project_id}"
         )
+        return secret_version_number
+
+    @staticmethod
+    def extract_secret_version_number(secret_version: SecretVersion | AccessSecretVersionResponse) -> str:
+        return secret_version.name.split("/")[-1]
 
     def delete_secret(self, project_id: str, secret_id: str) -> None:
         """

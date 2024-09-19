@@ -14,12 +14,15 @@ from typing import Any
 import common
 import urllib3
 from google.auth import _default
-from infra.resources.constants import AUTOMATION_GCP_PROJECT
+from infra.resources.constants import AUTOMATION_GCP_PROJECT, COMMENT_FIELD_NAME, GSM_SERVICE_ACCOUNT
 from jinja2 import Environment, FileSystemLoader
 from packaging.version import Version
 from slack_sdk import WebClient
 from urllib3.exceptions import InsecureRequestWarning
 
+from SecretActions.add_build_machine import BUILD_MACHINE_GSM_AUTH_ID
+from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule
+from SecretActions.SecretsBuild.merge_and_delete_dev_secrets import delete_dev_secrets
 from Tests.scripts.graph_lock_machine import (
     AVAILABLE_MACHINES,
     BUILD_IN_QUEUE,
@@ -35,7 +38,7 @@ warnings.filterwarnings("ignore", _default._CLOUD_SDK_CREDENTIALS_WARNING)
 
 from Tests.scripts.infra.settings import Settings, XSOARAdminUser  # noqa
 from Tests.scripts.infra.viso_api import VisoAPI  # noqa
-from Tests.scripts.infra.xsoar_api import XsoarClient, XsiamClient  # noqa
+from Tests.scripts.infra.xsoar_api import XsoarClient, XsiamClient, SERVER_TYPE_TO_CLIENT_TYPE, InvalidAPIKey  # noqa
 
 ARTIFACTS_FOLDER = os.environ["ARTIFACTS_FOLDER"]
 GITLAB_ARTIFACTS_URL = os.environ["GITLAB_ARTIFACTS_URL"]
@@ -63,13 +66,8 @@ TOKENS_COUNT_PERCENTAGE_THRESHOLD = int(os.getenv("TOKENS_COUNT_PERCENTAGE_THRES
 MAX_OWNERS_TO_NOTIFY_DISPLAY = 5
 MAX_SERVER_VERSIONS_DISPLAY = 3
 BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT = {XsiamClient.PLATFORM_TYPE: ["build", "nightly"]}
-COMMENT_FIELD_NAME = "__comment__"
 RECORDS_FILE_NAME = "records.json"
 WAIT_IN_LINE_SLACK_MESSAGES_FILE_NAME = "wait_in_line_slack_messages.json"
-SERVER_TYPE_TO_CLIENT_TYPE: dict[str | None, type[XsoarClient]] = {
-    XsoarClient.SERVER_TYPE: XsoarClient,
-    XsiamClient.SERVER_TYPE: XsiamClient,
-}
 PRODUCT_TYPE_TO_SERVER_TYPE: dict[str | None, str] = {
     XsoarClient.PRODUCT_TYPE: XsoarClient.SERVER_TYPE,
     XsiamClient.PRODUCT_TYPE: XsiamClient.SERVER_TYPE,
@@ -121,6 +119,7 @@ def generate_columns(without_viso: bool) -> list[dict]:
         create_column(False, "lcaas_id", "LCAAS ID", True, True, True, False),
         create_column(True, "ttl", "TTL", True, True, True, False),
         create_column(False, "license", "License", True, False, True, False),
+        create_column(False, "api_key_ttl", "API Key TTL", True, False, True, False),
         create_column(True, "owner", "Owner", True, False, True, True),
         create_column(True, "tenant_status", "Tenant Status", True, False, True, True),
         create_column(False, "build_machine", "Build Machine", True, False, True, True),
@@ -253,8 +252,7 @@ def generate_expired_class(expired: bool | None = None):
     return "expired" if expired else "ok" if expired is not None else "na"
 
 
-def generate_ttl_cell(ttl: str, current_date: datetime, **kwargs) -> dict:
-    ttl_date = get_datetime_from_epoch(ttl)
+def generate_ttl_cell(ttl_date: datetime, current_date: datetime, **kwargs) -> dict:
     expired = ttl_date <= current_date + TTL_EXPIRED_DAYS
     return generate_cell(
         ttl_date.strftime("%Y-%m-%dT%H-%M"),
@@ -301,7 +299,7 @@ def get_record_for_tenant(tenant, current_date: datetime):
         "disposable": generate_cell(tenant["disposable"]),
         "tenant_status": generate_tenant_status_cell(tenant["status"]),
         "viso_version": generate_cell(tenant["viso_version"]),
-        "ttl": generate_ttl_cell(tenant["ttl"], current_date),
+        "ttl": generate_ttl_cell(get_datetime_from_epoch(tenant["ttl"]), current_date),
         "slack_link": slack_link_cell,
     }
 
@@ -369,6 +367,37 @@ def generate_cell_dict_key(record: dict, key: str, default_value: Any = NOT_AVAI
     return generate_cell(default_value, "")
 
 
+def get_api_key_ttl_cell(client, current_date):
+    try:
+        cloud_machine_details, secret_version = client.login_using_gsm()
+        auth_id = cloud_machine_details[BUILD_MACHINE_GSM_AUTH_ID]
+        api_keys = client.search_api_keys()
+        if api_key := next((key for key in api_keys if key.id == auth_id), None):
+            logging.info(
+                f"API key for machine {client.tenant_name} (from secret version {secret_version}) "
+                f"is on API keys list in the machine."
+            )
+            return generate_ttl_cell(api_key.expiration, current_date) if api_key.expiration else generate_cell(NOT_AVAILABLE)
+        raise InvalidAPIKey(
+            client.tenant_name,
+            f"Could not find generated API key (from secret version {secret_version}) on API keys list in the machine.",
+        )
+    except Exception as e:
+        logging.exception(f"Failed to get API Key for machine: {client.tenant_name}. {e}")
+        return generate_cell(NOT_AVAILABLE, invalid=True)
+
+
+def remove_keys_without_tenant(all_tenant_lcaas_id: set[str]) -> set[str]:
+    secret_conf = GoogleSecreteManagerModule(GSM_SERVICE_ACCOUNT)
+    tenants_secrets = secret_conf.list_secrets_metadata_by_query(project_id=AUTOMATION_GCP_PROJECT, query="labels.machine:*")
+    logging.info(f"Got {len(tenants_secrets)} tenant's API keys from GSM.")
+    all_tenant_with_api_keys = {Path(s.name).name for s in tenants_secrets}
+    keys_without_tenant = all_tenant_with_api_keys.difference(all_tenant_lcaas_id)
+    logging.info(f"Found {len(keys_without_tenant)} tenants in GSM that don't exist in VISO, deleting those keys from GSM.")
+    delete_dev_secrets(keys_without_tenant, secret_conf, AUTOMATION_GCP_PROJECT)
+    return keys_without_tenant
+
+
 def generate_records(
     cloud_servers_path_json: dict,
     xsoar_admin_user: XSOARAdminUser,
@@ -426,6 +455,7 @@ def generate_records(
                     if tenant:
                         record |= get_record_for_tenant(tenant, current_date)
             record |= get_licenses_cells(client, current_date)
+            record["api_key_ttl"] = get_api_key_ttl_cell(client, current_date)
 
         records.append(record)
 
@@ -440,7 +470,7 @@ def generate_records(
             record = {
                 "host": generate_cell(generate_html_link(host_url, ui_url), host_url),
                 "ui_url": generate_cell(ui_url),
-                "machine_name": generate_cell(tenant["subdomain"]),
+                "machine_name": generate_cell(tenant["lcaas_id"]),
                 "enabled": generate_cell(False),
                 "flow_type": generate_cell(NOT_AVAILABLE, ""),
                 "platform_type": generate_cell(platform_type),
@@ -453,13 +483,16 @@ def generate_records(
                 "comment": generate_cell(""),
             }
             if client_type is not None and (
-                client := get_client(xsoar_admin_user, client_type, host_url, host_url, AUTOMATION_GCP_PROJECT)
+                client := get_client(
+                    xsoar_admin_user, client_type, host_url, f"qa2-test-{tenant['lcaas_id']}", AUTOMATION_GCP_PROJECT
+                )
             ):
                 if (versions := get_version_info(client)) is not None:
                     record |= generate_record_from_version_info(versions, platform_type=client_type.PLATFORM_TYPE)
                     if tenant := tenants.get(tenant["lcaas_id"]):
                         record |= get_record_for_tenant(tenant, current_date)
                 record |= get_licenses_cells(client, current_date)
+                record["api_key_ttl"] = get_api_key_ttl_cell(client, current_date)
             record |= get_record_for_tenant(tenant, current_date)
             records.append(record)
 
@@ -525,7 +558,13 @@ def extract_full_version(version_string: str) -> Version | None:
 
 
 def generate_report(
-    client: WebClient, without_viso: bool, name_mapping: dict, records: list, tenants: dict, tokens_count: int | None
+    client: WebClient,
+    without_viso: bool,
+    name_mapping: dict,
+    records: list,
+    tenants: dict,
+    tokens_count: int | None,
+    keys_without_tenant: set[str] | None,
 ) -> tuple[list[dict], list[int], list[str], dict[str, Any], list[dict]]:
     slack_msg_append: list[dict[Any, Any]] = []
     managers: list[Any] = name_mapping.get("managers", [])
@@ -537,6 +576,7 @@ def generate_report(
     disabled_machines_count = set()
     non_connectable_machines_count = set()
     ttl_expired_count = set()
+    invalid_api_key_ttl_count = set()
     licenses_expired_count = set()
     owners_to_machines: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     platform_type_to_flow_type_to_server_versions: dict[str, dict[str, dict[str, int]]] = defaultdict(
@@ -556,6 +596,8 @@ def generate_report(
                 non_connectable_machines_count.add(machine_name)
             if record.get("ttl", {}).get("expired"):
                 ttl_expired_count.add(machine_name)
+            if record.get("api_key_ttl", {}).get("invalid") or record.get("api_key_ttl", {}).get("expired"):
+                invalid_api_key_ttl_count.add(machine_name)
             for value in record.values():
                 if value.get("field_type") == "license" and value.get("expired"):
                     licenses_expired_count.add(machine_name)
@@ -633,6 +675,40 @@ def generate_report(
                         "value": ", ".join(ttl_expired_count),
                         "short": True,
                     }
+                ],
+            }
+        )
+    if invalid_api_key_ttl_count:
+        title = f"Build Machines - With Invalid/Expired API Key:{len(invalid_api_key_ttl_count)}"
+        slack_msg_append.append(
+            {
+                "color": "danger",
+                "title": title,
+                "fallback": title,
+                "fields": [
+                    {
+                        "title": f"Machine Name(s){'' if i == 0 else ' - Continued'}",
+                        "value": chunk,
+                        "short": False,
+                    }
+                    for i, chunk in enumerate(common.join_list_by_delimiter_in_chunks(invalid_api_key_ttl_count))
+                ],
+            }
+        )
+    if keys_without_tenant:
+        title = f"Build Machines - API Keys Without Tenant:{len(keys_without_tenant)}"
+        slack_msg_append.append(
+            {
+                "color": "danger",
+                "title": title,
+                "fallback": title,
+                "fields": [
+                    {
+                        "title": f"API Key Name(s){'' if i == 0 else ' - Continued'}",
+                        "value": chunk,
+                        "short": False,
+                    }
+                    for i, chunk in enumerate(common.join_list_by_delimiter_in_chunks(keys_without_tenant))
                 ],
             }
         )
@@ -830,6 +906,7 @@ def main() -> None:
         current_date_str = current_date.strftime("%Y-%m-%d")
         attachments_json = []
         wait_in_line_slack_messages: list = []
+        keys_without_tenant = None
 
         if args.test_data:
             test_data_path = Path(args.test_data)
@@ -840,6 +917,7 @@ def main() -> None:
             records = generate_records(
                 cloud_servers_path_json, Settings.xsoar_admin_user, tenants, args.without_viso, current_date
             )
+            keys_without_tenant = remove_keys_without_tenant({f"qa2-test-{tenant['lcaas_id']}" for tenant in tenants.values()})
             # Save the records to a json file for future use and debugging.
             with open(output_path / RECORDS_FILE_NAME, "w") as f:
                 json.dump(records, f, indent=4, default=str, sort_keys=True)
@@ -863,7 +941,7 @@ def main() -> None:
 
         logging.info(f"Creating report for {current_date_str}")
         columns, columns_filterable, managers, css_classes, slack_msg_append_report = generate_report(
-            client, args.without_viso, name_mapping, records, tenants, tokens_count
+            client, args.without_viso, name_mapping, records, tenants, tokens_count, keys_without_tenant
         )
         slack_msg_append.extend(slack_msg_append_report)
 

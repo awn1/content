@@ -9,6 +9,9 @@ from google.auth.exceptions import DefaultCredentialsError
 
 from SecretActions.add_gsm_secret import YELLOW_BOLD_PRINT
 from SecretActions.google_secret_manager_handler import DEV_PROJECT_ID, GoogleSecreteManagerModule
+from Tests.scripts.infra.models import PublicApiKey
+from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT, COMMENT_FIELD_NAME, GSM_SERVICE_ACCOUNT
+from Tests.scripts.infra.xsoar_api import SERVER_TYPE_TO_CLIENT_TYPE
 
 BUILD_MACHINE_GSM_API_KEY = "api-key"
 BUILD_MACHINE_GSM_AUTH_ID = "x-xdr-auth-id"
@@ -16,17 +19,10 @@ BUILD_MACHINE_GSM_TOKEN = "token"
 
 BUILD_MACHINE_INPUT_SERVERS_FILE = "servers-json"
 
-XSOAR_NG_MACHINE_TYPE = "xsoar_ng"
-XSIAM_MACHINE_TYPE = "xsiam"
-
-# from Tests.scripts.build_machines_report import COMMENT_FIELD_NAME
-COMMENT_FIELD_NAME = "__comment__"
-
 INPUT_TYPES = [BUILD_MACHINE_GSM_API_KEY, BUILD_MACHINE_GSM_TOKEN, BUILD_MACHINE_INPUT_SERVERS_FILE]
-MACHINE_TYPES = [XSOAR_NG_MACHINE_TYPE, XSIAM_MACHINE_TYPE]
+MACHINE_TYPES = list(SERVER_TYPE_TO_CLIENT_TYPE.keys())
 
 SECRET_VALUES = [BUILD_MACHINE_GSM_API_KEY, BUILD_MACHINE_GSM_TOKEN, BUILD_MACHINE_GSM_AUTH_ID]
-LABEL = {"build": "true"}
 
 
 def validate_input(options: argparse.Namespace, attr_validation: tuple) -> json5:
@@ -62,15 +58,14 @@ def create_new_values(server_value: dict | str, input_type: str) -> dict[str, st
         return {BUILD_MACHINE_GSM_TOKEN: server_value}
 
 
-def get_existing_secret(gsm_object: GoogleSecreteManagerModule, project_id: str, server_id: str) -> dict:
+def get_existing_secret(gsm_object: GoogleSecreteManagerModule, project_id: str, server_id: str) -> tuple[dict, str]:
     # Checks if the secret exists
     try:
-        existing_secret = gsm_object.get_secret(project_id, server_id)
-        return existing_secret
+        return gsm_object.get_secret(project_id, server_id, with_version=True)
     # Secret was not found, creates new secret
     except NotFound:
-        gsm_object.create_secret(project_id, server_id, LABEL)
-        return {}
+        gsm_object.create_secret(project_id, server_id)
+        return {}, "1"
     except PermissionDenied as e:
         if "secretmanager.versions.access" in str(e):
             raise PermissionDenied(
@@ -80,32 +75,53 @@ def get_existing_secret(gsm_object: GoogleSecreteManagerModule, project_id: str,
         raise
 
 
-def add_build_machine_secrets_from_file(secret_json: json5, input_type: str, project_id: str, machine_type: str = None):
+def add_build_machine_secrets_from_file(secret_json: json5, input_type: str, project_id: str, machine_type: str):
     """Adding the build machine secret from file to GSM"""
     logging.debug("Adding the build machine secret from file to GSM")
     gsm_object: GoogleSecreteManagerModule = GoogleSecreteManagerModule(project_id=project_id)
-    labels: dict[str, str] = (LABEL | {"machine": machine_type}) if machine_type else LABEL
 
     for server_id, server_value in secret_json.items():
         if server_id == COMMENT_FIELD_NAME:
             logging.debug("Skipping comment")
             continue
-        new_value: dict = create_new_values(server_value, input_type)
-        existing_value: dict = get_existing_secret(gsm_object, project_id, server_id)
-        updated_value: dict = existing_value | new_value
-        if updated_value != existing_value:
-            gsm_object.add_secret_version(
-                project_id, server_id, json5.dumps(updated_value, quote_keys=True, indent=4, sort_keys=True)
-            )
-            # Update the labels for the secret
-            gsm_object.update_secret(project_id, server_id, labels)
-        else:
-            logging.debug(f"Skipping update for {server_id}, its values did not change")
+        add_build_machine_secret_to_gsm(server_id, machine_type, input_type, project_id, gsm_object, server_value)
 
     print(
         YELLOW_BOLD_PRINT + "The secrets were successfully added to GSM. "
         "Make sure to add other relevant configurations to the servers json file." + YELLOW_BOLD_PRINT
     )
+
+
+def add_build_machine_secret_to_gsm(
+    server_id: str,
+    machine_type: str,
+    input_type: str = None,
+    project_id: str = AUTOMATION_GCP_PROJECT,
+    gsm_object: GoogleSecreteManagerModule = None,
+    server_value: dict | str = None,
+    public_api_key: PublicApiKey = None,
+) -> tuple[dict, str]:
+    if not gsm_object:
+        gsm_object: GoogleSecreteManagerModule = GoogleSecreteManagerModule(
+            project_id=project_id,
+            service_account_file=GSM_SERVICE_ACCOUNT,  # used from build
+        )
+    if server_value:
+        server_value: dict = create_new_values(server_value, input_type)
+    else:
+        server_value = {BUILD_MACHINE_GSM_API_KEY: public_api_key.key, BUILD_MACHINE_GSM_AUTH_ID: public_api_key.id}
+
+    existing_value, secret_version = get_existing_secret(gsm_object, project_id, server_id)
+    updated_value: dict = existing_value | server_value
+    if updated_value != existing_value:
+        secret_version = gsm_object.add_secret_version(
+            project_id, server_id, json5.dumps(updated_value, quote_keys=True, indent=4, sort_keys=True)
+        )
+        # Update the labels for the secret
+        gsm_object.update_secret(project_id, server_id, {"machine": gsm_object.convert_to_gsm_format(machine_type)})
+    else:
+        logging.debug(f"Skipping update for {server_id}, its values did not change")
+    return updated_value, secret_version
 
 
 def run(options: argparse.Namespace):

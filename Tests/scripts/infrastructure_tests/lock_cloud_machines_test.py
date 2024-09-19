@@ -1,3 +1,4 @@
+import collections
 import json
 import os
 
@@ -5,12 +6,16 @@ import pytest
 import requests
 from requests import ConnectionError, Response
 
+from Tests.scripts.infra.models import PublicApiKey
+from Tests.scripts.infra.settings import Settings
+from Tests.scripts.infra.xsoar_api import XsoarClient
 from Tests.scripts.lock_cloud_machines import (
     check_job_status,
     get_and_lock_all_needed_machines,
     get_machines_locks_details,
     get_my_place_in_the_queue,
     try_to_lock_machine,
+    validate_connection_for_machines,
     wait_for_build_to_be_first_in_queue,
 )
 
@@ -210,3 +215,98 @@ def test_get_and_lock_all_needed_machines(mocker):
     )
     assert mock_try_to_lock_machine.call_count == 3
     assert lock_machine_list == ["machine2", "machine1"]
+
+
+def test_validate_connection_for_machines(mocker):
+    """
+    Given:
+        Cloud servers dict and the chosen machine list.
+    When:
+        Validating that the machines are connectable via the API keys provided for them.
+    Then:
+        Assert no error is raised, meaning the keys are valid.
+    """
+    cloud_servers = {
+        "__comment__": {
+            "dictionary key": "mapping to the instance name",
+            "ui_url": "The URL to access the instance in the browser",
+            "instance_name": "The name of the instance",
+            "base_url": "The base URL for the instance",
+            "xsiam_version": "The version of the XSOAR instance",
+            "demisto_version": "The version of the Demisto instance",
+            "enabled": "Whether the instance is enabled",
+            "flow_type": "The flow type of the instance: (nightly, upload, build, etc.)",
+            "agent_host_name": "The name of the agent host",
+            "agent_host_ip": "The IP address of the agent host",
+            "build_machine": "Whether the instance is a build machine",
+            "comment": "Any additional comments",
+            "server_type": "The server type, can be either 'XSIAM' or 'XSOAR SAAS'",
+        },
+        "machine-xsoar1": {
+            "ui_url": "https://url-xsoar1.us.paloaltonetworks.com",
+            "instance_name": "machine-xsoar1",
+            "base_url": "https://api-url-xsoar1.us.paloaltonetworks.com",
+            "demisto_version": "99.99.98",
+            "xsoar_ng_version": "8.7.0",
+            "enabled": True,
+            "flow_type": "build",
+            "build_machine": True,
+            "server_type": "XSOAR SAAS",
+        },
+        "machine-xsoar2": {
+            "ui_url": "https://url-xsoar2.us.paloaltonetworks.com",
+            "instance_name": "machine-xsoar2",
+            "base_url": "https://api-url-xsoar1.us.paloaltonetworks.com",
+            "demisto_version": "99.99.98",
+            "xsoar_ng_version": "8.7.0",
+            "enabled": True,
+            "flow_type": "build",
+            "build_machine": True,
+            "server_type": "XSOAR SAAS",
+        },
+        "machine-xsiam1": {
+            "ui_url": "https://url-xsiam1.us.paloaltonetworks.com/",
+            "instance_name": "machine-xsiam1",
+            "base_url": "https://api-url-xsiam1.us.paloaltonetworks.com",
+            "xsiam_version": "ga",
+            "demisto_version": "8.7.0",
+            "enabled": True,
+            "flow_type": "nightly",
+            "agent_host_name": "Win10a",
+            "agent_host_ip": "1.1.1.1",
+            "build_machine": True,
+            "server_type": "XSIAM",
+        },
+        "machine-xsiam2": {
+            "ui_url": "https://url-xsiam2.us.paloaltonetworks.com/",
+            "instance_name": "machine-xsiam2",
+            "base_url": "https://api-url-xsiam2.us.paloaltonetworks.com",
+            "xsiam_version": "ga",
+            "demisto_version": "8.7.0",
+            "enabled": True,
+            "flow_type": "build",
+            "agent_host_name": "Win10b",
+            "agent_host_ip": "1.2.3.4",
+            "build_machine": True,
+            "server_type": "XSIAM",
+        },
+    }
+
+    machine_list = ["machine-xsoar1", "machine-xsiam2"]
+    Xsoar_Admin_User = collections.namedtuple("Xsoar_Admin_User", ["username", "password"])
+    mocker.patch.object(Settings, "xsoar_admin_user", return_value=Xsoar_Admin_User("u", "p"))
+    mocker.patch(
+        "Tests.scripts.infra.xsoar_api.XsoarClient.get_gsm_cloud_machine_details",
+        return_value=({"api-key": "a", "x-xdr-auth-id": 2}, "3"),
+    )
+    Machine_Health_Response = collections.namedtuple("Machine_Health_Response", ["ok"])
+    mocker.patch.object(
+        requests, "get", side_effect=[Machine_Health_Response(False), Machine_Health_Response(True)] * len(machine_list)
+    )
+    mocker.patch.object(XsoarClient, "login_via_okta")
+    mocker.patch.object(XsoarClient, "create_api_key", return_value=PublicApiKey(id="3", key="b"))
+    mocker.patch(
+        "SecretActions.add_build_machine.add_build_machine_secret_to_gsm",
+        return_value=({"api-key": "b", "x-xdr-auth-id": 3}, "4"),
+    )
+    validate_connection_for_machines(machine_list, cloud_servers)

@@ -13,6 +13,9 @@ from slack_sdk import WebClient as SlackWebClient
 
 from Tests.Marketplace.common import get_json_file
 from Tests.scripts.common import evaluate_condition
+from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT
+from Tests.scripts.infra.settings import Settings
+from Tests.scripts.infra.xsoar_api import SERVER_TYPE_TO_CLIENT_TYPE
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 from Utils.github_workflow_scripts.utils import get_env_var
@@ -504,6 +507,27 @@ def wait_for_build_to_be_first_in_queue(
             sleep(random.randint(8, 13))
 
 
+def validate_connection_for_machines(machine_list: list[str], cloud_servers: dict[str, dict]):
+    """
+    For relevant server types, gets the cloud machine API key from GSM and checks it.
+    If it is not valid or doesn't exist, creates one and saves it to GSM.
+
+    Raises InvalidAPIKey Exception if creating a new API key was unsuccessful.
+    """
+    for cloud_machine in machine_list:
+        conf = cloud_servers.get(cloud_machine)
+        if client_type := SERVER_TYPE_TO_CLIENT_TYPE.get(conf.get("server_type")):  # type: ignore[union-attr, arg-type]
+            xsoar_admin_user = Settings.xsoar_admin_user
+            client = client_type(
+                xsoar_host=conf.get("base_url").replace("https://api-", "").replace("/", ""),  # type: ignore[union-attr]
+                xsoar_user=xsoar_admin_user.username,
+                xsoar_pass=xsoar_admin_user.password,
+                tenant_name=cloud_machine,
+                project_id=AUTOMATION_GCP_PROJECT,
+            )
+            client.login_using_gsm()
+
+
 def main():
     start_time = time.time()
     install_logging("lock_cloud_machines.log", logger=logging)
@@ -604,6 +628,8 @@ def main():
 
     with open(options.response_machine, "w") as f:
         f.write(f"{','.join(lock_machine_list)}")
+
+    validate_connection_for_machines(lock_machine_list, cloud_servers_path_json)
 
     end_time = time.time()
     duration_minutes = (end_time - start_time) // 60

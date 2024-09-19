@@ -35,3 +35,21 @@ class PublicApiKey:
         self.creation_time = creation_time
         self.created_by = created_by
         self.user_name = user_name
+
+    @staticmethod
+    def parse_api_key_from_table_data(key):
+        return PublicApiKey(
+            id=key.get("API_KEY_ID"),
+            key=key.get("API_KEY"),
+            comment=key.get("API_KEY_COMMENT"),
+            roles=key.get("API_KEY_RBAC_ROLES"),
+            security_level=key.get("API_KEY_SECURITY_LEVEL"),
+            expiration=PublicApiKey.parse_expiration(key.get("API_KEY_EXPIRATION_TIME")),
+            creation_time=key.get("API_KEY_CREATION_TIME"),
+            created_by=key.get("API_KEY_CREATED_BY"),
+            user_name=key.get("API_KEY_PRETTY_USER"),
+        )
+
+    @staticmethod
+    def parse_expiration(api_key_expiration_time):
+        return datetime.datetime.fromtimestamp(float(api_key_expiration_time) / 1000) if api_key_expiration_time else None

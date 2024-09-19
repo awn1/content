@@ -17,6 +17,8 @@ OKTA_PROD_AUTH_URL = "https://sso.paloaltonetworks.com/api/v1/authn"
 CI_PIPELINE_SOURCE = "CI_PIPELINE_SOURCE"
 IS_MSSP_TENANT = "is_mssp_tenant"
 
+COMMENT_FIELD_NAME = "__comment__"
+
 
 class TokenCache:
     TOKEN_MGMT = "token_mgmt"
