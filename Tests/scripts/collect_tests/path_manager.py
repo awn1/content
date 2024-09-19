@@ -5,7 +5,7 @@ from pathlib import Path
 
 from git import InvalidGitRepositoryError, Repo
 
-from Tests.scripts.collect_tests.constants import MODELING_RULES_TO_TEST_FILE, TPB_DEPENDENCIES_FILE
+from Tests.scripts.collect_tests.constants import MODELING_RULES_TO_TEST_FILE, PLAYBOOK_FLOW_TO_TEST_FILE, TPB_DEPENDENCIES_FILE
 
 _SANITY_FILES_FOR_GLOB = (
     # if any of the files under this list (or descendants) is changed, and no other files are changed,
@@ -50,7 +50,10 @@ class PathManager:
         self.id_set_path = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "id_set.json"
         self.conf_path = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "conf.json"
         self.output_tests_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "filter_file.txt"
+
         self.output_modeling_rules_to_test_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / MODELING_RULES_TO_TEST_FILE
+        self.output_playbook_flow_test_to_test_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / PLAYBOOK_FLOW_TO_TEST_FILE
+
         self.output_packs_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "content_packs_to_install.txt"
         self.output_packs_to_upload_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "content_packs_to_upload.json"
         self.output_machines_file = PathManager.ARTIFACTS_FOLDER_SERVER_TYPE / "filter_envs.json"

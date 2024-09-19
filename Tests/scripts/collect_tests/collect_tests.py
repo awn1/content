@@ -16,6 +16,7 @@ from Tests.Marketplace.marketplace_services import get_failed_packs_from_previou
 from Tests.scripts.collect_tests.constants import (
     ALWAYS_INSTALLED_PACKS_MAPPING,
     DEFAULT_MARKETPLACES_WHEN_MISSING,
+    FLOW_TEST_POSTFIX,
     IGNORED_FILE_TYPES,
     MODELING_RULE_COMPONENT_FILES,
     NON_CODE_FILE_TYPES_TO_COLLECT,
@@ -55,6 +56,7 @@ from Tests.scripts.collect_tests.utils import (
     hotfix_detect_old_script_yml,
 )
 from Tests.scripts.collect_tests.version_range import VersionRange
+from Tests.scripts.utils.playbook_flow_test_utils import FlowDataExtractor
 
 
 class CollectionReason(str, Enum):
@@ -86,6 +88,7 @@ class CollectionReason(str, Enum):
     PACK_TEST_E2E = "pack was chosen to be tested in e2e tests"
     PACK_MASTER_BUCKET_DISCREPANCY = "pack version on master is ahead of bucket, collected to upload"
     NIGHTLY_PACK = "nightly packs are always installed"
+    PLAYBOOK_CHANGED = "playbook changed, getting playbook's flow test file"
 
 
 REASONS_ALLOWING_NO_ID_SET_OR_CONF = {
@@ -110,6 +113,7 @@ class CollectionResult:
         is_sanity: bool = False,
         only_to_install: bool = False,
         pack_to_reinstall: str | None = None,
+        playbook_flow_test_to_test: str | Path | None = None,  # path to dir of playbook to test with playbook flow tests
     ):
         """
         Collected test playbook, and/or a pack to install/upload.
@@ -134,6 +138,7 @@ class CollectionResult:
         self.tests: set[str] = set()
         self.tpb_dependencies_packs: dict[str, dict[str, list[str]]] = {}
         self.modeling_rules_to_test: dict[str, dict] = {}
+        self.playbook_flow_tests_to_test: dict[str, dict] = {}
         self.packs_to_install: set[str] = set()
         self.packs_to_upload: set[str] = set()
         self.packs_to_update_metadata: set[str] = set()
@@ -186,6 +191,19 @@ class CollectionResult:
             self.packs_to_install = {pack} if pack else set()
             self.modeling_rules_to_test[modeling_rule_to_test.as_posix()] = {"pack": pack}
             logger.info(f"collected {modeling_rule_to_test=}, {reason} ({reason_description}, {version_range=})")
+
+        if playbook_flow_test_to_test:
+            self.packs_to_install = {pack} if pack else set()
+            try:
+                flow_test_path = FlowDataExtractor().get_playbook_flow_test_path(playbook_flow_test_to_test, pack)
+                logger.info(f"Received full path for flow tests: {flow_test_path=}. Extracting additional dependencies.")
+                dependencies = FlowDataExtractor().get_additional_packs_data(file_path=flow_test_path)
+                self.playbook_flow_tests_to_test[str(playbook_flow_test_to_test)] = {"pack": pack, "dependencies": dependencies}
+                logger.info(
+                    f"collected {playbook_flow_test_to_test=}, {reason} ({reason_description},{version_range=}, {dependencies=})"
+                )
+            except ValueError as e:
+                logger.info(f"Error collecting Flow Tests. Error: {e!s}")
 
         if pack_to_reinstall:
             self.packs_to_reinstall = {pack_to_reinstall}
@@ -288,6 +306,7 @@ class CollectionResult:
         result.tests = self.tests | other.tests  # type: ignore[operator]
         result.tpb_dependencies_packs = self.tpb_dependencies_packs | other.tpb_dependencies_packs  # type: ignore[operator]
         result.modeling_rules_to_test = self.modeling_rules_to_test | other.modeling_rules_to_test
+        result.playbook_flow_tests_to_test = self.playbook_flow_tests_to_test | other.playbook_flow_tests_to_test
         result.packs_to_install = self.packs_to_install | other.packs_to_install  # type: ignore[operator]
         result.packs_to_upload = self.packs_to_upload | other.packs_to_upload
         result.packs_to_update_metadata = self.packs_to_update_metadata | other.packs_to_update_metadata
@@ -964,6 +983,28 @@ class BranchTestCollector(TestCollector):
                 raise e
         return CollectionResult.union(collected)
 
+    def get_playbook_tests(self, tests_list: list) -> tuple[list[str], str | None]:
+        """Taking a list of tests and split it to test playbooks and flow tests.
+        Currently assuming only one code test file available for playbook , this may change in the future.
+
+        Args:
+            tests_list (list): A list of flow tests (Usually from tests section in playbook's yml file.)
+
+        Returns:
+            tuple[list[str], list[str]]: tuple containing tuple of test playbooks and tuple of playbook flow tests.
+        """
+        test_playbooks = []
+        playbook_flow_test = None
+
+        for test in tests_list:
+            # Currently assuming only one flow test exist per playbook
+            if test.endswith(FLOW_TEST_POSTFIX):
+                playbook_flow_test = test
+            else:
+                test_playbooks.append(test)
+
+        return (test_playbooks), playbook_flow_test
+
     def _collect_yml(self, content_item_path: Path) -> CollectionResult | None:
         """
         collecting a yaml-based content item (including py-based, whose names match a yaml based one)
@@ -982,6 +1023,7 @@ class BranchTestCollector(TestCollector):
         relative_yml_path = PACK_MANAGER.relative_to_packs(yml_path)
         tests: tuple[str, ...]
         only_to_install = False
+        playbook_flow_test = None
 
         match actual_content_type:
             case None:
@@ -1028,7 +1070,9 @@ class BranchTestCollector(TestCollector):
                         logger.info(f"Found changes in ApiModule = {yml.id_}, starting collecting related integrations")
                         return self._collect_integrations_using_apimodule(yml.id_)
 
-                    tests = tuple(yml.tests)  # raises NoTestsConfiguredException if 'no tests' in the tests field
+                    tests, playbook_flow_test = self.get_playbook_tests(
+                        yml.tests
+                    )  # raises NoTestsConfiguredException if 'no tests' in the tests field
                     reason = CollectionReason.SCRIPT_PLAYBOOK_CHANGED
 
                 except NoTestsConfiguredException:
@@ -1057,6 +1101,7 @@ class BranchTestCollector(TestCollector):
                         conf=self.conf,
                         id_set=self.id_set,
                         only_to_install=only_to_install,
+                        playbook_flow_test_to_test=playbook_flow_test,
                     )
                     for test in tests
                 )
@@ -1550,6 +1595,8 @@ def output(result: CollectionResult | None):
     packs_to_upload = sorted(result.packs_to_upload, key=lambda x: x.lower()) if result else []
     packs_to_update_metadata = sorted(result.packs_to_update_metadata, key=lambda x: x.lower()) if result else []
     modeling_rules_to_test = result.modeling_rules_to_test if result else {}
+    playbook_flow_test_to_test = result.playbook_flow_tests_to_test if result else {}
+    print(f"{playbook_flow_test_to_test=}")
     machines = result.machines if result and result.machines else ()
     packs_to_reinstall_test = sorted(result.packs_to_reinstall, key=lambda x: x.lower()) if result else ()
 
@@ -1557,6 +1604,9 @@ def output(result: CollectionResult | None):
     packs_to_install_str = "\n".join(packs_to_install)
     packs_to_upload_str = "\n".join(packs_to_upload)
     packs_to_update_metadata_str = "\n".join(packs_to_update_metadata)
+    playbook_flow_test_str = "\n".join(playbook_flow_test_to_test.keys()) if playbook_flow_test_to_test else ""
+    print(f"{playbook_flow_test_str=}")
+
     machine_str = ", ".join(sorted(map(str, machines)))
     packs_to_reinstall_test_str = "\n".join(packs_to_reinstall_test)
     tpb_dependencies_packs_str = json.dumps(tpb_dependencies_packs) if tpb_dependencies_packs else ""
@@ -1565,7 +1615,8 @@ def output(result: CollectionResult | None):
     logger.info(f"collected {len(packs_to_install)} packs to install:\n{packs_to_install_str}")
     logger.info(f"collected {len(packs_to_upload)} packs to upload:\n{packs_to_upload_str}")
     logger.info(f"collected {len(packs_to_update_metadata)} packs to update:\n{packs_to_update_metadata_str}")
-    logger.info(f"collected {len(modeling_rules_to_test)} modeling rules to test:\n{modeling_rules_to_test.keys()}")
+    logger.info(f"collected {len(modeling_rules_to_test)} modeling rules to test")
+    logger.info(f"collected {len(playbook_flow_test_to_test)} playbook flow test to test:\n{playbook_flow_test_str}")
     logger.info(f"collected {len(machines)} XSOAR6 machines: {machine_str}")
     logger.info(f"collected {len(packs_to_reinstall_test)} packs to reinstall to test:\n{packs_to_reinstall_test_str}")
 
@@ -1574,12 +1625,15 @@ def output(result: CollectionResult | None):
     PATHS.output_packs_to_upload_file.write_text(
         json.dumps({"packs_to_upload": packs_to_upload, "packs_to_update_metadata": packs_to_update_metadata})
     )
+
     if modeling_rules_to_test:
         # Don't write modeling rules to test if there are none.
         PATHS.output_modeling_rules_to_test_file.write_text(json.dumps(modeling_rules_to_test))
-    PATHS.output_machines_file.write_text(
-        json.dumps({str(machine): (machine in machines) for machine in Machine.get_all_machines()})
-    )
+    if playbook_flow_test_to_test:
+        # Don't write PLaybook flow to test if there are none.
+        PATHS.output_playbook_flow_test_to_test_file.write_text(json.dumps(playbook_flow_test_to_test))
+
+    PATHS.output_machines_file.write_text(json.dumps({str(machine): (machine in machines) for machine in Machine}))
     PATHS.output_packs_to_reinstall_test_file.write_text(packs_to_reinstall_test_str)
     PATHS.output_tpb_dependencies_packs.write_text(tpb_dependencies_packs_str)
 
