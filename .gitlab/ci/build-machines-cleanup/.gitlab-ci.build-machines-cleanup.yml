@@ -43,9 +43,6 @@
 
 .lock-machine:
   - section_start "Lock Machine" --collapsed
-  - echo "Authenticating GCP"
-  - gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-  - echo "Auth done successfully"
   - ./Tests/scripts/lock_cloud_machines.sh
   - |
     if [ ! -s "${ARTIFACTS_FOLDER}/locked_machines_list.txt" ]; then
@@ -76,7 +73,6 @@
       if [[ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]]; then
         if [[ -e "${ARTIFACTS_FOLDER}/locked_machines_list.txt" ]]; then
           echo "Job finished, removing lock file for machine ids:${CLOUD_CHOSEN_MACHINE_IDS}"
-          gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
           gsutil rm "gs://xsoar-ci-artifacts/$GCS_LOCKS_PATH/machines_locks/*-lock-$CI_PIPELINE_ID*"
           echo "Finished removing lock file(s)"
         else
