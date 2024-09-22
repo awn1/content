@@ -699,12 +699,12 @@ def generate_report(
         title = f"Build Machines - API Keys Without Tenant:{len(keys_without_tenant)}"
         slack_msg_append.append(
             {
-                "color": "danger",
+                "color": "warning",
                 "title": title,
                 "fallback": title,
                 "fields": [
                     {
-                        "title": f"API Key Name(s){'' if i == 0 else ' - Continued'}",
+                        "title": f"Deleted API Key(s){'' if i == 0 else ' - Continued'}",
                         "value": chunk,
                         "short": False,
                     }
