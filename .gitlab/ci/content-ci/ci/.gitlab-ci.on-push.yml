@@ -42,6 +42,7 @@ cloning-repositories:
     - if: '$IS_NIGHTLY == "true"'
     - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
     - if: '$TRIGGER_TEST_BRANCH == "true"'
+    - if: '$IS_NATIVE_NIGHTLY == "true"'
   extends:
     - .cloning-repositories
   script:
@@ -159,6 +160,7 @@ validate-content-conf:
     - !reference [.filter-non-nightly-docker-updates-rule, rules]
     - if: "$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/"
     - if: '$TRIGGER_TEST_BRANCH == "true"'
+    - if: '$IS_NATIVE_NIGHTLY == "true"'
     - if: '$IS_NIGHTLY == "true"'
       variables:
         IFRA_ENV_TYPE: "Nightly"
@@ -237,7 +239,7 @@ validate-content-conf:
       if [ -n "${INSTANCE_TESTS}" ]; then
         echo "Skipping - not running in INSTANCE_TESTS build"
       else
-        python3 ./Tests/scripts/collect_tests/collect_tests.py -n "${IS_NIGHTLY}" --sdk-nightly "${DEMISTO_SDK_NIGHTLY}" --marketplace "$MARKETPLACE_VERSION" --service_account $GCS_MARKET_KEY --graph true --override_all_packs $OVERRIDE_ALL_PACKS -up "${PACKS_TO_UPLOAD}"
+        python3 ./Tests/scripts/collect_tests/collect_tests.py -n "${IS_NIGHTLY}" --native-nightly "${IS_NATIVE_NIGHTLY}" --sdk-nightly "${DEMISTO_SDK_NIGHTLY}" --marketplace "$MARKETPLACE_VERSION" --service_account $GCS_MARKET_KEY --graph true --override_all_packs $OVERRIDE_ALL_PACKS -up "${PACKS_TO_UPLOAD}"
       fi
     - section_end "Collect Tests"
 
@@ -270,6 +272,10 @@ validate-content-conf:
         if [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]]; then
           echo "Creating Xsoar Instances for SDK nightly- changing the filter_envs json."
           jq '.' <<< '{"Server 6.11": false, "Server 6.12": false, "Server Master": true}' > "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json"
+        fi
+        if [[ "${IS_NATIVE_NIGHTLY}" == "true" ]]; then
+          echo "Creating Xsoar Instances for Native nightly- changing the filter_envs json."
+          jq '.' <<< '{"Server 6.11": false, "Server 6.12": false, "Server Master": false}' > "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json"
         fi
         python3 ./gcp/create_instance.py --env-type "${IFRA_ENV_TYPE}" --outfile "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json" --filter-envs "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json" --creds "${CONTENT_BUILD_GCP}" --zone "${GCP_ZONE}" --instances-config "${CI_PROJECT_DIR}/config/instances_config.json"
       fi
@@ -305,6 +311,15 @@ xsoar-saas-prepare-testing-bucket:
     MARKETPLACE_BUCKET: "$GCS_MARKET_XSOAR_SAAS_BUCKET"
   extends:
     - .generic-prepare-testing-bucket
+  rules:
+    - !reference [.filter-non-nightly-docker-updates-rule, rules]
+    - if: "$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/"
+    - if: '$TRIGGER_TEST_BRANCH == "true"'
+    - if: '$IS_NIGHTLY == "true"'
+      variables:
+        IFRA_ENV_TYPE: "Nightly"
+    - if: '$IS_NATIVE_NIGHTLY == "true"'
+
 
 mpv2-prepare-testing-bucket:
   needs:
@@ -450,6 +465,7 @@ tests_xsoar_server:
     - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
     - if: '$TRIGGER_TEST_BRANCH == "true"'
     - if: '$IS_NIGHTLY == "true"'
+    - if: '$IS_NATIVE_NIGHTLY == "true"'
   parallel:
     matrix:
       - INSTANCE_ROLE:
@@ -466,6 +482,16 @@ fan-in-nightly:
       when: always
   script:
     - echo "fan in nightly"
+
+fan-in-native-nightly:
+  tags:
+    - gke
+  stage: fan-in
+  rules:
+    - if: '$IS_NATIVE_NIGHTLY == "true"'
+      when: always
+  script:
+    - echo "fan in native nightly"
 
 jobs-done-check-nightly:
   extends:
@@ -795,6 +821,15 @@ xsoar_ng_server_ga:
         CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">=50%" # stop waiting on the timeout if we got 50% of the machines.
         CLOUD_MACHINES_TIMEOUT: 1200 # 20 minutes
         GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng-nightly"
+    - if: '$IS_NATIVE_NIGHTLY == "true"'
+      when: always
+      variables:
+        CLOUD_MACHINES_TYPE: "native-nightly"
+        CLEAN_MACHINE_NEEDED: "true"
+        CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">1" # don't run the job if there are less than 1 machines available.
+        CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">=100%" # stop waiting on the timeout if we got 100% of the machines.
+        CLOUD_MACHINES_TIMEOUT: 1200  # 20 minutes
+        GCS_LOCKS_PATH: "content-locks/locks-xsoar-ng-native-nightly"
     - if: '$IS_NIGHTLY == "true"'
   variables:
     CLEAN_MACHINE_NEEDED: "true"
@@ -974,6 +1009,13 @@ xsoar-test_playbooks_results:
   dependencies:
     - tests_xsoar_server
     - xsoar_ng_server_ga
+  rules:
+    - !reference [.filter-non-nightly-docker-updates-rule, rules]
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
+    - if: '$TRIGGER_TEST_BRANCH == "true"'
+    - if: '$IS_NATIVE_NIGHTLY == "true"'
+    - if: '$IS_NIGHTLY == "true"'
+      when: always
 
 xsiam-test_playbooks_results:
   variables:
@@ -1013,3 +1055,38 @@ xsiam-test_modeling_rule_results:
     - xsiam_server_ga
   dependencies:
     - xsiam_server_ga
+
+
+jobs-done-check-native-nightly:
+  extends:
+    - .jobs-done-check
+  needs:
+    - cloning-repositories
+    - xsoar-saas-prepare-testing-bucket
+    - xsoar_ng_server_ga
+    - xsoar-test_playbooks_results
+  tags:
+    - gke
+  rules:
+    - if: '$IS_NATIVE_NIGHTLY == "true"'
+      when: always
+  variables:
+    WORKFLOW: 'Native Nightly'
+
+
+slack-native-notify-nightly-build:
+  rules:
+    - if: '$IS_NATIVE_NIGHTLY == "true"'
+      when: always
+  extends:
+    - .trigger-slack-notification
+  variables:  # Passes the environment variable from the parent pipeline to the child which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: 'fan-in-native-nightly'
+    WORKFLOW: 'Native Nightly'
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
+    SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
+    SLACK_JOB: 'true'
+    SLACK_ALLOW_FAILURE: 'false'
+    CURRENT_BRANCH_NAME: $INFRA_BRANCH

@@ -12,5 +12,6 @@
   "parallel_integrations": [],
   "private_tests": [],
   "test_marketplacev2": [],
-  "nightly_packs": []
+  "nightly_packs": [],
+  "native_nightly_packs": []
 }

@@ -42,6 +42,7 @@ variables:
   DEMISTO_CONNECTION_POOL_MAXSIZE: "180" # see this issue for more info https://github.com/demisto/etc/issues/36886
   DEMISTO_SDK_NIGHTLY: "false"
   IS_NIGHTLY: "false"
+  IS_NATIVE_NIGHTLY: "false"
   SCHEDULED_NIGHTLY: "false" # true only during a real scheduled nightly run.
   OLD_NIGHTLY: "false"
   SDK_REF: "master" # The SDK reference to use when OVERRIDE_SDK_REF is "true".

@@ -19,6 +19,7 @@ if [ "$#" -lt "1" ]; then
   [-sn, --scheduled-nightly]                Whether this build is a scheduled nightly build.
   [-tmr, --test-modeling-rule-jira-tickets] Whether to enable test modeling rule jira tickets creation.
   [-tpr, --test-playbooks-jira-tickets]     Whether to enable test playbooks jira tickets creation.
+  [-nn, --native-nightly]                   Whether this build is a native nightly build.
   "
   echo "Get the trigger token from here https://vault.paloaltonetworks.local/home#R2VuZXJpY1NlY3JldERldGFpbHM6RGF0YVZhdWx0OmIyMzJiNDU0LWEzOWMtNGY5YS1hMTY1LTQ4YjRlYzM1OTUxMzpSZWNvcmRJbmRleDowOklzVHJ1bmNhdGVk" # disable-secrets-detection
   exit 1
@@ -32,6 +33,8 @@ TEST_MODELING_RULE_JIRA_TICKETS="false"
 TEST_PLAYBOOKS_JIRA_TICKETS="false"
 _sdk_ref="${SDK_REF:-master}"
 _override_sdk_ref="${DEMISTO_SDK_NIGHTLY:-}"
+_is_nightly="true"
+_is_native_nightly="false"
 
 # Parsing the user inputs.
 
@@ -66,6 +69,8 @@ while [[ "$#" -gt 0 ]]; do
     shift;;
   -tpr|--test-playbooks-jira-tickets) TEST_PLAYBOOKS_JIRA_TICKETS="true"
     shift;;
+  -nn|--native-nightly) _is_native_nightly="true" _is_nightly="false"
+    shift;;
 
   *)    # unknown option.
     shift;;
@@ -87,7 +92,8 @@ curl "$BUILD_TRIGGER_URL" --form "ref=${_branch}" --form "token=${_ci_token}" \
     --form "variables[SCHEDULED_NIGHTLY]=${_scheduled_nightly}"  \
     --form "variables[SDK_REF]=${_sdk_ref}" \
     --form "variables[OVERRIDE_SDK_REF]=${_override_sdk_ref}" \
-    --form "variables[IS_NIGHTLY]=true" \
+    --form "variables[IS_NIGHTLY]=${_is_nightly}" \
+    --form "variables[IS_NATIVE_NIGHTLY]=${_is_native_nightly}" \
     --form "variables[TEST_MODELING_RULE_JIRA_TICKETS]=${TEST_MODELING_RULE_JIRA_TICKETS}" \
     --form "variables[TEST_PLAYBOOKS_JIRA_TICKETS]=${TEST_PLAYBOOKS_JIRA_TICKETS}" \
     --form "variables[SLACK_CHANNEL]=${_slack_channel}" \

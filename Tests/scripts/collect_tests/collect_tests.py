@@ -41,6 +41,7 @@ from Tests.scripts.collect_tests.exceptions import (
     SkippedTestException,
     TestMarketplaceException,
     TestMissingFromIdSetException,
+    UnsuitableForNativeNightlyException,
 )
 from Tests.scripts.collect_tests.id_set import Graph, IdSet, IdSetItem
 from Tests.scripts.collect_tests.logger import logger
@@ -88,6 +89,7 @@ class CollectionReason(str, Enum):
     PACK_TEST_E2E = "pack was chosen to be tested in e2e tests"
     PACK_MASTER_BUCKET_DISCREPANCY = "pack version on master is ahead of bucket, collected to upload"
     NIGHTLY_PACK = "nightly packs are always installed"
+    NATIVE_NIGHTLY_PACK = "native nightly packs"
     PLAYBOOK_CHANGED = "playbook changed, getting playbook's flow test file"
 
 
@@ -1556,6 +1558,45 @@ class NightlyTestCollector(BranchTestCollector, ABC):
         return CollectionResult.union(result)
 
 
+class NativeNightlyTestCollector(BranchTestCollector, ABC):
+    def _collect(self) -> CollectionResult | None:
+        if self.marketplace == MarketplaceVersions.XSOAR_SAAS:
+            return self._collect_tests_for_marketplace()
+        return None
+
+    def _collect_tests_for_marketplace(self) -> CollectionResult | None:
+        """
+        :return: All tests whose marketplace field includes the collector's marketplace value
+        and are in the conf.native_nightly_packs or conf.non_api_tests
+        """
+        result = []
+        for playbook in self.id_set.test_playbooks:
+            try:
+                if playbook.pack_id not in self.conf.native_nightly_packs:
+                    raise UnsuitableForNativeNightlyException(playbook.pack_id)
+                self._validate_id_set_item_compatibility(playbook, is_integration=False)
+                result.append(
+                    CollectionResult(
+                        test=playbook.id_,
+                        modeling_rule_to_test=None,
+                        pack=playbook.pack_id,
+                        reason=CollectionReason.ID_SET_MARKETPLACE_VERSION,
+                        reason_description=self.marketplace.value,
+                        version_range=playbook.version_range,
+                        conf=self.conf,
+                        only_to_install=True,
+                        id_set=self.id_set,
+                    )
+                )
+            except (
+                NothingToCollectException,
+                NonXsoarSupportedPackException,
+                UnsuitableForNativeNightlyException,
+            ) as e:
+                logger.debug(f"{playbook.id_} - {e!s}")
+        return CollectionResult.union(result)
+
+
 class UploadAllCollector(TestCollector):
     def _collect(self) -> CollectionResult | None:  # TODO adjust to the new design
         if result := self._collect_all_marketplace_compatible_packs():
@@ -1645,6 +1686,7 @@ if __name__ == "__main__":
     sys.path.append(str(PATHS.content_path))
     parser = ArgumentParser()
     parser.add_argument("-n", "--nightly", type=str2bool, help="Is nightly")
+    parser.add_argument("-nt", "--native-nightly", type=str2bool, help="Is native nightly")
     parser.add_argument("-sn", "--sdk-nightly", type=str2bool, help="Is SDK nightly")
     parser.add_argument("-mp", "--marketplace", type=MarketplaceVersions, help="marketplace version", default="xsoar")
     parser.add_argument("--service_account", help="Path to gcloud service account")
@@ -1666,6 +1708,7 @@ if __name__ == "__main__":
     marketplace = MarketplaceVersions(args.marketplace)
 
     nightly = args.nightly
+    native_nightly = args.native_nightly
     sdk_nightly = args.sdk_nightly
     service_account = args.service_account
     graph = args.graph
@@ -1685,6 +1728,10 @@ if __name__ == "__main__":
 
     elif nightly:
         collector = NightlyTestCollector(
+            branch_name=branch_name, marketplace=marketplace, service_account=service_account, graph=graph
+        )
+    elif native_nightly:
+        collector = NativeNightlyTestCollector(
             branch_name=branch_name, marketplace=marketplace, service_account=service_account, graph=graph
         )
     else:

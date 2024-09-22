@@ -15,6 +15,7 @@
   "nightly_packs": [
     "myXSOARSaaSOnlyPack"
   ],
+  "native_nightly_packs": ["myXSOARSaaSOnlyPack"],
   "unmockable_integrations": {},
   "parallel_integrations": [],
   "private_tests": [],

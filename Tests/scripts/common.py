@@ -29,9 +29,10 @@ TEST_NATIVE_CANDIDATE = "Test Native Candidate"
 SECURITY_SCANS = "Security Scans"
 BUILD_MACHINES_CLEANUP = "Build Machines Cleanup"
 SDK_RELEASE = "Automate Demisto SDK release"
-
+NATIVE_NIGHTLY = "Native Nightly"
 WORKFLOW_TYPES = {
     CONTENT_NIGHTLY,
+    NATIVE_NIGHTLY,
     CONTENT_PR,
     CONTENT_MERGE,
     SDK_NIGHTLY,

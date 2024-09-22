@@ -38,6 +38,7 @@
   "nightly_packs": [
       "myPack"
   ],
+  "native_nightly_packs": [],
   "unmockable_integrations": {},
   "parallel_integrations": [],
   "private_tests": [],

@@ -2,9 +2,24 @@ import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
-from Tests.scripts.common import BUCKET_UPLOAD, CONTENT_MERGE, CONTENT_NIGHTLY, CONTENT_PR, SDK_NIGHTLY, WORKFLOW_TYPES
+from Tests.scripts.common import (
+    BUCKET_UPLOAD,
+    CONTENT_MERGE,
+    CONTENT_NIGHTLY,
+    CONTENT_PR,
+    NATIVE_NIGHTLY,
+    SDK_NIGHTLY,
+    WORKFLOW_TYPES,
+)
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
+
+NATIVE_NIGHTLY_JOBS = [
+    "cloning-repositories",
+    "xsoar-saas-prepare-testing-bucket",
+    "xsoar_ng_server_ga",
+    "xsoar-test_playbooks_results",
+]
 
 SDK_NIGHTLY_JOBS = [
     "demisto-sdk-nightly:cloning-repositories",
@@ -77,6 +92,7 @@ CONTENT_NIGHTLY_JOBS = CONTENT_COMMON_JOBS
 JOBS_PER_TRIGGERING_WORKFLOW = {
     CONTENT_NIGHTLY: CONTENT_NIGHTLY_JOBS,
     SDK_NIGHTLY: SDK_NIGHTLY_JOBS,
+    NATIVE_NIGHTLY: NATIVE_NIGHTLY_JOBS,
     BUCKET_UPLOAD: BUCKET_UPLOAD_JOBS,
     CONTENT_PR: CONTENT_PR_JOBS,
     CONTENT_MERGE: CONTENT_MERGE_JOBS,
