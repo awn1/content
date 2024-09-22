@@ -60,6 +60,7 @@ class TestConf(DictFileBased):
         self.skipped_tests: dict[str, str] = self["skipped_tests"]
         self.skipped_integrations: dict[str, str] = self["skipped_integrations"]
         self.nightly_packs: set[str] = set(self["nightly_packs"])
+        self.native_nightly_packs: set[str] = set(self["native_nightly_packs"])
 
         self.classifier_to_test: dict[TestConfItem, str] = {
             test.classifier: test.playbook_id for test in self.tests if test.classifier

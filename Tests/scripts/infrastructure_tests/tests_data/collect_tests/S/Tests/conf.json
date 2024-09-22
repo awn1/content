@@ -21,6 +21,7 @@
   "nightly_packs": [
     "myXSOAROnlyPack"
   ],
+  "native_nightly_packs": [],
   "unmockable_integrations": {},
   "parallel_integrations": [],
   "private_tests": [],

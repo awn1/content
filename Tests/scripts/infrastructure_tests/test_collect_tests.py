@@ -13,6 +13,7 @@ from Tests.scripts.collect_tests.collect_tests import (
     BranchTestCollector,
     FileType,
     Machine,
+    NativeNightlyTestCollector,
     NightlyTestCollector,
     UploadAllCollector,
 )
@@ -1722,3 +1723,63 @@ def test_nightly_failed_packs_from_prev_upload(
         collected = collector.collect()
     assert collected.packs_to_upload == expected_packs_to_upload
     assert collected.packs_to_update_metadata == expected_packs_to_update_metadata
+
+
+@pytest.mark.parametrize(
+    "case_mocker,expected_tests,expected_packs,expected_machines,expected_modeling_rules_to_test,"
+    "collector_class_args,mocked_changed_files",
+    [
+        # Test case for XSOAR_SAAS marketplace
+        pytest.param(
+            MockerCases.A_xsoar_saas,
+            NIGHTLY_EXPECTED_TESTS,
+            ("myXSOARSaaSOnlyPack",),
+            None,
+            None,
+            XSOAR_SAAS_BRANCH_ARGS,
+            ("Packs/myXSOARSaaSOnlyPack/Integrations/myIntegration/myIntegration.yml",),
+            id="xsoar_saas_case",
+        ),
+        # Test case for non-XSOAR_SAAS marketplace (should return None)
+        pytest.param(
+            MockerCases.A_xsoar,
+            None,
+            None,
+            None,
+            None,
+            XSOAR_BRANCH_ARGS,
+            ("Packs/myXSOAROnlyPack/Integrations/myIntegration/myIntegration.yml",),
+            id="xsoar_case",
+        ),
+    ],
+)
+def test_native_nightly_test_collector(
+    mocker,
+    monkeypatch,
+    case_mocker,
+    expected_tests,
+    expected_packs,
+    expected_machines,
+    expected_modeling_rules_to_test,
+    collector_class_args,
+    mocked_changed_files,
+):
+    """
+    Test the NativeNightlyTestCollector class
+    """
+    mocker.patch.object(BranchTestCollector, "_get_git_diff", return_value=FilesToCollect(mocked_changed_files, ()))
+    mocker.patch.object(BranchTestCollector, "_collect_failed_packs_from_prev_upload")
+    mocker.patch.object(BranchTestCollector, "_sort_packs_to_upload")
+
+    _test(
+        mocker,
+        monkeypatch,
+        case_mocker=case_mocker,
+        collector_class=NativeNightlyTestCollector,
+        expected_tests=expected_tests,
+        expected_packs=expected_packs,
+        expected_packs_to_upload=[],
+        expected_machines=expected_machines,
+        expected_modeling_rules_to_test=expected_modeling_rules_to_test,
+        collector_class_args=collector_class_args,
+    )

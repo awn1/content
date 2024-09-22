@@ -44,6 +44,14 @@ workflow:
       variables:
         WORKFLOW_PIPELINE_NAME: 'Triggered Content Nightly pipeline for branch: $CI_COMMIT_REF_NAME'
 
+    - if: '$IS_NATIVE_NIGHTLY == "true" && $CI_PIPELINE_SOURCE == "schedule"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Scheduled Native Nightly pipeline for branch: $CI_COMMIT_REF_NAME'
+
+    - if: '$IS_NATIVE_NIGHTLY == "true" && $CI_PIPELINE_SOURCE == "trigger"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Triggered Native Nightly pipeline for branch: $CI_COMMIT_REF_NAME'
+
     - if: '$DEMISTO_SDK_NIGHTLY == "true" && $CI_PIPELINE_SOURCE == "schedule"'
       variables:
           WORKFLOW_PIPELINE_NAME: 'Scheduled SDK Nightly pipeline'

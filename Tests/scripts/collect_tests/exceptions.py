@@ -51,6 +51,14 @@ class NonNightlyPackInNightlyBuildException(Exception):
         return self.message
 
 
+class UnsuitableForNativeNightlyException(Exception):
+    def __init__(self, pack_name: str | None):
+        self.message = f"Skipping tests for pack {pack_name}: " f"Not listed under `native nightly packs` in conf.json."
+
+    def __str__(self):
+        return self.message
+
+
 class NonDictException(Exception):
     def __init__(self, path: Path | None):
         self.message = path
