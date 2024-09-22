@@ -178,6 +178,7 @@ demisto-sdk-nightly:xsoar-prepare-testing-bucket:
     - demisto-sdk-nightly:cloning-repositories
   tags:
     - gce
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -205,6 +206,7 @@ demisto-sdk-nightly:mpv2-prepare-testing-bucket:
     - demisto-sdk-nightly:cloning-repositories
   tags:
     - gce
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -233,6 +235,7 @@ demisto-sdk-nightly:xpanse-prepare-testing-bucket:
     - demisto-sdk-nightly:cloning-repositories
   tags:
     - gce
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -259,6 +262,7 @@ demisto-sdk-nightly:xsoar-saas-prepare-testing-bucket:
     - demisto-sdk-nightly:cloning-repositories
   tags:
     - gce
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -296,6 +300,7 @@ demisto-sdk-nightly:test-upload-flow:
 demisto-sdk-nightly:run-end-to-end-tests-general:
   tags:
     - gce # can't run docker in docker on gke
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule-always
@@ -334,6 +339,7 @@ demisto-sdk-nightly:run-end-to-end-tests-general:
 demisto-sdk-nightly:run-end-to-end-tests-xsoar:
   tags:
     - gce # can't run docker in docker on gke
+    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule-always
