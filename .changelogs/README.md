@@ -6,7 +6,7 @@ To create a changelog, choose one of:
 
 ## Manually
 
-1. Create a file in the `.changelogs` folder using the format: `<Jira issue number>.<category>.md` (e.g., `CIAC-11444.doc.md`).
+1. Create a file in the `.changelogs` folder using the format: `<Jira issue code>.<category>.md` (e.g., `CIAC-12345.doc.md`). (only use the `+` option when there's no Jira issue at all, and one isn't necessary.)
 2. The _category_ can be one of the following: `feature`, `bugfix`, `doc`, `removal`, or `misc`.
 3. In the file, write a brief one-line changelog for each change.
 
