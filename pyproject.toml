@@ -38,7 +38,7 @@ version = "0.0.6"
 [tool.poetry.dependencies]
 beautifulsoup4 = "^4.11.1"
 coloredlogs = "^15.0.1"
-demisto-sdk = "1.31.11"
+demisto-sdk = "1.32.1"
 Faker = "^15.3.4"
 filelock = "^3.10.0"
 gitpython = "^3.1.43"  # import git
