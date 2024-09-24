@@ -1,3 +1,32 @@
+# Content Infrastructure 0.0.7 (2024-09-24)
+
+### Features
+
+- Creating API keys on demand for build machines. ([CIAC-11043](https://jira-dc.paloaltonetworks.com/browse/CIAC-11043))
+- Added Playbook Flow Test to collection step
+  Changed copying of content-test-conf to all servers ([CIAC-11068](https://jira-dc.paloaltonetworks.com/browse/CIAC-11068))
+- Added native nightly ([CIAC-11408](https://jira-dc.paloaltonetworks.com/browse/CIAC-11408))
+- splitted the run-pre-commit job into 4 seperated jobs that will run in parallel. Each job runs the pre-commit in docker tests in a different docker container which is determined according to one of the follwing options: `from-yml`, `native:ga`, `native:maintenance`, `native:candidate`. ([CIAC-11452](https://jira-dc.paloaltonetworks.com/browse/CIAC-11452))
+- update-demisto-sdk-version to 1.32.1
+
+### Bugfixes
+
+- A tag has been added to the GitLab runner in the SDK nightly build. ([CIAC-11840](https://jira-dc.paloaltonetworks.com/browse/CIAC-11840))
+- deleting datasets one at a time, to avoid issues with okta.
+
+### Improved Documentation
+
+- Improve the changelogs readme, mention the possiblity to use `+` when there's no issue
+
+### Deprecations and Removals
+
+- Removed the Connection content item type, following a removal on the SDK repo side. ([CIAC-11822](https://jira-dc.paloaltonetworks.com/browse/CIAC-11822))
+
+### Misc
+
+- Update report message when API key is deleted to warning.
+
+
 # Content Infrastructure 0.0.6 (2024-09-19)
 
 ### Features
