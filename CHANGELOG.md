@@ -1,3 +1,15 @@
+# Content Infrastructure 0.0.8 (2024-09-25)
+
+### Bugfixes
+
+- avoid extract content-test-conf in run validations job
+
+### Deprecations and Removals
+
+- Removed the section of `Validate content-test-conf Branch Merged`, under `run-validations-new-validate-flow` job, because it is already under `validate-content-conf` job.
+  Removed the run of `demisto-sdk secrets`, because it runs under content pre-commit GitHub action. ([CIAC-11737](https://jira-dc.paloaltonetworks.com/browse/CIAC-11737))
+
+
 # Content Infrastructure 0.0.7 (2024-09-24)
 
 ### Features
