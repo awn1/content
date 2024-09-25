@@ -14,7 +14,21 @@ from slack_notifier import slack_notifier
 SECRETS_KEYS = ["email", "emailphone", "phone"]
 
 # Items to ignore with '@' before them as well
-FULL_IGNORE = ["", "?", "1E", "CSC", "Cybereason", "Equifax", "Palo Alto Networks", "SAP", "SOC", "Slack", "Support", "Turner"]
+FULL_IGNORE = [
+    "",
+    "?",
+    "1E",
+    "CSC",
+    "Cybereason",
+    "Equifax",
+    "Palo Alto Networks",
+    "SAP",
+    "SOC",
+    "Slack",
+    "Support",
+    "Turner",
+    "1111111111",
+]
 
 FULL_IGNORE_LOWER = [ignore.lower() for ignore in FULL_IGNORE]
 
