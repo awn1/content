@@ -880,8 +880,9 @@ def get_missing_users_in_mapping(client: WebClient, name_mapping: dict) -> list[
         mapping_user_names = set(filter_comment_field(name_mapping.get("names", {})).values())
         ignored_user_names = set(filter_comment_field(name_mapping.get("ignored_names", {})).keys())
         slack_usernames = set(get_slack_usernames_from_ids(client, members).values())
-        missing = list(slack_usernames - mapping_user_names - ignored_user_names)
+        missing: list[str] = [name for name in (slack_usernames - mapping_user_names - ignored_user_names) if name is not None]
         logging.info(f"Missing users in the name mapping: {missing}")
+        return missing
     except Exception:
         logging.exception("Failed to get slack members.")
     return []
