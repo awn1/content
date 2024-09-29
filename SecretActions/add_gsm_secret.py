@@ -102,6 +102,14 @@ def _prepare_additional_labels(
     """
     additional_labels = dict()
     options_labels = options.__dict__
+
+    # Validate pack_id is present
+    if not options.pack_id:
+        raise ValueError(
+            "The pack_id label is required for all secrets. Please provide a pack_id by using the -pi " "flag i.e., -pi 'Slack'."
+        )
+    additional_labels["pack_id"] = gsm_object.convert_to_gsm_format(options.pack_id)  # Add the pack_id label
+
     for label in labels_to_add:
         if label_value := options_labels.get(label):
             if label in (ExpirationData.CREDS_EXPIRATION_LABEL_NAME, ExpirationData.LICENSE_EXPIRATION_LABEL_NAME):
@@ -115,7 +123,7 @@ def upsert_secret(
     gsm_object: GoogleSecreteManagerModule, options: argparse.Namespace, gsm_project_id: str, secret_json: json5
 ) -> None:
     """
-    Adds/updates th secret
+    Adds/updates the secret.
     :param gsm_object: The GSM object
     :param options: The passed script variables
     :param gsm_project_id: The GCP project ID
@@ -231,6 +239,7 @@ def options_handler(args=None):
         help="The secret owner, responsible for any issues or changes.",
     )
     parser.add_argument("-cl", "--centrify", required=False, help="The secret link in Centrify Vault.")
+    parser.add_argument("-pi", "--pack_id", required=True, help="The pack which should use this secret.")
     parser.add_argument("--jira_link", required=False, help="The link of the secret updating request.")
     parser.add_argument("--skip_reason", required=False, help="A skipping reason to add.")
     options = parser.parse_args(args)

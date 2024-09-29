@@ -54,7 +54,7 @@ def __get_integration_config(client, integration_name, logging_module=logging):
     match_configurations = [x for x in all_configurations if x["name"] == integration_name]
 
     if not match_configurations or len(match_configurations) == 0:
-        logging_module.error("integration was not found")
+        logging_module.error(f"{integration_name} - integration was not found")
         return None
 
     return match_configurations[0]

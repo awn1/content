@@ -83,6 +83,7 @@ ARTIFACTS_FOLDER = os.getenv("ARTIFACTS_FOLDER")
 ARTIFACTS_FOLDER_SERVER_TYPE = os.getenv("ARTIFACTS_FOLDER_SERVER_TYPE")
 ENV_RESULTS_PATH = os.getenv("ENV_RESULTS_PATH", f"{ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json")
 SET_SERVER_KEYS = True
+SERVER_HOST_PLACEHOLDER = "%%SERVER_HOST%%"
 
 
 # -------------------------------------- Helper methods ----------------------------------------------
@@ -311,6 +312,8 @@ class Server:
         self.__client = None
         self.test_pack_path = None
         self._server_numeric_version = None
+        self.secret_conf = None
+        self.options = None
 
     @abstractmethod
     def install_packs(self, pack_ids: list | None = None, install_packs_in_batches=False, production_bucket: bool = True) -> bool:
@@ -759,7 +762,7 @@ class Server:
         return param_conf
 
     def set_integration_instance_parameters(
-        self, integration_configuration, integration_params, integration_instance_name, is_byoi
+        self, integration_configuration, integration_params, integration_instance_name, is_byoi, integration_name
     ):
         """Set integration module values for integration instance creation
 
@@ -779,6 +782,8 @@ class Server:
                 provided in the conf.json
             is_byoi: (bool)
                 If the integration is byoi or not
+            integration_name: (str)
+                The name of the integration being configured
 
 
         Returns:
@@ -789,10 +794,9 @@ class Server:
         if not module_configuration:
             module_configuration = []
 
-        if "integrationInstanceName" in integration_params:
-            instance_name = integration_params["integrationInstanceName"]
-        else:
-            instance_name = "{}_test_{}".format(integration_instance_name.replace(" ", "_"), str(uuid.uuid4()))
+        instance_name = integration_params.get("integrationInstanceName") or "{}_test_{}".format(
+            (integration_instance_name or integration_name).replace(" ", "_"), str(uuid.uuid4())
+        )
 
         # define module instance
         module_instance = {
@@ -848,7 +852,7 @@ class Server:
             logging.debug(f"Skipping configuration for integration: {integration_name} (it has test_validate set to false)")
             return None
         module_instance = self.set_integration_instance_parameters(
-            integration_configuration, integration_params, integration_instance_name, is_byoi
+            integration_configuration, integration_params, integration_instance_name, is_byoi, integration_name
         )
         return module_instance
 
@@ -858,32 +862,35 @@ class Server:
         """
         Configures old and new integrations in the server configured in the demisto_client.
         Args:
-            self: The server object
-            modified_integrations_to_configure: Integrations to configure that are already exists
-            new_integrations_to_configure: Integrations to configure that were created in this build
+            self: The server object.
+            modified_integrations_to_configure: Integrations to configure that already exist.
+            new_integrations_to_configure: Integrations to configure that were created in this build.
 
         Returns:
             A tuple with two lists:
-            1. List of configured instances of modified integrations
-            2. List of configured instances of new integrations
+            1. List of configured instances of modified integrations.
+            2. List of configured instances of new integrations.
         """
-        modified_modules_instances = []
-        new_modules_instances = []
-        for integration in modified_integrations_to_configure:
-            placeholders_map = {"%%SERVER_HOST%%": self}
-            module_instance = self.configure_integration_instance(integration, placeholders_map)
-            if module_instance:
-                modified_modules_instances.append(module_instance)
-        for integration in new_integrations_to_configure:
-            placeholders_map = {"%%SERVER_HOST%%": self}
-            module_instance = self.configure_integration_instance(integration, placeholders_map)
-            if module_instance:
-                new_modules_instances.append(module_instance)
+
+        def configure_instances(integrations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            placeholders_map = {SERVER_HOST_PLACEHOLDER: self}
+            configured_instances = []
+            for integration in integrations:
+                instance = self.configure_integration_instance(integration, placeholders_map)
+                if instance:
+                    configured_instances.append(instance)
+            return configured_instances
+
+        # Configure modified and new integrations
+        modified_modules_instances = configure_instances(modified_integrations_to_configure)
+        new_modules_instances = configure_instances(new_integrations_to_configure)
+
         return modified_modules_instances, new_modules_instances
 
     def configure_server_instances(self, tests_for_iteration, all_new_integrations, modified_integrations):
         modified_module_instances = []
         new_module_instances = []
+        configured_integrations_set = set()  # Track all configured integrations
         for test in tests_for_iteration:
             integrations = self.get_integrations_for_test(test, self.build.skipped_integrations_conf)
 
@@ -906,12 +913,12 @@ class Server:
 
             integrations_to_configure = modified_integrations[:]
             integrations_to_configure.extend(unchanged_integrations)
-            placeholders_map = {"%%SERVER_HOST%%": self}
+            placeholders_map = {SERVER_HOST_PLACEHOLDER: self}
             new_ints_params_set = self.set_integration_params(
-                new_integrations, self.build.secret_conf["integrations"], instance_names_conf, placeholders_map
+                new_integrations, self.secret_conf["integrations"], instance_names_conf, placeholders_map
             )
             ints_to_configure_params_set = self.set_integration_params(
-                integrations_to_configure, self.build.secret_conf["integrations"], instance_names_conf, placeholders_map
+                integrations_to_configure, self.secret_conf["integrations"], instance_names_conf, placeholders_map
             )
             if not new_ints_params_set:
                 logging.error(f"failed setting parameters for integrations: {new_integrations}")
@@ -924,9 +931,36 @@ class Server:
                 integrations_to_configure, new_integrations
             )
 
+            # Add to the set of configured integrations
+            configured_integrations_set.update(
+                integration.get("name") for integration in integrations_to_configure + new_integrations
+            )
+
             modified_module_instances.extend(modified_module_instances_for_test)
             new_module_instances.extend(new_module_instances_for_test)
-        return modified_module_instances, new_module_instances
+
+        # After looping through tests, handle instance_test_only instances
+        unconfigured_integrations = [
+            integration
+            for integration in self.secret_conf["integrations"]
+            if integration.get("name") not in configured_integrations_set
+        ]
+
+        logging.info(f"Configured integrations: {configured_integrations_set}")
+
+        # Configure the unconfigured integrations directly
+        instance_test_only_instances = []
+        unconfigured_integration_names = [integration["name"] for integration in unconfigured_integrations]
+        logging.info(f'Found unconfigured integration instances are: "{", ".join(unconfigured_integration_names)}"')
+        if unconfigured_integrations:
+            placeholders_map = {SERVER_HOST_PLACEHOLDER: self}
+            instance_test_only_instances = []
+            for integration in unconfigured_integrations:
+                configured_instance = self.configure_integration_instance(integration, placeholders_map)
+                if configured_instance:
+                    instance_test_only_instances.append(configured_instance)
+
+        return modified_module_instances, new_module_instances, instance_test_only_instances
 
     @abstractmethod
     def configure_and_test_integrations_pre_update(self, new_integrations, modified_integrations) -> tuple:
@@ -1184,12 +1218,15 @@ class Server:
 
 
 class XSOARServer(Server):
-    def __init__(self, internal_ip, user_name, password, pack_ids_to_install, tests_to_run, build, build_number=""):
+    def __init__(self, internal_ip, pack_ids_to_install, tests_to_run, build, options, build_number=""):
         super().__init__()
         self.__client = None
         self.internal_ip: str = internal_ip
-        self.user_name = user_name
-        self.password = password
+        self.pack_ids_to_install = pack_ids_to_install
+        self.options = options
+        self.secret_conf = get_secrets_from_gsm(self.options, options.branch, self.pack_ids_to_install)
+        self.user_name = options.user if options.user else self.secret_conf.get("username")
+        self.password = options.password if options.password else self.secret_conf.get("userPassword")
         self.pack_ids_to_install = pack_ids_to_install
         self.tests_to_run = tests_to_run
         self.build = build
@@ -1271,10 +1308,13 @@ class XSOARServer(Server):
             * A list of new integrations names
         """
         tests_for_iteration = self.get_tests()
-        modified_module_instances, new_module_instances = self.configure_server_instances(
+        modified_module_instances, new_module_instances, instance_test_only = self.configure_server_instances(
             tests_for_iteration, new_integrations, modified_integrations
         )
-        successful_tests_pre, failed_tests_pre = self.instance_testing(modified_module_instances, pre_update=True)
+        logging.info(f'Found instance_test_only instances are: "{instance_test_only}"')
+        successful_tests_pre, failed_tests_pre = self.instance_testing(
+            modified_module_instances + instance_test_only, pre_update=True
+        )
         return modified_module_instances, new_module_instances, failed_tests_pre, successful_tests_pre
 
     def install_packs(self, pack_ids: list | None = None, install_packs_in_batches=False, production_bucket: bool = True) -> bool:
@@ -1339,7 +1379,17 @@ class XSOARServer(Server):
 
 class CloudServer(Server):
     def __init__(
-        self, api_key, server_numeric_version, base_url, xdr_auth_id, name, pack_ids_to_install, tests_to_run, build, build_number
+        self,
+        api_key,
+        server_numeric_version,
+        base_url,
+        xdr_auth_id,
+        name,
+        pack_ids_to_install,
+        tests_to_run,
+        build,
+        build_number,
+        options,
     ):
         super().__init__()
         self.name = name
@@ -1348,6 +1398,8 @@ class CloudServer(Server):
         self.base_url = base_url
         self.xdr_auth_id = xdr_auth_id
         self.pack_ids_to_install = pack_ids_to_install
+        self.options = options
+        self.secret_conf = get_secrets_from_gsm(self.options, options.branch, self.pack_ids_to_install)
         self.tests_to_run = tests_to_run
         self.build = build
         self.build_number = build_number
@@ -1440,10 +1492,14 @@ class CloudServer(Server):
             * A list of new integrations names
         """
         tests_for_iteration = self.get_tests()
-        modified_module_instances, new_module_instances = self.configure_server_instances(
+        modified_module_instances, new_module_instances, instance_test_only = self.configure_server_instances(
             tests_for_iteration, new_integrations, modified_integrations
         )
-        successful_tests_pre, failed_tests_pre = self.instance_testing(modified_module_instances, pre_update=True, use_mock=False)
+        instance_test_only_names = [integration["name"] for integration in instance_test_only]
+        logging.info(f'Found the following instance_test_only instance: "{", ".join(instance_test_only_names)}"')
+        successful_tests_pre, failed_tests_pre = self.instance_testing(
+            modified_module_instances + instance_test_only, pre_update=True, use_mock=False
+        )
         return modified_module_instances, new_module_instances, failed_tests_pre, successful_tests_pre
 
     def set_marketplace_url(
@@ -1521,9 +1577,6 @@ class Build(ABC):
         self.git_sha1 = options.git_sha1
         self.branch_name = options.branch
         self.ci_build_number = options.build_number
-        self.secret_conf = get_secrets_from_gsm(options, self.branch_name)
-        self.username = options.user if options.user else self.secret_conf.get("username")
-        self.password = options.password if options.password else self.secret_conf.get("userPassword")
         conf = get_json_file(options.conf)
         self.tests = conf["tests"]
         self.skipped_integrations_conf = conf["skipped_integrations"]
@@ -1657,12 +1710,11 @@ class XSOARBuild(Build):
         servers = [
             XSOARServer(
                 internal_ip=internal_ip,
-                user_name=self.username,
-                password=self.password,
                 pack_ids_to_install=packs_to_install,
                 tests_to_run=tests_to_run,
-                build_number=self.ci_build_number,
                 build=self,
+                options=options,
+                build_number=self.ci_build_number,
             )
             for internal_ip in self.get_servers(self.ami_env)
         ]
@@ -1734,6 +1786,7 @@ class CloudBuild(Build):
                     build=self,
                     pack_ids_to_install=packs_to_install,
                     tests_to_run=tests_to_run,
+                    options=options,
                 )
             )
         logging.info("Done working on servers")

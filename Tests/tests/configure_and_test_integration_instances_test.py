@@ -1,9 +1,12 @@
 import os
+import unittest
+from unittest.mock import MagicMock
 
 import demisto_client
 import pytest
 
 from Tests.configure_and_test_integration_instances import (
+    SERVER_HOST_PLACEHOLDER,
     CloudBuild,
     Server,
     XSOARBuild,
@@ -86,32 +89,53 @@ def create_build_object_with_mock(mocker, server_type):
 def test_configure_old_and_new_integrations(mocker):
     """
     Given:
-        - A list of new integration that should be configured
+        - A list of new integrations that should be configured
         - A list of old integrations that should be configured
     When:
-        - Running 'configure_old_and_new_integrations' method on those integrations
-
+        - Running 'configure_modified_and_new_integrations' method on those integrations
     Then:
-        - Assert there the configured old integrations has no intersection with the configured new integrations
+        - Assert that the configured old integrations have no intersection with the configured new integrations
+        - Ensure that the instances are correctly updated in the output lists
     """
 
-    def configure_integration_instance_mocker(integration, _):
-        return integration
+    def configure_integration_instance_mocker(integration, placeholders_map):
+        # Simulate creating an instance by copying the integration and updating with placeholders_map
+        instance = integration.copy()
+        instance.update(placeholders_map)
+        return instance
 
+    # Mock the server and its methods
     mocker.patch("Tests.configure_and_test_integration_instances.XSOARBuild.__init__", return_value=None)
-
     mocker.patch(
         "Tests.configure_and_test_integration_instances.Server.configure_integration_instance",
         side_effect=configure_integration_instance_mocker,
     )
+
+    # Setup the server and its integrations
     server = Server()
     server.build = XSOARBuild({})
-    server.build.servers = ["server1"]
+    server.secret_conf = {
+        "integrations": [
+            {"name": "old_integration1"},
+            {"name": "old_integration2"},
+            {"name": "new_integration1"},
+            {"name": "new_integration2"},
+            {"name": "unconfigured_integration"},
+        ]
+    }
+
+    # Run the configuration method
     old_modules_instances, new_modules_instances = server.configure_modified_and_new_integrations(
-        modified_integrations_to_configure=["old_integration1", "old_integration2"],
-        new_integrations_to_configure=["new_integration1", "new_integration2"],
+        modified_integrations_to_configure=[{"name": "old_integration1"}, {"name": "old_integration2"}],
+        new_integrations_to_configure=[{"name": "new_integration1"}, {"name": "new_integration2"}],
     )
-    assert not set(old_modules_instances).intersection(new_modules_instances)
+
+    # Assertions
+    # Ensure that there's no intersection between the old and new configured instances
+    assert set(inst["name"] for inst in old_modules_instances).isdisjoint(inst["name"] for inst in new_modules_instances)
+
+    # Ensure that instances are correctly configured with placeholders
+    assert all(inst[SERVER_HOST_PLACEHOLDER] == server for inst in old_modules_instances + new_modules_instances)
 
 
 @pytest.mark.parametrize("expected_class, server_type", [(XSOARBuild, "XSOAR"), (CloudBuild, "XSIAM")])
@@ -338,3 +362,152 @@ def test_get_server_numeric_version(mocker, version):
 
     mocker.patch("Tests.test_content.get_demisto_version", return_value=version)
     assert get_server_numeric_version(demisto_client) == version
+
+
+class TestServerConfigureIntegrations(unittest.TestCase):
+    def setUp(self):
+        """Set up a Server object and mock necessary attributes."""
+        self.server = Server()
+        self.server.build = MagicMock()
+        self.server.build.secret_conf = {
+            "integrations": [
+                {"name": "integration1"},
+                {"name": "integration2"},
+                {"name": "integration3"},
+                {"name": "integration4"},
+            ]
+        }
+        self.server.configure_integration_instance = MagicMock(
+            side_effect=lambda integration, _: f"Configured {integration['name']}"
+        )
+
+    def test_configure_all_integrations(self):
+        """Test all integrations are configured."""
+        modified_integrations = [{"name": "integration1"}, {"name": "integration2"}]
+        new_integrations = [{"name": "integration3"}, {"name": "integration4"}]
+
+        modified_instances, new_instances = self.server.configure_modified_and_new_integrations(
+            modified_integrations, new_integrations
+        )
+
+        self.assertEqual(modified_instances, ["Configured integration1", "Configured integration2"])
+        self.assertEqual(new_instances, ["Configured integration3", "Configured integration4"])
+
+    def test_some_integrations_unconfigured(self):
+        """Test when some integrations are unconfigured."""
+        modified_integrations = [{"name": "integration1"}]
+        new_integrations = [{"name": "integration3"}]
+
+        modified_instances, new_instances = self.server.configure_modified_and_new_integrations(
+            modified_integrations, new_integrations
+        )
+
+        self.assertEqual(modified_instances, ["Configured integration1"])
+        self.assertEqual(new_instances, ["Configured integration3"])
+
+    def test_no_integrations_to_configure(self):
+        """Test when no integrations are provided for configuration."""
+        modified_integrations = []
+        new_integrations = []
+
+        modified_instances, new_instances = self.server.configure_modified_and_new_integrations(
+            modified_integrations, new_integrations
+        )
+
+        self.assertEqual(modified_instances, [])
+        self.assertEqual(new_instances, [])
+
+    def test_partial_failure_in_configure(self):
+        """Test partial failure in configuring integrations."""
+
+        def mock_configure_instance(integration, _):
+            if integration["name"] == "integration2":
+                return None  # Simulate failure
+            return f"Configured {integration['name']}"
+
+        self.server.configure_integration_instance.side_effect = mock_configure_instance
+
+        modified_integrations = [{"name": "integration1"}, {"name": "integration2"}]
+        new_integrations = [{"name": "integration3"}]
+
+        modified_instances, new_instances = self.server.configure_modified_and_new_integrations(
+            modified_integrations, new_integrations
+        )
+
+        self.assertEqual(modified_instances, ["Configured integration1"])
+        self.assertEqual(new_instances, ["Configured integration3"])
+
+    def test_empty_secret_conf(self):
+        """Test behavior when secret_conf['integrations'] is empty."""
+        self.server.build.secret_conf["integrations"] = []
+        modified_integrations = [{"name": "integration1"}]
+        new_integrations = [{"name": "integration2"}]
+
+        modified_instances, new_instances = self.server.configure_modified_and_new_integrations(
+            modified_integrations, new_integrations
+        )
+
+        self.assertEqual(modified_instances, ["Configured integration1"])
+        self.assertEqual(new_instances, ["Configured integration2"])
+
+    def test_all_integrations_already_configured(self):
+        """Test when all integrations are already configured."""
+        modified_integrations = [{"name": "integration1"}, {"name": "integration2"}]
+        new_integrations = [{"name": "integration3"}, {"name": "integration4"}]
+
+        modified_instances, new_instances = self.server.configure_modified_and_new_integrations(
+            modified_integrations, new_integrations
+        )
+
+        # Calling the method again to simulate that all integrations were already configured
+        modified_instances, new_instances = self.server.configure_modified_and_new_integrations(
+            modified_integrations, new_integrations
+        )
+
+        self.assertEqual(modified_instances, ["Configured integration1", "Configured integration2"])
+        self.assertEqual(new_instances, ["Configured integration3", "Configured integration4"])
+
+    def test_integration_with_no_parameters(self):
+        """Test behavior when an integration has no parameters."""
+        modified_integrations = [{"name": "integration1", "params": {}}]
+        new_integrations = [{"name": "integration2", "params": {}}]
+
+        modified_instances, new_instances = self.server.configure_modified_and_new_integrations(
+            modified_integrations, new_integrations
+        )
+
+        self.assertEqual(modified_instances, ["Configured integration1"])
+        self.assertEqual(new_instances, ["Configured integration2"])
+
+    def test_invalid_integration_name(self):
+        """Test behavior when an invalid integration name is provided."""
+        modified_integrations = [{"name": "invalid_integration"}]
+        new_integrations = [{"name": "integration2"}]
+
+        self.server.configure_integration_instance.side_effect = (
+            lambda integration, _: None if integration["name"] == "invalid_integration" else f"Configured {integration['name']}"
+        )
+
+        modified_instances, new_instances = self.server.configure_modified_and_new_integrations(
+            modified_integrations, new_integrations
+        )
+
+        self.assertEqual(modified_instances, [])
+        self.assertEqual(new_instances, ["Configured integration2"])
+
+    def test_duplicates_across_modified_and_new(self):
+        """Test when the same integration appears in both modified and new integrations."""
+        modified_integrations = [{"name": "integration1"}]
+        new_integrations = [{"name": "integration1"}, {"name": "integration2"}]
+
+        modified_instances, new_instances = self.server.configure_modified_and_new_integrations(
+            modified_integrations, new_integrations
+        )
+
+        # Integration1 should be configured only once in either modified or new but not both
+        self.assertEqual(modified_instances, ["Configured integration1"])
+        self.assertEqual(new_instances, ["Configured integration1", "Configured integration2"])
+
+
+if __name__ == "__main__":
+    unittest.main()
