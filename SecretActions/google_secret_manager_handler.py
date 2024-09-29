@@ -1,10 +1,12 @@
 import argparse
 import logging
+import re
 from datetime import datetime
 from enum import Enum
 
 import dateparser
 import json5
+from demisto_sdk.commands.common.tools import str2bool
 from google.auth import default
 from google.cloud import secretmanager
 from google.cloud.secretmanager_v1 import AccessSecretVersionResponse, SecretVersion
@@ -26,6 +28,7 @@ class FilterLabels(Enum):
     IS_DEV_BRANCH = "dev"
     BRANCH_NAME = "branch"
     PR_NUMBER = "pr_number"
+    PACK_ID = "pack_id"
 
     def __str__(self):
         return self.value
@@ -293,6 +296,38 @@ class GoogleSecreteManagerModule:
         return secrets
 
 
+def filter_secrets_by_pack_ids(
+    secrets: list[dict[str, dict[str, str]]], target_pack_ids: list[str]
+) -> list[dict[str, dict[str, str]]]:
+    """
+    Gets the dev secrets and main secrets from GSM and merges them
+    :param branch_name: the name of the branch of the PR
+    :param options: the parsed parameter for the script
+    :return: the list of secrets from GSM to use in the build
+    Filters a list of secrets to include only those with a matching 'pack_id' label from the target list.
+    Excludes secrets that have a 'should_instance_test' label with a value of 'false'.
+
+    Args:
+        secrets (list): A list of dictionaries where each dictionary represents a secret.
+        target_pack_ids (list): A list of 'pack_id' values to filter secrets by.
+
+    Returns:
+        list: A list of filtered secrets that have a 'pack_id' label matching any of the target pack_ids
+              and do not have 'should_instance_test' set to 'false'.
+    """
+    target_pack_ids_set = {normalize_pack_id(pack_id) for pack_id in target_pack_ids}
+    return [
+        secret
+        for secret in secrets
+        if normalize_pack_id(secret.get("labels", {}).get("pack_id", "")) in target_pack_ids_set
+        and str2bool(secret.get("labels", {}).get("should_instance_test", "true"))
+    ]
+
+
+def normalize_pack_id(pack_id: str) -> str:
+    return re.sub(r"\s+", "_", pack_id.lower())
+
+
 def normalize_branch_name(branch_name: str):
     """normalizing the branch name if it contains the upload bucket suffix"""
     if BUCKET_UPLOAD_BRANCH_SUFFIX in branch_name:
@@ -307,12 +342,13 @@ def create_github_client(gsm_object: GoogleSecreteManagerModule, project_id: str
     return GithubClient(github_token)
 
 
-def get_secrets_from_gsm(options: argparse.Namespace, branch_name: str = "") -> dict:
+def get_secrets_from_gsm(options: argparse.Namespace, branch_name: str = "", filter_by_pack_ids: list[str] | None = None) -> dict:
     """
-    Gets the dev secrets and main secrets from GSM and merges them
-    :param branch_name: the name of the branch of the PR
-    :param options: the parsed parameter for the script
-    :return: the list of secrets from GSM to use in the build
+    Gets the dev secrets and main secrets from GSM and merges them.
+    :param branch_name: the name of the branch of the PR.
+    :param options: the parsed parameter for the script.
+    :param filter_by_pack_ids: a list of pack_ids to filter secrets by. If None, no filtering is applied.
+    :return: the list of secrets from GSM to use in the build.
     """
     secret_conf = GoogleSecreteManagerModule(options.gsm_service_account)
 
@@ -332,16 +368,17 @@ def get_secrets_from_gsm(options: argparse.Namespace, branch_name: str = "") -> 
             if "Did not find the PR" in str(e):
                 logging.info(
                     f"Did not find the associated PR with the branch {branch_name}, you may be running from infra."
-                    "Will only use the secrets from prod"
+                    " Will only use the secrets from prod."
                 )
             else:
                 logging.info(f"Got the following error when trying to contact Github: {e!s}")
 
         if pr_number:
-            logging.info(f"Getting secrets for the {branch_name} branch with pr number: {pr_number}")
+            logging.info(f"Getting secrets for the {branch_name} branch with PR number: {pr_number}")
             branch_secrets = secret_conf.get_secrets_from_project(options.gsm_project_id_dev, pr_number, is_dev_branch=True)
             logging.info(f"Finished getting all branch secrets, got {len(branch_secrets)} branch secrets")
 
+    # Merge branch secrets into master secrets
     if branch_secrets:
         for dev_secret in branch_secrets:
             replaced = False
@@ -354,9 +391,13 @@ def get_secrets_from_gsm(options: argparse.Namespace, branch_name: str = "") -> 
                     master_secrets[i] = dev_secret
                     replaced = True
                     break
-            # If the dev secret is not in the changed packs it's a new secret
             if not replaced:
                 master_secrets.append(dev_secret)
 
+    # Filter secrets by pack_ids if provided
+    if filter_by_pack_ids:
+        logging.info(f"Filtering by pack IDs: {filter_by_pack_ids}")
+        master_secrets = filter_secrets_by_pack_ids(master_secrets, filter_by_pack_ids)
+        logging.info("Finished filtering")
     secret_file = {"username": options.user, "userPassword": options.password, "integrations": master_secrets}
     return secret_file

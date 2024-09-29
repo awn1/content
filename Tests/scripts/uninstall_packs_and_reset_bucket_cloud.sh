@@ -12,10 +12,15 @@ if [[ -z "${CLOUD_CHOSEN_MACHINE_IDS}" ]]; then
 else
   IFS=', ' read -r -a CLOUD_CHOSEN_MACHINE_ID_ARRAY <<< "${CLOUD_CHOSEN_MACHINE_IDS}"
   for CLOUD_CHOSEN_MACHINE_ID in "${CLOUD_CHOSEN_MACHINE_ID_ARRAY[@]}"; do
+  {
     echo "Copying prod bucket to ${CLOUD_CHOSEN_MACHINE_ID} bucket."
-    gsutil -m -q cp -r "gs://$GCS_SOURCE_BUCKET/content" "gs://$GCS_MACHINES_BUCKET/${CLOUD_CHOSEN_MACHINE_ID}/" >> "${ARTIFACTS_FOLDER_INSTANCE}/logs/Copy_prod_bucket_to_cloud_machine_cleanup.log" 2>&1
+    gcloud storage cp -r "gs://${GCS_SOURCE_BUCKET}/content" "gs://${GCS_MACHINES_BUCKET}/${CLOUD_CHOSEN_MACHINE_ID}/" >> "${ARTIFACTS_FOLDER_INSTANCE}/logs/Copy_prod_bucket_to_cloud_machine_cleanup.log" 2>&1
+    echo "Finished copying prod bucket to ${CLOUD_CHOSEN_MACHINE_ID} bucket."
     exit_on_error $? "Failed to copy prod bucket to ${CLOUD_CHOSEN_MACHINE_ID} bucket"
+  } &
   done
+  # Makes this step concurrent and waits till they are done.
+  wait
 
   echo "sleeping 120 seconds"
   sleep 120
