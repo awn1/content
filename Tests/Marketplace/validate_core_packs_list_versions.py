@@ -289,7 +289,7 @@ def main():
     build_number = option.ci_build_number
     gitlab_branch = option.gitlab_branch
     extract_destination_path = mkdtemp()
-    build_bucket_path = os.path.join(GCPConfig.BUILD_PATH_PREFIX, gitlab_branch, build_number, marketplace)
+    build_bucket_path = os.path.join(GCPConfig.BUILD_PATH_PREFIX, gitlab_branch, build_number)
     build_bucket_base_path = os.path.join(build_bucket_path, GCPConfig.CONTENT_PACKS_PATH)
 
     # google cloud storage client initialized.

@@ -316,6 +316,7 @@ xsoar-saas-prepare-testing-bucket:
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_XSOAR}/server_type_${SERVER_TYPE}"
     MARKETPLACE_VERSION: "xsoar_saas"
     MARKETPLACE_BUCKET: "$GCS_MARKET_XSOAR_SAAS_BUCKET"
+    GCS_BUILD_BUCKET: "$GCS_BUILD_XSOAR_SAAS_BUCKET"
   extends:
     - .generic-prepare-testing-bucket
   rules:
@@ -338,6 +339,7 @@ mpv2-prepare-testing-bucket:
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_MPV2}/server_type_${SERVER_TYPE}"
     MARKETPLACE_VERSION: "marketplacev2"
     MARKETPLACE_BUCKET: "$GCS_MARKET_V2_BUCKET"
+    GCS_BUILD_BUCKET: "$GCS_BUILD_V2_BUCKET"
     PRODUCT_NAME: "Cortex XSIAM"
   extends:
     - .generic-prepare-testing-bucket
@@ -353,6 +355,7 @@ xpanse-prepare-testing-bucket:
     MARKETPLACE_VERSION: "xpanse"
     PRODUCT_NAME: "Cortex XPANSE"
     MARKETPLACE_BUCKET: "$GCS_MARKET_XPANSE_BUCKET"
+    GCS_BUILD_BUCKET: "$GCS_BUILD_XPANSE_BUCKET"
   extends:
     - .generic-prepare-testing-bucket
 
