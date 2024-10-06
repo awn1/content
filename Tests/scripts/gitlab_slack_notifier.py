@@ -2,6 +2,7 @@ import argparse
 import contextlib
 import json
 import logging
+import math
 import os
 import sys
 import tempfile
@@ -92,6 +93,8 @@ SLACK_MESSAGE_CHANNEL_TO_THREAD = "slack_message_channel_to_thread.json"
 OLD_SLACK_MESSAGE = "slack_msg.json"
 OLD_SLACK_MESSAGE_THREADS = "threaded_messages.json"
 OLD_SLACK_MESSAGE_CHANNEL_TO_THREAD = "channel_to_thread.json"
+DAYS_TO_SEARCH = 30
+ALLOWED_COVERAGE_PROXIMITY = 0.25  # Percentage threshold for allowed coverage proximity.
 
 
 def options_handler() -> argparse.Namespace:
@@ -699,17 +702,33 @@ def collect_pipeline_data(gitlab_client: Gitlab, project_id: str, pipeline_id: s
     return pipeline.web_url, failed_jobs
 
 
-def construct_coverage_slack_msg() -> list[dict[str, Any]]:
+def construct_coverage_slack_msg(sleep_interval: int = 1) -> list[dict[str, Any]]:
     from demisto_sdk.commands.coverage_analyze.tools import get_total_coverage
 
     coverage_today = get_total_coverage(filename=(ROOT_ARTIFACTS_FOLDER / "coverage_report" / "coverage-min.json").as_posix())
     coverage_yesterday = get_total_coverage(date=datetime.now() - timedelta(days=1))
+
     # The artifacts are kept for 30 days, so we can get the coverage for the last month.
-    coverage_last_month = get_total_coverage(date=datetime.now() - timedelta(days=30))
-    color = "good" if coverage_today >= coverage_yesterday else "danger"
+    # When the coverage file does not exist, we try to import the file from the following day,
+    # and the attempt will continue until the day before yesterday.
+    for days_ago in range(DAYS_TO_SEARCH, 2, -1):
+        if coverage_last_month := get_total_coverage(date=datetime.now() - timedelta(days=days_ago)):
+            break
+    else:
+        coverage_last_month = "no coverage found for last month"
+
+    if isinstance(coverage_last_month, float):  #  The coverage file is found
+        coverage_last_month = f"{coverage_last_month:.3f}%"
+
+    color = (
+        "good"
+        if coverage_today >= coverage_yesterday
+        or math.isclose(coverage_today, coverage_yesterday, abs_tol=ALLOWED_COVERAGE_PROXIMITY)
+        else "danger"
+    )
     title = (
         f"Content code coverage: {coverage_today:.3f}% (Yesterday: {coverage_yesterday:.3f}%, "
-        f"Last month: {coverage_last_month:.3f}%)"
+        f"Last month: {coverage_last_month})"
     )
 
     return [
