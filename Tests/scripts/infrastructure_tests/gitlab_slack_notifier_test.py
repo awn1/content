@@ -4,7 +4,10 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 
-from Tests.scripts.gitlab_slack_notifier import bucket_sync_msg_builder
+from Tests.scripts.gitlab_slack_notifier import (
+    bucket_sync_msg_builder,
+    construct_coverage_slack_msg,
+)
 
 
 @pytest.mark.parametrize(
@@ -93,3 +96,86 @@ def test_bucket_sync_msg_builder(
 
     assert bucket_sync_msg == expected_bucket_sync_msg
     assert bucket_sync_thread == expected_bucket_sync_thread
+
+
+@pytest.mark.parametrize(
+    "mock_coverage_today, mock_coverage_yesterday, expected_color",
+    [
+        pytest.param(1.0, 0.5, "good", id="Case 1: Today's coverage percentage is higher then yesterday"),
+        pytest.param(
+            0.76,
+            1.0,
+            "good",
+            id="Case 2: Today's coverage percentage is less than yesterday's but the difference is less than 0.25 percent",
+        ),
+        pytest.param(
+            0.74,
+            1.0,
+            "danger",
+            id="Case 3: Today's coverage percentage is less than yesterday's and the difference is higher than 0.25 percent",
+        ),
+    ],
+)
+def test_construct_coverage_slack_msg(
+    mocker: MockerFixture,
+    mock_coverage_today: float,
+    mock_coverage_yesterday: float,
+    expected_color: str,
+):
+    """
+    Given:
+        - No args given
+    When:
+        - the construct_coverage_slack_msg function runs with mocking values.
+    Then:
+        - Ensure the msg color is as expected.
+    """
+    mocker.patch(
+        "demisto_sdk.commands.coverage_analyze.tools.get_total_coverage",
+        side_effect=[mock_coverage_today, mock_coverage_yesterday, 1.0],
+    )
+
+    result = construct_coverage_slack_msg()
+    assert result[0]["color"] == expected_color
+
+
+@pytest.mark.parametrize(
+    "coverage_last_month, expected_calls",
+    [
+        pytest.param(0.0, 4, id="Case 1: the coverage file from a month ago does not exist"),
+        pytest.param(1.0, 3, id="Case 2: the coverage file from a month ago exist"),
+    ],
+)
+def test_construct_coverage_slack_msg_coverage_last_month(
+    mocker: MockerFixture,
+    coverage_last_month: float,
+    expected_calls: str,
+):
+    mock_get_total_coverage = mocker.patch(
+        "demisto_sdk.commands.coverage_analyze.tools.get_total_coverage",
+        side_effect=[1.0, 1.0, coverage_last_month, 1.0],
+    )
+
+    construct_coverage_slack_msg()
+    assert expected_calls == mock_get_total_coverage.call_count
+
+
+def test_construct_coverage_slack_msg_no_coverage_last_month(
+    mocker: MockerFixture,
+):
+    """
+    Given:
+        - No args given
+    When:
+        - the construct_coverage_slack_msg function runs and simulates a scenario
+          where no coverage file exists within the time range from a month ago.
+    Then:
+        - Ensure the msg includes the expected value for last month.
+    """
+    mocker.patch(
+        "demisto_sdk.commands.coverage_analyze.tools.get_total_coverage",
+        return_value=0.0,
+    )
+
+    result = construct_coverage_slack_msg()
+    assert "Last month: no coverage found for last month" in result[0]["title"]
