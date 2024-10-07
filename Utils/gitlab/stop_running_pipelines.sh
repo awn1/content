@@ -24,12 +24,12 @@ fi
 
 # Helper functions
 
-function get_branch_pipelines(){
+function get_branch_pipelines() {
   local resp=$1
   echo $(echo "${resp}" | jq -c '.[]')
 }
 
-function stop_pipeline_by_id(){
+function stop_pipeline_by_id() {
   curl --request POST --header "PRIVATE-TOKEN: $GITLAB_CANCEL_TOKEN" "$CONTENT_PIPELINES_API_URL/$1/cancel"
 }
 
@@ -37,8 +37,7 @@ function stop_pipeline_by_id(){
 RESP=$(curl -v -H "Content-Type: application/json" -H "PRIVATE-TOKEN: $GITLAB_CANCEL_TOKEN" $CONTENT_PIPELINES_API_URL\?ref\=$CI_COMMIT_BRANCH)
 if [ "$RESP" != "[]" ]; then
   PIPELINES=$(get_branch_pipelines "$RESP")
-  for pipeline in ${PIPELINES}
-  do
+  for pipeline in ${PIPELINES}; do
     source=$(echo $pipeline | jq -r ".source")
     status=$(echo $pipeline | jq -r ".status")
     id=$(echo $pipeline | jq -r ".id")

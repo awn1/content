@@ -16,7 +16,7 @@ _gitlab_token=$1
 
 [ -n "$2" ] && _branch="$2" || _branch="$(git branch --show-current)"
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 source ${SCRIPT_DIR}/trigger_build_url.sh
 
 curl "$BUILD_TRIGGER_URL" -F "ref=$_branch" -F "token=$_gitlab_token" -F "variables[INSTANCE_TESTS]=true" -F "variables[IFRA_ENV_TYPE]=Server 5.5" | jq

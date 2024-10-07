@@ -11,7 +11,7 @@ if [ "$#" -lt "1" ]; then
   exit 1
 fi
 
-_branch="$(git branch  --show-current)"
+_branch="$(git branch --show-current)"
 _ttl=300
 
 # Parsing the user inputs.
@@ -19,30 +19,35 @@ _ttl=300
 while [[ "$#" -gt 0 ]]; do
   case $1 in
 
-  -ct|--ci-token) _ci_token="$2"
+  -ct | --ci-token)
+    _ci_token="$2"
     shift
-    shift;;
-
-  -b|--branch) _branch="$2"
     shift
-    shift;;
+    ;;
 
-  -ttl|--time-to-live) _ttl="$2"
+  -b | --branch)
+    _branch="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  *)    # unknown option.
-    shift;;
+  -ttl | --time-to-live)
+    _ttl="$2"
+    shift
+    shift
+    ;;
+
+  *) # unknown option.
+    shift ;;
   esac
 done
 
-
 if [ -z "$_ci_token" ]; then
-    echo "You must provide a ci token."
-    exit 1
+  echo "You must provide a ci token."
+  exit 1
 fi
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 source ${SCRIPT_DIR}/trigger_build_url.sh
 
 curl -k --request POST \

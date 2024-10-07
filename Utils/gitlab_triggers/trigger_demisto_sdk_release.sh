@@ -39,37 +39,53 @@ _sdk_branch_name="master"
 while [[ "$#" -gt 0 ]]; do
   case $1 in
 
-  -ct|--ci-token) _ci_token="$2"
+  -ct | --ci-token)
+    _ci_token="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  -rv|--release-version) _release_version="$2"
+  -rv | --release-version)
+    _release_version="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  -ib|--infra-branch) _infra_branch="$2"
+  -ib | --infra-branch)
+    _infra_branch="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  -cb|--content-branch) _content_branch="$2"
+  -cb | --content-branch)
+    _content_branch="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  -ch|--slack-channel) _slack_channel="$2"
+  -ch | --slack-channel)
+    _slack_channel="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  -r|--reviewer) _reviewer="$2"
+  -r | --reviewer)
+    _reviewer="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  -d|--is-draft) _is_draft="$2"
+  -d | --is-draft)
+    _is_draft="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  -s|--sdk-branch-name) _sdk_branch_name="$2"
+  -s | --sdk-branch-name)
+    _sdk_branch_name="$2"
     shift
-    shift;;
+    shift
+    ;;
   *)
     echo "Unknown parameter passed: $1"
     exit 1
@@ -79,20 +95,19 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 if [ -z "$_ci_token" ]; then
-    echo "You must provide a ci token."
-    exit 1
+  echo "You must provide a ci token."
+  exit 1
 fi
 
 if [ -z "$_release_version" ]; then
-    echo "You must provide a release version."
-    exit 1
+  echo "You must provide a release version."
+  exit 1
 fi
 
 if [ -z "$_reviewer" ]; then
-    echo "You must provide a github username username of the release owner."
-    exit 1
+  echo "You must provide a github username username of the release owner."
+  exit 1
 fi
-
 
 CONTENT_PROJECT_ID=${CONTENT_PROJECT_ID:-1701}
 CI_SERVER_URL=${CI_SERVER_URL:-https://gitlab.xdr.pan.local} # disable-secrets-detection
@@ -100,7 +115,7 @@ CI_SERVER_URL=${CI_SERVER_URL:-https://gitlab.xdr.pan.local} # disable-secrets-d
 export BUILD_TRIGGER_URL="${CI_SERVER_URL}/api/v4/projects/${CONTENT_PROJECT_ID}/trigger/pipeline"
 
 export URL=$(
-curl "$BUILD_TRIGGER_URL" --form "ref=${_content_branch}" --form "token=${_ci_token}" \
+  curl "$BUILD_TRIGGER_URL" --form "ref=${_content_branch}" --form "token=${_ci_token}" \
     --form "variables[SDK_RELEASE]=true" \
     --form "variables[CI_TOKEN]=${_ci_token}" \
     --form "variables[REVIEWER]=${_reviewer}" \
@@ -108,7 +123,8 @@ curl "$BUILD_TRIGGER_URL" --form "ref=${_content_branch}" --form "token=${_ci_to
     --form "variables[RELEASE_VERSION]=${_release_version}" \
     --form "variables[IS_DRAFT]=${_is_draft}" \
     --form "variables[SDK_BRANCH_NAME]=${_sdk_branch_name}" \
-    --form "variables[SLACK_CHANNEL]=${_slack_channel}" | jq .web_url)
+    --form "variables[SLACK_CHANNEL]=${_slack_channel}" | jq .web_url
+)
 
 echo "SDK release flow started:"
 echo $URL

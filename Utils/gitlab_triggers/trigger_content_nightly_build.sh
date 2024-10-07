@@ -25,7 +25,7 @@ if [ "$#" -lt "1" ]; then
   exit 1
 fi
 
-_branch="$(git branch  --show-current)"
+_branch="$(git branch --show-current)"
 _infra_branch="$(git branch --show-current)"
 _scheduled_nightly="false"
 _slack_channel="dmst-build-test"
@@ -41,45 +41,62 @@ _is_native_nightly="false"
 while [[ "$#" -gt 0 ]]; do
   case $1 in
 
-  -ct|--ci-token) _ci_token="${2}"
+  -ct | --ci-token)
+    _ci_token="${2}"
     shift
-    shift;;
-
-  -b|--branch) _branch="${2}"
     shift
-    shift;;
-  -ib|--infra-branch) _infra_branch="${2}"
+    ;;
+
+  -b | --branch)
+    _branch="${2}"
     shift
-    shift;;
-
-  -sn|--scheduled-nightly) _scheduled_nightly="true"
-    shift;;
-
-  -ch|--slack-channel) _slack_channel="${2}"
     shift
-    shift;;
+    ;;
+  -ib | --infra-branch)
+    _infra_branch="${2}"
+    shift
+    shift
+    ;;
 
-  -sr|--sdk-ref)
+  -sn | --scheduled-nightly)
+    _scheduled_nightly="true"
+    shift
+    ;;
+
+  -ch | --slack-channel)
+    _slack_channel="${2}"
+    shift
+    shift
+    ;;
+
+  -sr | --sdk-ref)
     _sdk_ref="${2}"
     _override_sdk_ref="true"
     shift
-    shift;;
+    shift
+    ;;
 
-  -tmr|--test-modeling-rule-jira-tickets) TEST_MODELING_RULE_JIRA_TICKETS="true"
-    shift;;
-  -tpr|--test-playbooks-jira-tickets) TEST_PLAYBOOKS_JIRA_TICKETS="true"
-    shift;;
-  -nn|--native-nightly) _is_native_nightly="true" _is_nightly="false"
-    shift;;
+  -tmr | --test-modeling-rule-jira-tickets)
+    TEST_MODELING_RULE_JIRA_TICKETS="true"
+    shift
+    ;;
+  -tpr | --test-playbooks-jira-tickets)
+    TEST_PLAYBOOKS_JIRA_TICKETS="true"
+    shift
+    ;;
+  -nn | --native-nightly)
+    _is_native_nightly="true" _is_nightly="false"
+    shift
+    ;;
 
-  *)    # unknown option.
-    shift;;
+  *) # unknown option.
+    shift ;;
   esac
 done
 
 if [ -z "${_ci_token}" ]; then
-    echo "You must provide a ci token."
-    exit 1
+  echo "You must provide a ci token."
+  exit 1
 fi
 
 CONTENT_PROJECT_ID=${CONTENT_PROJECT_ID:-1061}
@@ -88,15 +105,14 @@ CI_SERVER_URL=${CI_SERVER_URL:-https://gitlab.xdr.pan.local} # disable-secrets-d
 export BUILD_TRIGGER_URL="${CI_SERVER_URL}/api/v4/projects/${CONTENT_PROJECT_ID}/trigger/pipeline"
 
 curl "$BUILD_TRIGGER_URL" --form "ref=${_branch}" --form "token=${_ci_token}" \
-    --form "variables[INFRA_BRANCH]=${_infra_branch}" \
-    --form "variables[SCHEDULED_NIGHTLY]=${_scheduled_nightly}"  \
-    --form "variables[SDK_REF]=${_sdk_ref}" \
-    --form "variables[OVERRIDE_SDK_REF]=${_override_sdk_ref}" \
-    --form "variables[IS_NIGHTLY]=${_is_nightly}" \
-    --form "variables[IS_NATIVE_NIGHTLY]=${_is_native_nightly}" \
-    --form "variables[TEST_MODELING_RULE_JIRA_TICKETS]=${TEST_MODELING_RULE_JIRA_TICKETS}" \
-    --form "variables[TEST_PLAYBOOKS_JIRA_TICKETS]=${TEST_PLAYBOOKS_JIRA_TICKETS}" \
-    --form "variables[SLACK_CHANNEL]=${_slack_channel}" \
-    --form "variables[BRANCH]=${_branch}" \
-    --silent | jq
-
+  --form "variables[INFRA_BRANCH]=${_infra_branch}" \
+  --form "variables[SCHEDULED_NIGHTLY]=${_scheduled_nightly}" \
+  --form "variables[SDK_REF]=${_sdk_ref}" \
+  --form "variables[OVERRIDE_SDK_REF]=${_override_sdk_ref}" \
+  --form "variables[IS_NIGHTLY]=${_is_nightly}" \
+  --form "variables[IS_NATIVE_NIGHTLY]=${_is_native_nightly}" \
+  --form "variables[TEST_MODELING_RULE_JIRA_TICKETS]=${TEST_MODELING_RULE_JIRA_TICKETS}" \
+  --form "variables[TEST_PLAYBOOKS_JIRA_TICKETS]=${TEST_PLAYBOOKS_JIRA_TICKETS}" \
+  --form "variables[SLACK_CHANNEL]=${_slack_channel}" \
+  --form "variables[BRANCH]=${_branch}" \
+  --silent | jq

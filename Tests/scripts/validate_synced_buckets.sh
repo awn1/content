@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 function compare_revision() {
   bucket_list_origin=($GCS_MARKET_XSOAR_SAAS_BUCKET $GCS_MARKET_V2_BUCKET $GCS_MARKET_XPANSE_BUCKET)
   bucket_list_prod=($MARKETPLACE_XSOAR_PROD $MARKETPLACE_V2_PROD $MARKETPLACE_XPANSE_PROD)
@@ -16,8 +15,8 @@ function compare_revision() {
     gsutil cp "gs://$bucket1$json_file_path" $ARTIFACTS_FOLDER/sync/origin_index.json
     gsutil cp "gs://$bucket2$json_file_path" $ARTIFACTS_FOLDER/sync/prod_index.json
 
-    revision_origin=$( jq -r '.revision' $ARTIFACTS_FOLDER/sync/origin_index.json)
-    revision_prod=$( jq -r '.revision' $ARTIFACTS_FOLDER/sync/prod_index.json)
+    revision_origin=$(jq -r '.revision' $ARTIFACTS_FOLDER/sync/origin_index.json)
+    revision_prod=$(jq -r '.revision' $ARTIFACTS_FOLDER/sync/prod_index.json)
 
     # Compare the revisions
     if [ "$revision_origin" = "$revision_prod" ]; then
@@ -32,4 +31,3 @@ function compare_revision() {
 }
 
 compare_revision "$1"
-

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 function exit_on_error {
-    if [ "${1}" -ne 0 ]; then
-        echo "ERROR: ${2}, exiting with code ${1}" 1>&2
-        exit "${1}"
-    fi
+  if [ "${1}" -ne 0 ]; then
+    echo "ERROR: ${2}, exiting with code ${1}" 1>&2
+    exit "${1}"
+  fi
 }
 
 if [[ "${SERVER_TYPE}" != "XSIAM" ]]; then
@@ -15,7 +15,7 @@ fi
 MODELING_RULES_RESULTS_FILE_NAME="${ARTIFACTS_FOLDER_INSTANCE}/test_modeling_rules_report.xml"
 
 function write_empty_test_results_file() {
-  cat <<EOF > "${MODELING_RULES_RESULTS_FILE_NAME}"
+  cat <<EOF >"${MODELING_RULES_RESULTS_FILE_NAME}"
 <?xml version='1.0' encoding='utf-8'?>
 <testsuites />
 EOF
@@ -25,10 +25,12 @@ EOF
 generate_empty_results_file="false"
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    --generate-empty-result-file) generate_empty_results_file="true"
-      shift;;
-    *)  # unknown option.
-      shift;;
+  --generate-empty-result-file)
+    generate_empty_results_file="true"
+    shift
+    ;;
+  *) # unknown option.
+    shift ;;
   esac
 done
 
@@ -52,7 +54,7 @@ echo "IS_NIGHTLY: ${IS_NIGHTLY}"
 if [ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]; then
 
   echo "Getting cloud machine details for: ${CLOUD_CHOSEN_MACHINE_IDS}"
-  python Tests/scripts/get_cloud_machines_details.py --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" > "cloud_machines_details.json"
+  python Tests/scripts/get_cloud_machines_details.py --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" >"cloud_machines_details.json"
   exit_on_error $? "Failed to get cloud machine details"
   echo "Saved cloud machine details for: ${CLOUD_CHOSEN_MACHINE_IDS} under 'cloud_machines_details.json'"
 

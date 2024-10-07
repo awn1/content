@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 function exit_on_error {
-    if [ "${1}" -ne 0 ]; then
-        echo "ERROR: ${2}, exiting with code ${1}" 1>&2
-        exit "${1}"
-    fi
+  if [ "${1}" -ne 0 ]; then
+    echo "ERROR: ${2}, exiting with code ${1}" 1>&2
+    exit "${1}"
+  fi
 }
 
 python3 ./Tests/Marketplace/reinstall_packs.py --cloud_machine "${CLOUD_CHOSEN_MACHINE_IDS}" \

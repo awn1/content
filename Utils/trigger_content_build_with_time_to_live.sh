@@ -32,28 +32,24 @@ _changed_pack=$5
 
 trigger_build_url="https://circleci.com/api/v2/project/github/demisto/content/pipeline"
 
-
-if [ -z $_time_to_live ] || [ $_time_to_live -lt 180 ]
-then
-      echo "Minumum time is 180 minutes. The script will use defualt time to live"
-      _time_to_live=180
+if [ -z $_time_to_live ] || [ $_time_to_live -lt 180 ]; then
+  echo "Minumum time is 180 minutes. The script will use defualt time to live"
+  _time_to_live=180
 fi
 
-if [ $_time_to_live -gt 540 ]
-then
-    echo "Maximum time is 540 minutes, please change the time_to_live argument"
-    exit 1
+if [ $_time_to_live -gt 540 ]; then
+  echo "Maximum time is 540 minutes, please change the time_to_live argument"
+  exit 1
 fi
 
-if [ -n "$_contrib_branch" ] && [ -z $_changed_pack ]
-then
-    echo "You must specify the pack name"
-    exit 1
+if [ -n "$_contrib_branch" ] && [ -z $_changed_pack ]; then
+  echo "You must specify the pack name"
+  exit 1
 fi
 
-if [ -z $_contrib_branch ]
-then
-  post_data=$(cat <<-EOF
+if [ -z $_contrib_branch ]; then
+  post_data=$(
+    cat <<-EOF
  {
     "branch": "${_branch}",
     "parameters": {
@@ -61,11 +57,12 @@ then
     }
   }
 EOF
-)
+  )
 
 else
   pack_name=$(echo $_changed_pack | cut -d "/" -f 2)
-  post_data=$(cat <<-EOF
+  post_data=$(
+    cat <<-EOF
  {
     "branch": "${_branch}",
     "parameters": {
@@ -75,13 +72,13 @@ else
     }
   }
 EOF
-)
+  )
 fi
 
 curl \
---header "Accept: application/json" \
---header "Content-Type: application/json" \
--k \
---data "${post_data}" \
---request POST ${trigger_build_url} \
---user "$_circle_token:"
+  --header "Accept: application/json" \
+  --header "Content-Type: application/json" \
+  -k \
+  --data "${post_data}" \
+  --request POST ${trigger_build_url} \
+  --user "$_circle_token:"

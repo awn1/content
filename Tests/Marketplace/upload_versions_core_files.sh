@@ -2,7 +2,7 @@
 # ====== BUILD CONFIGURATION ======
 
 if [[ -z "$3" ]]; then
-  MARKETPLACE_TYPE="xsoar"  # The default is "marketplace-dist"
+  MARKETPLACE_TYPE="xsoar" # The default is "marketplace-dist"
 else
   MARKETPLACE_TYPE=$3
 fi
@@ -14,7 +14,6 @@ BUILD_BUCKET_PACKS_DIR_FULL_PATH="$GCS_BUILD_BUCKET/$BUILD_BUCKET_PACKS_DIR_PATH
 echo "Starting calculate override core packs"
 python3 ./Tests/Marketplace/override_core_packs_versions.py -pa "${ARTIFACTS_FOLDER_SERVER_TYPE}" -n "${CI_PIPELINE_ID}" -mp "${MARKETPLACE_TYPE}" -uc "${LAST_UPLOAD_COMMIT}"
 echo "Finished calculate override core packs"
-
 
 core_packs_files_count=$(find "${ARTIFACTS_FOLDER_SERVER_TYPE}" -name "corepacks*.json" | wc -l)
 if [ "${core_packs_files_count}" -eq 0 ]; then

@@ -24,54 +24,66 @@ _ignore_error='true'
 while [[ "$#" -gt 0 ]]; do
   case $1 in
 
-  -r|--repo) _repo="$2"
+  -r | --repo)
+    _repo="$2"
     shift
-    shift;;
-
-  -b|--branch) _branch="$2"
     shift
-    shift;;
+    ;;
 
-  -h|--host) _host="$2"
+  -b | --branch)
+    _branch="$2"
     shift
-    shift;;
-
-  -t|--token) _token="$2"
     shift
-    shift;;
+    ;;
 
-  -u|--user) _user="$2"
+  -h | --host)
+    _host="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  --exit-code) _ignore_error="false"
-    shift;;
+  -t | --token)
+    _token="$2"
+    shift
+    shift
+    ;;
 
-  *)    # unknown option.
-    shift;;
+  -u | --user)
+    _user="$2"
+    shift
+    shift
+    ;;
+
+  --exit-code)
+    _ignore_error="false"
+    shift
+    ;;
+
+  *) # unknown option.
+    shift ;;
   esac
 done
 
 if [ -z "${_repo}" ]; then
-    echo "you must provide a repository (--repo)"
-    exit 1
+  echo "you must provide a repository (--repo)"
+  exit 1
 fi
 
 if [ -z "${_branch}" ]; then
-    echo "you must provide a branch name (--branch)"
-    exit 1
+  echo "you must provide a branch name (--branch)"
+  exit 1
 fi
 
 if [ -z "${_host}" ]; then
-    echo "you must provide a host (--host)"
-    exit 1
+  echo "you must provide a host (--host)"
+  exit 1
 fi
 
-git ls-remote --exit-code --heads "https://${_user}:${_token}@${_host}/${_repo}.git" "refs/heads/${_branch}" >> /dev/null \
-    && echo 'true' \
-    && exit 0
+git ls-remote --exit-code --heads "https://${_user}:${_token}@${_host}/${_repo}.git" "refs/heads/${_branch}" >>/dev/null &&
+  echo 'true' &&
+  exit 0
 
 echo 'false'
 if [ "${_ignore_error}" = 'false' ]; then
-    exit 1
+  exit 1
 fi
