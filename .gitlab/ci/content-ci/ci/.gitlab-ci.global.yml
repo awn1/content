@@ -902,6 +902,10 @@
     - python3 Tests/scripts/check_jobs_done.py --triggering-workflow "${WORKFLOW}" --job-done-files "${PIPELINE_JOBS_FOLDER}"
 
 .docker_services:
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
   services:
     - name: ${DOCKER_IO}/library/docker:20.10.12-dind
       alias: docker
