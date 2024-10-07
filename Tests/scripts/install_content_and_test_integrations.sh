@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 function exit_on_error {
-    if [ "${1}" -ne 0 ]; then
-        echo "ERROR: ${2}, exiting with code ${1}" 1>&2
-        exit "${1}"
-    fi
+  if [ "${1}" -ne 0 ]; then
+    echo "ERROR: ${2}, exiting with code ${1}" 1>&2
+    exit "${1}"
+  fi
 }
 
 echo "starting to install packs ..."
@@ -14,14 +14,13 @@ if [ -z "${INSTANCE_ROLE}" ]; then
 fi
 
 if [[ ! -f "$GCS_MARKET_KEY" ]]; then
-    exit_on_error 1 "GCS_MARKET_KEY not set aborting pack installation"
+  exit_on_error 1 "GCS_MARKET_KEY not set aborting pack installation"
 fi
 
 CONF_PATH="./Tests/conf.json"
 
 echo "Copying test_pack_*.zip to artifacts folder:${ARTIFACTS_FOLDER}"
 cp ./Tests/test_pack_*.zip "$ARTIFACTS_FOLDER" || true
-
 
 echo "Starting $0 script instance role:${INSTANCE_ROLE}, Server type:${SERVER_TYPE} nightly:${IS_NIGHTLY}"
 
@@ -58,21 +57,21 @@ if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; 
     exit_on_error 1 "No machines were chosen"
   fi
 elif [[ "${SERVER_TYPE}" == "XSOAR" ]]; then
-    python3 ./Tests/configure_and_test_integration_instances.py -u "$USERNAME" \
-      -p "$PASSWORD" \
-      -c "$CONF_PATH" \
-      --pack_ids_to_install "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" -g "$GIT_SHA1" --ami_env "${INSTANCE_ROLE}" \
-      --branch "$CI_COMMIT_BRANCH" --build_number "$CI_PIPELINE_ID" -sa "$GCS_MARKET_KEY" \
-      --server_type "${SERVER_TYPE}" \
-      --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" \
-      --marketplace_name "$MARKETPLACE_NAME" --artifacts_folder "$ARTIFACTS_FOLDER" --marketplace_buckets "$GCS_MACHINES_BUCKET" \
-      --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
-      --gsm_service_account "$GSM_SERVICE_ACCOUNT" \
-      --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN"
-    exit_on_error $? "Failed to run $0 script"
+  python3 ./Tests/configure_and_test_integration_instances.py -u "$USERNAME" \
+    -p "$PASSWORD" \
+    -c "$CONF_PATH" \
+    --pack_ids_to_install "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt" -g "$GIT_SHA1" --ami_env "${INSTANCE_ROLE}" \
+    --branch "$CI_COMMIT_BRANCH" --build_number "$CI_PIPELINE_ID" -sa "$GCS_MARKET_KEY" \
+    --server_type "${SERVER_TYPE}" \
+    --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" \
+    --marketplace_name "$MARKETPLACE_NAME" --artifacts_folder "$ARTIFACTS_FOLDER" --marketplace_buckets "$GCS_MACHINES_BUCKET" \
+    --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
+    --gsm_service_account "$GSM_SERVICE_ACCOUNT" \
+    --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN"
+  exit_on_error $? "Failed to run $0 script"
 
-    echo "Finished $0 successfully"
-    exit 0
+  echo "Finished $0 successfully"
+  exit 0
 else
   exit_on_error 1 "Unknown server type: ${SERVER_TYPE}"
 fi

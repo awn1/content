@@ -3,7 +3,7 @@
 TEST_PLAYBOOKS_RESULTS_FILE_NAME="${ARTIFACTS_FOLDER_INSTANCE}/test_playbooks_report.xml"
 
 function write_empty_test_results_file() {
-  cat <<EOF > "${TEST_PLAYBOOKS_RESULTS_FILE_NAME}"
+  cat <<EOF >"${TEST_PLAYBOOKS_RESULTS_FILE_NAME}"
 <?xml version='1.0' encoding='utf-8'?>
 <testsuites />
 EOF
@@ -13,12 +13,14 @@ EOF
 generate_empty_results_file="false"
 while [[ "$#" -gt 0 ]]; do
   case "${1}" in
-    --generate-empty-result-file) generate_empty_results_file="true"
-      shift;;
-    *)  # unknown option.
-      shift
-      echo "Unknown option was received: $1"
-      ;;
+  --generate-empty-result-file)
+    generate_empty_results_file="true"
+    shift
+    ;;
+  *) # unknown option.
+    shift
+    echo "Unknown option was received: $1"
+    ;;
   esac
 done
 
@@ -30,7 +32,7 @@ fi
 SECRET_CONF_PATH=$(cat secret_conf_path)
 
 echo "Getting cloud machine details for: ${CLOUD_CHOSEN_MACHINE_IDS}"
-python Tests/scripts/get_cloud_machines_details.py --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" > "cloud_machines_details.json"
+python Tests/scripts/get_cloud_machines_details.py --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" >"cloud_machines_details.json"
 echo "Saved cloud machine details for: ${CLOUD_CHOSEN_MACHINE_IDS} under 'cloud_machines_details.json'"
 
 CONF_PATH="./Tests/conf.json"
@@ -38,7 +40,7 @@ CONF_PATH="./Tests/conf.json"
 [ -n "${MEM_CHECK}" ] && MEM_CHECK=true || MEM_CHECK=false
 [ -z "${NON_AMI_RUN}" ] && IS_AMI_RUN=true || IS_AMI_RUN=false
 
-echo "export GOOGLE_APPLICATION_CREDENTIALS=$GCS_ARTIFACTS_KEY" >> "${BASH_ENV}"
+echo "export GOOGLE_APPLICATION_CREDENTIALS=$GCS_ARTIFACTS_KEY" >>"${BASH_ENV}"
 source "${BASH_ENV}"
 
 echo "Running server tests on Instance role:${INSTANCE_ROLE}, nightly:${IS_NIGHTLY}, AMI run:${IS_AMI_RUN} mem check:${MEM_CHECK} ARTIFACTS_FOLDER:${ARTIFACTS_FOLDER}"
@@ -47,10 +49,10 @@ exit_code=0
 if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; then
   if [ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]; then
     demisto-sdk test-content -k "$DEMISTO_API_KEY" -c "$CONF_PATH" -e "$SECRET_CONF_PATH" -n "${IS_NIGHTLY}" -t "$SLACK_TOKEN" \
-        -b "${CI_PIPELINE_ID}" -g "$CI_COMMIT_BRANCH" -m "${MEM_CHECK}" --is-ami "${IS_AMI_RUN}" -d "${INSTANCE_ROLE}" \
-        --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" --server-type "${SERVER_TYPE}" \
-        --use-retries --cloud_servers_api_keys "cloud_machines_details.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" --product-type="${PRODUCT_TYPE}" --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
-        --service_account "${GCS_ARTIFACTS_KEY}" --artifacts_bucket "${GCS_ARTIFACTS_BUCKET}"
+      -b "${CI_PIPELINE_ID}" -g "$CI_COMMIT_BRANCH" -m "${MEM_CHECK}" --is-ami "${IS_AMI_RUN}" -d "${INSTANCE_ROLE}" \
+      --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" --server-type "${SERVER_TYPE}" \
+      --use-retries --cloud_servers_api_keys "cloud_machines_details.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" --product-type="${PRODUCT_TYPE}" --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
+      --service_account "${GCS_ARTIFACTS_KEY}" --artifacts_bucket "${GCS_ARTIFACTS_BUCKET}"
     command_exit_code=$?
     if [ "${command_exit_code}" -ne 0 ]; then
       exit_code=1
@@ -62,13 +64,13 @@ if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; 
   fi
 
 elif [[ "${SERVER_TYPE}" == "XSOAR" ]]; then
-    demisto-sdk test-content -k "$DEMISTO_API_KEY" -c "$CONF_PATH" -e "$SECRET_CONF_PATH" -n "${IS_NIGHTLY}" -t "$SLACK_TOKEN" \
-      -b "${CI_PIPELINE_ID}" -g "$CI_COMMIT_BRANCH" -m "${MEM_CHECK}" --is-ami "${IS_AMI_RUN}" -d "${INSTANCE_ROLE}" \
-      --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" --server-type "${SERVER_TYPE}" \
-      --use-retries --cloud_servers_api_keys "cloud_machines_details.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" --product-type="${PRODUCT_TYPE}" --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
-      --service_account "${GCS_ARTIFACTS_KEY}" --artifacts_bucket "${GCS_ARTIFACTS_BUCKET}"
-    exit_code=$?
-    echo "Failed to run test content with exit code:${exit_code}"
+  demisto-sdk test-content -k "$DEMISTO_API_KEY" -c "$CONF_PATH" -e "$SECRET_CONF_PATH" -n "${IS_NIGHTLY}" -t "$SLACK_TOKEN" \
+    -b "${CI_PIPELINE_ID}" -g "$CI_COMMIT_BRANCH" -m "${MEM_CHECK}" --is-ami "${IS_AMI_RUN}" -d "${INSTANCE_ROLE}" \
+    --cloud_machine_ids "${CLOUD_CHOSEN_MACHINE_IDS}" --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" --server-type "${SERVER_TYPE}" \
+    --use-retries --cloud_servers_api_keys "cloud_machines_details.json" --artifacts-path="${ARTIFACTS_FOLDER_INSTANCE}" --product-type="${PRODUCT_TYPE}" --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
+    --service_account "${GCS_ARTIFACTS_KEY}" --artifacts_bucket "${GCS_ARTIFACTS_BUCKET}"
+  exit_code=$?
+  echo "Failed to run test content with exit code:${exit_code}"
 else
   exit_on_error 1 "Unknown server type: ${SERVER_TYPE}"
 fi
@@ -94,4 +96,3 @@ else
   echo "Finish running server tests on instance role: ${INSTANCE_ROLE}, server type:${SERVER_TYPE} - Error handling will be done on the results job, exiting with code 0"
   exit 0
 fi
-

@@ -13,7 +13,8 @@ _circle_token=$2
 trigger_build_url="https://circleci.com/api/v2/project/github/demisto/content/pipeline"
 
 if [ -z "$3" ]; then
-  post_data=$(cat <<-EOF
+  post_data=$(
+    cat <<-EOF
  {
     "branch": "${_branch}",
     "parameters": {
@@ -21,9 +22,10 @@ if [ -z "$3" ]; then
     }
   }
 EOF
-)
+  )
 else
-  post_data=$(cat <<-EOF
+  post_data=$(
+    cat <<-EOF
   {
     "branch": "${_branch}",
     "parameters": {
@@ -32,16 +34,16 @@ else
     }
   }
 EOF
-)
+  )
 fi
 
 echo "Going to post to: $trigger_build_url the following data:"
 echo "$post_data"
 
 curl \
---header "Accept: application/json" \
---header "Content-Type: application/json" \
--k \
---data "${post_data}" \
---request POST ${trigger_build_url} \
---user "$_circle_token:"
+  --header "Accept: application/json" \
+  --header "Content-Type: application/json" \
+  -k \
+  --data "${post_data}" \
+  --request POST ${trigger_build_url} \
+  --user "$_circle_token:"

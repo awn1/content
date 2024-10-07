@@ -22,7 +22,7 @@ if [ "$#" -lt "1" ]; then
   exit 1
 fi
 
-_branch="$(git branch  --show-current)"
+_branch="$(git branch --show-current)"
 _bucket="marketplace-dist-dev"
 _bucket_v2="marketplace-v2-dist-dev"
 _bucket_xpanse="xpanse-dist-dev"
@@ -38,97 +38,117 @@ _infra_branch="${INFRA_BRANCH:-master}"
 while [[ "$#" -gt 0 ]]; do
   case $1 in
 
-  -ct|--ci-token) _ci_token="$2"
+  -ct | --ci-token)
+    _ci_token="$2"
     shift
-    shift;;
-
-  -b|--branch) _branch="$2"
     shift
-    shift;;
+    ;;
 
-  -gb|--bucket)
-  if [ "$(echo "$2" | tr '[:upper:]' '[:lower:]')" == "marketplace-dist" ]; then
-    echo "Only test buckets are allowed to use. Using marketplace-dist-dev instead."
-  else
-    _bucket=$2
-  fi
+  -b | --branch)
+    _branch="$2"
     shift
-    shift;;
-
-  -gb2|--bucket_v2)
-  if [ "$(echo "$2" | tr '[:upper:]' '[:lower:]')" == "marketplace-v2-dist" ]; then
-    echo "Only test buckets are allowed to use. Using marketplace-v2-dist-dev instead."
-  else
-    _bucket_v2=$2
-  fi
     shift
-    shift;;
+    ;;
 
-  -gb3|--bucket_xpanse)
-  if [ "$(echo "$2" | tr '[:upper:]' '[:lower:]')" == "xpanse-dist" ]; then
-    echo "Only test buckets are allowed to use. Using xpanse-dist-dev instead."
-  else
-    _bucket_xpanse=$2
-  fi
+  -gb | --bucket)
+    if [ "$(echo "$2" | tr '[:upper:]' '[:lower:]')" == "marketplace-dist" ]; then
+      echo "Only test buckets are allowed to use. Using marketplace-dist-dev instead."
+    else
+      _bucket=$2
+    fi
     shift
-    shift;;
-
-  -gb4|--bucket_xsoar_saas)
-  if [ "$(echo "$2" | tr '[:upper:]' '[:lower:]')" == "marketplace-saas-dist" ]; then
-    echo "Only test buckets are allowed to use. Using marketplace-saas-dist-dev instead."
-  else
-    _bucket_xsoar_saas=$2
-  fi
     shift
-    shift;;
+    ;;
 
-  -f|--force) _force="true"
+  -gb2 | --bucket_v2)
+    if [ "$(echo "$2" | tr '[:upper:]' '[:lower:]')" == "marketplace-v2-dist" ]; then
+      echo "Only test buckets are allowed to use. Using marketplace-v2-dist-dev instead."
+    else
+      _bucket_v2=$2
+    fi
     shift
-    shift;;
-
-  -p|--packs) _packs="$2"
     shift
-    shift;;
+    ;;
 
-  -ch|--slack-channel) _slack_channel="$2"
+  -gb3 | --bucket_xpanse)
+    if [ "$(echo "$2" | tr '[:upper:]' '[:lower:]')" == "xpanse-dist" ]; then
+      echo "Only test buckets are allowed to use. Using xpanse-dist-dev instead."
+    else
+      _bucket_xpanse=$2
+    fi
     shift
-    shift;;
-
-  -sbp|--storage-base-path) _storage_base_path="$2"
     shift
-    shift;;
+    ;;
 
-  -sr|--sdk-ref)
+  -gb4 | --bucket_xsoar_saas)
+    if [ "$(echo "$2" | tr '[:upper:]' '[:lower:]')" == "marketplace-saas-dist" ]; then
+      echo "Only test buckets are allowed to use. Using marketplace-saas-dist-dev instead."
+    else
+      _bucket_xsoar_saas=$2
+    fi
+    shift
+    shift
+    ;;
+
+  -f | --force)
+    _force="true"
+    shift
+    shift
+    ;;
+
+  -p | --packs)
+    _packs="$2"
+    shift
+    shift
+    ;;
+
+  -ch | --slack-channel)
+    _slack_channel="$2"
+    shift
+    shift
+    ;;
+
+  -sbp | --storage-base-path)
+    _storage_base_path="$2"
+    shift
+    shift
+    ;;
+
+  -sr | --sdk-ref)
     _sdk_ref="${2}"
     _override_sdk_ref="true"
     shift
-    shift;;
+    shift
+    ;;
 
-  -o|--override-all-packs) _override_all_packs=true
-    shift;;
+  -o | --override-all-packs)
+    _override_all_packs=true
+    shift
+    ;;
 
-  -dz|--create_dependencies_zip) _create_dependencies_zip=true
-    shift;;
+  -dz | --create_dependencies_zip)
+    _create_dependencies_zip=true
+    shift
+    ;;
 
-  *)    # unknown option.
-    shift;;
+  *) # unknown option.
+    shift ;;
   esac
 done
 
-
 if [ -z "$_ci_token" ]; then
-    echo "You must provide a ci token."
-    exit 1
+  echo "You must provide a ci token."
+  exit 1
 fi
 
 if [ "$_force" == "true" ] && [ -z "$_packs" ]; then
-    echo "You must provide a csv list of packs to force upload."
-    exit 1
+  echo "You must provide a csv list of packs to force upload."
+  exit 1
 fi
 
 if [ "$_force" == "true" ] && [ -n "$_storage_base_path" ]; then
-    echo "Can not force upload while using a storage base path."
-    exit 1
+  echo "Can not force upload while using a storage base path."
+  exit 1
 fi
 if [ -n "$_storage_base_path" ] && [[ "$_storage_base_path" != *content ]]; then
   echo "$_storage_base_path"

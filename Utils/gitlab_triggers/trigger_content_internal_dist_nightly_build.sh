@@ -1,36 +1,40 @@
 #!/usr/bin/env bash
 
-
 _slack_channel="dmst-build-test"
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
 
-  -ct|--ci-token) _ci_token="$2"
+  -ct | --ci-token)
+    _ci_token="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  -sdk|--sdk-ref) _sdk_ref="$2"
+  -sdk | --sdk-ref)
+    _sdk_ref="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  -ch|--slack-channel) _slack_channel="$2"
+  -ch | --slack-channel)
+    _slack_channel="$2"
     shift
-    shift;;
+    shift
+    ;;
 
   esac
 done
 
 if [ -z "$_ci_token" ]; then
-    echo "You must provide a ci token."
-    exit 1
+  echo "You must provide a ci token."
+  exit 1
 fi
 
 GOLD_PROJECT_ID=${GOLD_PROJECT_ID:-1738}
 CI_SERVER_URL=${CI_SERVER_URL:-https://gitlab.xdr.pan.local} # disable-secrets-detection
 
 export BUILD_TRIGGER_URL="${CI_SERVER_URL}/api/v4/projects/${GOLD_PROJECT_ID}/trigger/pipeline"
-
 
 curl --request POST \
   --form "ref=master" \

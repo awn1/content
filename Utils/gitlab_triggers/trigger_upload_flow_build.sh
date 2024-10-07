@@ -18,7 +18,7 @@ if [ "$#" -lt "1" ]; then
   exit 1
 fi
 
-_branch="$(git branch  --show-current)"
+_branch="$(git branch --show-current)"
 _bucket="marketplace-dist-dev"
 _bucket_v2="marketplace-v2-dist-dev"
 _bucket_xpanse="xpanse-dist-dev"
@@ -32,62 +32,81 @@ _override_all_pack="false"
 while [[ "$#" -gt 0 ]]; do
   case $1 in
 
-  -ct|--ci-token) _ci_token="$2"
+  -ct | --ci-token)
+    _ci_token="$2"
     shift
-    shift;;
-
-  -b|--branch) _branch="$2"
     shift
-    shift;;
+    ;;
 
-  -gb|--bucket) _bucket="$2"
+  -b | --branch)
+    _branch="$2"
     shift
-    shift;;
-
-  -gb2|--bucket_v2) _bucket_v2="$2"
     shift
-    shift;;
+    ;;
 
-  -gb3| --bucket_xpanse) _bucket_xpanse="$2"
+  -gb | --bucket)
+    _bucket="$2"
     shift
-    shift;;
-
-  -gb4|--bucket_xsoar_saas) _bucket_xsoar_saas="$2"
     shift
-    shift;;
+    ;;
 
-  -f|--force) _force="true"
+  -gb2 | --bucket_v2)
+    _bucket_v2="$2"
     shift
-    shift;;
-
-  -p|--packs) _packs="$2"
     shift
-    shift;;
+    ;;
 
-  -ch|--slack-channel) _slack_channel="$2"
+  -gb3 | --bucket_xpanse)
+    _bucket_xpanse="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  -oa|--override-all) _override_all_pack="true"
-    shift;;
+  -gb4 | --bucket_xsoar_saas)
+    _bucket_xsoar_saas="$2"
+    shift
+    shift
+    ;;
 
-  *)    # unknown option.
-    shift;;
+  -f | --force)
+    _force="true"
+    shift
+    shift
+    ;;
+
+  -p | --packs)
+    _packs="$2"
+    shift
+    shift
+    ;;
+
+  -ch | --slack-channel)
+    _slack_channel="$2"
+    shift
+    shift
+    ;;
+
+  -oa | --override-all)
+    _override_all_pack="true"
+    shift
+    ;;
+
+  *) # unknown option.
+    shift ;;
   esac
 done
 
-
 if [ -z "$_ci_token" ]; then
-    echo "You must provide a ci token."
-    exit 1
+  echo "You must provide a ci token."
+  exit 1
 fi
 
 if [ "$_force" == "true" ] && [ -z "$_packs" ]; then
-    echo "You must provide a csv list of packs to force upload."
-    exit 1
+  echo "You must provide a csv list of packs to force upload."
+  exit 1
 fi
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 source ${SCRIPT_DIR}/trigger_build_url.sh
 
 curl -k -v --request POST \

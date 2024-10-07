@@ -19,37 +19,47 @@ _override_sdk_ref="${DEMISTO_SDK_NIGHTLY:-false}"
 while [[ "$#" -gt 0 ]]; do
   case $1 in
 
-  -ct|--ci-token) _ci_token="$2"
+  -ct | --ci-token)
+    _ci_token="$2"
     shift
-    shift;;
-
-  -cb|--content-branch) _content_branch="$2"
     shift
-    shift;;
+    ;;
 
-  -ib|--infra-branch) _infra_branch="$2"
+  -cb | --content-branch)
+    _content_branch="$2"
     shift
-    shift;;
-
-  -ch|--slack-channel) _slack_channel="$2"
     shift
-    shift;;
+    ;;
 
-  -sr|--sdk-ref)
+  -ib | --infra-branch)
+    _infra_branch="$2"
+    shift
+    shift
+    ;;
+
+  -ch | --slack-channel)
+    _slack_channel="$2"
+    shift
+    shift
+    ;;
+
+  -sr | --sdk-ref)
     _sdk_ref="${2}"
     _override_sdk_ref="true"
     shift
-    shift;;
+    shift
+    ;;
 
-  *)    # unknown option.
+  *) # unknown option.
     echo "Unknown parameter passed: $1"
-    exit 1;;
+    exit 1
+    ;;
   esac
 done
 
 if [ -z "${_ci_token}" ]; then
-    echo "You must provide a ci token."
-    exit 1
+  echo "You must provide a ci token."
+  exit 1
 fi
 
 if [ -z "${_content_branch}" ]; then

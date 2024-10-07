@@ -9,10 +9,10 @@ aws ec2 wait instance-running --instance-ids ${INSTANCE_ID}
 echo "Instance started. fetching IP"
 
 PUBLIC_IP=$(aws ec2 describe-instances --instance-ids ${INSTANCE_ID} \
-    --query 'Reservations[0].Instances[0].PublicIpAddress' | tr -d '"')
+  --query 'Reservations[0].Instances[0].PublicIpAddress' | tr -d '"')
 echo "Instance public IP is: $PUBLIC_IP"
 
-echo ${PUBLIC_IP} > public_ip
+echo ${PUBLIC_IP} >public_ip
 
 echo "wait 90 seconds to ensure server is ready for ssh"
 sleep 90s
@@ -20,7 +20,7 @@ sleep 90s
 USER="gcp-user"
 
 echo "add instance to known hosts"
-ssh-keyscan -H ${PUBLIC_IP} >> ~/.ssh/known_hosts
+ssh-keyscan -H ${PUBLIC_IP} >>~/.ssh/known_hosts
 
 # copy content files
 ssh ${USER}@${PUBLIC_IP} 'mkdir ~/content'

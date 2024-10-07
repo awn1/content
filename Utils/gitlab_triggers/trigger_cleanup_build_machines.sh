@@ -27,7 +27,7 @@ if [ "$#" -lt "1" ]; then
   exit 1
 fi
 
-_branch="$(git branch  --show-current)"
+_branch="$(git branch --show-current)"
 _slack_channel="dmst-build-machines-cleanup"
 _machine_type="nightly"
 _machine=""
@@ -40,44 +40,62 @@ _old_pipeline=""
 while [[ "$#" -gt 0 ]]; do
   case $1 in
 
-  -ct|--ci-token) _ci_token="$2"
+  -ct | --ci-token)
+    _ci_token="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  -b|--branch) _branch="$2"
+  -b | --branch)
+    _branch="$2"
     shift
-    shift;;
+    shift
+    ;;
 
-  -ch|--slack-channel) _slack_channel="$2"
+  -ch | --slack-channel)
+    _slack_channel="$2"
     shift
-    shift;;
-  -m|--machine) _machine="$2"
     shift
-    shift;;
-  -mt|--machine-type) _machine_type="$2"
+    ;;
+  -m | --machine)
+    _machine="$2"
     shift
-    shift;;
-  -mc|--machine-count) _machine_count="$2"
     shift
-    shift;;
-  -p|--lock-path) _lock_path="$2"
+    ;;
+  -mt | --machine-type)
+    _machine_type="$2"
     shift
-    shift;;
-  -st|--server-type) _server_type="$2"
     shift
-    shift;;
-  -op|--old_pipeline) _old_pipeline="$2"
+    ;;
+  -mc | --machine-count)
+    _machine_count="$2"
     shift
-    shift;;
+    shift
+    ;;
+  -p | --lock-path)
+    _lock_path="$2"
+    shift
+    shift
+    ;;
+  -st | --server-type)
+    _server_type="$2"
+    shift
+    shift
+    ;;
+  -op | --old_pipeline)
+    _old_pipeline="$2"
+    shift
+    shift
+    ;;
 
-  *)    # unknown option.
-    shift;;
+  *) # unknown option.
+    shift ;;
   esac
 done
 
 if [ -z "$_ci_token" ]; then
-    echo "You must provide a ci token."
-    exit 1
+  echo "You must provide a ci token."
+  exit 1
 fi
 
 CONTENT_PROJECT_ID=${CONTENT_PROJECT_ID:-1701}
@@ -85,12 +103,12 @@ CI_SERVER_URL=${CI_SERVER_URL:-https://gitlab.xdr.pan.local} # disable-secrets-d
 export BUILD_TRIGGER_URL="${CI_SERVER_URL}/api/v4/projects/${CONTENT_PROJECT_ID}/trigger/pipeline"
 
 curl "$BUILD_TRIGGER_URL" --form "ref=${_branch}" --form "token=${_ci_token}" \
-    --form "variables[BUILD_MACHINES_CLEANUP]=true" \
-    --form "variables[SLACK_CHANNEL]=${_slack_channel}" \
-    --form "variables[LOCK_MACHINE_NAME]=${_machine}" \
-    --form "variables[CLOUD_MACHINES_TYPE]=${_machine_type}" \
-    --form "variables[CLOUD_MACHINES_COUNT]=${_machine_count}" \
-    --form "variables[GCS_LOCKS_PATH]=${_lock_path}" \
-    --form "variables[SERVER_TYPE]=${_server_type}"\
-    --form "variables[BRANCH]=${_branch}"\
-    --form "variables[OLD_PIPELINE]=${_old_pipeline}" | jq
+  --form "variables[BUILD_MACHINES_CLEANUP]=true" \
+  --form "variables[SLACK_CHANNEL]=${_slack_channel}" \
+  --form "variables[LOCK_MACHINE_NAME]=${_machine}" \
+  --form "variables[CLOUD_MACHINES_TYPE]=${_machine_type}" \
+  --form "variables[CLOUD_MACHINES_COUNT]=${_machine_count}" \
+  --form "variables[GCS_LOCKS_PATH]=${_lock_path}" \
+  --form "variables[SERVER_TYPE]=${_server_type}" \
+  --form "variables[BRANCH]=${_branch}" \
+  --form "variables[OLD_PIPELINE]=${_old_pipeline}" | jq
