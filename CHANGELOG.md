@@ -1,3 +1,26 @@
+# Content Infrastructure 0.0.9 (2024-10-07)
+
+### Features
+
+- Enhanced pre- / post-update instance testing. ([CIAC-11059](https://jira-dc.paloaltonetworks.com/browse/CIAC-11059))
+- demisto-sdk now supports using a DockerHub proxy from GAR when running in a Gitlab CI environment. ([CIAC-11589](https://jira-dc.paloaltonetworks.com/browse/CIAC-11589))
+
+### Bugfixes
+
+- Fixed a issue where the upload core files script failed because of querying the wrong bucket. ([132353](https://jira-dc.paloaltonetworks.com/browse/132353))
+- Added better handling for test-upload-flow pipeline creation failures.
+- Raised timeout for cleanup step.
+- fixing an issue where the missing users in the mapping wasn't returned
+
+### Misc
+
+- [CIAC-11751](https://jira-dc.paloaltonetworks.com/browse/CIAC-11751)
+- Added `shfmt`
+- Added a `poetry.toml` to the infra repo. This tells `Poetry` to always create the virtual environments in the project directory (rather than `/.cache/pypoetry`)
+- Added values to the secrets ignore list.
+- demisto-sdk release 1.32.2.
+
+
 # Content Infrastructure 0.0.8 (2024-09-25)
 
 ### Bugfixes
