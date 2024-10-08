@@ -933,31 +933,41 @@ def main():
     test_upload_flow_pipeline_id_file = ROOT_ARTIFACTS_FOLDER / TEST_UPLOAD_FLOW_PIPELINE_ID
     if test_upload_flow_pipeline_id_file.exists():
         test_upload_flow_pipeline_id = test_upload_flow_pipeline_id_file.read_text().strip()
-        test_upload_flow_slack_message, test_upload_flow_slack_message_threads, _, test_upload_flow_pipeline = (
-            get_pipeline_slack_data(gitlab_client, test_upload_flow_pipeline_id, project_id)
-        )
-        logging.info(f"Got Slack data from test upload flow pipeline: {test_upload_flow_pipeline_id}")
-        test_upload_flow_pipeline_title = f"Test Upload Flow Slack message - Pipeline Status:{test_upload_flow_pipeline.status}"
-        threaded_messages.append(
-            {
-                "title_link": test_upload_flow_pipeline.web_url,
-                "color": "good" if test_upload_flow_pipeline.status == "success" else "danger",
-                "fallback": test_upload_flow_pipeline_title,
-                "title": test_upload_flow_pipeline_title,
-            }
-        )
-        if not test_upload_flow_slack_message or not test_upload_flow_slack_message_threads:
-            logging.error(f"Failed to get Slack message or threads for test upload flow pipeline: {test_upload_flow_pipeline_id}")
+        test_upload_flow_slack_message = None
+        test_upload_flow_slack_message_threads = None
+        try:
+            test_upload_flow_slack_message, test_upload_flow_slack_message_threads, _, test_upload_flow_pipeline = (
+                get_pipeline_slack_data(gitlab_client, test_upload_flow_pipeline_id, project_id)
+            )
+            logging.info(f"Got Slack data from test upload flow pipeline: {test_upload_flow_pipeline_id}")
+            test_upload_flow_pipeline_title = (
+                f"Test Upload Flow Slack message - Pipeline Status:{test_upload_flow_pipeline.status}"
+            )
             threaded_messages.append(
                 {
-                    "fallback": "Failed to get Slack message or threads for test upload flow pipeline",
-                    "title": "Failed to get Slack message or threads for test upload flow pipeline",
-                    "color": "danger",
+                    "title_link": test_upload_flow_pipeline.web_url,
+                    "color": "good" if test_upload_flow_pipeline.status == "success" else "danger",
+                    "fallback": test_upload_flow_pipeline_title,
+                    "title": test_upload_flow_pipeline_title,
                 }
             )
 
-        threaded_messages.extend(test_upload_flow_slack_message)
-        threaded_messages.extend(test_upload_flow_slack_message_threads)
+            threaded_messages.extend(test_upload_flow_slack_message)
+            threaded_messages.extend(test_upload_flow_slack_message_threads)
+        except Exception as e:
+            logging.exception(f"Failed to get Slack message or threads for test upload flow pipeline, reason: {e}")
+        finally:
+            if not test_upload_flow_slack_message or not test_upload_flow_slack_message_threads:
+                logging.error(
+                    f"Failed to get Slack message or threads for test upload flow pipeline: {test_upload_flow_pipeline_id}"
+                )
+                threaded_messages.append(
+                    {
+                        "fallback": "Failed to get Slack message or threads for test upload flow pipeline",
+                        "title": "Failed to get Slack message or threads for test upload flow pipeline",
+                        "color": "danger",
+                    }
+                )
 
     # We only need the channel mapping from the parent pipeline, so we can append it to the current pipeline's messages.
     parent_slack_message_channel_to_thread: dict = {}
