@@ -8,6 +8,7 @@ import pytest
 import requests
 import timeout_decorator
 from demisto_client.demisto_api.rest import ApiException
+from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
 from google.cloud.storage import Blob
 from networkx import DiGraph
 from pytest_mock import MockFixture
@@ -631,9 +632,7 @@ def test_get_all_content_packs_dependencies(mocker: MockFixture):
     mocker.patch.object(script, "get_hybrid_pack_dependencies", return_value=mock_hybrid_pack_request)
     hybrid_pack_mocker = mocker.MagicMock()
     hybrid_pack_mocker.object_id = "HybridPack"
-    # NOTE See CIAC-11638
-    # mocker.patch.object(Neo4jContentGraphInterface, "search", return_value=[hybrid_pack_mocker])
-    script.HYBRID_PACKS = [hybrid_pack_mocker.object_id]
+    mocker.patch.object(Neo4jContentGraphInterface, "search", return_value=[hybrid_pack_mocker])
     script.PAGE_SIZE_DEFAULT = 2
 
     # Call function and test
@@ -655,9 +654,7 @@ def test_get_all_content_packs_dependencies_empty(mocker: MockFixture):
     client = mocker.Mock()
     mocker.patch.object(script, "get_one_page_of_packs_dependencies", return_value={"total": 3, "packs": []})
     mocker.patch.object(script, "get_hybrid_pack_dependencies", return_value={})
-    # NOTE See CIAC-11638
-    # mocker.patch.object(Neo4jContentGraphInterface, "search", return_value=[])
-    script.HYBRID_PACKS = []
+    mocker.patch.object(Neo4jContentGraphInterface, "search", return_value=[])
     result = script.get_all_content_packs_dependencies(client)
 
     assert result == {}
@@ -696,9 +693,7 @@ def test_get_all_content_packs_dependencies_null(mocker: MockFixture):
     ]
     mocker.patch.object(script, "get_one_page_of_packs_dependencies", side_effect=mock_request)
     mocker.patch.object(script, "get_hybrid_pack_dependencies", return_value={})
-    # NOTE See CIAC-11638
-    # mocker.patch.object(Neo4jContentGraphInterface, "search", return_value=[])
-    script.HYBRID_PACKS = []
+    mocker.patch.object(Neo4jContentGraphInterface, "search", return_value=[])
     script.PAGE_SIZE_DEFAULT = 2
 
     # Call function and test
