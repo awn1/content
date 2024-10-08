@@ -28,7 +28,7 @@ fi
 
 if [ -f "${ARTIFACTS_FOLDER_SERVER_TYPE}/versions-metadata.json" ]; then
   echo "Uploading versions-metadata.json."
-  gsutil cp -z json "${ARTIFACTS_FOLDER_SERVER_TYPE}/versions-metadata.json" "gs://$BUILD_BUCKET_PACKS_DIR_FULL_PATH" >> "${ARTIFACTS_FOLDER_SERVER_TYPE}/logs/upload_versions_core_files_gsutil.log" 2>&1
+  gsutil cp -z json "${ARTIFACTS_FOLDER_SERVER_TYPE}/versions-metadata.json" "gs://$BUILD_BUCKET_PACKS_DIR_FULL_PATH" >>"${ARTIFACTS_FOLDER_SERVER_TYPE}/logs/upload_versions_core_files_gsutil.log" 2>&1
   echo "Successfully uploaded versions-metadata.json."
 else
   echo "No versions-metadata.json file, skipping uploading."
