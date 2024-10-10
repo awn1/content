@@ -71,7 +71,7 @@ def get_pack_content_paths(pack_path: Path, marketplace=MarketplaceVersions.XSOA
     sub_dirs = [str(sub_dir) for sub_dir in sub_dirs if '.' not in str(sub_dir)]
 
     for content_item_type in sub_dirs:
-        if content_item_type not in ['ReleaseNotes', 'TestPlaybooks']:
+        if content_item_type not in ['ReleaseNotes', 'TestPlaybooks', 'doc_files']:
             content_dict[content_item_type] = ['/'.join(p.parts[1:]) for p in Path(os.path.join(str(pack_artifacts_path),
                                                                                                 content_item_type)).glob('*')]
     shutil.rmtree(pack_artifacts_path)

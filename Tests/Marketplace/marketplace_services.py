@@ -2520,6 +2520,8 @@ class Pack:
                             return False
         else:
             logging.debug(f"No markdown relative path images were found in pack {self.name}")
+        if (Path(self.path) / "doc_files").exists():
+            shutil.rmtree(Path(self.path) / "doc_files")
         return True
 
     def process_and_upload_image(self, image: dict, storage_bucket, storage_base_path):
