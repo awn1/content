@@ -676,6 +676,7 @@
 
 .update-content-graph:
   - section_start "Update content graph" --collapsed
+  - gcloud auth configure-docker ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
   - echo "Updating the content graph"
   - demisto-sdk graph update -g --marketplace "${MARKETPLACE_NAME}" -i "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_graph/${MARKETPLACE_NAME}.zip"
   - echo "Successfully updated content graph"
