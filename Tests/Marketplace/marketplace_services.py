@@ -1227,6 +1227,7 @@ class Pack:
         same_block_versions_dict: dict = {}
         for item in changelog:  # divide the versions into lists of lower and higher than given version
             (lower_versions if Version(item) < Version(version) else higher_versions).append(Version(item))
+        logging.debug(f"Checking for version '{version}' in changelog: '{changelog.keys()}'. {lower_versions}, {higher_versions}")
         higher_nearest_version = min(higher_versions)
         lower_versions = lower_versions + lowest_version  # if the version is 1.0.0, ensure lower_versions is not empty
         lower_nearest_version = max(lower_versions)
@@ -3849,7 +3850,9 @@ def is_content_item_in_id_set(display_name: str, rn_header: str, id_set: dict, m
 
     if not id_set:
         logging.debug("id_set does not exist, searching in graph")
-        content_type = rn_header.replace(" ", "")[:-1]
+        content_type = (
+            rn_header.replace(" ", "")[:-1] if rn_header != "Triggers Recommendations" else rn_header.split(" ")[0][:-1]
+        )
 
         if not is_content_item_in_graph(
             display_name=display_name,
