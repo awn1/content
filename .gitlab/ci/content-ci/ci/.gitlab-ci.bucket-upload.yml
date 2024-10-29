@@ -1,3 +1,4 @@
+
 .bucket-upload-rule:
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /pull\/[0-9]+/'
@@ -907,8 +908,7 @@ upload-id-set-bucket:
   extends:
     - .bucket-upload-rule
     - .default-job-settings
-  stage: upload-to-marketplace
-  when: always
+  stage: sync-buckets
   variables:
     MARKETPLACE_XSOAR_PROD: "marketplace-xsoar"
     MARKETPLACE_V2_PROD: "marketplace-xsiam"
@@ -974,6 +974,14 @@ sync-buckets-between-projects:
     - job: upload-packs-to-xpanse-marketplace
       artifacts: false
     - job: upload-packs-to-xsoar-saas-marketplace
+      artifacts: false
+    - job: mpv2-prepare-testing-bucket-upload-flow
+      artifacts: false
+    - job: xpanse-prepare-testing-bucket-upload-flow
+      artifacts: false
+    - job: xsoar-prepare-testing-bucket-upload-flow
+      artifacts: false
+    - job: xsoar-saas-prepare-testing-bucket-upload-flow
       artifacts: false
     - job: cloning-repositories-upload-flow
       artifacts: true
