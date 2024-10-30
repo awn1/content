@@ -66,7 +66,7 @@ else
     if [ -n "${ARTIFACTS_FOLDER}" ] && [ "${error_code}" -ne 0 ]; then
       cp "${PWD}"/poetry-installer-error-*.log "${ARTIFACTS_FOLDER}"
     fi
-    exit_on_error $error_code "Failed to install Poetry version:${POETRY_VERSION}"
+    exit_on_error $? "Failed to install Poetry version:${POETRY_VERSION}"
   fi
 fi
 
