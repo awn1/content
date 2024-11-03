@@ -2,7 +2,7 @@
 
 ### Features
 
-- Bump demisto-sdk to version 1.32.3. 
+- Bump demisto-sdk to version 1.32.3.
 - Remove demisto-sdk support using a DockerHub proxy from GAR when running in a Gitlab CI environment.
 
 ### Bugfixes
