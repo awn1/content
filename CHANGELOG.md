@@ -2,17 +2,17 @@
 
 ### Features
 
-- Bump demisto-sdk to version 1.32.3.
-  remove demisto-sdk support using a DockerHub proxy from GAR when running in a Gitlab CI environment.
+- Bump demisto-sdk to version 1.32.3. 
+- Remove demisto-sdk support using a DockerHub proxy from GAR when running in a Gitlab CI environment.
 
 ### Bugfixes
 
 - Added docker authentication to update-content-graph job to allow initialising a docker daemon using the job's service account. ([CIAC-11589](https://jira-dc.paloaltonetworks.com/browse/CIAC-11589))
-- fix Step sync-bucket-between-projects starts before the upload steps are completed. ([CIAC-11965](https://jira-dc.paloaltonetworks.com/browse/CIAC-11965))
+- Fixed the timing of the step sync-bucket-between-projects to start after the upload steps are completed. ([CIAC-11965](https://jira-dc.paloaltonetworks.com/browse/CIAC-11965))
 - Fixed an issue where content items of type *Triggers Recommendations* were being filtered out during the upload process. ([CIAC-12002](https://jira-dc.paloaltonetworks.com/browse/CIAC-12002))
 - Fixing an issue where the Content Graph Interface failed in a multi-threaded environment due to an inability to create multiple interfaces at the same time. ([11638](https://jira-dc.paloaltonetworks.com/browse/11638))
 - Added better handling for cases where slack notifier fails to get trigger-test-upload report.
-- Added cleanup for pack's doc_files folder after relative image path upload
+- Added cleanup for pack's doc_files folder after relative image path upload.
 - Fixed an issue where error appeared in Installing Virtualenv step due to missing exit_code.
 
 ### Deprecations and Removals
