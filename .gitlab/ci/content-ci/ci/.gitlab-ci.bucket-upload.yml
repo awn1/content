@@ -441,7 +441,6 @@ install-packs-in-server-master:
   stage: run-instances
   extends:
     - .default-job-settings
-    - .docker_services
   script:
     - EXIT_CODE=0
 
