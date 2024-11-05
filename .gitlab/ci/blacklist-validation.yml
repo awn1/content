@@ -2,8 +2,13 @@
   rules:
     - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BLACKLIST_VALIDATION == "true"'
 
-.clone_from_git: &clone_from_git
-  # If content are found in the runner, remove it. Clone from content repo.
+.blacklist-validation-schedule-rule-always:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BLACKLIST_VALIDATION == "true"'
+      when: always
+
+.clone_from_git:
+  &clone_from_git # If content are found in the runner, remove it. Clone from content repo.
 
   - cd ${CI_PROJECT_DIR}
   - git fetch --all
@@ -12,15 +17,15 @@
   - git branch --set-upstream-to=origin/$CI_COMMIT_BRANCH $CI_COMMIT_BRANCH
   - cd ${CI_BUILDS_DIR}/${CI_PROJECT_NAMESPACE}
   - |
-      if [ -d "${CI_BUILDS_DIR}/${CI_PROJECT_NAMESPACE}/content" ]; then
-        echo "Found content, removing and re-cloning"
-        rm -rf "${CI_BUILDS_DIR}/${CI_PROJECT_NAMESPACE}/content"
-      fi
+    if [ -d "${CI_BUILDS_DIR}/${CI_PROJECT_NAMESPACE}/content" ]; then
+      echo "Found content, removing and re-cloning"
+      rm -rf "${CI_BUILDS_DIR}/${CI_PROJECT_NAMESPACE}/content"
+    fi
   - git clone https://github.com/demisto/content.git --depth 1
 
 blacklist-validation-job:
   extends:
-    - .blacklist-validation-schedule-rule  # put in comment for testing
+    - .blacklist-validation-schedule-rule # put in comment for testing
     - .default-job-settings
   stage: blacklist-validation
 
@@ -28,10 +33,36 @@ blacklist-validation-job:
     SECRETS_GOLD_API_KEY_NG: $SECRETS_GOLD_API_KEY_NG
     SECRETS_GOLD_AUTH_ID_NG: $SECRETS_GOLD_AUTH_ID_NG
     SLACK_TOKEN: $SLACK_TOKEN
+    ARTIFACTS_FOLDER: artifacts
+    ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+    CI_JOB_ID: "$CI_JOB_ID"
 
   script:
-    - pip install -r ./BlacklistValidation/requirements.txt
+    - !reference [.poetry-install]
     - *clone_from_git
-    - CONTENT_TEST_CONF_FOLDER="${CI_PROJECT_DIR}"
+    - INFRA_FOLDER="${CI_PROJECT_DIR}"
     - CONTENT_FOLDER="${CI_BUILDS_DIR}/${CI_PROJECT_NAMESPACE}/content"
-    - "python $CONTENT_TEST_CONF_FOLDER/BlacklistValidation/get_blacklist.py -u 'https://api-content-gold.crtx.us.paloaltonetworks.com/xsoar' -c $CONTENT_FOLDER -j $CI_JOB_URL"
+    - cd ${INFRA_FOLDER}
+    - mkdir -p "${ARTIFACT_PATH}/logs" || echo "Artifact Folder already exist."
+    - poetry run python BlacklistValidation/get_blacklist.py -u 'https://api-content-gold.crtx.us.paloaltonetworks.com/xsoar' -c "${CONTENT_FOLDER}" -j "${CI_JOB_URL}" -o "${ARTIFACT_PATH}"
+    - job-done
+
+blacklist-validation-fan-in:
+  stage: fan-in
+  extends:
+    - .blacklist-validation-schedule-rule-always
+  script:
+    - echo "fan in"
+
+blacklist-validation-slack-notify:
+  extends:
+    - .blacklist-validation-schedule-rule-always
+    - .trigger-slack-notification
+  variables:
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: "blacklist-validation-fan-in"
+    WORKFLOW: "Blacklist Validation"
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_ALLOW_FAILURE: "false"
+    ARTIFACT_PATH: "${CI_PROJECT_DIR}/artifacts"
+    SLACK_MSG_THREAD: "${ARTIFACT_PATH}/black_list_report_for_slack.json"

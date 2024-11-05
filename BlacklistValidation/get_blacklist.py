@@ -6,10 +6,13 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from glob import glob
+from pathlib import Path
 
 import demisto_client.demisto_api
 from demisto_client import generic_request_func
-from slack_notifier import slack_notifier
+
+from Tests.scripts.common import join_list_by_delimiter_in_chunks, slack_link
+from Tests.scripts.utils import logging_wrapper as logging
 
 SECRETS_KEYS = ["email", "emailphone", "phone"]
 
@@ -29,7 +32,6 @@ FULL_IGNORE = [
     "Turner",
     "1111111111",
 ]
-
 FULL_IGNORE_LOWER = [ignore.lower() for ignore in FULL_IGNORE]
 
 # Items that will be ignored as an item but will be searched for with '@' before them
@@ -217,7 +219,7 @@ IGNORES = [
     "Zeb",
 ]
 IGNORES_LOWER = [ignore.lower() for ignore in IGNORES]
-
+REPORT_FILE_NAME = "black_list_report_for_slack.json"
 _secrets_found = {}
 _secrets_filenames = {}
 _matching_secrets = {}
@@ -235,6 +237,7 @@ def option_handler():
     parser.add_argument("-c", "--content_path", help="Path to content repo", required=True)
     parser.add_argument("-u", "--host", help="URL for Demisto instance", required=True)
     parser.add_argument("-j", "--job_url", help="URL for gitlab CI job", required=False)
+    parser.add_argument("-o", "--output-path", required=True, help="The path to save the slack message to.")
 
     # disable-secrets-detection-end
     return parser.parse_args()
@@ -436,12 +439,72 @@ def convert_filenames_to_content_links(secrets_filenames):
     return links_to_content
 
 
+def get_all_github_links(secrets_filenames, matching_secrets):
+    """
+    Args:
+        secrets_filenames (list): the names of all the files that were found to contain secrets.
+        matching_secrets (list): the matching secrets found for the file names.
+    Returns:
+         List: A list of GitHub links to the files with secrets.
+    """
+    secret_files_links_with_secrets = []
+    secret_files_links_no_secrets = []
+    for index, secret_file_name in enumerate(secrets_filenames):
+        split_secret = secret_file_name.split(":")
+        full_file_name = split_secret[0].strip(".")
+        server_url = os.getenv("CI_SERVER_URL", "https://gitlab.xdr.pan.local")
+        namespace = os.getenv("CI_PROJECT_NAMESPACE", "xdr/cortex-content")
+        builds_path = os.getenv("CI_BUILDS_DIR", "/builds")
+        base_url = f"{server_url}/{namespace}/content/-/blob/master"
+        file_name = full_file_name.removeprefix(f"{builds_path}/{namespace}/content")
+        line_number = split_secret[1]
+        line_number = f"#L{line_number}"
+        secret = matching_secrets[index]
+        link_to_file = f"{base_url}{file_name}{line_number}"
+        file_link = slack_link(link_to_file, f"{file_name[1:]}{line_number} -- {secret}")
+
+        secret_files_links_with_secrets.append(file_link)
+        secret_files_links_no_secrets.append(link_to_file)
+
+    return secret_files_links_with_secrets
+
+
+def create_slack_report(secrets_found: bool, secrets_filenames: list, matching_secrets: list) -> list[dict]:
+    """
+    Create a Slack report based on the results of the secrets search.
+
+    Parameters:
+    secrets_found (bool): Indicates whether secrets were found.
+    secrets_filenames (list): List of filenames where secrets were found.
+    matching_secrets (list): List of matching secrets.
+
+    Returns:
+    list[dict]: A list of dictionaries representing the Slack report.
+    """
+    text = ""
+    secret_links_thread = []
+    if secrets_found:
+        logging.info("Secrets were found in the repository. Creating Slack report.")
+        secret_files_links = get_all_github_links(secrets_filenames, matching_secrets)
+        if secret_files_links:
+            text = f"Found {len(secret_files_links)} secrets: "
+
+            secret_links_thread = [
+                {"text": chunk} for chunk in join_list_by_delimiter_in_chunks(list_to_join=secret_files_links, delimiter="\n")
+            ]
+        else:
+            text = "Secrets found. An error occurred while extracting results."
+
+    return [{"text": text, "short": False, "color": "danger"}] + secret_links_thread
+
+
 def main():
     options = option_handler()
+    output_path = Path(options.output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
+
     host = options.host
     content_root_dir = options.content_path
-    ci_job_url = options.job_url
-    slack_token = os.environ["SLACK_TOKEN"]
 
     try:
         client = create_client(host)
@@ -450,26 +513,23 @@ def main():
 
         packs_dirs_list = glob(os.path.join(content_root_dir, "Packs/*"))
         secrets_found, secrets_filenames, matching_secrets = parallel_secrets_detection(packs_dirs_list, blacklist_data)
-
-        if not secrets_found:
-            slack_notifier(
-                slack_token=slack_token,
-                job_url=ci_job_url,
-                message="No secrets have been found in content repository.",
-                success=True,
-            )
-            exit(0)
-
-        else:
-            links_to_content = convert_filenames_to_content_links(secrets_filenames)
-            slack_notifier(
-                slack_token=slack_token, secrets_filenames=links_to_content, matching_secrets=matching_secrets, job_url=ci_job_url
-            )
-            exit(1)
+        slack_report = create_slack_report(secrets_found, secrets_filenames, matching_secrets)
 
     except Exception as e:
-        print(e)
-        slack_notifier(slack_token=slack_token, job_url=ci_job_url, message=str(e))
+        secrets_found = "error"
+        slack_report = [
+            {
+                "text": f"An error occurred while scanning for secrets. The error message is: {e!s}",
+                "short": False,
+                "color": "danger",
+            }
+        ]
+
+    with open(os.path.join(output_path, REPORT_FILE_NAME), "w") as msg_file:
+        json.dump(slack_report, msg_file)
+
+    if secrets_found:
+        logging.info("Secrets found or an error occurred - exiting with error code 1")
         exit(1)
 
 
