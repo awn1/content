@@ -1,5 +1,6 @@
 import base64
 import contextlib
+import copy
 import glob
 import itertools
 import json
@@ -312,7 +313,7 @@ def install_packs(
             {"ID": response_data_pack.get("id"), "CurrentVersion": response_data_pack.get("currentVersion")}
             for response_data_pack in response_data_packs
         ]
-        logging.success(f"Packs were successfully installed on server {host}")
+        logging.success(f"{len(packs_data)} Packs were successfully installed on server {host}")
 
         return success, packs_data
 
@@ -466,6 +467,7 @@ def install_all_content_packs_for_nightly(
             logging.debug(f"Found the {pack_version=} for {pack_id=}")
             all_packs.append(get_pack_installation_request_data(pack_id, pack_version))
     success, _ = install_packs(client, host, all_packs)
+
     return success
 
 
@@ -965,20 +967,34 @@ def create_batches(list_of_packs_and_its_dependency: list):
     Args:
         list_of_packs_and_its_dependency (list): A list containing lists
             where each item is another list of a pack and its dependencies.
-        A list of pack batches (lists) to use in installation requests in size less than BATCH_SIZE
+
+    Returns:
+        (List[packs]) A list of pack batches to use in installation requests in size less than BATCH_SIZE
+        (List[List(packs)]) list of pack batches, where each batch contains lists of packs that must be installed together.
     """
+    # A flattened list of packs to install together (no dependencies).
     batch: list = []
+    # A list of lists where the inner lists contain the packs that must be installed together.
+    batch_with_deps: list = []
+    # A list where each item is a batch.
     list_of_batches: list = []
+    # A list where each item is a batch_with_deps (A list of the lists of lists with dependencies).
+    list_of_batches_with_deps: list = []
+
     for packs_to_install_body in list_of_packs_and_its_dependency:
         if len(batch) + len(packs_to_install_body) < BATCH_SIZE:
-            batch.extend(packs_to_install_body)
+            batch.extend(copy.copy(packs_to_install_body))
+            batch_with_deps.append(copy.copy(packs_to_install_body))
         else:
             if batch:
                 list_of_batches.append(batch)
-            batch = packs_to_install_body
+                list_of_batches_with_deps.append(batch_with_deps)
+            batch = copy.copy(packs_to_install_body)
+            batch_with_deps = [copy.copy(packs_to_install_body)]
     list_of_batches.append(batch)
+    list_of_batches_with_deps.append(batch_with_deps)
 
-    return list_of_batches
+    return list_of_batches, list_of_batches_with_deps
 
 
 def save_graph_data_file_log(graph: DiGraph, file_name: str) -> None:
@@ -1090,12 +1106,25 @@ def search_and_install_packs_and_their_dependencies(
     logging.debug(f"{packs_to_install_request_body=}")
 
     if install_packs_in_batches:
-        batch_packs_install_request_body = create_batches(packs_to_install_request_body)
+        batch_packs_install_request_body, batches_dependencies = create_batches(packs_to_install_request_body)
+        for packs_to_install_body, batch_dependencies in zip(batch_packs_install_request_body, batches_dependencies):
+            batch_success, _ = install_packs(client, host, packs_to_install_body)
+            if not batch_success:
+                logging.info(f"Failed to install bulk installation of batch: {packs_to_install_body}.")
+                logging.info(f"Trying to install one by one in the following order: {batch_dependencies}.")
+                one_by_one_success = True
+                for one_by_one_packs in batch_dependencies:
+                    pack_success, _ = install_packs(client, host, one_by_one_packs, attempts_count=1)
+                    if not pack_success:
+                        logging.error(f"Failed to install pack one by one: {one_by_one_packs}.")
+                    one_by_one_success &= pack_success
+                batch_success = one_by_one_success
+            success &= batch_success
     else:
         batch_packs_install_request_body = [list(itertools.chain.from_iterable(packs_to_install_request_body))]
 
-    for packs_to_install_body in batch_packs_install_request_body:
-        pack_success, _ = install_packs(client, host, packs_to_install_body)
-        success &= pack_success
+        for packs_to_install_body in batch_packs_install_request_body:
+            pack_success, _ = install_packs(client, host, packs_to_install_body)
+            success &= pack_success
 
     return sorted_packs_to_install, success

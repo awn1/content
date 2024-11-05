@@ -910,17 +910,32 @@ def test_filter_deprecated_packs(mocker: MockFixture):
 
 
 @pytest.mark.parametrize(
-    "list_of_packs, expected",
+    "list_of_packs, expected_batches, expected_batches_with_deps",
     [
-        ([["pack1"], ["pack2", "pack3"]], [["pack1", "pack2", "pack3"]]),
-        ([["pack1"], ["pack2", "pack3"], ["pack4"]], [["pack1", "pack2", "pack3", "pack4"]]),
+        ([["pack1"], ["pack2", "pack3"]], [["pack1", "pack2", "pack3"]], [[["pack1"], ["pack2", "pack3"]]]),
+        (
+            [["pack1"], ["pack2", "pack3"], ["pack4"]],
+            [["pack1", "pack2", "pack3", "pack4"]],
+            [[["pack1"], ["pack2", "pack3"], ["pack4"]]],
+        ),
         (
             [["pack1"], ["pack2", "pack3"], ["pack4", "pack5", "pack6"]],
             [["pack1", "pack2", "pack3"], ["pack4", "pack5", "pack6"]],
+            [[["pack1"], ["pack2", "pack3"]], [["pack4", "pack5", "pack6"]]],
+        ),
+        (
+            [["pack1"], ["pack2", "pack3"], ["pack4", "pack5", "pack6"], ["pack7"], ["pack8"], ["pack9"]],
+            [["pack1", "pack2", "pack3"], ["pack4", "pack5", "pack6", "pack7"], ["pack8", "pack9"]],
+            [[["pack1"], ["pack2", "pack3"]], [["pack4", "pack5", "pack6"], ["pack7"]], [["pack8"], ["pack9"]]],
+        ),
+        (
+            [["pack1"], ["pack2"], ["pack3"], ["pack4"], ["pack5"], ["pack6"], ["pack7"], ["pack8"]],
+            [["pack1", "pack2", "pack3", "pack4"], ["pack5", "pack6", "pack7", "pack8"]],
+            [[["pack1"], ["pack2"], ["pack3"], ["pack4"]], [["pack5"], ["pack6"], ["pack7"], ["pack8"]]],
         ),
     ],
 )
-def test_create_batches(mocker: MockFixture, list_of_packs, expected):
+def test_create_batches(mocker: MockFixture, list_of_packs, expected_batches, expected_batches_with_deps):
     """
     Given:
         A list of packs and dependencies
@@ -932,7 +947,9 @@ def test_create_batches(mocker: MockFixture, list_of_packs, expected):
         Ensure the correct batches are created based on the batch size
     """
     mocker.patch.object(script, "BATCH_SIZE", 5)
-    assert script.create_batches(list_of_packs) == expected
+    batches, batches_with_deps = script.create_batches(list_of_packs)
+    assert batches == expected_batches
+    assert batches_with_deps == expected_batches_with_deps
 
 
 def test_search_and_install_packs_success(mocker: MockFixture):
@@ -1009,6 +1026,40 @@ def test_search_and_install_packs_failure_install_packs(mocker: MockFixture):
     _, success = script.search_and_install_packs_and_their_dependencies(pack_ids=mock_packs, client=MockClient())
 
     assert success is False
+
+
+def test_search_and_install_packs_one_by_one_on_failure(mocker: MockFixture):
+    """
+    Given:
+        A list of pack IDs to install.
+        install_packs_in_batches is True.
+
+    When:
+        search_and_install_packs_and_their_dependencies is called with that list of packs and installation fails.
+
+    Then:
+        A failure response should be returned, since the install packs call returned a failure.
+        Assert the one by one retry.
+    """
+    mock_packs = ["pack1", "pack2"]
+    mocker.patch.object(script, "get_env_var", return_value="commit")
+    mocker.patch.object(script, "filter_deprecated_packs", return_value=mock_packs)
+    mocker.patch.object(script, "get_all_content_packs_dependencies", return_value={})
+    mocker.patch.object(script, "save_graph_data_file_log")
+    mocker.patch.object(script, "get_packs_and_dependencies_to_install", return_value=(False, set()))
+    mocker.patch.object(script, "merge_cycles", return_value=DiGraph())
+    install_packs_mock = mocker.patch.object(script, "install_packs", return_value=(False, []))
+    mocker.patch.object(script, "create_install_request_body", return_value=[["pack1"], ["pack2"]])
+
+    _, success = script.search_and_install_packs_and_their_dependencies(
+        pack_ids=mock_packs, client=MockClient(), install_packs_in_batches=True
+    )
+
+    assert success is False
+    assert install_packs_mock.call_count == 3
+    assert install_packs_mock.call_args_list[0].args[2] == ["pack1", "pack2"]
+    assert install_packs_mock.call_args_list[1].args[2] == ["pack1"]
+    assert install_packs_mock.call_args_list[2].args[2] == ["pack2"]
 
 
 @pytest.mark.parametrize("pack_version, expected_results", [("6.5.0", {"TestPack"}), ("6.8.0", set())])
