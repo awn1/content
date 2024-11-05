@@ -383,7 +383,7 @@ def get_api_key_ttl_cell(client, current_date):
             f"Could not find generated API key (from secret version {secret_version}) on API keys list in the machine.",
         )
     except Exception as e:
-        logging.exception(f"Failed to get API Key for machine: {client.tenant_name}. {e}")
+        logging.error(f"Failed to get API Key for machine: {client.tenant_name}. {e}")
         return generate_cell(NOT_AVAILABLE, invalid=True)
 
 
