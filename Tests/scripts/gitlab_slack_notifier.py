@@ -30,21 +30,13 @@ from Tests.scripts.common import (
     CONTENT_PR,
     TEST_MODELING_RULES_REPORT_FILE_NAME,
     TEST_PLAYBOOKS_REPORT_FILE_NAME,
-    create_shame_message,
-    get_commit_by_sha,
     get_instance_directories,
-    get_nearest_newer_commit_with_pipeline,
-    get_nearest_older_commit_with_pipeline,
-    get_pipeline_by_commit,
-    get_pipelines_and_commits,
     get_properties_for_test_suite,
     get_slack_user_name,
     get_test_results_files,
-    is_pivot,
     join_list_by_delimiter_in_chunks,
     replace_escape_characters,
     slack_link,
-    was_message_already_sent,
 )
 from Tests.scripts.github_client import GithubPullRequest
 from Tests.scripts.test_modeling_rule_report import (
@@ -79,7 +71,6 @@ CI_SERVER_HOST = os.getenv("CI_SERVER_HOST", "")
 DEFAULT_BRANCH = "master"
 SLACK_NOTIFY = "slack-notify"
 ALL_FAILURES_WERE_CONVERTED_TO_JIRA_TICKETS = " (All failures were converted to Jira tickets)"
-LOOK_BACK_HOURS = 48
 UPLOAD_BUCKETS = [
     (ARTIFACTS_FOLDER_XSOAR_SERVER_TYPE, "XSOAR"),
     (ARTIFACTS_FOLDER_XSOAR_SAAS_SERVER_TYPE, "XSOAR SAAS"),
@@ -117,6 +108,7 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument("--current-branch", required=False, help="Current branch name", default=CI_COMMIT_BRANCH)
     parser.add_argument("-f", "--file", help="File path with the text to send")
     parser.add_argument("-t", "--attachments", help="File path with the attachments to send", required=False)
+    parser.add_argument("-th", "--thread", help="A message to be sent as a thread", required=False)
     return parser.parse_args()
 
 
@@ -538,9 +530,9 @@ def construct_slack_msg(
     pipeline_url: str,
     pipeline_failed_jobs: list[ProjectPipelineJob],
     pull_request: GithubPullRequest | None,
-    shame_message: tuple[str, str, str, str] | None,
     file: str | None,
     attachments: str | None,
+    thread: str | None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str, list[dict[str, Any]]]:
     # report failing jobs
     content_fields = []
@@ -603,34 +595,16 @@ def construct_slack_msg(
     title = triggering_workflow
 
     if file:
-        try:
-            text = Path(file).read_text()
-            slack_msg_append.extend(json.loads(text))
-        except Exception:
-            file_title = f"Failed to read file and parse {file}"
-            logging.exception(file_title)
-            slack_msg_append.append(
-                {
-                    "fallback": file_title,
-                    "title": file_title,
-                    "color": "danger",
-                }
-            )
-    attachments_json = []
-    if attachments:
-        try:
-            text = Path(attachments).read_text()
-            attachments_json = json.loads(text)
-        except Exception:
-            file_title = f"Failed to read attachments file and parse {attachments}"
-            logging.exception(file_title)
-            slack_msg_append.append(
-                {
-                    "fallback": file_title,
-                    "title": file_title,
-                    "color": "danger",
-                }
-            )
+        slack_msg_append.extend(read_and_parse(file, f"Failed to read file and parse {file}", slack_msg_append))
+
+    if thread:
+        threaded_messages.extend(read_and_parse(thread, f"Failed to read thread file and parse {thread}", slack_msg_append))
+
+    attachments_json = (
+        read_and_parse(attachments, f"Failed to read attachments file and parse {attachments}", slack_msg_append)
+        if attachments
+        else []
+    )
 
     if pull_request:
         pr_number = pull_request.data["number"]
@@ -653,18 +627,29 @@ def construct_slack_msg(
         # No color is needed in case of success, as it's controlled by the color of the test failures' indicator.
 
     title += title_append
-    slack_msg_start = []
-    if shame_message:
-        hi_and_status, person_in_charge, in_this_pr, shame_color = shame_message
-        slack_msg_start.append({"title": f"{hi_and_status}\n{person_in_charge}\n{in_this_pr}", "color": shame_color})
     return (
-        slack_msg_start
-        + [{"fallback": title, "color": color, "title": title, "title_link": pipeline_url, "fields": content_fields}]
+        [{"fallback": title, "color": color, "title": title, "title_link": pipeline_url, "fields": content_fields}]
         + slack_msg_append,
         threaded_messages,
         title,
         attachments_json,
     )
+
+
+def read_and_parse(file_path: str, error_title: str, on_error_append_to: list):
+    # Read and parse the file, if an error occurs append the error message to the append_to list.
+    try:
+        return json.loads(Path(file_path).read_text())
+    except Exception:
+        logging.exception(error_title)
+        on_error_append_to.append(
+            {
+                "fallback": error_title,
+                "title": error_title,
+                "color": "danger",
+            }
+        )
+    return []
 
 
 def missing_content_packs_test_conf(artifact_folder: Path) -> list[dict[str, Any]]:
@@ -823,7 +808,6 @@ def main():
     options = options_handler()
     triggering_workflow = options.triggering_workflow  # ci workflow type that is triggering the slack notifier
     pipeline_id = options.pipeline_id
-    commit_sha = options.current_sha
     project_id = options.gitlab_project_id
     server_url = options.url
     ci_token = options.ci_token
@@ -831,7 +815,6 @@ def main():
     gitlab_client = Gitlab(server_url, private_token=ci_token, ssl_verify=GITLAB_SSL_VERIFY)
     slack_token = options.slack_token
     slack_client = WebClient(token=slack_token)
-
     logging.info(
         f"Sending Slack message for pipeline {pipeline_id} in project {project_id} on server {server_url} "
         f"triggering workflow:'{triggering_workflow}' allowing failure:{options.allow_failure} "
@@ -866,58 +849,8 @@ def main():
         logging.info("Not a pull request build, skipping PR comment")
 
     pipeline_url, pipeline_failed_jobs = collect_pipeline_data(gitlab_client, project_id, pipeline_id)
-    shame_message = None
-    if options.current_branch == DEFAULT_BRANCH and triggering_workflow == CONTENT_MERGE:
-        computed_slack_channel = "dmst-build-test"
-        # Check if the current commits pipeline differs from the previous one. If the previous pipeline is still running,
-        # compare the next build. For commits without pipelines, compare the current one to the nearest commit with a
-        # pipeline and all those in between, marking them as suspicious.
-        list_of_pipelines, list_of_commits = get_pipelines_and_commits(
-            gitlab_client=gitlab_client, project_id=project_id, look_back_hours=LOOK_BACK_HOURS
-        )
-        current_commit = get_commit_by_sha(commit_sha, list_of_commits)
-        if current_commit:
-            current_commit_index = list_of_commits.index(current_commit)
-
-            # If the current commit is the last commit in the list, there is no previous commit,
-            # since commits are in ascending order
-            # or if we already sent a shame message for newer commits, we don't want to send another one for older commits.
-            if current_commit_index != len(list_of_commits) - 1 and not was_message_already_sent(
-                current_commit_index, list_of_commits, list_of_pipelines
-            ):
-                current_pipeline = get_pipeline_by_commit(current_commit, list_of_pipelines)
-
-                # looking backwards until we find a commit with a pipeline to compare with
-                previous_pipeline, suspicious_commits = get_nearest_older_commit_with_pipeline(
-                    list_of_pipelines, list_of_commits, current_commit_index
-                )
-                if previous_pipeline and suspicious_commits and current_pipeline:
-                    pipeline_changed_status = is_pivot(current_pipeline=current_pipeline, pipeline_to_compare=previous_pipeline)
-
-                    logging.info("comparing current pipeline status with nearest older pipeline status")
-
-                    if pipeline_changed_status is None and current_commit_index > 0:
-                        # looking_forward until we find a commit with a pipeline to compare with
-                        next_pipeline, suspicious_commits = get_nearest_newer_commit_with_pipeline(
-                            list_of_pipelines, list_of_commits, current_commit_index
-                        )
-
-                        if next_pipeline and suspicious_commits:
-                            pipeline_changed_status = is_pivot(
-                                current_pipeline=next_pipeline, pipeline_to_compare=current_pipeline
-                            )
-                            logging.info("comparing current pipeline status with nearest newer pipeline status")
-
-                    if pipeline_changed_status is not None:
-                        shame_message = create_shame_message(
-                            suspicious_commits,  # type: ignore[arg-type]
-                            pipeline_changed_status,  # type: ignore
-                            options.name_mapping_path,
-                        )
-                        computed_slack_channel = "test_slack_notifier_when_master_is_broken"
-
     slack_msg_data, threaded_messages, title, attachments_json = construct_slack_msg(
-        triggering_workflow, pipeline_url, pipeline_failed_jobs, pull_request, shame_message, options.file, options.attachments
+        triggering_workflow, pipeline_url, pipeline_failed_jobs, pull_request, options.file, options.attachments, options.thread
     )
 
     slack_msg_output_file = ROOT_ARTIFACTS_FOLDER / SLACK_MESSAGE
