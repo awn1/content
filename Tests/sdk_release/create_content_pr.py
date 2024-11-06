@@ -7,7 +7,7 @@ from pathlib import Path
 
 import requests
 import urllib3
-from create_release import get_changelog_text
+from create_release import compile_changelog, fetch_changelog
 
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
@@ -121,13 +121,13 @@ def main():
     start = time.time()
     elapsed: float = 0
     content_pr: dict = {}
-
+    changelog_file_text = fetch_changelog(release_branch_name)
     # wait to content pr to create
     while elapsed < TIMEOUT:
         content_pr = get_pr_from_branch("content", release_branch_name, access_token)
         if content_pr:
             logging.success(f'content pull request created: {content_pr.get("html_url")}')
-            edit_pr_body(content_pr.get("number"), access_token, get_changelog_text(release_branch_name))
+            edit_pr_body(content_pr.get("number"), access_token, compile_changelog(changelog_file_text))
             break
 
         logging.info("content pull request not created yet")
@@ -139,7 +139,7 @@ def main():
             sys.exit(1)
 
     # write the changelog text to SLACK_CHANGELOG_FILE
-    changelog_text = get_changelog_text(release_branch_name, text_format="slack")
+    changelog_text = compile_changelog(changelog_file_text, text_format="slack")
     changelog_text = SLACK_RELEASE_MESSAGE.format(sdk_version=release_branch_name, changelog=changelog_text)
     changelog_file = Path(artifacts_folder, SLACK_CHANGELOG_FILE)
     changelog_file.write_text(changelog_text)

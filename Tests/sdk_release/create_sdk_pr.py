@@ -10,7 +10,7 @@ from pathlib import Path
 
 import requests
 import urllib3
-from create_release import get_changelog_text
+from create_release import compile_changelog, fetch_changelog
 
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
@@ -209,9 +209,7 @@ def main():
     logging.success("Retrieve SDK changelog workflow finished successfully")
 
     # update the release PR body
-    data = {
-        "body": get_changelog_text(release_branch_name),
-    }
+    data = {"body": compile_changelog(fetch_changelog(release_branch_name))}
     url = f"{API_SUFFIX}/pulls/{pr_number}"
     response = requests.request("PATCH", url, data=json.dumps(data), headers=headers, verify=False)
     if response.status_code != requests.codes.ok:
