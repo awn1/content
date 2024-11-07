@@ -78,7 +78,7 @@
                     "simple": "closeNotes"
                 },
                 "classificationReason": {
-                    "simple": "closingreason"
+                    "simple": "microsoftsentinelclassificationreason"
                 },
                 "description": {
                     "simple": "description"

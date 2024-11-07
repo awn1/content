@@ -68,7 +68,7 @@ INTEGRATION_INSTANCE = demisto.integrationInstance()
 INCOMING_MIRRORED_FIELDS = ['ID', 'Etag', 'Title', 'Description', 'Severity', 'Status', 'owner', 'tags', 'FirstActivityTimeUTC',
                                   'LastActivityTimeUTC', 'LastModifiedTimeUTC', 'CreatedTimeUTC', 'IncidentNumber', 'AlertsCount',
                                   'AlertProductNames', 'Tactics', 'relatedAnalyticRuleIds', 'IncidentUrl', 'classification',
-                                  'classificationComment', 'alerts', 'entities', 'comments', 'relations']
+                                  'classificationReason', 'classificationComment', 'alerts', 'entities', 'comments', 'relations']
 OUTGOING_MIRRORED_FIELDS = {'etag', 'title', 'description', 'severity', 'status', 'tags', 'firstActivityTimeUtc',
                             'lastActivityTimeUtc', 'classification', 'classificationComment', 'classificationReason'}
 OUTGOING_MIRRORED_FIELDS = {filed: pascalToSpace(filed) for filed in OUTGOING_MIRRORED_FIELDS}
@@ -76,6 +76,7 @@ OUTGOING_MIRRORED_FIELDS = {filed: pascalToSpace(filed) for filed in OUTGOING_MI
 LEVEL_TO_SEVERITY = {0: 'Informational', 0.5: 'Informational', 1: 'Low', 2: 'Medium', 3: 'High', 4: 'High'}
 CLASSIFICATION_REASON = {'FalsePositive': 'InaccurateData', 'TruePositive': 'SuspiciousActivity',
                          'BenignPositive': 'SuspiciousButExpected'}
+MY_CLASSIFICATION_REASON = {'InaccurateData': 'Inaccurate Data', 'IncorrectAlertLogic': 'Incorrect Alert Logic'}
 
 
 class AzureSentinelClient:
@@ -557,6 +558,7 @@ def get_remote_incident_data(client: AzureSentinelClient, incident_id: str):
         updated_object: The updated object to set in the XSOAR incident.
     """
     mirrored_data = client.http_request('GET', f'incidents/{incident_id}')
+    demisto.debug(f"\n{mirrored_data=}\n")
     incident_mirrored_data = incident_data_to_xsoar_format(mirrored_data, is_fetch_incidents=True)
     fetch_incidents_additional_info(client, incident_mirrored_data)
     updated_object: Dict[str, Any] = {}
@@ -583,12 +585,13 @@ def set_xsoar_incident_entries(updated_object: Dict[str, Any], entries: List, re
         if updated_object.get('Status') == 'Closed':
             close_reason = updated_object.get('classification', '')
             close_notes = updated_object.get('classificationComment', '')
-            close_in_xsoar(entries, remote_incident_id, close_reason, close_notes)
+            classification_reason = updated_object.get('classificationReason', '')
+            close_in_xsoar(entries, remote_incident_id, close_reason, classification_reason, close_notes)
         elif updated_object.get('Status') in ('New', 'Active'):
             reopen_in_xsoar(entries, remote_incident_id)
 
 
-def close_in_xsoar(entries: List, remote_incident_id: str, close_reason: str, close_notes: str) -> None:
+def close_in_xsoar(entries: List, remote_incident_id: str, close_reason: str, classification_reason, close_notes: str) -> None:
     demisto.debug(f'Incident is closed: {remote_incident_id}')
     entries.append({
         'Type': EntryType.NOTE,
@@ -758,7 +761,7 @@ def update_remote_system_command(client: AzureSentinelClient, args: Dict[str, An
     remote_incident_id = parsed_args.remote_incident_id
     demisto.debug(f'Got the following data {data}, and delta {delta}.')
     if parsed_args.incident_changed and delta:
-        demisto.debug(f'Got the following delta keys {list(delta.keys())}.')
+        demisto.debug(f'Got the following delta keys {list(delta.keys())}.')jghkhgvkj
         try:
             if result := update_remote_incident(
                 client, data, delta, parsed_args.inc_status, remote_incident_id
@@ -1979,6 +1982,7 @@ def main():
     params = demisto.params()
     args = demisto.args()
     command = demisto.command()
+    demisto.debug(f"\n{command=}\n{args=}\n{params=}\n")
 
     demisto.debug(f'Command being called is {command}')
     try:
