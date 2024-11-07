@@ -761,7 +761,7 @@ def update_remote_system_command(client: AzureSentinelClient, args: Dict[str, An
     remote_incident_id = parsed_args.remote_incident_id
     demisto.debug(f'Got the following data {data}, and delta {delta}.')
     if parsed_args.incident_changed and delta:
-        demisto.debug(f'Got the following delta keys {list(delta.keys())}.')jghkhgvkj
+        demisto.debug(f'Got the following delta keys {list(delta.keys())}.')jghkhgvkjvaskgcvakjgvclU
         try:
             if result := update_remote_incident(
                 client, data, delta, parsed_args.inc_status, remote_incident_id
