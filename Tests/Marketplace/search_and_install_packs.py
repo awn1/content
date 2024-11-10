@@ -1108,7 +1108,7 @@ def search_and_install_packs_and_their_dependencies(
     if install_packs_in_batches:
         batch_packs_install_request_body, batches_dependencies = create_batches(packs_to_install_request_body)
         for packs_to_install_body, batch_dependencies in zip(batch_packs_install_request_body, batches_dependencies):
-            batch_success, _ = install_packs(client, host, packs_to_install_body)
+            batch_success, _ = install_packs(client, host, packs_to_install_body, attempts_count=3)
             if not batch_success:
                 logging.info(f"Failed to install bulk installation of batch: {packs_to_install_body}.")
                 logging.info(f"Trying to install one by one in the following order: {batch_dependencies}.")
