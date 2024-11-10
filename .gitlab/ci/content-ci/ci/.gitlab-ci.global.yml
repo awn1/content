@@ -530,6 +530,7 @@
 
 .default-after-script:
   - source .gitlab/helper_functions.sh
+  - cp -r /var/log/neo4j ${CI_PROJECT_DIR}/artifacts || true
   - *setup-network-certs
   - *setup-artifactory
   - *install_node_modules
