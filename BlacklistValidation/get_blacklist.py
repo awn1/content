@@ -31,6 +31,8 @@ FULL_IGNORE = [
     "Support",
     "Turner",
     "1111111111",
+    "12345678",
+    "123456789",
 ]
 FULL_IGNORE_LOWER = [ignore.lower() for ignore in FULL_IGNORE]
 
@@ -50,6 +52,8 @@ IGNORES = [
     "020202",
     "1111111111",
     "5555555555",
+    "12345678",
+    "123456789",
     # A
     "AACN",
     "ABB",
