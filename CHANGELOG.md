@@ -1,3 +1,24 @@
+# Content Infrastructure 0.0.11 (2024-11-13)
+
+### Features
+
+- Added a pack by pack retry mechanism on bulk batch installation failures. ([CIAC-11299](https://jira-dc.paloaltonetworks.com/browse/CIAC-11299))
+- Modified the `create_release` script which would previously generate all release notes of the `demisto-sdk` in one section. Now it generates the changelog with different sections separated by headers Fixed, Breaking Changes, and Internal. ([CIAC-11845](https://jira-dc.paloaltonetworks.com/browse/CIAC-11845))
+- Removing the Slack notification for build pivots and replacing the blacklist validation notification with a GitLab Slack notification. ([10874](https://jira-dc.paloaltonetworks.com/browse/10874))
+- Bump demisto-sdk to version 1.32.4.
+
+### Bugfixes
+
+- Change batch pack installation retries from 5 to 3. ([CIAC-11299](https://jira-dc.paloaltonetworks.com/browse/CIAC-11299))
+
+### Misc
+
+- Added values to the secrets ignore list.
+- Removed stacktrace from build machine report for when creating an API key is unsuccessful.
+- Updated the deprecated graph update command in the on-push pipeline to use the latest.
+- added support to copy neo4j into artifacts in the build-machines cleanup afterscript.
+
+
 # Content Infrastructure 0.0.10 (2024-11-03)
 
 ### Features
