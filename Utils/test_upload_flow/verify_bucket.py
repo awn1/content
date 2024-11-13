@@ -75,7 +75,7 @@ def logger(func):
 
 class GCP:
     def __init__(self, service_account, storage_bucket_name, storage_base_path):
-        storage_client = init_storage_client(service_account)
+        storage_client = init_storage_client()
         self.storage_bucket = storage_client.bucket(storage_bucket_name)
         self.storage_base_path = storage_base_path
         self.extracting_destination = tempfile.mkdtemp()

@@ -599,7 +599,6 @@
       if [[ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]]; then
         if [[ -e "${ARTIFACTS_FOLDER}/locked_machines_list.txt" ]]; then
           echo "Job finished, removing lock file for machine ids:${CLOUD_CHOSEN_MACHINE_IDS}"
-          gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
           gsutil rm "gs://xsoar-ci-artifacts/$GCS_LOCKS_PATH/machines_locks/*-lock-$CI_PIPELINE_ID*" || true
           echo "Finished removing lock file(s)"
         else
@@ -634,7 +633,6 @@
           if [ "${pipeline_id}" != "null" ]; then
             echo "Triggered Clean Machine pipeline id:${pipeline_id} server type:${SERVER_TYPE}"
             echo "rename lock file of ${CLOUD_CHOSEN_MACHINE_ID}, jobid: ${CI_JOB_ID} ,current pipeline id: ${CI_PIPELINE_ID} to new pipeline_id ${pipeline_id}"
-            gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
             gsutil mv "gs://xsoar-ci-artifacts/${GCS_LOCKS_PATH}/machines_locks/${CI_PROJECT_ID}-lock-${CLOUD_CHOSEN_MACHINE_ID}-lock-${CI_PIPELINE_ID}_${CI_JOB_ID}" "gs://xsoar-ci-artifacts/${GCS_LOCKS_PATH}/machines_locks/${INFRA_PROJECT_ID}-lock-${CLOUD_CHOSEN_MACHINE_ID}-lock-${pipeline_id}"
             echo "Successful triggered cleanup machine pipeline - ${CI_SERVER_URL}/${CI_PROJECT_NAMESPACE}/infra/-/pipelines/$pipeline_id"
             break
@@ -838,7 +836,6 @@
     - echo "Download index.zip"
     - INDEX_PATH=$(mktemp)
     - |
-      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
       echo "successfully activated google cloud service account"
       gsutil cp "gs://marketplace-dist/content/packs/index.zip" $INDEX_PATH
       echo "successfully downloaded index.zip"
@@ -849,9 +846,6 @@
 
     - python3 Tests/Marketplace/validate_landing_page_sections.py -i $UNZIP_PATH
     - section_end "Validate landingPageSections.json"
-    - section_start "Revoking GCP Auth"
-    - gcloud auth revoke "${GCS_ARTIFACTS_ACCOUNT_NAME}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-    - section_end "Revoking GCP Auth"
     - job-done
 
 .run-validations-new-validate-flow:

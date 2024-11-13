@@ -91,6 +91,8 @@ run-pre-commit:
 
 # runs in gitlab for the on-push flow (except for contributors)
 run-validations:
+  tags:
+    - cortex-content-1738
   needs:
     - cloning-repositories
   extends:
@@ -102,6 +104,8 @@ run-validations:
 
 # runs in gitlab for the on-push flow (except for contributors)
 run-validations-new-validate-flow:
+  tags:
+    - cortex-content-1738
   needs:
     - cloning-repositories
   extends:
@@ -584,6 +588,7 @@ jobs-done-check-on-push:
     - xsiam-test_modeling_rule_results
   tags:
     - gke
+    - cortex-content-1738
   variables:
     WORKFLOW: 'Content PR'
     master_branch_name: master
@@ -628,6 +633,7 @@ jobs-done-check-on-merge:
     - xsiam-test_modeling_rule_results
   tags:
     - gke
+    - cortex-content-1738
   variables:
     WORKFLOW: 'Content Merge'
     master_branch_name: master
@@ -778,9 +784,9 @@ xsiam_server_ga:
       variables:
         CLOUD_MACHINES_TYPE: "nightly"
         CLEAN_MACHINE_NEEDED: "true"
-        CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">0" # don't run the job if there are no machines available.
-        CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">0" # stop waiting on the timeout if we got at least one machine.
-        CLOUD_MACHINES_TIMEOUT: 0  # Wait indefinitely for the machines.
+        CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: ">=0" # don't run the job if there are less than 2 machines available.
+        CLOUD_MACHINES_COUNT_TIMEOUT_CONDITION: ">=0" # stop waiting on the timeout if we got 50% of the machines.
+        CLOUD_MACHINES_TIMEOUT: 0
         GCS_LOCKS_PATH: "content-locks/locks-xsiam-ga-nightly"
     - if: '$IS_NIGHTLY == "true" && $SCHEDULED_NIGHTLY == "true"'  # On scheduled nightly, we want to run more machines.
       when: always
@@ -891,6 +897,7 @@ test-upload-flow:
     - cloning-repositories
   tags:
     - gke
+    - cortex-content-1738
   extends:
     - .default-job-settings
   rules:

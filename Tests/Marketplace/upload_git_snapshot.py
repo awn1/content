@@ -59,7 +59,6 @@ def main():
     install_logging("upload_git_snapshot.log")
     option = option_handler()
     storage_bucket_name = option.bucket_name
-    service_account = option.service_account
     pack_name = option.pack_name
     branch_name = option.branch_name
     pack_version = option.pack_version
@@ -68,7 +67,7 @@ def main():
     git_org = option.git_org
 
     # google cloud storage client initialized
-    storage_client = init_storage_client(service_account)
+    storage_client = init_storage_client()
     storage_bucket = storage_client.bucket(storage_bucket_name)
 
     upload_git_snapshot(snapshot_path, pack_name, branch_name, pack_version, storage_bucket, git_repo, git_org)
