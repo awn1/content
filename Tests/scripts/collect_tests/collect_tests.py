@@ -859,7 +859,7 @@ class BranchTestCollector(TestCollector):
             - Adds failed packs to `result.packs_to_upload` and `result.packs_to_update_metadata`.
             - Removes duplicates from `packs_to_update_metadata`.
         """
-        re_upload_packs = get_failed_packs_from_previous_upload(self.service_account, self.marketplace)
+        re_upload_packs = get_failed_packs_from_previous_upload(self.marketplace)
         if not re_upload_packs:
             return
 
@@ -1293,7 +1293,7 @@ class BranchTestCollector(TestCollector):
 
         if str2bool(os.getenv("IS_NIGHTLY")) or upload_delta_from_last_upload or os.getenv("IFRA_ENV_TYPE") == "Bucket-Upload":
             logger.info("Getting last commit from index for previous_commit")
-            previous_commit = get_last_commit_from_index(self.service_account, self.marketplace)
+            previous_commit = get_last_commit_from_index(self.marketplace)
 
         elif self.branch_name == "master":
             current_commit, previous_commit = tuple(repo.iter_commits(max_count=2))

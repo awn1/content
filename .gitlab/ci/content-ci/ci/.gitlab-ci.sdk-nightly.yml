@@ -129,6 +129,7 @@ demisto-sdk-nightly:check-idset-dependent-commands:
     - demisto-sdk-nightly:cloning-repositories
   tags:
     - gke
+    - cortex-content-1738
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -152,17 +153,10 @@ demisto-sdk-nightly:check-idset-dependent-commands:
     - cp "./Tests/conf.json" "${ARTIFACTS_FOLDER_SERVER_TYPE}/conf.json" # workaround for the hard-coded value in the sdk
     - section_end "Update Conf"
     - !reference [.create-id-set]
-    - section_start "Activate GCloud Service Account" --collapsed
-    - gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-    - echo "successfully activated google cloud service account"
-    - section_end "Activate GCloud Service Account"
     - section_start "Download private ID set" --collapsed
     - gsutil cp "gs://marketplace-dist/content/private_id_set.json" "${ARTIFACTS_FOLDER_SERVER_TYPE}/unified_id_set.json"
     - echo "successfully downloaded private ID set"
     - section_end "Download private ID set"
-    - section_start "Revoking GCP Auth"
-    - gcloud auth revoke "${GCS_ARTIFACTS_ACCOUNT_NAME}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-    - section_end "Revoking GCP Auth"
     - section_start "Merge public and private ID sets" --collapsed
     - demisto-sdk merge-id-sets -i1 "${ARTIFACTS_FOLDER_SERVER_TYPE}/id_set.json" -i2 "${ARTIFACTS_FOLDER_SERVER_TYPE}/unified_id_set.json" -o "${ARTIFACTS_FOLDER_SERVER_TYPE}/unified_id_set.json"
     - echo "successfully merged public and private ID sets"
@@ -298,6 +292,7 @@ demisto-sdk-nightly:test-upload-flow:
     - demisto-sdk-nightly:cloning-repositories
   tags:
     - gke
+    - cortex-content-1738
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -421,6 +416,7 @@ demisto-sdk-nightly:run-end-to-end-tests-xsiam:
     - when: never
   tags:
     - gce
+    - cortex-content-1738
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule-always
@@ -543,6 +539,8 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar-saas:
     - !reference [.clean-machine]
 
 demisto-sdk-nightly:jobs-done-check:
+  tags:
+    - cortex-content-1738
   extends:
     - .jobs-done-check
     - .sdk-nightly-schedule-rule
@@ -566,6 +564,7 @@ demisto-sdk-nightly:jobs-done-check:
 demisto-sdk-nightly:fan-in:
   tags:
     - gke
+    - cortex-content-1738
   stage: fan-in
   extends:
     - .sdk-nightly-schedule-rule-always
