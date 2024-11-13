@@ -16,8 +16,7 @@ import networkx as nx
 from demisto_client.demisto_api.api.default_api import DefaultApi as DemistoClient
 from demisto_sdk.commands.common import tools
 from demisto_sdk.commands.common.logger import logger
-from demisto_sdk.commands.content_graph.common import PACK_METADATA_FILENAME, ContentType
-from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterfaceSingleton
+from demisto_sdk.commands.content_graph.common import PACK_METADATA_FILENAME
 from demisto_sdk.commands.test_content.ParallelLoggingManager import ARTIFACTS_PATH
 from google.cloud.storage import Bucket  # noqa
 from networkx import DiGraph
@@ -56,6 +55,7 @@ GITLAB_PACK_METADATA_URL = (
 BATCH_SIZE = 10
 PAGE_SIZE_DEFAULT = 50
 CYCLE_SEPARATOR = "<->"
+HYBRID_PACKS = ["PrismaCloud"]
 
 
 @lru_cache
@@ -673,13 +673,14 @@ def get_all_content_packs_dependencies(client: DemistoClient) -> dict[str, dict]
                 )
             break
 
-    hybrid_packs = []
-    with Neo4jContentGraphInterfaceSingleton.get_instance() as interface:
-        hybrid_packs = interface.search(content_type=ContentType.PACK, hybrid=True)
-
-    hybrid_packs = [pack.object_id for pack in hybrid_packs]
-    logging.info(f"found {len(hybrid_packs)} hybrid packs: {','.join(hybrid_packs)}")
-    for pack in hybrid_packs:
+    # NOTE: Commented out. Please review CIAC-11638 and CIAC-12144.
+    # hybrid_packs = []
+    # with Neo4jContentGraphInterfaceSingleton.get_instance() as interface:
+    #     hybrid_packs = interface.search(content_type=ContentType.PACK, hybrid=True)
+    #   hybrid_packs = [pack.object_id for pack in hybrid_packs]
+    #   logging.info(f"found {len(hybrid_packs)} hybrid packs: {','.join(hybrid_packs)}")
+    logging.info(f"Found {len(HYBRID_PACKS)} hybrid packs: {','.join(HYBRID_PACKS)}")
+    for pack in HYBRID_PACKS:
         pack_response = get_hybrid_pack_dependencies(client, pack)
         if pack_response:
             all_packs_dependencies[pack] = {
