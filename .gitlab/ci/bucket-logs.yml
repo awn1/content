@@ -8,8 +8,6 @@
       when: always
 
 from-marketplace-dist-logs:
-  tags:
-    - cortex-content-1738
   extends:
     - .update-marketplace-bucket-logs-schedule-rule
     - .default-job-settings
@@ -17,12 +15,12 @@ from-marketplace-dist-logs:
   variables:
     BUCKET_NAME: marketplace-dist
     LOG_TABLE: marketplace_logs.usage
+  before_script:
+    - gcloud auth activate-service-account --key-file $GCLOUD_SERVICE_KEY
   script:
     - ./BucketLogs/process-logs.sh
 
 from-xsoar-registry-logs:
-  tags:
-    - cortex-content-1738
   extends:
     - .update-marketplace-bucket-logs-schedule-rule
     - .default-job-settings
@@ -30,6 +28,8 @@ from-xsoar-registry-logs:
   variables:
     BUCKET_NAME: artifacts.xsoar-registry.appspot.com
     LOG_TABLE: bucket_logs.xsoar_registry_usage
+  before_script:
+    - gcloud auth activate-service-account --key-file $GCLOUD_SERVICE_KEY
   script:
     - ./BucketLogs/process-logs.sh
 
