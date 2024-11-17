@@ -482,8 +482,10 @@ class TestHelperFunctions:
             b'"failed_to_upload": {"packs_to_upload": ["Pack1"], '
             b'"packs_to_update_metadata": ["Pack2"]}}'
         )
-        failed_packs = get_failed_packs_from_previous_upload()
+        service_account = "service_account"
+        failed_packs = get_failed_packs_from_previous_upload(service_account)
 
+        mock_init_storage_client.assert_called_once_with(service_account)
         mock_bucket.blob.assert_called_once_with("content/packs/content_status.json")
         mock_blob.download_as_string.assert_called_once()
 

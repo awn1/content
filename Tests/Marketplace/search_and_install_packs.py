@@ -443,19 +443,22 @@ def get_pack_installation_request_data(pack_id: str, pack_version: str):
     return {"id": pack_id, "version": pack_version}
 
 
-def install_all_content_packs_for_nightly(client: DemistoClient, host: str, pack_ids_to_install: list[str]) -> bool:
+def install_all_content_packs_for_nightly(
+    client: DemistoClient, host: str, service_account: str, pack_ids_to_install: list[str]
+) -> bool:
     """Iterates over the packs currently located in the Packs directory. Wrapper for install_packs.
     Retrieving the latest version of each pack from the production bucket.
 
     :param client: Demisto-py client to connect to the server.
     :param host: FQDN of the server.
+    :param service_account: The full path to the service account json.
     :param pack_ids_to_install: List of pack IDs to install specifically to XSOAR marketplace.
     :return: Boolean value indicating whether the installation was successful or not.
     """
     all_packs = []
 
     # Initiate the GCS client and get the production bucket
-    storage_client = init_storage_client()
+    storage_client = init_storage_client(service_account)
     production_bucket = storage_client.bucket(GCPConfig.PRODUCTION_BUCKET)
     logging.debug(f"Installing all content packs for nightly flow in server {host}")
 
@@ -473,6 +476,7 @@ def install_all_content_packs_from_build_bucket(
     host: str,
     server_version: str,
     bucket_packs_root_path: str,
+    service_account: str,
     extract_destination_path: str,
 ):
     """Iterates over the packs currently located in the Build bucket. Wrapper for install_packs.
@@ -482,13 +486,14 @@ def install_all_content_packs_from_build_bucket(
     :param host: FQDN of the server.
     :param server_version: The version of the server the packs are installed on.
     :param bucket_packs_root_path: The prefix to the root of packs in the bucket
+    :param service_account: Google Service Account
     :param extract_destination_path: the full path of extract folder for the index.
     :return: None. Prints the response from the server in the build.
     """
     all_packs = []
     logging.debug(f"Installing all content packs in server {host} from packs path {bucket_packs_root_path}")
 
-    storage_client = init_storage_client()
+    storage_client = init_storage_client(service_account)
     build_bucket = storage_client.bucket(GCPConfig.CI_BUILD_BUCKETS["xsoar"])
     index_folder_path, _, _ = download_and_extract_index(build_bucket, extract_destination_path, bucket_packs_root_path)
 
