@@ -744,7 +744,7 @@
   script:
     - section_start "Configure Docker" --collapsed
     # we need to configure the docker with the registry in order to be able to pull the images
-    - gcloud auth configure-docker ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
+    - gcloud auth configure-docker --quiet ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
     - section_end "Configure Docker"
     - section_start "Run Pre-Commit"
     - SHOULD_PRE_COMMIT_ALL=$(./Tests/scripts/should_pre_commit_all.sh)

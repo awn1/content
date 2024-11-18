@@ -30,7 +30,7 @@ test-native-candidate:run-pre-commit-with-native-candidate:
     - section_end "Versions"
     - section_start "Revoking GCP Auth and Configure Docker"
     - gcloud auth revoke "${GCS_ARTIFACTS_ACCOUNT_NAME}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-    - gcloud auth configure-docker ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
+    - gcloud auth configure-docker --quiet ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
     - section_end "Revoking GCP Auth and Configure Docker"
     - section_start "Run pre-commit with Native Candidate"
     - poetry install --only mypy
