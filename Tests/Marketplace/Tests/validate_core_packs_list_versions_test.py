@@ -3,8 +3,14 @@ import os
 from pathlib import Path
 from unittest import mock
 
+from Tests.Marketplace import validate_core_packs_list_versions
 from Tests.Marketplace.marketplace_services import load_json
 from Tests.Marketplace.validate_core_packs_list_versions import LogAggregator
+
+
+class MockNamespace:
+    marketplace = "xsoar_saas"
+    server_version = "8.8.0"
 
 
 def test_extract_pack_name_from_path_full_path():
@@ -107,7 +113,6 @@ def test_get_core_pack_from_file(mocker):
     Then
     - Ensure the pack was extracted successfully.
     """
-    from Tests.Marketplace import validate_core_packs_list_versions
     from Tests.Marketplace.validate_core_packs_list_versions import get_core_packs_from_file
 
     dummy_corepacks_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data", "corepacks-x.x.x.json")
@@ -134,7 +139,6 @@ def test_verify_all_mandatory_dependencies_are_in_corepack_list_invalid(mocker):
     Then:
     - The method executed with error.
     """
-    from Tests.Marketplace import validate_core_packs_list_versions
     from Tests.Marketplace.validate_core_packs_list_versions import verify_all_mandatory_dependencies_are_in_corepack_list
 
     mocker.patch("Tests.Marketplace.validate_core_packs_list_versions.check_if_test_dependency", return_value=False)
@@ -174,7 +178,6 @@ def test_verify_all_mandatory_dependencies_are_in_corepack_list_invalid_2(mocker
     Then:
     - The method executed with error.
     """
-    from Tests.Marketplace import validate_core_packs_list_versions
     from Tests.Marketplace.validate_core_packs_list_versions import verify_all_mandatory_dependencies_are_in_corepack_list
 
     mocker_logs = mocker.patch.object(validate_core_packs_list_versions.LogAggregator, "add_log")
@@ -217,7 +220,6 @@ def test_verify_all_mandatory_dependencies_are_in_corepack_list_valid(mocker):
     Then:
      - The method end successfully.
     """
-    from Tests.Marketplace import validate_core_packs_list_versions
     from Tests.Marketplace.validate_core_packs_list_versions import verify_all_mandatory_dependencies_are_in_corepack_list
 
     mocker_logs = mocker.patch.object(validate_core_packs_list_versions.LogAggregator, "add_log")
@@ -239,3 +241,27 @@ def test_verify_all_mandatory_dependencies_are_in_corepack_list_valid(mocker):
         "FeedMitreAttackv2", "1.1.39", dependencies, core_packs, "corepacks-x.x.x.json", "xsoar", "index.zip", LogAggregator()
     )
     assert mocker_logs.call_count == 0
+
+
+def test_get_core_packs_content():
+    """
+    Given:
+     - The data of a core packs list file.
+    When:
+     - Calling get_core_packs_content to parse the content of the file in the way we want.
+    Then:
+     - Retrieve the information in the expected format.
+    """
+    from Tests.Marketplace.validate_core_packs_list_versions import get_core_packs_content
+
+    core_packs_file_data = {
+        "corePacks": ["pack1/1.1.34/pack1.zip", "pack2/1.0.9/pack2.zip"],
+        "upgradeCorePacks": ["pack1", "pack2"],
+    }
+    core_packs_dict = {}
+    expected_result = {
+        "pack1": {"version": "1.1.34", "index_zip_path": "/pack1/metadata-1.1.34.json"},
+        "pack2": {"version": "1.0.9", "index_zip_path": "/pack2/metadata-1.0.9.json"},
+    }
+    get_core_packs_content(core_packs_file_data, core_packs_dict)
+    assert core_packs_dict == expected_result

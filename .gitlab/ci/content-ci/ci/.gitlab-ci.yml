@@ -16,6 +16,9 @@ stages:
   - run-instances
   - results
   - upload-to-marketplace
+  - create-updated-corepacks-list
+  - validate-core-packs-list-versions
+  - upload-updated-core-packs-list
   - sync-buckets
   - create-release-branch
   - trigger-nightlies
@@ -24,6 +27,7 @@ stages:
   - are-jobs-really-done
   - fan-in  # concentrate pipeline artifacts to single job before triggering child slack pipeline
   - trigger-contribution-build
+  - slack-notify
 
 include:
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.variables.yml
@@ -37,3 +41,4 @@ include:
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.security-scans.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.trigger-contribution-build.yml
   - local: .gitlab/ci/gitlab-ci.shared.variables.yml
+  - local: .gitlab/ci/content-ci/ci/override-corepacks.yml

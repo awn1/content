@@ -1,0 +1,120 @@
+validate-marketplace:
+  stage: unittests-and-validations
+  rules:
+    - if: '$PIPELINE_TYPE == "override-corepacks"'
+  extends:
+    - .pipeline-common-validations
+  variables:
+    MARKETPLACES: $MARKETPLACES
+
+check-user-permissions:
+  stage: unittests-and-validations
+  rules:
+    - if: '$PIPELINE_TYPE == "override-corepacks"'
+  extends:
+    - .default-job-settings
+  variables:
+    TEST_OVERRIDE_COREPACKS: "false"
+  script:
+    - echo "the var TEST_OVERRIDE_COREPACKS is $TEST_OVERRIDE_COREPACKS"
+    - !reference [.check_user_permissions_to_upload_packs]
+
+create-updated-corepacks-list:
+  stage: create-updated-corepacks-list
+  tags:
+    - cortex-content-1738
+  needs:
+    - validate-marketplace
+    - check-user-permissions
+  rules:
+    - if: '$PIPELINE_TYPE == "override-corepacks"'
+  extends:
+    - .default-job-settings
+  variables:
+    MARKETPLACES: $MARKETPLACES
+    PACKS_VERSIONS: $PACKS_VERSIONS
+    SERVER_VERSION_TO_UPDATE: $SERVER_VERSION_TO_UPDATE
+  script:
+    - echo "validate & create-updated-corepacks-list $MARKETPLACES $PACKS_VERSIONS $SERVER_VERSION_TO_UPDATE"
+    - python3 -u ./Tests/Marketplace/create_updated_core_packs_list.py -mp "${MARKETPLACES}" -p "${PACKS_VERSIONS}" -sv "${SERVER_VERSION_TO_UPDATE}"
+    - echo "finished validate & create-updated-corepacks-list"
+
+validate-core-packs-list-versions:
+  stage: validate-core-packs-list-versions
+  tags:
+    - cortex-content-1738
+  needs:
+    - create-updated-corepacks-list
+  rules:
+    - if: '$PIPELINE_TYPE == "override-corepacks"'
+  extends:
+    - .default-job-settings
+  parallel:
+    matrix:
+      - MARKETPLACE_VERSION:
+          - "xsoar_saas"
+          - "marketplacev2"
+          - "xpanse"
+  variables:
+    SERVER_VERSION_TO_UPDATE: $SERVER_VERSION_TO_UPDATE
+  script:
+    - echo "validate-core-packs-list-versions $MARKETPLACE_VERSION"
+    - python3 -u ./Tests/Marketplace/validate_core_packs_list_versions.py -s "${GCS_MARKET_KEY}" -mp "${MARKETPLACE_VERSION}" -sv "${SERVER_VERSION_TO_UPDATE}"
+    - echo "finished validate-core-packs-list-versions"
+
+upload-updated-core-packs-list:
+  stage: upload-updated-core-packs-list
+  tags:
+    - cortex-content-1738
+  rules:
+    - if: '$PIPELINE_TYPE == "override-corepacks"'
+  extends:
+    - .default-job-settings
+  needs:
+    - validate-core-packs-list-versions
+  parallel:
+    matrix:
+      - MARKETPLACE_VERSION:
+          - "xsoar_saas"
+          - "marketplacev2"
+          - "xpanse"
+  variables:
+    SERVER_VERSION_TO_UPDATE: $SERVER_VERSION_TO_UPDATE
+    TEST_OVERRIDE_COREPACKS: "false"
+    CI_PIPELINE_ID: $CI_PIPELINE_ID
+  script:
+    - section_start "Upload Core packs List" --collapsed
+    - python3 -u ./Tests/Marketplace/upload_override_core_packs.py -sv "$SERVER_VERSION_TO_UPDATE" -cpi "$CI_PIPELINE_ID" -t "$TEST_OVERRIDE_COREPACKS" -mp "$MARKETPLACE_VERSION"
+    - section_end "Upload Core packs List"
+
+override-core-packs-sync-buckets-between-projects:
+  extends:
+    - .sync-buckets-between-projects
+  rules:
+  - if : '$PIPELINE_TYPE == "override-corepacks"'
+  needs:
+    - upload-updated-core-packs-list
+  tags:
+    - cortex-content-1738
+  variables:
+    TEST_OVERRIDE_COREPACKS: "false"
+
+override-corepacks-fan-in:
+  stage: fan-in
+  rules:
+    - if: '$PIPELINE_TYPE == "override-corepacks"'
+  script:
+    - echo "fan in"
+
+override-corepacks-slack-notify:
+  rules:
+    - if: '$PIPELINE_TYPE == "override-corepacks"'
+  extends:
+    - .trigger-slack-notification
+  variables:
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: "override-corepacks-fan-in"
+    WORKFLOW: "Override corepacks pipeline"
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_ALLOW_FAILURE: "true"
+    ARTIFACT_PATH: "${CI_PROJECT_DIR}/artifacts"

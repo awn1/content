@@ -7,6 +7,7 @@ import sys
 from tempfile import mkdtemp
 from typing import Any
 
+from demisto_sdk.commands.common.constants import MarketplaceVersionToMarketplaceName
 from demisto_sdk.commands.content_graph.common import ContentType, RelationshipType
 from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
 from google.cloud.storage import Blob
@@ -14,7 +15,7 @@ from packaging.version import Version
 
 from Tests.Marketplace.logs_aggregator import LogAggregator
 from Tests.Marketplace.marketplace_constants import GCPConfig
-from Tests.Marketplace.marketplace_services import init_storage_client
+from Tests.Marketplace.marketplace_services import init_storage_client, load_json
 from Tests.Marketplace.upload_packs import (
     download_and_extract_index,
     download_and_extract_pack,
@@ -51,15 +52,16 @@ def option_handler():
         ),
         required=False,
     )
-    parser.add_argument("-bb", "--build_bucket_name", help="Gitlab Build bucket name", required=True)
+    parser.add_argument("-bb", "--build_bucket_name", help="Gitlab Build bucket name", required=False)
     parser.add_argument(
         "-n",
         "--ci_build_number",
         help="Gitlab build number (will be used as hash revision at index file)",
-        required=True,
+        required=False,
     )
-    parser.add_argument("-c", "--gitlab_branch", help="Gitlab branch of current build", required=True)
+    parser.add_argument("-c", "--gitlab_branch", help="Gitlab branch of current build", required=False)
     parser.add_argument("-mp", "--marketplace", help="marketplace version", default="xsoar")
+    parser.add_argument("-sv", "--server_version", help="The server version of the core packs list to override", required=False)
     # disable-secrets-detection-end
     return parser.parse_args()
 
@@ -89,8 +91,54 @@ def get_file_blob(storage_bucket: Any, path: str) -> Blob:
     return index_blob
 
 
+def get_core_packs_content(core_packs_file_data: dict, core_packs_dict: dict):
+    """Gets the relevant dictionary from the corepacks.json file.
+
+    Args:
+        core_packs_file_data (dict): The content of the core packs list file.
+        core_packs_dict (dict): An empty dict that will have the wanted info in the end of the function.
+    Returns:
+        dict: The relevant part of the core packs list. For example:
+        {"pack_name":
+            {"version": "1.0.0", "index_zip_path": "/pack_name/metadata-1.0.0.json"}
+        }
+
+    """
+    core_packs_file_list = core_packs_file_data.get("corePacks", [])
+    for core_pack_path in core_packs_file_list:
+        pack_name = extract_pack_name_from_path(core_pack_path)
+        pack_version = extract_pack_version_from_pack_path(core_pack_path, pack_name)
+        core_packs_dict.update(
+            {
+                f"{pack_name}": {
+                    "version": pack_version,
+                    "index_zip_path": f"/{pack_name}/metadata-{pack_version}.json",
+                }
+            }
+        )
+
+
+def get_core_packs_from_artifacts(path: str) -> dict:
+    """Gets the content of the core packs list file from the artifacts in order to create a dict with the needed info.
+
+    Args:
+        path (str): The path in the artifacts folder of the relevant core packs file.
+    Returns:
+        dict: The relevant part of the core packs list.
+
+    """
+    core_packs_dict: dict[Any, Any] = {}
+    logging.debug(f"Getting the core packs file content from the {path=}.")
+    core_packs_file_data = load_json(path)
+    if core_packs_file_data:
+        get_core_packs_content(core_packs_file_data, core_packs_dict)
+    else:
+        logging.info(f"{path} does not exists in the artifacts, will not be checked.")
+    return core_packs_dict
+
+
 def get_core_packs_from_file(storage_bucket: Any, path: str) -> dict:
-    """Gets the core pack list from the corepacks.json file.
+    """Gets the core pack list from the corepacks.json file in the build bucket.
 
     Args:
         storage_bucket (google.cloud.storage.bucket.Bucket): google storage bucket where corepacks.json is stored.
@@ -99,23 +147,13 @@ def get_core_packs_from_file(storage_bucket: Any, path: str) -> dict:
         dict: The core packs dict.
 
     """
-    core_packs_dict = {}
+    core_packs_dict: dict[Any, Any] = {}
     blob = get_file_blob(storage_bucket, path)
     if blob.exists():
+        logging.debug(f"Getting the core packs file content from the {storage_bucket=}.")
         with blob.open("r") as f:
             core_packs_file_data = json.load(f)
-            core_packs_file_list = core_packs_file_data.get("corePacks", [])
-            for core_pack_path in core_packs_file_list:
-                pack_name = extract_pack_name_from_path(core_pack_path)
-                pack_version = extract_pack_version_from_pack_path(core_pack_path, pack_name)
-                core_packs_dict.update(
-                    {
-                        f"{pack_name}": {
-                            "version": pack_version,
-                            "index_zip_path": f"/{pack_name}/metadata-{pack_version}.json",
-                        }
-                    }
-                )
+            get_core_packs_content(core_packs_file_data, core_packs_dict)
     else:
         logging.info(f"{path} does not exists in the bucket, will not be checked.")
     return core_packs_dict
@@ -279,6 +317,57 @@ def check_if_test_dependency(dependency_name: str, pack_name: str, marketplace: 
         return False
 
 
+def prepare_validate_corepacks(
+    marketplace: str, option: argparse.Namespace, gitlab_branch: str | None, build_number: str = ""
+) -> tuple:
+    """Prepares the relevant parameters depending on the use case.
+        1. Override-corepacks-list flow.
+            a. The relevant corepacks list in this case is in the artifacts folder.
+            b. There is no build and no build bucket in this flow. As a result the bucket_base_path is different.
+            c. Checks only the specific server version that was requested in the flow parameters.
+        2. Regular build flow.
+            a. There is a PR and a build or an active upload flow.
+            b. As a result there is a build bucket.
+            c. Checks the 2 last versions of the core pack (the unlocked one and the latest locked one).
+    Args:
+        marketplace (str): the marketplace type of the bucket. possible options: xsoar, marketplace_v2 or xpanse.
+        option (argparse.Namespace)
+        gitlab_branch (str | None): The relevant gitlab branch from the MR, if relevant.
+        build_number (str | None): The number of the relevant build.
+    Returns:
+        A tuple of the parameters to be used later in the validation bucket_name, artifacts_folder, bucket_base_path,
+        corepacks_files_names.
+    """
+    if not gitlab_branch:  # override-corepacks-list case
+        bucket_name = MarketplaceVersionToMarketplaceName[marketplace]
+        artifacts_folder = os.getenv("ARTIFACTS_FOLDER")
+        server_version = option.server_version
+        bucket_base_path = GCPConfig.CONTENT_PACKS_PATH
+        corepacks_files_names = [f"corepacks-{server_version}.json"]
+        logging.debug(
+            f"Validating core packs list versions in override core packs pipeline. {corepacks_files_names=} "
+            f"{bucket_name=}, {artifacts_folder=}."
+        )
+
+    else:
+        artifacts_folder = ""
+        bucket_name = GCPConfig.CI_BUILD_BUCKETS[marketplace]
+        build_bucket_path = os.path.join(GCPConfig.BUILD_PATH_PREFIX, gitlab_branch, build_number)
+        bucket_base_path = os.path.join(build_bucket_path, GCPConfig.CONTENT_PACKS_PATH)
+
+        # Get relevant files name of corepacks-x.x.x.json or corepacks.json
+        corepacks_json_file_name = f"{GCPConfig.CORE_PACK_FILE_NAME}"
+        last_version_corepacks, penultimate_version_corepacks = get_last_corepacks_files_from_versions_metadata()
+
+        corepacks_files_names = [
+            penultimate_version_corepacks,
+            last_version_corepacks,
+            corepacks_json_file_name,
+        ]
+        logging.debug(f"Validate core packs list versions in a build bucket. {corepacks_files_names=} {bucket_name=}.")
+    return bucket_name, artifacts_folder, bucket_base_path, corepacks_files_names
+
+
 def main():
     install_logging("validate_core_pack_list.log", logger=logging)
     option = option_handler()
@@ -289,29 +378,25 @@ def main():
     build_number = option.ci_build_number
     gitlab_branch = option.gitlab_branch
     extract_destination_path = mkdtemp()
-    build_bucket_path = os.path.join(GCPConfig.BUILD_PATH_PREFIX, gitlab_branch, build_number)
-    build_bucket_base_path = os.path.join(build_bucket_path, GCPConfig.CONTENT_PACKS_PATH)
+
+    bucket_name, artifacts_folder, bucket_base_path, corepacks_files_names = prepare_validate_corepacks(
+        marketplace, option, gitlab_branch, build_number
+    )
 
     # google cloud storage client initialized.
     logging.debug("init storage_client")
     storage_client = init_storage_client()
-    storage_bucket = storage_client.bucket(GCPConfig.CI_BUILD_BUCKETS[marketplace])
+    storage_bucket = storage_client.bucket(bucket_name)
 
     # Get the index file from the bucket.
-    index_folder_path, _, _ = download_and_extract_index(storage_bucket, extract_destination_path, build_bucket_base_path)
+    index_folder_path, _, _ = download_and_extract_index(storage_bucket, extract_destination_path, bucket_base_path)
 
-    # Get relevant files name of corepacks-x.x.x.json or corepacks.json
-    corepacks_json_file_name = f"{GCPConfig.CORE_PACK_FILE_NAME}"
-    last_version_corepacks, penultimate_version_corepacks = get_last_corepacks_files_from_versions_metadata()
-
-    corepacks_files_names = [
-        penultimate_version_corepacks,
-        last_version_corepacks,
-        corepacks_json_file_name,
-    ]
     with LogAggregator() as log_aggregator:
         for corepacks_file_name in corepacks_files_names:
-            core_packs = get_core_packs_from_file(storage_bucket, os.path.join(build_bucket_base_path, corepacks_file_name))
+            if not artifacts_folder:
+                core_packs = get_core_packs_from_file(storage_bucket, os.path.join(bucket_base_path, corepacks_file_name))
+            else:
+                core_packs = get_core_packs_from_artifacts(os.path.join(artifacts_folder, bucket_name, corepacks_file_name))
             for pack_name, pack_data in core_packs.items():
                 pack_version = pack_data.get("version")
                 if pack_path_after_extraction := download_and_extract_pack(
@@ -319,7 +404,7 @@ def main():
                     pack_version,
                     storage_bucket,
                     extract_destination_path,
-                    build_bucket_base_path,
+                    bucket_base_path,
                 ):
                     metadata_zip_index = get_dependencies_from_pack_meta_data(pack_data.get("index_zip_path"), index_folder_path)
                     metadata_zip_pack = get_dependencies_from_pack_meta_data("/metadata.json", pack_path_after_extraction)  # type: ignore[arg-type]

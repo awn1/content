@@ -11,20 +11,9 @@ BUILD_BUCKET_PATH="content/builds/$CI_COMMIT_BRANCH/$CI_PIPELINE_ID"
 BUILD_BUCKET_PACKS_DIR_PATH="$BUILD_BUCKET_PATH/content/packs"
 BUILD_BUCKET_PACKS_DIR_FULL_PATH="$GCS_BUILD_BUCKET/$BUILD_BUCKET_PACKS_DIR_PATH"
 
-echo "Starting calculate override core packs"
-python3 ./Tests/Marketplace/override_core_packs_versions.py -pa "${ARTIFACTS_FOLDER_SERVER_TYPE}" -n "${CI_PIPELINE_ID}" -mp "${MARKETPLACE_TYPE}" -uc "${LAST_UPLOAD_COMMIT}"
-echo "Finished calculate override core packs"
-
-core_packs_files_count=$(find "${ARTIFACTS_FOLDER_SERVER_TYPE}" -name "corepacks*.json" | wc -l)
-if [ "${core_packs_files_count}" -eq 0 ]; then
-  echo "No core packs files were found, skipping uploading."
-else
-  echo "Uploading ${core_packs_files_count} core packs files."
-  # Copy core packs files from the artifacts folder to the build bucket:
-  echo "${BUILD_BUCKET_PACKS_DIR_FULL_PATH} this is path of the build bucket"
-  find "${ARTIFACTS_FOLDER_SERVER_TYPE}" -name "corepacks*.json" -exec gsutil cp -z json "{}" "gs://$BUILD_BUCKET_PACKS_DIR_FULL_PATH" \;
-  echo "Successfully uploaded core packs files."
-fi
+echo "Handling versions-metadata file updates."
+python3 ./Tests/Marketplace/upload_server_versions_metadata.py -pa "${ARTIFACTS_FOLDER_SERVER_TYPE}"
+echo "Finished updating the versions-metadata file"
 
 if [ -f "${ARTIFACTS_FOLDER_SERVER_TYPE}/versions-metadata.json" ]; then
   echo "Uploading versions-metadata.json."

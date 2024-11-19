@@ -241,11 +241,13 @@
     [ ! -d "${CI_PROJECT_DIR}/Tests" ] && mkdir -p "${CI_PROJECT_DIR}/Tests" || echo "Tests directory already exists"
     [ ! -d "${CI_PROJECT_DIR}/Utils" ] && mkdir -p "${CI_PROJECT_DIR}/Utils" || echo "Utils directory already exists"
     [ ! -d "${CI_PROJECT_DIR}/config" ] && mkdir -p "${CI_PROJECT_DIR}/config" || echo "config directory already exists"
+    [ ! -d "${CI_PROJECT_DIR}/Pipelines" ] && mkdir -p "${CI_PROJECT_DIR}/Pipelines" || echo "Pipelines directory already exists"
     [ ! -d "${CI_PROJECT_DIR}/SecretActions" ] && mkdir -p "${CI_PROJECT_DIR}/SecretActions" || echo "SecretActions directory already exists"
     [ ! -d "${CI_PROJECT_DIR}/gcp" ] && mkdir -p "${CI_PROJECT_DIR}/gcp" || echo "gcp directory already exists"
     # COPY DIRECTORIES
     cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/Tests/"* "${CI_PROJECT_DIR}/Tests"
     cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/Utils/"* "${CI_PROJECT_DIR}/Utils"
+    cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/Pipelines/"* "${CI_PROJECT_DIR}/Pipelines"
     cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/SecretActions/"* "${CI_PROJECT_DIR}/SecretActions"
     cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/gcp/"* "${CI_PROJECT_DIR}/gcp"
     # COPY FILES
@@ -405,6 +407,26 @@
   - cp $GCP_SSH_CONFIGURATION ~/.ssh/config
   - chmod 700 ~/.ssh/config
   - section_end "SSH config setup"
+
+.check_user_permissions_to_upload_packs:
+  - section_start "Check User Permissions to Upload Packs" # if bucket upload and uploading to marketplace-dist
+  - |
+    if [[ ( "${BUCKET_UPLOAD}" == "true" || "${FORCE_BUCKET_UPLOAD}" == "true" ) && "$GCS_MARKET_BUCKET" == "$GCS_PRODUCTION_BUCKET" ]] || [[ "$TEST_OVERRIDE_COREPACKS" == "false" ]]; then
+      CONTENT_LEADERS=$(curl -sS "https://api.github.com/orgs/demisto/teams/content-leaders/members" -H "Authorization: token ${GITHUB_TOKEN}")
+      echo "received content leaders"
+      LEADER_NAMES=$(echo $CONTENT_LEADERS | jq -r ".[].login")
+      LEADER_NAMES=$(echo "${LEADER_NAMES}" "content-bot" "svc -xsoar-gitlab-mirror" "svc-xsoar-gitlab-mirror" "${USERS_ALLOWED_TRIGGER_UPLOAD}" )
+      if [[ -z "$GITLAB_USER_NAME" ]] || [[ -z "`echo $LEADER_NAMES | grep -w "$GITLAB_USER_NAME"`" ]]; then
+        echo -e "User '$GITLAB_USER_NAME' is not allowed to trigger this build, only one of:\n${LEADER_NAMES}"
+        job-done
+        exit 1
+      else
+        echo "User '${GITLAB_USER_NAME}' is allowed to upload packs / force upload packs."
+      fi
+    else
+      echo "This is a test run. All users can run it."
+    fi
+  - section_end "Check User Permissions to Upload Packs"
 
 .install_ssh_keys: &install_ssh_keys
   - section_start "Installing SSH keys" --collapsed
@@ -899,3 +921,13 @@
       variables:
         KUBERNETES_MEMORY_REQUEST: ${KUBERNETES_MEMORY_REQUEST}
         KUBERNETES_MEMORY_LIMIT: ${KUBERNETES_MEMORY_LIMIT}
+
+.pipeline-common-validations:
+  variables:
+    MARKETPLACES: $MARKETPLACES
+  extends:
+    - .default-job-settings
+  script:
+    - section_start "validate variables"
+    - python3 -u ./Pipelines/common/common_validations.py --marketplaces ${MARKETPLACES}
+    - section_end "validate variables"

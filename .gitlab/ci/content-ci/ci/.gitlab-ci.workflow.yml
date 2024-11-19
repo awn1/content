@@ -75,6 +75,9 @@ workflow:
     - if: '$TRIGGER_TEST_BRANCH == "true"'
       variables:
           WORKFLOW_PIPELINE_NAME: 'Trigger Content test branch pipeline for infra branch: $INFRA_BRANCH'
+    - if: '$PIPELINE_TYPE == "override-corepacks"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Override corepacks pipeline'
 
     # Don't add any other rules after this one.
     - when: always  # Other pipelines can run, but use the default name

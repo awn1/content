@@ -20,24 +20,6 @@ cloning-repositories-upload-flow:
   script:
     - job-done
 
-.check_user_permissions_to_upload_packs: &check_user_permissions_to_upload_packs
-  - section_start "Check User Permissions to Upload Packs" # if bucket upload and uploading to marketplace-dist
-  - |
-    if [[ "${BUCKET_UPLOAD}" == "true" || "${FORCE_BUCKET_UPLOAD}" == "true" ]] && [[ "$GCS_MARKET_BUCKET" == "$GCS_PRODUCTION_BUCKET" ]]; then
-      CONTENT_LEADERS=$(curl -sS "https://api.github.com/orgs/demisto/teams/content-leaders/members" -H "Authorization: token ${GITHUB_TOKEN}")
-      echo "received content leaders"
-      LEADER_NAMES=$(echo $CONTENT_LEADERS | jq -r ".[].login")
-      LEADER_NAMES=$(echo "${LEADER_NAMES}" "content-bot" "svc -xsoar-gitlab-mirror" "svc-xsoar-gitlab-mirror" "${USERS_ALLOWED_TRIGGER_UPLOAD}" )
-      if [[ -z "$GITLAB_USER_NAME" ]] || [[ -z "`echo $LEADER_NAMES | grep -w "$GITLAB_USER_NAME"`" ]]; then
-        echo -e "User '$GITLAB_USER_NAME' is not allowed to trigger this build, only one of:\n${LEADER_NAMES}"
-        job-done
-        exit 1
-      else
-        echo "User '${GITLAB_USER_NAME}' is allowed to upload packs / force upload packs."
-      fi
-    fi
-  - section_end "Check User Permissions to Upload Packs"
-
 .upload_packs_to_the_marketplace: &upload_packs_to_the_marketplace
   - section_start "Upload Packs To Marketplace Storage"
   - |
@@ -586,7 +568,7 @@ upload-packs-to-marketplace:
     - .default-job-settings
   script:
     - !reference [.ssh-config-setup]
-    - *check_user_permissions_to_upload_packs
+    - !reference [.check_user_permissions_to_upload_packs]
     - *upload_packs_to_the_marketplace
     - *upload_failed_to_upload_packs
     - section_start "Download packs from GCP"
@@ -636,7 +618,7 @@ upload-packs-to-marketplace-v2:
     - .bucket-upload-rule
     - .default-job-settings
   script:
-    - *check_user_permissions_to_upload_packs
+    - !reference [.check_user_permissions_to_upload_packs]
     - *upload_packs_to_the_marketplace_v2
     - *upload_failed_to_upload_packs
     - section_start "Download packs from GCP"
@@ -686,7 +668,7 @@ upload-packs-to-xpanse-marketplace:
     - .bucket-upload-rule
     - .default-job-settings
   script:
-    - *check_user_permissions_to_upload_packs
+    - !reference [.check_user_permissions_to_upload_packs]
     - *upload_packs_to_the_marketplace_xpanse
     - *upload_failed_to_upload_packs
     - section_start "Download packs from GCP"
@@ -736,7 +718,7 @@ upload-packs-to-xsoar-saas-marketplace:
     - .bucket-upload-rule
     - .default-job-settings
   script:
-    - *check_user_permissions_to_upload_packs
+    - !reference [.check_user_permissions_to_upload_packs]
     - *upload_packs_to_the_marketplace_xsoar_saas
     - *upload_failed_to_upload_packs
     - section_start "Download packs from GCP"
@@ -820,7 +802,7 @@ xsoar-saas-force-pack-upload:
   extends:
     - .default-job-settings
   script:
-    - *check_user_permissions_to_upload_packs
+    - !reference [.check_user_permissions_to_upload_packs]
     - EXTRACT_FOLDER=$(mktemp -d)
     - PACK_ARTIFACTS="${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs.zip"
     - PACKS_DEPENDENCIES="${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json"
@@ -914,9 +896,9 @@ upload-id-set-bucket:
     MARKETPLACE_XPANSE_PROD: "marketplace-xpanse"
   script:
     - |
-      if [[ $TEST_UPLOAD == "true" ]]; then
+      if [[ $TEST_UPLOAD == "true" ]] || [[ $TEST_OVERRIDE_COREPACKS == "true" ]]; then
         echo -n "skipped" >> ${ARTIFACTS_FOLDER}/logs/trigger_sync_all_buckets_status_code.log
-        echo "Skipping syncing buckets in test upload-flow"
+        echo "Skipping syncing buckets in test upload-flow and test override core packs."
         job-done
         exit 0
       fi
