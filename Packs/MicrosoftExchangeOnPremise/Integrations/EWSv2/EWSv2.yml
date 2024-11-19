@@ -134,6 +134,13 @@ name: EWS v2
 script:
   commands:
   - arguments:
+    - description: The attachments id to get. If none - all attachments will be retrieve from the message. Support multiple attachments with comma-separated value or array.
+      isArray: true
+      name: attachment-id
+      required: true
+    description: Retrieves the actual attachments from an item (email message). To get all attachments for a message, only specify the item-id argument.
+    name: ews-test-get-attachment
+  - arguments:
     - description: The ID of the email message for which to get the attachments.
       name: item-id
       required: true

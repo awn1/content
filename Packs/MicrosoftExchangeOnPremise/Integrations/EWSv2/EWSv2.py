@@ -2287,6 +2287,78 @@ def sub_main():  # pragma: no cover
             encode_and_submit_results(send_email(args))
         elif demisto.command() == 'reply-mail':
             encode_and_submit_results(reply_email(args))
+        elif demisto.command() == 'ews-test-get-attachment':
+            attachment_id = args['attachment_id']
+            import ssl
+
+            import requests
+            from requests.adapters import HTTPAdapter
+            from requests_ntlm import HttpNtlmAuth
+            from requests.packages.urllib3.util.ssl_ import create_urllib3_context
+            # Set the URL of the Exchange server
+
+            url = EWS_SERVER
+            username = USERNAME
+            password = PASSWORD
+            # Set the username and password
+
+            CIPHERS_STRING = '@SECLEVEL=1:ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:ECDH+AESGCM:DH+AESGCM:' \
+                                    'ECDH+AES:DH+AES:RSA+ANESGCM:RSA+AES:!aNULL:!eNULL:!MD5:!DSS'
+
+            class SSLAdapter(HTTPAdapter):
+                """
+                    A wrapper used for https communication to enable ciphers that are commonly used
+                    and are not enabled by default
+                    :return: No data returned
+                    :rtype: ``None``
+                """
+                context = create_urllib3_context(ciphers=CIPHERS_STRING)
+
+                def __init__(self, verify=True, **kwargs):
+                    # type: (bool, dict) -> None
+                    if not verify:
+                        self.context.check_hostname = False
+                    if not verify and ssl.OPENSSL_VERSION_INFO >= (3, 0, 0, 0):
+                        self.context.options |= 0x4
+                    super().__init__(**kwargs)  # type: ignore[arg-type]
+
+                def init_poolmanager(self, *args, **kwargs):
+                    kwargs['ssl_context'] = self.context
+                    return super(SSLAdapter, self).init_poolmanager(*args, **kwargs)
+
+                def proxy_manager_for(self, *args, **kwargs):
+                    kwargs['ssl_context'] = self.context
+                    return super(SSLAdapter, self).proxy_manager_for(*args, **kwargs)
+
+            headers = {
+                'User-Agent': 'exchangelib/5.0.3 (python-requests/2.31.0)',
+                'Accept-Encoding': 'gzip, deflate',
+                'Accept': '*/*',
+                'Connection': 'Keep-Alive',
+                'Content-Type': 'text/xml; charset=utf-8',
+            }
+
+            # Define the XML body
+            xml_body = f'''<?xml version=\'1.0\' encoding=\'utf-8\'?>\n<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:m="http://schemas.microsoft.com/exchange/services/2006/messages" xmlns:t="http://schemas.microsoft.com/exchange/services/2006/types"><s:Header><t:RequestServerVersion Version="Exchange2016"/><t:TimeZoneContext><t:TimeZoneDefinition Id="UTC"/></t:TimeZoneContext></s:Header><s:Body><m:GetAttachment><m:AttachmentIds><t:AttachmentId Id="{attachment_id}"/></m:AttachmentIds></m:GetAttachment></s:Body></s:Envelope>'''
+
+            session = requests.Session()
+
+            # Mount the custom adapter to the session
+            session.mount('https://', SSLAdapter())
+            # Make the request
+            response = session.post(
+                url,
+                headers=headers,
+                data=xml_body,
+                auth=HttpNtlmAuth(username, password),
+                verify=False
+            )
+
+            # Print the response
+            print('Status Code:', response.status_code)
+            file_result = fileResult(f"attachment_file_results_{attachment_id[:5]}.xml", response.text)
+            # print('Response Body:', response.text)
+            return_results(file_result)
         else:
             return_error(f'Command: "{demisto.command()}" was not recognized by this integration')
 
