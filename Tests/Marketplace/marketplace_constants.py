@@ -3,6 +3,8 @@ import json
 import os
 from pathlib import Path
 
+from demisto_sdk.commands.common.constants import MarketplaceVersions
+
 IGNORED_FILES = ["__init__.py", "ApiModules", "NonSupported", "index"]  # files to ignore inside Packs folder
 CONTENT_ROOT_PATH = os.path.abspath(os.path.join(__file__, "../../.."))  # full path to content root repo
 PACKS_FOLDER = "Packs"  # name of base packs folder inside content repo
@@ -19,6 +21,7 @@ XSOAR_MP = "xsoar"
 XPANSE_MP = "xpanse"
 XSOAR_SAAS_MP = "xsoar_saas"
 XSOAR_ON_PREM_MP = "xsoar_on_prem"
+AUTHORIZED_MARKETPLACES = [XSIAM_MP, XPANSE_MP, XSOAR_SAAS_MP]
 XSIAM_START_TAG = "<~XSIAM>"
 XSIAM_END_TAG = "</~XSIAM>"
 XSOAR_START_TAG = "<~XSOAR>"
@@ -30,6 +33,13 @@ XSOAR_SAAS_END_TAG = "</~XSOAR_SAAS>"
 XSOAR_ON_PREM_TAG = "<~XSOAR_ON_PREM>"
 XSOAR_ON_PREM_END_TAG = "</~XSOAR_ON_PREM>"
 COREPACKS_OVERRIDE_FILE_PATH = "Config/corepacks_override.json"
+
+MARKETPLACE_VERSION_TO_DEV_BUCKET_NAME = {
+    MarketplaceVersions.XSOAR.value: "marketplace-dist-dev",
+    MarketplaceVersions.MarketplaceV2.value: "marketplace-v2-dist-dev",
+    MarketplaceVersions.XPANSE.value: "xpanse-dist-dev",
+    MarketplaceVersions.XSOAR_SAAS.value: "marketplace-saas-dist-dev",
+}
 
 TAGS_BY_MP = {
     XSIAM_MP: (XSIAM_START_TAG, XSIAM_END_TAG),

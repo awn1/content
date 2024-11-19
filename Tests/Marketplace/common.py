@@ -11,10 +11,11 @@ import demisto_client
 import requests
 from demisto_client.demisto_api.api.default_api import DefaultApi as DemistoClient
 from demisto_client.demisto_api.rest import ApiException
+from demisto_sdk.commands.common.constants import MarketplaceVersionToMarketplaceName
 from packaging.version import Version
 from urllib3.exceptions import HTTPError, HTTPWarning
 
-from Tests.Marketplace.marketplace_constants import Metadata
+from Tests.Marketplace.marketplace_constants import MARKETPLACE_VERSION_TO_DEV_BUCKET_NAME, Metadata
 from Tests.Marketplace.upload_packs import extract_packs_artifacts
 from Tests.scripts.utils import logging_wrapper as logging
 
@@ -340,3 +341,27 @@ def get_packs_with_higher_min_version(
             )
 
     return packs_with_higher_version
+
+
+def get_buckets_from_marketplaces(marketplaces: str) -> tuple:
+    """
+    Extract the relevant marketplaces from the parameter, and return a list of the relevant bucket names.
+
+    Args:
+        marketplaces (str): A comma separated sting with the relevant marketplaces to do the override in.
+    Returns:
+        A tuple of 2 lists. The first is a list of the relevant prod bucket names.
+        The second is a list of the relevant dev bucket names.
+    """
+    marketplaces_list = marketplaces.split(",")
+    marketplaces_prod_buckets_names = []
+    marketplaces_dev_buckets_names = []
+    for m in marketplaces_list:
+        marketplaces_prod_buckets_names.append(MarketplaceVersionToMarketplaceName[m.strip().lower()])
+        marketplaces_dev_buckets_names.append(MARKETPLACE_VERSION_TO_DEV_BUCKET_NAME[m.strip().lower()])
+    logging.debug(
+        f"The list of marketplaces is {marketplaces_list}.\n"
+        f"The matching prod bucket names are {marketplaces_prod_buckets_names} and the dev buckets are"
+        f" {marketplaces_dev_buckets_names}."
+    )
+    return marketplaces_prod_buckets_names, marketplaces_dev_buckets_names
