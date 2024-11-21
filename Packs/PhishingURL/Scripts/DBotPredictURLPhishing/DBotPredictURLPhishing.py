@@ -752,13 +752,14 @@ def main():
         protocol = demisto.args().get('defaultRequestProtocol', 'HTTP').lower()
 
         msg_list: list = []
+        model = load_model_from_docker()
 
-        # Check existing version of the model in demisto
-        exist, demisto_major_version, demisto_minor_version, model_data = oob_model_exists_and_updated()
+        # # Check existing version of the model in demisto
+        # exist, demisto_major_version, demisto_minor_version, model_data = oob_model_exists_and_updated()
 
-        # Update model if necessary and load the model
-        model, msg_list = update_and_load_model(debug, exist, reset_model, msg_list, demisto_major_version,
-                                                demisto_minor_version, model_data)
+        # # Update model if necessary and load the model
+        # model, msg_list = update_and_load_model(debug, exist, reset_model, msg_list, demisto_major_version,
+        #                                         demisto_minor_version, model_data)
 
         # Get all the URLs on which we will run the model
         urls, msg_list = get_urls_to_run(email_body, email_html, urls_argument, max_urls, model, msg_list, debug)
