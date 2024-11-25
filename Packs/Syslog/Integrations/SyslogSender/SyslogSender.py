@@ -276,6 +276,7 @@ def send_log(manager: SyslogManager, message: str, log_level: str):
 
     demisto.debug(f'Sent {log_level} message: {message}')
 
+
 def mirror_investigation():
     """
     Update the integration context with a new or existing mirror.
