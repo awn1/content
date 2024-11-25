@@ -92,8 +92,11 @@ class SyslogHandlerTLS(logging.Handler):
         ssl_sock = ssl_context.wrap_socket(ssl_sock, server_hostname=self.address)
         self.socket = ssl_sock
         try:
+            demisto.debug(f"Connecting with TLS to {self.address}:{self.port}")
             self.socket.connect((self.address, self.port))
+            demisto.debug(f"Connected with TLS succesfully to {self.address}:{self.port}")
         except OSError as exc:
+            demisto.debug(f"Error connecting with TLS to {self.address}:{self.port}: {str(exc)}")
             if ssl_sock:
                 ssl_sock.close()
             raise DemistoException(str(exc))
@@ -124,9 +127,12 @@ class SyslogHandlerTLS(logging.Handler):
                 message=self.format(record)
             )
             # Connect to the syslog server
+            demisto.debug(f"Sending {syslog_message=}")
             self.socket.send(syslog_message.encode('utf-8'))
+            demisto.debug(f"Sent {syslog_message=}")
 
         except Exception as e:
+            demisto.debug(f"Failed sending {syslog_message=}")
             if self.socket:
                 self.socket.close()
             demisto.error(str(e))
@@ -160,18 +166,21 @@ class SyslogManager:
         :return: syslog logger
         """
         if self.protocol == TLS and self.syslog_cert_path:
-            demisto.debug('creating tls logger handler')
+            demisto.debug('creating tls logger handler...')
             handler = self.init_handler_tls(self.syslog_cert_path)
         else:
-            demisto.debug('creating tcp/udp logger handler')
+            demisto.debug('creating tcp/udp logger handler...')
             handler = self._get_handler()
         syslog_logger = self._init_logger(handler)
-        demisto.debug('logger was created ')
+        demisto.debug('logger created successfully')
         try:
             yield syslog_logger
         finally:
+            demisto.debug('removing handler')
             syslog_logger.removeHandler(handler)
+            demisto.debug('closing handler')
             handler.close()
+            demisto.debug('handler closed successfully')
 
     def _get_handler(self) -> Rfc5424SysLogHandler:
         sock_kind = SOCK_STREAM if self.protocol == TCP else socket.SOCK_DGRAM
@@ -265,6 +274,7 @@ def send_log(manager: SyslogManager, message: str, log_level: str):
         if log_level == 'CRITICAL':
             syslog_logger.critical(message)
 
+    demisto.debug(f'Sent {log_level} message: {message}')
 
 def mirror_investigation():
     """
