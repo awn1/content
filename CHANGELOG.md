@@ -3,13 +3,13 @@
 ### Features
 
 - Created a new pipeline for overriding core packs lists. ([11298](https://jira-dc.paloaltonetworks.com/browse/11298))
-- Update the sdk version 1.32.5 in Infra.
+- Updated the sdk version 1.32.5 in Infra.
 
 ### Bugfixes
 
-- Fixed and issue where corepacks files are not copied to the build bucket. ([12002](https://jira-dc.paloaltonetworks.com/browse/12002))
+- Fixed an issue where corepacks files are not copied to the build bucket. ([12002](https://jira-dc.paloaltonetworks.com/browse/12002))
 - Revert ciac-11348 - since it fails the content logs processing.
-- Timeout issues - removed search for hybrid packs
+- Timeout issues - removed search for hybrid packs.
 
 ### Misc
 
