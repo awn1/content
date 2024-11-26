@@ -12,10 +12,17 @@
     - if: '$BUCKET_UPLOAD == "true" && $FORCE_BUCKET_UPLOAD == "false"'
       when: always
 
+.bucket-upload-rule-clone-repo:
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /pull\/[0-9]+/'
+      when: never
+    - if: '$BUCKET_UPLOAD == "true"'
+      when: always
+
 cloning-repositories-upload-flow:
   stage: .pre
   extends:
-    - .bucket-upload-rule
+    - .bucket-upload-rule-clone-repo
     - .cloning-repositories
   script:
     - job-done
@@ -752,6 +759,7 @@ xsoar-force-pack-upload:
     GCS_MARKET_BUCKET_TO_UPLOAD: $GCS_MARKET_BUCKET
     MARKETPLACE: "xsoar"
     GCS_CURRENT_PRODUCTION_BUCKET: $GCS_PRODUCTION_BUCKET
+    GCS_BUILD_BUCKET: "marketplace-ci-build-xsoar-dev"
   extends: .force-pack-upload
   rules:
     - if: '$FORCE_BUCKET_UPLOAD == "true"'
@@ -765,6 +773,7 @@ marketplace-v2-force-pack-upload:
     GCS_MARKET_BUCKET_TO_UPLOAD: $GCS_MARKET_V2_BUCKET
     MARKETPLACE: "marketplacev2"
     GCS_CURRENT_PRODUCTION_BUCKET: $GCS_PRODUCTION_V2_BUCKET
+    GCS_BUILD_BUCKET: "marketplace-ci-build-v2-dev"
   extends: .force-pack-upload
   rules:
     - if: '$FORCE_BUCKET_UPLOAD == "true"'
@@ -778,6 +787,7 @@ xpanse-force-pack-upload:
     GCS_MARKET_BUCKET_TO_UPLOAD: $GCS_MARKET_XPANSE_BUCKET
     MARKETPLACE: "xpanse"
     GCS_CURRENT_PRODUCTION_BUCKET: $GCS_PRODUCTION_XPANSE_BUCKET
+    GCS_BUILD_BUCKET: "marketplace-ci-build-xpanse-dev"
   extends: .force-pack-upload
   rules:
     - if: '$FORCE_BUCKET_UPLOAD == "true"'
@@ -789,8 +799,9 @@ xsoar-saas-force-pack-upload:
     ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_XSOAR}"
     ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_XSOAR}/server_type_${SERVER_TYPE}"
     GCS_MARKET_BUCKET_TO_UPLOAD: $GCS_MARKET_XSOAR_SAAS_BUCKET
-    MARKETPLACE: "xsoar saas"
+    MARKETPLACE: "xsoar_saas"
     GCS_CURRENT_PRODUCTION_BUCKET: $GCS_PRODUCTION_XSOAR_SAAS_BUCKET
+    GCS_BUILD_BUCKET: "marketplace-ci-build-xsoar-saas-dev"
   extends: .force-pack-upload
   rules:
     - if: '$FORCE_BUCKET_UPLOAD == "true"'
@@ -807,7 +818,7 @@ xsoar-saas-force-pack-upload:
     - PACK_ARTIFACTS="${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs.zip"
     - PACKS_DEPENDENCIES="${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json"
     - CI_COMMIT_BRANCH=${CI_COMMIT_BRANCH:-unknown}
-    - GCS_BUILD_BUCKET="marketplace-ci-build"
+    - GCS_BUILD_BUCKET=${GCS_BUILD_BUCKET}
     - |
       if [[ $GCS_MARKET_BUCKET_TO_UPLOAD == $GCS_CURRENT_PRODUCTION_BUCKET ]] && [[ -z $STORAGE_BASE_PATH ]]; then
         STORAGE_BASE_PATH="content"
@@ -817,7 +828,7 @@ xsoar-saas-force-pack-upload:
        STORAGE_BASE_PATH="upload-flow/builds/$CI_COMMIT_BRANCH/$CI_PIPELINE_ID/content"
       fi
 
-    - python3 ./Tests/Marketplace/copy_and_upload_packs.py -a "${PACK_ARTIFACTS}" -e $EXTRACT_FOLDER -pb "$GCS_MARKET_BUCKET_TO_UPLOAD" -bb "$GCS_BUILD_BUCKET" -s $GCS_MARKET_KEY -n $CI_PIPELINE_ID -c $CI_COMMIT_BRANCH -p "${PACKS_TO_UPLOAD}" -pbp "$STORAGE_BASE_PATH/packs" --marketplace $MARKETPLACE --artifacts-folder-server-type "${ARTIFACTS_FOLDER_SERVER_TYPE}"
+    - python3 ./Tests/Marketplace/copy_and_upload_packs.py -a "${PACK_ARTIFACTS}" -e "${EXTRACT_FOLDER}" -pb "${GCS_MARKET_BUCKET_TO_UPLOAD}" -bb "${GCS_BUILD_BUCKET}" -s "${GCS_MARKET_KEY}" -n "${CI_PIPELINE_ID}" -c "${CI_COMMIT_BRANCH}" -p "${PACKS_TO_UPLOAD}" -pbp "${STORAGE_BASE_PATH/packs}" --marketplace "${MARKETPLACE}" --artifacts-folder-server-type "${ARTIFACTS_FOLDER_SERVER_TYPE}"
 
 
 fan-in-bucket-upload:

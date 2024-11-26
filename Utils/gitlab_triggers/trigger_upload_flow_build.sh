@@ -14,11 +14,13 @@ if [ "$#" -lt "1" ]; then
   [-p, --packs]               CSV list of pack IDs. Mandatory when the --force flag is on.
   [-ch, --slack-channel]      A slack channel to send notifications to. Default is dmst-bucket-upload.
   [-oa, --override-all]       If given, will override all packs during this upload flow.
+  [-ib, --infra-branch]       The infra branch to use. Default is the latest nightly.
   "
   exit 1
 fi
 
 _branch="$(git branch --show-current)"
+_infra_branch="$(git branch --show-current)"
 _bucket="marketplace-dist-dev"
 _bucket_v2="marketplace-v2-dist-dev"
 _bucket_xpanse="xpanse-dist-dev"
@@ -86,6 +88,12 @@ while [[ "$#" -gt 0 ]]; do
     shift
     ;;
 
+  -ib | --infra-branch)
+    _infra_branch="${2}"
+    shift
+    shift
+    ;;
+
   -oa | --override-all)
     _override_all_pack="true"
     shift
@@ -123,4 +131,5 @@ curl -k -v --request POST \
   --form "variables[GCS_MARKET_XSOAR_SAAS_BUCKET]=${_bucket_xsoar_saas}" \
   --form "variables[IFRA_ENV_TYPE]=Bucket-Upload" \
   --form "variables[TEST_UPLOAD]=false" \
+  --form "variables[INFRA_BRANCH]=${_infra_branch}" \
   "$BUILD_TRIGGER_URL"
