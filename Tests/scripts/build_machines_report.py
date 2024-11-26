@@ -918,7 +918,10 @@ def main() -> None:
             records = generate_records(
                 cloud_servers_path_json, Settings.xsoar_admin_user, tenants, args.without_viso, current_date
             )
-            keys_without_tenant = remove_keys_without_tenant({f"qa2-test-{tenant['lcaas_id']}" for tenant in tenants.values()})
+            if not args.without_viso:
+                keys_without_tenant = remove_keys_without_tenant(
+                    {f"qa2-test-{tenant['lcaas_id']['display']}" for tenant in records}
+                )
             # Save the records to a json file for future use and debugging.
             with open(output_path / RECORDS_FILE_NAME, "w") as f:
                 json.dump(records, f, indent=4, default=str, sort_keys=True)
