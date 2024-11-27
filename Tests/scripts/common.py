@@ -6,7 +6,6 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
 import requests
 from dateutil import parser
 from demisto_sdk.commands.common.constants import MarketplaceVersions
@@ -30,6 +29,8 @@ SECURITY_SCANS = "Security Scans"
 BUILD_MACHINES_CLEANUP = "Build Machines Cleanup"
 SDK_RELEASE = "Automate Demisto SDK release"
 NATIVE_NIGHTLY = "Native Nightly"
+CONTENT_DOCS_PR = "Content Docs PR"
+CONTENT_DOCS_NIGHTLY = "Content Docs Nightly"
 WORKFLOW_TYPES = {
     CONTENT_NIGHTLY,
     NATIVE_NIGHTLY,
@@ -41,6 +42,8 @@ WORKFLOW_TYPES = {
     SECURITY_SCANS,
     BUILD_MACHINES_CLEANUP,
     SDK_RELEASE,
+    CONTENT_DOCS_PR,
+    CONTENT_DOCS_NIGHTLY,
 }
 BUCKET_UPLOAD_BRANCH_SUFFIX = "-upload_test_branch"
 TOTAL_HEADER = "Total"
@@ -185,6 +188,9 @@ def calculate_results_table(
     artifacts_path: Path | None = None,
     product_type: str | None = None,
 ) -> tuple[list[str], list[list[Any]], JUnitXml, int]:
+    # Importing pandas here to avoid importing it when not needed.
+    import pandas as pd  # type: ignore
+
     xml = JUnitXml()
     headers_multiline_char = "\n" if multiline_headers else " "
     headers = [h.replace("\n", headers_multiline_char) for h in base_headers]
