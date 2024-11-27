@@ -1,0 +1,222 @@
+.content_docs_rule:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_LABELS !~ /Force Merge/'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
+    - if: '$TRIGGER_TEST_BRANCH == "true"'
+    - if: '$IS_NIGHTLY == "true"'
+
+.get_pr_details_github:
+  - section_start "Get PR details from GitHub"
+  - |
+    PR_NUM=""
+    POST_COMMENT="false"
+
+    if [ "${IS_NIGHTLY}" == "true" ]; then
+      echo "Nightly build, skipping fetching PR details"
+    else
+      pr=$(curl -sS --get --header "Accept: application/vnd.github.v3.raw" --header "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/demisto/content-docs/pulls?state=open&base=master" --data-urlencode "head=demisto:${CI_COMMIT_REF_NAME}" | jq '.[]')
+      EXIT_CODE=$?
+      if [[ "${EXIT_CODE}" -ne 0 ]]; then
+        echo "Failed to fetch PR details, exit code:${EXIT_CODE}"
+        exit "${EXIT_CODE}"
+      fi
+
+      if [[ -n "${pr}" ]] && [[ "${pr}" != 'null' ]]; then
+        PR_NUM=$(echo $pr | jq -r '.number')
+        POST_COMMENT="true"
+        echo "PR number: ${PR_NUM}"
+      else
+          PR_NUM=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 13; echo)
+          echo "No PR found for the current branch: ${CI_COMMIT_REF_NAME}, generating random PR number: ${PR_NUM}"
+      fi
+    fi
+    export PR_NUM
+    export POST_COMMENT
+  - section_end "Get PR details from GitHub"
+
+.comment-on-pr:
+  - section_start "Comment on PR"
+  - |
+    if [ "${POST_COMMENT}" == "true" ]; then
+      echo "Posting comment to PR: ${PR_NUM}"
+      poetry run ./content-repo/post_github_comment.py "${ARTIFACTS_FOLDER}/deploy-info-firebase.txt"
+      EXIT_CODE=$?
+      if [[ "${EXIT_CODE}" -ne 0 ]]; then
+        echo "Failed to Post comment to PR, exit code:${EXIT_CODE}"
+        exit "${EXIT_CODE}"
+      fi
+    else
+      echo "No PR number found, skipping posting comment"
+    fi
+  - section_end "Comment on PR"
+
+.publish-to-firebase:
+  - |
+    if [ "${IS_NIGHTLY}" == "true" ]; then
+      echo "Deploying to prod as CI_COMMIT_REF_NAME is equal to master!"
+      firebase deploy --only hosting 2>&1 | tee -a "${ARTIFACTS_FOLDER}/deploy-info-firebase.txt"
+      EXIT_CODE=$?
+      if [ "${EXIT_CODE}" -ne 0 ]; then
+        echo "Failed to deploy to prod, exit code:${EXIT_CODE}"
+        exit "${EXIT_CODE}"
+      fi
+    else
+      echo "Deploying branch:${CI_COMMIT_REF_NAME}, Deploying to pull-request-${PR_NUM} channel"
+      firebase hosting:channel:deploy "pull-request-${PR_NUM}" --only xsoar.pan.dev  2>&1 | tee -a "${ARTIFACTS_FOLDER}/deploy-info-firebase.txt"
+      EXIT_CODE=$?
+      if [ "${EXIT_CODE}" -ne 0 ]; then
+        echo "Failed to deploy to pull-request-${PR_NUM} channel, exit code:${EXIT_CODE}"
+        exit "${EXIT_CODE}"
+      fi
+    fi
+
+.gcloud-authenticate:
+  - section_start "Authenticate with GCP"
+  - gcloud auth activate-service-account --key-file="${FIREBASE_JSON_KEY}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
+  - section_end "Authenticate with GCP"
+
+.install-firebase:
+  - section_start "Install Firebase"
+  - curl -sL firebase.tools | sed -e "s/latest/v12.7.0/" -e "s/\$sudo //g" -e "s/sudo //g" | bash
+  - section_end "Install Firebase"
+
+.authenticate-firebase:
+    - section_start "Authenticate with Firebase"
+    - export GOOGLE_APPLICATION_CREDENTIALS="${FIREBASE_JSON_KEY}"
+    - section_end "Authenticate with Firebase"
+
+build-docs:
+  stage: build-docs
+  extends:
+    - .default-job-settings
+    - .content_docs_rule
+  tags:
+    - high-mem
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 32Gi
+    KUBERNETES_MEMORY_LIMIT: 32Gi
+    KUBERNETES_CPU_REQUEST: "8"
+    KUBERNETES_CPU_LIMIT: "8"
+  script:
+    - EXIT_CODE=0
+    - git fetch origin master -q # allows `git diff`ing in posting GitHub comment (otherwise there's no origin/master)
+    - git --no-pager diff --name-only origin/master...HEAD -- docs content-repo/extra-docs/
+    - section_start "NPM install"
+    - nvm use
+    - node --version
+    - npm --version
+    - npm ci
+    - section_end "NPM install"
+    - section_start "Date week"
+    - date +%Y-%W-v4 > date-week.txt
+    - echo "Date week $(cat date-week.txt)"
+    - section_end "Date week"
+    - section_start "Reference docs"
+    - npm run reference-docs
+    - section_end "Reference docs"
+    - section_start "Heap stats"
+    - npm run heapstats
+    - section_end "Heap stats"
+    - section_start "Build docusaurus"
+    - npm run build-docusaurus || EXIT_CODE=$?
+    - section_end "Build docusaurus"
+    - section_start "Tar build dir"
+    - tar czf ${CI_PROJECT_DIR}/artifacts/build-site.tar.gz build
+    - ls -lh ${CI_PROJECT_DIR}/artifacts/build-site.tar.gz
+    - cp -rf build ${CI_PROJECT_DIR}/artifacts/
+    - section_end "Tar build dir"
+    - !reference [.install-firebase]
+    - !reference [.authenticate-firebase]
+    - !reference [.gcloud-authenticate]
+    - !reference [.get_pr_details_github]
+    - !reference [.publish-to-firebase]
+    - !reference [.comment-on-pr]
+    - echo "Build is done. Create tar of the build dir"
+    - job-done
+    - exit "${EXIT_CODE}"
+
+fan-in-nightly:
+  tags:
+    - gke
+  stage: fan-in
+  rules:
+    - if: '$IS_NIGHTLY == "true"'
+      when: always
+  script:
+    - echo "content docs - fan in nightly"
+
+jobs-done-check-nightly:
+  extends:
+    - .jobs-done-check
+  needs:
+    - build-docs
+  tags:
+    - gke
+  rules:
+    - if: '$IS_NIGHTLY == "true"'
+      when: always
+  variables:
+    WORKFLOW: 'Content Docs Nightly'
+    USE_INFRA_PYPROJECT_TOML: "true"
+
+fan-in-on-push:
+  when: always
+  stage: fan-in
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/ && $CI_COMMIT_BRANCH != $master_branch_name'
+    - if: '$TRIGGER_TEST_BRANCH == "true"'
+  tags:
+    - gke
+  script:
+    - echo "content docs - fan in on push"
+  variables:
+    master_branch_name: master
+
+jobs-done-check-on-push:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/ && $CI_COMMIT_BRANCH != $master_branch_name'
+    - if: '$TRIGGER_TEST_BRANCH == "true"'
+  extends:
+    - .content_docs_rule
+    - .jobs-done-check
+  needs:
+    - build-docs
+  tags:
+    - gke
+  variables:
+    WORKFLOW: 'Content Docs PR'
+    USE_INFRA_PYPROJECT_TOML: "true"
+    master_branch_name: master
+
+slack-notify-nightly-build:
+  rules:
+    - if: '$IS_NIGHTLY == "true"'
+      when: always
+  extends:
+    - .trigger-slack-notification
+  variables:  # Passes the environment variable from the parent pipeline to the child which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: 'fan-in-nightly'
+    WORKFLOW: 'Content Docs Nightly'
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_JOB: 'true'
+    REPOSITORY_NAME: "demisto/content-docs"
+    USE_INFRA_PYPROJECT_TOML: "true"
+
+slack-notify-on-push:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/ && $CI_COMMIT_BRANCH != $master_branch_name'
+      when: always
+    - if: '$TRIGGER_TEST_BRANCH == "true"'
+      when: always
+  extends:
+    - .trigger-slack-notification
+  variables:  # Passes the environment variable from the parent pipeline to the child which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: 'fan-in-on-push'
+    WORKFLOW: 'Content Docs PR'
+    master_branch_name: master
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_JOB: 'true'
+    REPOSITORY_NAME: "demisto/content-docs"
+    USE_INFRA_PYPROJECT_TOML: "true"

@@ -21,10 +21,11 @@ from junitparser import JUnitXml, TestSuite
 from slack_sdk import WebClient
 
 from Tests.Marketplace.marketplace_constants import BucketUploadFlow
-from Tests.Marketplace.marketplace_services import get_upload_data
 from Tests.scripts.common import (
     BUCKET_UPLOAD,
     BUCKET_UPLOAD_BRANCH_SUFFIX,
+    CONTENT_DOCS_NIGHTLY,
+    CONTENT_DOCS_PR,
     CONTENT_MERGE,
     CONTENT_NIGHTLY,
     CONTENT_PR,
@@ -68,6 +69,7 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 CI_COMMIT_BRANCH = os.getenv("CI_COMMIT_BRANCH", "")
 CI_COMMIT_SHA = os.getenv("CI_COMMIT_SHA", "")
 CI_SERVER_HOST = os.getenv("CI_SERVER_HOST", "")
+REPOSITORY_NAME = os.getenv("REPOSITORY_NAME", "demisto/content")
 DEFAULT_BRANCH = "master"
 SLACK_NOTIFY = "slack-notify"
 ALL_FAILURES_WERE_CONVERTED_TO_JIRA_TICKETS = " (All failures were converted to Jira tickets)"
@@ -99,6 +101,7 @@ def options_handler() -> argparse.Namespace:
         "-ch", "--slack_channel", help="The slack channel in which to send the notification", default=CONTENT_CHANNEL
     )
     parser.add_argument("-gp", "--gitlab_project_id", help="The gitlab project id", default=GITLAB_PROJECT_ID)
+    parser.add_argument("-r", "--repository", help="The repository name", default=REPOSITORY_NAME)
     parser.add_argument("-tw", "--triggering-workflow", help="The type of ci pipeline workflow the notifier is reporting on")
     parser.add_argument(
         "-a", "--allow-failure", help="Allow posting message to fail in case the channel doesn't exist", required=True
@@ -476,6 +479,9 @@ def bucket_sync_msg_builder(artifact_path: Path) -> tuple[list, list]:
 def bucket_upload_results(
     bucket_artifact_folder: Path, marketplace_name: str
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    # Importing here to avoid importing demisto-sdk.
+    from Tests.Marketplace.marketplace_services import get_upload_data  # noqa: E402
+
     slack_msg_append = []
     threaded_messages = []
     pack_results_path = bucket_artifact_folder / BucketUploadFlow.PACKS_RESULTS_FILE_FOR_SLACK
@@ -832,9 +838,10 @@ def main():
                 branch=branch,
                 fail_on_error=True,
                 verify=False,
+                repository=options.repository,
             )
             author = pull_request.data.get("user", {}).get("login")
-            if triggering_workflow in {CONTENT_NIGHTLY, CONTENT_PR}:
+            if triggering_workflow in {CONTENT_NIGHTLY, CONTENT_PR, CONTENT_DOCS_PR, CONTENT_DOCS_NIGHTLY}:
                 # This feature is only supported for content nightly and content pr workflows.
                 computed_slack_channel = f"@{get_slack_user_name(author, author, options.name_mapping_path)}"
             else:
