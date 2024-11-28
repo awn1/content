@@ -13,6 +13,7 @@ import time
 import traceback
 import websocket
 import json
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from threading import Event
@@ -752,6 +753,7 @@ def screenshot_image(browser, tab, path, wait_time, navigation_timeout, full_scr
         demisto.info(f"Empty snapshot, {screenshot_data=}")
     else:
         demisto.info(f"Captured snapshot, {len(captured_image)=}")
+        demisto.debug(f'captured_image before decode {screenshot_data=}')
 
     # Page URL, if needed
     if include_url:
@@ -990,7 +992,7 @@ def rasterize_email_command():  # pragma: no cover
     offline = demisto.args().get('offline', 'false') == 'true'
 
     rasterize_type_arg = demisto.args().get('type', 'png').lower()
-    file_name = demisto.args().get('file_name', 'email')
+    file_name = demisto.args().get('file_name', uuid.uuid4())
     file_name = f'{file_name}.{rasterize_type_arg}'
     rasterize_type = RasterizeType(rasterize_type_arg)
 
