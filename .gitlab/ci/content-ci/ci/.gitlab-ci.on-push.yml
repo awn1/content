@@ -229,19 +229,16 @@ validate-content-conf:
         echo "Test upload flow - skipping find dependencies changes"
       fi
     - section_end "Find dependencies changes"
-
-    - section_start "Replace Cortex XSOAR" --collapsed
+    - section_start "Zip Xspanse and Xsiam" --collapsed
     - |
       if [[ $MARKETPLACE_VERSION == "marketplacev2" ||  $MARKETPLACE_VERSION == "xpanse" ]];
       then
-        echo "Replace Cortex XSOAR for non-xsoar build."
         pushd "${ARTIFACTS_FOLDER_SERVER_TYPE}"
-        find content_packs -type f -not \( -path "*/ReleaseNotes/*" \) -exec sed -i -e 's/Cortex XSOAR/'"$PRODUCT_NAME"'/gI' {} \;
         pushd content_packs; zip -r ../content_packs.zip * 1> /dev/null; popd
         rm -rf content_packs
         popd
       fi
-    - section_end "Replace Cortex XSOAR"
+    - section_end "Zip Xspanse and Xsiam"
     - section_start "Collect Tests" --collapsed
     - |
       if [ -n "${INSTANCE_TESTS}" ]; then
