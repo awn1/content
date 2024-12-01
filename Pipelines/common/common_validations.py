@@ -35,11 +35,9 @@ def run(options: argparse.Namespace):
 
 
 def options_handler(args=None):
-    parser = argparse.ArgumentParser(
-        description="Common validations for pipelines. " "Docs: <confluence link>"  # TODO
-    )
+    parser = argparse.ArgumentParser(description="Common validations for pipelines.")
     parser.add_argument(
-        "--marketplaces", required=False, help="A comma seperated list of the relevant marketplaces " "to upload to."
+        "--marketplaces", required=False, help="A comma separated list of the relevant marketplaces to upload to."
     )
     options = parser.parse_args(args)
 

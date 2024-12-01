@@ -79,5 +79,9 @@ workflow:
       variables:
           WORKFLOW_PIPELINE_NAME: 'Override corepacks pipeline'
 
+    - if: '$PIPELINE_TYPE == "content-override"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Running Content Override pipeline for $TENANT_IDS with marketplace:$MARKETPLACE and env type:$ENV_TYPE'
+
     # Don't add any other rules after this one.
     - when: always  # Other pipelines can run, but use the default name

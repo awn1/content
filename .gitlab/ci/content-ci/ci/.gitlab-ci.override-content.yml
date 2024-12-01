@@ -1,0 +1,146 @@
+.override-content-rule:
+  rules:
+    - if: '$PIPELINE_TYPE == "content-override"'
+
+.override-content-rule-always:
+  rules:
+    - if: '$PIPELINE_TYPE == "content-override"'
+      when: always
+
+.override-content-rule-dev:
+  rules:
+    - if: '$PIPELINE_TYPE == "content-override" && $ENV_TYPE == "dev"'
+
+.override-content-rule-prod:
+  rules:
+    - if: '$PIPELINE_TYPE == "content-override" && $ENV_TYPE == "prod"'
+
+.push-content:
+  - echo "Copying files to ${TENANT_IDS} tenants."
+  - |
+    IFS=',' read -r -a TENANT_ID_ARRAY <<< "${TENANT_IDS}"
+    for TENANT_ID in "${TENANT_ID_ARRAY[@]}"; do
+      echo "Starting loop for ${TENANT_ID}."
+
+      DEST_URL="gs://${TENANT_ID}-xsoar-marketplace-overridable/content/"
+      ZIP_SRC="${CONTENT_TO_UPLOAD_DIRECTORY}/content_to_override_${CI_PIPELINE_ID}.zip"
+
+      echo "Copying the file ${ZIP_SRC} to the bucket url ${DEST_URL}."
+      gsutil cp "${ZIP_SRC}" "${DEST_URL}"
+      echo "Finished copying files to tenant ${TENANT_ID}."
+    done
+
+override-content:validate-variables:
+  tags:
+    - gke
+  stage: unittests-and-validations
+  variables:
+    MARKETPLACE: $MARKETPLACE
+    MARKETPLACES: $MARKETPLACE
+    PATHS: $PATHS
+    PACKS: $PACKS
+    TENANT_IDS: $TENANT_IDS
+    ENV_TYPE: $ENV_TYPE
+  extends:
+    - .override-content-rule
+    - .default-job-settings
+    - .pipeline-common-validations
+  script:
+    - EXIT_CODE=0
+
+    - section_start "Create content graph" --collapsed
+    - git fetch origin master:refs/remotes/origin/master
+    - echo "Checking out to master branch to create the Content graph"
+    - git checkout master
+    - demisto-sdk graph update --marketplace "${MARKETPLACE}"
+    - echo "Successfully created content graph"
+    - section_end "Create content graph"
+
+    - echo "Checking out to branch {$CI_COMMIT_BRANCH}"
+    - git checkout $CI_COMMIT_BRANCH
+
+    - section_start "validate variables"
+    - python3 ./Pipelines/override_content/override_content_validations.py  --paths ${PATHS} --packs ${PACKS} --marketplace ${MARKETPLACE} --tenant_ids ${TENANT_IDS} --env_type ${ENV_TYPE} || EXIT_CODE=$?
+    - section_end "validate variables"
+    - job-done
+    - exit "${EXIT_CODE}"
+
+override-content:prepare-content-to-override:
+  stage: prepare-content
+  needs: ["override-content:validate-variables"]
+  extends:
+    - .override-content-rule
+    - .default-job-settings
+  variables:
+    MARKETPLACE: $MARKETPLACE
+    PATHS: $PATHS
+    PACKS: $PACKS
+    TENANT_IDS: $TENANT_IDS
+    RAW_FILES_DIRECTORY: "${ARTIFACTS_FOLDER}/content_to_override/raw_files"
+    CONTENT_TO_UPLOAD_DIRECTORY: "${ARTIFACTS_FOLDER}/content_to_override/content_to_upload"
+  script:
+    - section_start "Preparing content"
+    - mkdir -pv -m 777 "${RAW_FILES_DIRECTORY}" "${CONTENT_TO_UPLOAD_DIRECTORY}"
+    - |
+      if [[ -n "${PATHS}" ]]; then
+        python3 ./Pipelines/override_content/add_packid_to_content_items.py --paths ${PATHS}
+
+        IFS=',' read -r -a PATHS_ARRAY <<< "${PATHS}"
+        for CONTENT_PATH in "${PATHS_ARRAY[@]}"; do
+          demisto-sdk prepare-content -i "${CONTENT_PATH}" -o "${RAW_FILES_DIRECTORY}" -mp "${MARKETPLACE}" -f
+        done
+      else
+        MODIFIED_PACK_NAMES=$(./Pipelines/override_content/prepare_pack_names.sh "${PACKS}")
+        demisto-sdk prepare-content -i "${MODIFIED_PACK_NAMES}" -o "${RAW_FILES_DIRECTORY}" -mp "${MARKETPLACE}"
+      fi
+    - section_end "Preparing content"
+
+    - section_start "Zip files"
+    - cd "${RAW_FILES_DIRECTORY}"
+    - zip "${CONTENT_TO_UPLOAD_DIRECTORY}/content_to_override_${CI_PIPELINE_ID}.zip" *
+    - section_end "Zip files"
+
+override-content:push-content-dev:
+  tags:
+    - content-1061
+  stage: push-content
+  needs: ["override-content:prepare-content-to-override"]
+  extends:
+    - .override-content-rule-dev
+  variables:
+    TENANT_IDS: $TENANT_IDS
+    CONTENT_TO_UPLOAD_DIRECTORY: "${ARTIFACTS_FOLDER}/content_to_override/content_to_upload"
+  script:
+    - !reference [.push-content]
+
+override-content:push-content-prod:
+  tags:
+    - content-prod-1061
+  stage: push-content
+  needs: ["override-content:prepare-content-to-override"]
+  extends:
+    - .override-content-rule-prod
+  variables:
+    TENANT_IDS: $TENANT_IDS
+    CONTENT_TO_UPLOAD_DIRECTORY: "${ARTIFACTS_FOLDER}/content_to_override/content_to_upload"
+  script:
+    - !reference [.push-content]
+
+override-content-fan-in:
+  stage: fan-in
+  extends:
+    - .override-content-rule-always
+  script:
+    - echo "fan in"
+
+override-content-slack-notify:
+  extends:
+    - .override-content-rule-always
+    - .trigger-slack-notification
+  variables:
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: "override-content-fan-in"
+    WORKFLOW: "Override Content"
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_ALLOW_FAILURE: "false"
+    ARTIFACT_PATH: "${CI_PROJECT_DIR}/artifacts"
