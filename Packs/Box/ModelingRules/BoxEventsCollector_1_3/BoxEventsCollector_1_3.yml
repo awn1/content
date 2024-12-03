@@ -3,3 +3,4 @@ id: BoxEventCollector
 name: BoxEventCollector
 rules: ''
 schema: ''
+toversion: 8.8.0

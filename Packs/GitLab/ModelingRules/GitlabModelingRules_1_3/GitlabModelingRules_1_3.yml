@@ -4,3 +4,4 @@ name: Gitlab Mapping Rules
 rules: ''
 schema: ''
 tags: gitlab
+toversion: 8.8.0

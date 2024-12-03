@@ -1230,5 +1230,6 @@
     "timezoneOffset": 0,
     "type": "pdf",
     "fromVersion": "8.2.0",
-    "description": ""
+    "description": "",
+    "toVersion": "8.8.0"
 }

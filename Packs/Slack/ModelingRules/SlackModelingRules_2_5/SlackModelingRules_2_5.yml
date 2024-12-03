@@ -1,0 +1,6 @@
+fromversion: 8.9.0
+id: slack_modeling_rule
+name: Slack Modeling Rule
+rules: ''
+schema: ''
+tags: slack

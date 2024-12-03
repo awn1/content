@@ -4,3 +4,4 @@ name: Clearswift DLP Modeling Rules
 rules: ''
 schema: ''
 tags: ''
+toversion: 8.8.0

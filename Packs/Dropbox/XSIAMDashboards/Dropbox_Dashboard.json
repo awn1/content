@@ -495,5 +495,6 @@
             }
         }
     ],
-    "fromVersion": "6.10.0"
+    "fromVersion": "6.10.0",
+    "toVersion": "8.8.0"
 }

@@ -1,0 +1,6 @@
+fromversion: 8.9.0
+id: BarracudaEmailProtection
+name: Barracuda Email Protection
+rules: ''
+schema: ''
+tags: Barracuda, Email
