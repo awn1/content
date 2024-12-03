@@ -1,0 +1,46 @@
+{
+    "data": [
+        {
+            "test_data_event_id": "5c5f3d34-9d38-4fb3-9671-297cd4a16133",
+            "vendor": "shodan",
+            "product": "banner",
+            "dataset": "shodan_banner_raw",
+            "tenant_timezone": "UTC",
+            "event_data": {
+                "size": 1,
+                "created": "Nov 7th 2024 03:21:12",
+                "expires": 0,
+                "has_triggers": true,
+                "id": "18XFVXVJHHZDWB3T",
+                "_id": "w40jPpw4p+mPF1yd0OYefA==:0:3580:4819",
+                "_tag": [],
+                "name": "test_alert",
+                "_vendor": "shodan",
+                "filters": {
+                    "ip": [
+                        "1.1.1.1"
+                    ]
+                },
+                "_product": "banner",
+                "triggers": {
+                    "any": {}
+                },
+                "notifiers": [],
+                "_collector_name": "Shodan_v2_instance_1",
+                "_collector_type": "Shodan_v2",
+                "_reporting_device_ip": "34.136.49.211",
+                "_final_reporting_device_ip": "34.136.49.211"
+            },
+            "expected_values": {
+                "xdm.session_context_id": "18XFVXVJHHZDWB3T",
+                "xdm.alert.name": "test_alert",
+                "xdm.event.description": "{\"ip\":[\"1.1.1.1\"]}",
+                "xdm.alert.description": "{\"triggers\":\"{any:{}}\",\"has_triggers\":true,\"expires\":0,\"expiration\":null}" ,
+                "xdm.target.host.ipv4_addresses": [
+                    "1.1.1.1"
+                ]
+            }
+        }
+    ],
+    "ignored_validations": []
+}
