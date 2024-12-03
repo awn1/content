@@ -37,7 +37,7 @@ create-release-branch:
     REVIEWER: $REVIEWER
   script:
     - section_start "Create release branch" --collapsed
-    - poetry run python3 -u ./Tests/sdk_release/pre_validations.py -t "${GITHUB_TOKEN}" -v "${RELEASE_VERSION}" -r "${REVIEWER}" -b "${SDK_BRANCH_NAME}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json"
+    - poetry run python3 -u ./Tests/sdk_release/pre_validations.py -t "${GITHUB_TOKEN}" -v "${RELEASE_VERSION}" -r "${REVIEWER}" -b "${SDK_BRANCH_NAME}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json" -c "${GITLAB_STATUS_TOKEN}"
     - poetry run python3 -u ./Tests/scripts/gitlab_basic_slack_notifier.py -s "${SLACK_TOKEN}" -t "The release of demisto-sdk version \`"$RELEASE_VERSION"\` has started:\`"$CI_PIPELINE_URL"\` " --allow-failure "${SLACK_ALLOW_FAILURE}" -ch "${SLACK_CHANNEL}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json"
     - poetry run python3 -u ./Tests/sdk_release/create_release_branch.py -t "${GITHUB_TOKEN}" -n "${RELEASE_VERSION}" -b "${SDK_BRANCH_NAME}"
     - section_end "Create release branch"
@@ -194,6 +194,7 @@ deploy-sdk-to-pypi:
     - poetry run python3 -u ./Tests/sdk_release/create_release.py -t "${GITHUB_TOKEN}" -b "${RELEASE_VERSION}" -d "${IS_DRAFT}"
     - poetry run python3 -u ./Tests/sdk_release/wait_for_release.py -b "${RELEASE_VERSION}"
     - poetry run python3 -u ./Tests/sdk_release/create_content_pr.py -t "${GITHUB_TOKEN}" -b "${RELEASE_VERSION}" -r "${REVIEWER}" --artifacts-folder "${ARTIFACTS_FOLDER}" -d "${IS_DRAFT}"
+    - poetry run python3 -u ./Tests/sdk_release/update_sdk_v_in_infra.py -c "${GITLAB_STATUS_TOKEN}" -rv "${RELEASE_VERSION}" -r "${REVIEWER}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json" -d "$IS_DRAFT"
     - poetry run python3 -u ./Tests/scripts/gitlab_basic_slack_notifier.py -s "${SLACK_TOKEN}" -f "${ARTIFACTS_FOLDER}/SLACK_MERGE_PRS_REQUEST.txt" --allow-failure "${SLACK_ALLOW_FAILURE}" -ch "${SLACK_CHANNEL}" -gu "${REVIEWER}" -gt "${GITLAB_API_TOKEN_CONTENT}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json"
     - section_end "Deploy SDK release"
 
@@ -213,6 +214,6 @@ wait-for-prs:
     SLACK_CHANNEL: $SLACK_CHANNEL
   script:
     - section_start "Wait for prs to be merged" --collapsed
-    - poetry run python3 -u ./Tests/sdk_release/wait_for_release_prs.py -t "${GITHUB_TOKEN}" -b "${RELEASE_VERSION}" --artifacts-folder "${ARTIFACTS_FOLDER}"
+    - poetry run python3 -u ./Tests/sdk_release/wait_for_release_prs.py -t "${GITHUB_TOKEN}" -b "${RELEASE_VERSION}" --artifacts-folder "${ARTIFACTS_FOLDER}" -c "${GITLAB_STATUS_TOKEN}"
     - poetry run python3 -u ./Tests/scripts/gitlab_basic_slack_notifier.py -s "${SLACK_TOKEN}" -f "${ARTIFACTS_FOLDER}/CHANGELOG_SLACK.txt" --allow-failure "${SLACK_ALLOW_FAILURE}" -ch "${SLACK_CHANNEL}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json"
     - section_end "Wait for prs to be merged"

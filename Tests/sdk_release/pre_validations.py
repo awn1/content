@@ -1,13 +1,16 @@
 import argparse
 import logging
+import os
 import re
 import sys
 
 import requests
 import urllib3
+from gitlab import GitlabGetError
 
 from Tests.scripts.common import get_slack_user_name
 from Tests.scripts.utils.log_util import install_logging
+from Tests.sdk_release.update_sdk_v_in_infra import get_gitlab_project
 
 # Disable insecure warnings
 urllib3.disable_warnings()
@@ -17,6 +20,7 @@ VERSION_FORMAT_REGEX = "\d{1,3}\.\d{1,3}\.\d{1,3}"
 
 GITHUB_USER_URL = "https://api.github.com/users/{username}"
 GITHUB_BRANCH_URL = "https://api.github.com/repos/demisto/demisto-sdk/branches/{branch_name}"
+GITLAB_PROJECT_ID = int(os.getenv("CI_PROJECT_ID", 1701))
 
 
 def options_handler():
@@ -32,6 +36,7 @@ def options_handler():
         required=True,
     )
     parser.add_argument("-n", "--name-mapping_path", help="Path to name mapping file.", required=True)
+    parser.add_argument("-c", "--ci_token", help="The token for circleci/gitlab", required=True)
     options = parser.parse_args()
     return options
 
@@ -43,6 +48,7 @@ def main():
     release_version = options.release_version
     reviewer = options.reviewer
     sdk_branch_name = options.sdk_branch_name
+    ci_token = options.ci_token
     errors = []
 
     # validate version format
@@ -72,6 +78,18 @@ def main():
     slack_user_name = get_slack_user_name(reviewer, None, options.name_mapping_path)
     if slack_user_name is None:
         errors.append(f"The user {reviewer} not exists in the name_mapping.json file")
+
+    # validate that the infra future release branch doesn't exist
+    project = get_gitlab_project(ci_token, GITLAB_PROJECT_ID)
+    infra_branch_name = f"update_infra_with_sdk_{release_version}"
+    try:
+        existing_branch = project.branches.get(infra_branch_name)
+        if existing_branch:
+            errors.append(
+                f"The infra branch that should be used for the release {infra_branch_name} already exist in Infra repo."
+            )
+    except GitlabGetError:
+        logging.debug(f"The branch {infra_branch_name} doesn't exist in Infra repo")
 
     if errors:
         logging.error("\n".join(errors))
