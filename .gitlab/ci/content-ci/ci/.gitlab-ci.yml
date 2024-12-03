@@ -29,7 +29,6 @@ stages:
   - trigger-contribution-build
   - prepare-content
   - push-content
-  - slack-notify
 
 include:
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.variables.yml
