@@ -1,0 +1,6 @@
+fromversion: 8.9.0
+id: Arista_Switch_Modeling_Rules
+name: Arista Switch Modeling Rules
+rules: ''
+schema: ''
+tags: 'Arista Switch EOS'

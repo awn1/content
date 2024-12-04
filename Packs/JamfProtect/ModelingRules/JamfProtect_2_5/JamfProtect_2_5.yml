@@ -1,0 +1,6 @@
+fromversion: 8.9.0
+id: JamfProtect_ModelingRule
+name: JamfProtect Modeling Rule
+rules: ''
+schema: ''
+tags: Jamf

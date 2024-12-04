@@ -80,8 +80,7 @@
                 "rowPos": 0,
                 "sign": null,
                 "signAlignment": null,
-                "style": {
-                },
+                "style": {},
                 "w": 3
             },
             "query": {
@@ -168,8 +167,7 @@
                 "rowPos": 0,
                 "sign": null,
                 "signAlignment": null,
-                "style": {
-                },
+                "style": {},
                 "w": 3
             },
             "query": {
@@ -264,8 +262,7 @@
                 "rowPos": 6,
                 "sign": null,
                 "signAlignment": null,
-                "style": {
-                },
+                "style": {},
                 "w": 3
             },
             "query": {
@@ -304,8 +301,7 @@
                 "rowPos": 6,
                 "sign": null,
                 "signAlignment": null,
-                "style": {
-                },
+                "style": {},
                 "w": 3
             },
             "query": {
@@ -520,8 +516,7 @@
                 "rowPos": 8,
                 "sign": null,
                 "signAlignment": null,
-                "style": {
-                },
+                "style": {},
                 "w": 3
             },
             "query": {
@@ -550,8 +545,7 @@
             "titleStyle": null
         }
     ],
-    "recipients": [
-    ],
+    "recipients": [],
     "orientation": "portrait",
     "paperSize": "A4",
     "runOnce": false,
@@ -1154,7 +1148,7 @@
     },
     "fromVersion": "6.0.0",
     "description": "All failed enabled integrations and failed open incident.",
-    "tags": [
-    ],
-    "createdBy": ""
+    "tags": [],
+    "createdBy": "",
+    "toVersion": "8.8.0"
 }

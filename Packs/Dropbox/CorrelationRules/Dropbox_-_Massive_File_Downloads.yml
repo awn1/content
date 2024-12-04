@@ -47,3 +47,4 @@ xql_query: 'datamodel dataset = dropbox_dropbox_raw
 
   | filter NumberOfFiles > 100'
 fromversion: 6.10.0
+toversion: 8.8.0

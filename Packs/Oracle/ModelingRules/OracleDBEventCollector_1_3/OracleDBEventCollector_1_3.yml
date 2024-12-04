@@ -3,3 +3,4 @@ id: OracleDBEventCollector
 name: OracleDBEventCollector
 rules: ''
 schema: ''
+toversion: 8.8.0

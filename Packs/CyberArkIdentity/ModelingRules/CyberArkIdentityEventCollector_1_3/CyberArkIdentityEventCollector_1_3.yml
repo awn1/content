@@ -3,3 +3,4 @@ id: CyberArkIdentityEventCollector
 name: CyberArkIdentityEventCollector
 rules: ''
 schema: ''
+toversion: 8.8.0
