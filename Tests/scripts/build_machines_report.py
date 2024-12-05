@@ -72,6 +72,9 @@ PRODUCT_TYPE_TO_SERVER_TYPE: dict[str | None, str] = {
     XsoarClient.PRODUCT_TYPE: XsoarClient.SERVER_TYPE,
     XsiamClient.PRODUCT_TYPE: XsiamClient.SERVER_TYPE,
 }
+IGNORED_FLOW_TYPES = [
+    "build-test-xsiam",  # Research team machines.
+]
 
 
 def create_column(
@@ -590,7 +593,7 @@ def generate_report(
         # checking the TTL, enabled and connectable only for build machines.
         if get_record_display(record, "build_machine", True):
             platform_type_to_flow_type_to_server_versions[platform_type][flow_type][get_record_display(record, "version")] += 1
-            if not get_record_display(record, "enabled", True):
+            if not get_record_display(record, "enabled", True) and flow_type not in IGNORED_FLOW_TYPES:
                 disabled_machines_count.add(machine_name)
             if not get_record_display(record, "connectable", True):
                 non_connectable_machines_count.add(machine_name)
@@ -755,6 +758,8 @@ def generate_report(
         platform_type_to_flow_type_to_server_versions_fields = []
         for platform_type, flow_type_to_server_versions in platform_type_to_flow_type_to_server_versions.items():
             for flow_type, server_versions in flow_type_to_server_versions.items():
+                if flow_type in IGNORED_FLOW_TYPES:
+                    continue
                 if len(server_versions) > 1:
                     platform_type_to_flow_type_to_server_versions_fields.append(
                         {
