@@ -1,3 +1,24 @@
+# Content Infrastructure 0.0.13 (2024-12-05)
+
+### Features
+
+- Added support for the override-content pipeline ([CIAC-11762](https://jira-dc.paloaltonetworks.com/browse/CIAC-11762))
+- Reduce index.zip file size ([CIAC-12307](https://jira-dc.paloaltonetworks.com/browse/CIAC-12307))
+- Add an option to ignore specific flow-type in the build machines report.
+- Enhanced the automated Demisto-SDK release process to automatically generate a merge request in Infra to update the new version.
+- Support other group machines in the build machines report, by not deleting their API keys from GSM.
+- move content docs build to gitlab
+
+### Bugfixes
+
+- Fix force upload build
+- Fix force upload issue with packs path
+
+### Deprecations and Removals
+
+- Removing the 'replace xsoar' mechanism from infra (now implemented in prepare_content instead). ([10198](https://jira-dc.paloaltonetworks.com/browse/10198))
+
+
 # Content Infrastructure 0.0.12 (2024-11-25)
 
 ### Features
