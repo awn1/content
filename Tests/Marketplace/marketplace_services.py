@@ -63,6 +63,7 @@ PULL_REQUEST_PATTERN = "\(#(\d+)\)"
 TAGS_SECTION_PATTERN = "(.|\s)+?"
 SPECIAL_DISPLAY_NAMES_PATTERN = re.compile(r"- \*\*(.+?)\*\*")
 MAX_TOVERSION = "99.99.99"
+JSON_SEPARATORS = (",", ":")  # To get the most compact JSON representation, we should specify (',', ':') to eliminate whitespace.
 
 
 class Pack:
@@ -1548,7 +1549,7 @@ class Pack:
             logging.debug(f"Versions to keep for pack: {self._pack_name} = {pack_versions_to_keep}")
             # write back changelog with changes to pack folder
             with open(os.path.join(self._pack_path, Pack.CHANGELOG_JSON), "w") as pack_changelog:
-                json.dump(changelog, pack_changelog, indent=4)
+                json.dump(changelog, pack_changelog, separators=JSON_SEPARATORS)
 
             task_status = True
             logging.debug(f"Finished creating {Pack.CHANGELOG_JSON} for {self._pack_name}")
@@ -3458,7 +3459,7 @@ def json_write(file_path: str, data: dict, update: bool = False):
         metadata_obj = data
 
     with open(file_path, "w") as f:
-        f.write(json.dumps(metadata_obj, indent=4))
+        f.write(json.dumps(metadata_obj, separators=JSON_SEPARATORS))
 
 
 def init_storage_client(service_account=None):
