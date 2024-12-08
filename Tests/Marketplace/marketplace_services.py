@@ -90,10 +90,11 @@ class Pack:
     README = "README.md"
     PACK_METADATA = "pack_metadata.json"
     METADATA = "metadata.json"
+    VERSION_CONFIG = "version_config.json"
     AUTHOR_IMAGE_NAME = "Author_image.png"
     EXCLUDE_DIRECTORIES = [PackFolders.TEST_PLAYBOOKS.value]
     RELEASE_NOTES = "ReleaseNotes"
-    INDEX_FILES_TO_UPDATE = [METADATA, CHANGELOG_JSON, README]
+    INDEX_FILES_TO_UPDATE = [METADATA, CHANGELOG_JSON, README, VERSION_CONFIG]
 
     def __init__(self, pack_name, pack_path, is_modified=None, is_metadata_updated=None):
         self._pack_name = pack_name
