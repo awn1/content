@@ -29,6 +29,7 @@ from Tests.scripts.common import (
     CONTENT_MERGE,
     CONTENT_NIGHTLY,
     CONTENT_PR,
+    DOCKERFILES_PR,
     TEST_MODELING_RULES_REPORT_FILE_NAME,
     TEST_PLAYBOOKS_REPORT_FILE_NAME,
     get_instance_directories,
@@ -65,11 +66,11 @@ CONTENT_CHANNEL = "dmst-build-test"
 XDR_CONTENT_SYNC_CHANNEL_ID = os.getenv("XDR_CONTENT_SYNC_CHANNEL_ID", "")
 SLACK_USERNAME = "Content GitlabCI"
 SLACK_WORKSPACE_NAME = os.getenv("SLACK_WORKSPACE_NAME", "")
+REPOSITORY_NAME = os.getenv("REPOSITORY_NAME", "demisto/content")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 CI_COMMIT_BRANCH = os.getenv("CI_COMMIT_BRANCH", "")
 CI_COMMIT_SHA = os.getenv("CI_COMMIT_SHA", "")
 CI_SERVER_HOST = os.getenv("CI_SERVER_HOST", "")
-REPOSITORY_NAME = os.getenv("REPOSITORY_NAME", "demisto/content")
 DEFAULT_BRANCH = "master"
 SLACK_NOTIFY = "slack-notify"
 ALL_FAILURES_WERE_CONVERTED_TO_JIRA_TICKETS = " (All failures were converted to Jira tickets)"
@@ -93,6 +94,7 @@ ALLOWED_COVERAGE_PROXIMITY = 0.25  # Percentage threshold for allowed coverage p
 def options_handler() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Parser for slack_notifier args")
     parser.add_argument("-n", "--name-mapping_path", help="Path to name mapping file.", required=True)
+    parser.add_argument("-r", "--repository", help="The repository name", default=REPOSITORY_NAME)
     parser.add_argument("-u", "--url", help="The gitlab server url", default=GITLAB_SERVER_URL)
     parser.add_argument("-p", "--pipeline_id", help="The pipeline id to check the status of", required=True)
     parser.add_argument("-s", "--slack_token", help="The token for slack", required=True)
@@ -101,7 +103,6 @@ def options_handler() -> argparse.Namespace:
         "-ch", "--slack_channel", help="The slack channel in which to send the notification", default=CONTENT_CHANNEL
     )
     parser.add_argument("-gp", "--gitlab_project_id", help="The gitlab project id", default=GITLAB_PROJECT_ID)
-    parser.add_argument("-r", "--repository", help="The repository name", default=REPOSITORY_NAME)
     parser.add_argument("-tw", "--triggering-workflow", help="The type of ci pipeline workflow the notifier is reporting on")
     parser.add_argument(
         "-a", "--allow-failure", help="Allow posting message to fail in case the channel doesn't exist", required=True
@@ -835,13 +836,13 @@ def main():
             logging.info(f"Searching for pull request for origin branch:{options.current_branch} and calculated branch:{branch}")
             pull_request = GithubPullRequest(
                 options.github_token,
+                repository=options.repository,
                 branch=branch,
                 fail_on_error=True,
                 verify=False,
-                repository=options.repository,
             )
             author = pull_request.data.get("user", {}).get("login")
-            if triggering_workflow in {CONTENT_NIGHTLY, CONTENT_PR, CONTENT_DOCS_PR, CONTENT_DOCS_NIGHTLY}:
+            if triggering_workflow in {CONTENT_NIGHTLY, CONTENT_PR, CONTENT_DOCS_PR, CONTENT_DOCS_NIGHTLY, DOCKERFILES_PR}:
                 # This feature is only supported for content nightly and content pr workflows.
                 computed_slack_channel = f"@{get_slack_user_name(author, author, options.name_mapping_path)}"
             else:

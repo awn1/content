@@ -5,7 +5,7 @@ repos:
   - id: ruff
     args:
     - --fix
-    exclude: CommonServerPython.py
+    exclude: CommonServerPython.py|Tests/docker/CVE_report
   - id: ruff-format
 - repo: https://github.com/pappasam/toml-sort
   rev: v0.23.1
@@ -65,7 +65,7 @@ repos:
       - types-dateparser
     types: [python]
     #duplicate here and in pyproject.toml because https://github.com/python/mypy/issues/13916
-    exclude: BlacklistValidation*|SecretActions*|artifacts*|.*infrastructure_tests*|.*_test|test_.*|test_data|tests_data|.venv
+    exclude: BlacklistValidation*|SecretActions*|artifacts*|.*infrastructure_tests*|.*_test|test_.*|test_data|tests_data|Tests/docker/SSLTestSuite|Tests/docker/CVE_report|.venv
 -   repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.10.0
     hooks:

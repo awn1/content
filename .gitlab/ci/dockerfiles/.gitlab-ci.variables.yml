@@ -1,0 +1,19 @@
+variables:
+  ARTIFACTORY_ENABLED: "true"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  SLACK_CHANNEL: "dmst-build-test"
+  SLACK_PARENT_PIPELINE_ID: ""  # empty string, no parent pipeline.
+  SLACK_PARENT_PROJECT_ID: ""  # empty string, no parent project.
+  ARTIFACTS_FOLDER: "${CI_PROJECT_DIR}/artifacts"
+  PIPELINE_JOBS_FOLDER: "${CI_PROJECT_DIR}/pipeline_jobs_folder"
+  PYTHONPATH: "${CI_PROJECT_DIR}"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  POETRY_VIRTUALENVS_OPTIONS_ALWAYS_COPY: "true"
+  FF_USE_FASTZIP: "true"
+  POETRY_VERSION: "1.8.2"
+  INSTALL_POETRY: "true"
+  DOCKER_IO: "docker.io" # defined in the project level CI/CD variables
+  CONTENT_GITLAB_CI: "true"
+  USE_INFRA_PYPROJECT_TOML: "false"
+  GITLAB_PAGES_URL: "https://xdr.docs-prod.xdr.pan.local/-/cortex-content/dockerfiles/-/jobs"
+  PIPENV_IGNORE_VIRTUALENVS: 1
