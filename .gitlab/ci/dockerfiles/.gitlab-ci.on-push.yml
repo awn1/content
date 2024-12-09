@@ -1,0 +1,203 @@
+.build-docker-pipeline-rule:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
+    - if: '$TRIGGER_TEST_BRANCH == "true"'
+
+.build-docker-pipeline-rule-always:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
+      when: always
+    - if: '$TRIGGER_TEST_BRANCH == "true"'
+      when: always
+
+cloning-repositories:
+  stage: .pre
+  extends:
+    - .cloning-repositories
+    - .build-docker-pipeline-rule
+  script:
+    - !reference [.check_build_files_are_up_to_date]
+    - job-done
+
+fan-in-on-push:
+  when: always
+  stage: fan-in
+  extends:
+    - .build-docker-pipeline-rule-always
+  tags:
+    - gke
+  script:
+    - echo "fan in on push"
+  variables:
+    master_branch_name: master
+
+jobs-done-check-on-push:
+  extends:
+    - .build-docker-pipeline-rule
+    - .jobs-done-check
+  needs:
+    - cloning-repositories
+    - validate_approved_licenses_files
+    - validate_dependabot_config
+    - validate_deprecated_images
+    - run_pytest
+    - build_docker_images
+    - scan_images
+    - test_ssl_connection
+    - parse_report
+  variables:
+    WORKFLOW: 'Dockerfiles PR'
+    master_branch_name: master
+    USE_INFRA_PYPROJECT_TOML: "true"
+
+slack-notify-on-push:
+  extends:
+    - .build-docker-pipeline-rule-always
+    - .trigger-slack-notification
+  variables:  # Passes the environment variable from the parent pipeline to the child which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: 'fan-in-on-push'
+    WORKFLOW: 'Dockerfiles PR'
+    master_branch_name: master
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
+    SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
+    SLACK_JOB: 'true'
+    SLACK_ALLOW_FAILURE: 'true'
+    CI_PROJECT_ID: $CI_PROJECT_ID
+    CI_SERVER_URL: $CI_SERVER_URL
+    JIRA_SERVER_URL: $JIRA_SERVER_URL
+    JIRA_VERIFY_SSL: $JIRA_VERIFY_SSL
+    JIRA_API_KEY: $JIRA_API_KEY
+    JIRA_PROJECT_ID: $JIRA_PROJECT_ID
+    JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME: $JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME
+    CURRENT_BRANCH_NAME: $INFRA_BRANCH
+    USE_INFRA_PYPROJECT_TOML: "true"
+    REPOSITORY_NAME: "demisto/dockerfiles"
+
+validate_approved_licenses_files:
+  stage: build
+  extends:
+    - .build-docker-pipeline-rule
+    - .default-job-settings
+  needs:
+    - cloning-repositories
+  script:
+    - section_start "Validate Approved Licenses Files"
+    - poetry run jsonschema -i docker/approved_licenses.json docker/approved_licenses.schema.json
+    - section_end "Validate Approved Licenses Files"
+    - job-done
+
+validate_dependabot_config:
+  stage: build
+  extends:
+    - .build-docker-pipeline-rule
+    - .default-job-settings
+  needs:
+    - cloning-repositories
+  script:
+    - section_start "Validate Dependabot Config"
+    - "${CI_PROJECT_DIR}/docker/verify_dependabot.sh"
+    - section_end "Validate Dependabot Config"
+    - job-done
+
+validate_deprecated_images:
+  stage: build
+  extends:
+    - .build-docker-pipeline-rule
+    - .default-job-settings
+  needs:
+    - cloning-repositories
+  script:
+    - section_start "Validate Deprecated Images"
+    - poetry run python3 -u "${CI_PROJECT_DIR}/utils/validate_deprecated_dockers_json.py" --exclude python --docker_dir docker --deprecated_path docker/deprecated_images.json
+    - section_end "Validate Deprecated Images"
+    - job-done
+
+run_pytest:
+  stage: build
+  extends:
+    - .build-docker-pipeline-rule
+    - .default-job-settings
+  needs:
+    - cloning-repositories
+  script:
+    - section_start "Run Pytest"
+    - cd "${CI_PROJECT_DIR}"
+    - PYTHONPATH="${PYTHONPATH}:${CI_PROJECT_DIR}"
+    - export PYTHONPATH
+    - poetry run pytest
+    - section_end "Run Pytest"
+    - job-done
+
+build_docker_images:
+  stage: build
+  extends:
+    - .build-docker-pipeline-rule
+    - .default-job-settings
+    - .docker_services
+  needs:
+    - cloning-repositories
+  script:
+    - section_start "Git diff"
+    - git fetch origin master # allows `git diff`ing (otherwise there's no origin/master)
+    - section_end "Git diff"
+    - !reference [.install-pyenv]
+    - !reference [.install-python-versions]
+    - section_start "Build Docker Images"
+    - poetry run "${CI_PROJECT_DIR}/docker/build_docker.sh"
+    - section_end "Build Docker Images"
+    - job-done
+
+scan_images:
+  stage: Test Images
+  extends:
+    - .build-docker-pipeline-rule
+    - .default-job-settings
+  needs:
+    - cloning-repositories
+    - build_docker_images
+  script:
+    - section_start "Run Scans"
+    - !reference [.set-twistlock-env]
+    - |
+      "${CI_PROJECT_DIR}/Tests/docker/run_scans.sh" "${CI_PROJECT_DIR}/pushed_dockers.txt" "${CI_PROJECT_DIR}/image_artifacts.txt"
+    - section_end "Run Scans"
+    - job-done
+
+test_ssl_connection:
+  stage: Test Images
+  extends:
+    - .build-docker-pipeline-rule
+    - .default-job-settings
+  needs:
+    - cloning-repositories
+    - build_docker_images
+  script:
+    - section_start "Test SSL Connection"
+    - |
+      "${CI_PROJECT_DIR}/Tests/docker/SSLTestSuite/run_ssl_test_suite.sh" "${CI_PROJECT_DIR}/pushed_dockers.txt"
+    - section_end "Test SSL Connection"
+    - job-done
+
+parse_report:
+  stage: Parse Report
+  extends:
+    - .build-docker-pipeline-rule
+    - .default-job-settings
+  needs:
+    - cloning-repositories
+    - scan_images
+  script:
+    - section_start "Parse Report"
+    - echo "Parsing the report"
+    - |
+      if [ ! -d "${CI_PROJECT_DIR}/scan_results" ]; then
+        echo "scan_results directory does not exist, creating it"
+        mkdir -p "${CI_PROJECT_DIR}/scan_results"
+      else
+        echo "scan_results directory already exists"
+      fi
+    - python "${CI_PROJECT_DIR}/Tests/docker/parse_scan_reports.py" --reports-folder "${CI_PROJECT_DIR}/scan_results" --mitigated-cves-file "${CI_PROJECT_DIR}/artifacts/repositories/content-test-conf/docker/mitigated-cves.json" --relevant-severity-levels "${RELEVANT_SEVERITY_LEVELS}"
+    - section_end "Parse Report"
+    - job-done

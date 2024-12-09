@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CVE report</title>
+</head>
+<body>
+<p>
+    This report was generated on {{ res.date }}
+    <br/>
+    Number of critical content items with cves in their images {{ res.total_critical_cve_content_items }}
+    <br/>
+    Number of {{ res.relevant_levels }} content items with cves in their images {{ res.total_cve_content_items }}
+    <br/>
+    Number of repos that have {{ res.relevant_levels }} cve in latest: {{ res.num_problematic_candidates }}
+    <br/>
+    Number of cves in latest repos: {{ res.num_problematic_cves_candidates }}
+    <br/>
+    Total used images in content (distinct tags): {{ res.number_total_used_content }}
+    <br/>
+    Number of deprecated images used in content: {{ res.number_deprecated_images }}
+
+    Progress Json:
+    <pre id="progress-section" class="collapsed"></pre>
+
+
+</p>
+<style>
+    .loader {
+  border: 16px solid #f3f3f3; /* Light grey */
+  border-top: 16px solid #3498db; /* Blue */
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+  animation: spin 2s linear infinite;
+}
+
+.color-cell {
+    transition: background-color 0.5s ease;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+    <h1>Content images</h1>
+    Minimum severity: <select id="severity_in" >
+        <option value="critical">Critical</option>
+        <option value="high" selected="selected">High</option>
+        <option value="medium">Medium</option>
+        <option value="moderate">Moderate</option>
+        <option value="low">Low</option>
+
+    </select>
+<br/>
+    Minimum support: <select id="support_in" >
+        <option value="xsoar">xsoar</option>
+        <option value="partner">partner</option>
+        <option value="community">community</option>
+        <option value="developer" selected="selected">developer</option>
+    </select>
+
+    <table id="content_cve_table" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th class="dt-control"></th>
+                <th>Repository</th>
+                <th>Highest Severity</th>
+                <th>Highest Support</th>
+                <th>Is outdated</th>
+                <th># Content Items</th>
+                <th>Deprecated</th>
+                <th>Latest has CVEs</th>
+                <th>Latest Tag</th>
+                <th>Latest Content Tag</th>
+                <th>CVE Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for repository, entry in res.content_report.items() %}
+            <tr>
+                <td class="dt-control"></td>
+                <td> {{ repository }} </td>
+                <td> {{ entry.highest_severity }}</td>
+                <td> {{ entry.highest_support }}</td>
+                <td> {{ entry.outdated }} </td>
+
+                <td> {{ entry.num_content_items_with_cves }} </td>
+                <td> {{ entry.deprecated }} </td>
+                <td> {{ entry.latest_has_cve }} </td>
+
+                <td> {{ entry.latest_tag }} </td>
+                <td class="color-cell"> {{ entry.latest_used_content }} </td>
+                <td> {% if entry.cve_item_info|length > 0 %}
+                    <!-- this will be moved to child by the js -->
+                    <div class="content">
+                        <table>
+                            <thead>
+                                <td>id</td><td>highest severity</td><td>num cves</td><td>tag</td><td>last updated</td><td>support level</td>
+                            </thead>
+                            <tbody>
+                        {% for item in entry.cve_item_info %}
+                        <tr class="row-severity-level-{{ item.highest_severity }} row-support-level-{{ item.support_level }}">
+                            <td>
+                                {{ item.id }}
+                            </td>
+                            <td>
+                                {{ item.highest_severity }}
+                            </td>
+                            <td>
+                                {{ item.num_cves}}
+                            </td>
+                            <td>
+                                <a href="{{ item.console_link }}" target="_blank"> {{ item.tag }}</a>
+                            </td>
+                            <td>
+                                {{ item.last_updated }}
+                            </td>
+                            <td>{{ item.support_level }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    </table>
+                    </div>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <th></th>
+                <th>Repository</th>
+                <th>Highest Severity</th>
+                <th>Highest Support</th>
+                <th>Is outdated</th>
+                <th># Content Items</th>
+                <th>Deprecated</th>
+                <th>Latest has CVEs</th>
+                <th>Latest Tag</th>
+                <th>Latest Content Tag</th>
+                <th>CVE Details</th>
+            </tr>
+        </tfoot>
+    </table>
+<br/>
+    <h2>Cves on latest tags</h2>
+<br/>
+<br/>
+    <table id="candidate_table" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th>Repository</th>
+                <th>CVE ID</th>
+                <th>Severity</th>
+                <th>Fix Status</th>
+                <th>Vulnerability link</th>
+                <th>Packages</th>
+                <th>Path</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in res.problematic_candidates %}
+            <tr>
+                <td> <a href="{{ entry.console_link }}" target="_blank"> {{ entry.repository }}</a> </td>
+                <td> {{ entry.cve_id }} </td>
+                <td> {{ entry.severity }} </td>
+                <td> {{ entry.fix_status }} </td>
+                <td> <a href="{{ entry.vulnerability_link }}" target="_blank">{{ entry.vulnerability_link }}</a></td>
+                <td> {{ entry.source_package }} :  {{ entry.packages }} </td>
+                <td> {{ entry.package_path }} </td>
+                <td> {{ entry.description }} </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <th>Repository</th>
+                <th>CVE ID</th>
+                <th>Severity</th>
+                <th>Fix Status</th>
+                <th>Vulnerability link</th>
+                <th>Packages</th>
+                <th>Path</th>
+                <th>Description</th>
+            </tr>
+        </tfoot>
+    </table>
+
+    <br/>
+    <button type="button" id="cve-image-content">Show cve-image-content view </button>
+    <div class="loader" style="display:none"></div>
+    <pre id="new-cve-data" class="collapsed"></pre>
+    <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-jsonview/1.2.3/jquery.jsonview.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-jsonview/1.2.3/jquery.jsonview.css"/>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+
+    <script>
+        $(document).ready(function() {
+            $('#progress-section').JSONView({'progress' : {{ res.progress | tojson | safe }}},  {collapsed: true } );
+            const COLUMNS = {
+                num_cve: 5,
+                latest_tag: 8,
+                latest_content: 9,
+                cve_data: 10
+            }
+            $('#content_cve_table tr').each(function() {
+                debugger
+                const colorCell = $(this).find('.color-cell')
+                const latestCell = colorCell.prev('td');
+
+                latestContentArr = colorCell.text().split('.')
+                lastContentVer = parseInt(latestContentArr[latestContentArr.length-1])
+
+
+                latestArr = latestCell.text().split('.')
+                latestVer = parseInt(latestArr[latestArr.length-1])
+
+                const difference = Math.abs(lastContentVer - latestVer);
+                if (difference) {
+                    const maxDifference = 50000;
+                    const ratio = difference / maxDifference;
+
+                    // Calculate the RGB color values
+                    const green = Math.min(255, 255 * (1 - ratio));
+                    const color = `rgb(255, ${green}, 0)`;
+                    colorCell.css('background-color', color);
+                }
+
+            })
+
+
+            var candidate_table = new DataTable('#candidate_table');
+            var content_table = new DataTable('#content_cve_table');
+            content_table.column(COLUMNS.cve_data).visible(false, true)
+            content_table.rows().every(function () {
+
+                this.child(this.data()[COLUMNS.cve_data]).hide()
+            });
+            function arraysEqual(arr1, arr2) {
+                if (arr1.length !== arr2.length) return false;
+                for (let i = 0; i < arr1.length; i++) {
+                    if (arr1[i] !== arr2[i]) return false;
+                }
+                return true;
+            }
+            function isInArray(item, array) {
+                for (let arr of array) {
+                    if (arraysEqual(item, arr)) return true;
+                }
+                return false;
+            }
+            function toJqueryClasses(arr) {
+                classes = []
+                for(let inner_arr of arr) {
+                    classes.push(inner_arr.map(e => `.${e}`).join(''))
+                }
+                return classes.join(', ')
+            }
+            function getSublistUpToValue(arr, value) {
+                const index = arr.indexOf(value);
+                if (index === -1) {
+                    return [];
+                }
+                return arr.slice(0, index + 1);
+            }
+            function cartesianProduct(arr1, arr2) {
+                return arr1.flatMap(x => arr2.map(y => [x, y]));
+            }
+            function trigger_search(){
+                const severity_order = ['critical', 'high', 'medium', 'moderate', 'low']
+                const support_order = ['xsoar', 'partner', 'community', 'developer']
+
+                let severity_value = document.getElementById("severity_in").value
+                let support_value = document.getElementById("support_in").value
+
+                let severity_to_show = getSublistUpToValue(severity_order, severity_value)
+                let support_to_show = getSublistUpToValue(support_order, support_value)
+
+                let classes_to_show = cartesianProduct(severity_to_show.map(e => `row-severity-level-${e}`), support_to_show.map(e => `row-support-level-${e}`))
+                let classes_to_hide = cartesianProduct(severity_order.map(e => `row-severity-level-${e}`), support_order.map(e => `row-support-level-${e}`)).filter(x => !isInArray(x,classes_to_show))
+
+                let show_classes_jquery = toJqueryClasses(classes_to_show)
+                let hide_classes_jquery = toJqueryClasses(classes_to_hide)
+
+                console.log('hide: ' + hide_classes_jquery)
+                console.log('show: ' + show_classes_jquery)
+
+                content_table.rows().every(function(){
+                    let inner_table = this.child()
+                    $(inner_table).find(hide_classes_jquery).hide()
+                    let show_classes_elts = $(inner_table).find(show_classes_jquery)
+                    show_classes_elts.show()
+                    let data = this.data()
+                    data[COLUMNS.num_cve] = show_classes_elts.length
+                    this.data(data)
+                })
+                content_table.column(COLUMNS.num_cve).search('(?!^0$)[0-9]+', true, true).draw()
+            }
+
+            content_table.on('click', 'td.dt-control', function (e) {
+                let tr = e.target.closest('tr');
+                let row = content_table.row(tr);
+                if (row.child.isShown()) {
+                    row.child.hide();
+                }
+                else {
+                    row.child.show();
+                }
+            });
+            document.getElementById("severity_in").addEventListener('change', trigger_search);
+            document.getElementById("support_in").addEventListener('change', trigger_search);
+
+
+
+            trigger_search()
+
+            var data = {{ res.new_cve_data | tojson | safe }}
+            if (Object.keys(data).length > 0){
+                function populate_cves() {
+                    $("#cve-image-content").hide()
+                    $(".loader").show()
+                    setTimeout(() => {
+                        $('#new-cve-data').JSONView({'data' : data},  {collapsed: true } );
+                        $(".loader").hide()
+                    }, 0);
+
+                }
+                document.getElementById("cve-image-content").addEventListener('click', populate_cves);
+
+
+            }
+
+            });
+
+    </script>
+</body>
+</html>

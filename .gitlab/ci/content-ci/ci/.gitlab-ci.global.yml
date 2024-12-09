@@ -314,7 +314,7 @@
   - section_end "Check Build Files Are Up To Date"
 
 .stop_contrib_external_build:
-  - - section_start "Stop contrib external build"
+  - section_start "Stop contrib external build"
   - |
     if [[ $CI_COMMIT_BRANCH =~ ^contrib/* && $CI_PIPELINE_SOURCE = "push" && $(curl --get --header "Accept: application/vnd.github.v3.raw" --header "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/demisto/content/pulls?state=open&base=master" --data-urlencode "head=demisto:${CI_COMMIT_BRANCH}" | jq) = '[]' ]]; then
       echo "not running on contrib/ branches when there is no open internal PR or the pipeline was manually triggered"
@@ -638,7 +638,7 @@
   - section_end "Unlock Machine"
 
 .clean-machine:
-  #retry mechanism for trigger upload pipeline in case it failed because of gitlab connectivity issues.
+  # Retry mechanism for a trigger upload pipeline in case it failed because of gitlab connectivity issues.
   - section_start "Trigger Cleanup Machine" --collapsed
   - echo "needed clean machine ${CLEAN_MACHINE_NEEDED}"
   - |
@@ -873,9 +873,6 @@
 
     - python3 Tests/Marketplace/validate_landing_page_sections.py -i $UNZIP_PATH
     - section_end "Validate landingPageSections.json"
-    - section_start "Revoking GCP Auth"
-    - gcloud auth revoke "${GCS_ARTIFACTS_ACCOUNT_NAME}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-    - section_end "Revoking GCP Auth"
     - job-done
 
 .run-validations-new-validate-flow:

@@ -9,12 +9,25 @@ from Tests.scripts.common import (
     CONTENT_MERGE,
     CONTENT_NIGHTLY,
     CONTENT_PR,
+    DOCKERFILES_PR,
     NATIVE_NIGHTLY,
     SDK_NIGHTLY,
     WORKFLOW_TYPES,
 )
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
+
+DOCKERFILES_PR_JOBS = [
+    "cloning-repositories",
+    "build_docker_images",
+    "run_pytest",
+    "validate_approved_licenses_files",
+    "validate_dependabot_config",
+    "validate_deprecated_images",
+    "scan_images",
+    "test_ssl_connection",
+    "parse_report",
+]
 
 NATIVE_NIGHTLY_JOBS = [
     "cloning-repositories",
@@ -108,6 +121,7 @@ CONTENT_DOCS_PR_JOBS = CONTENT_DOCS_JOBS_BASE
 CONTENT_DOCS_NIGHTLY_JOBS = CONTENT_DOCS_JOBS_BASE
 
 JOBS_PER_TRIGGERING_WORKFLOW = {
+    DOCKERFILES_PR: DOCKERFILES_PR_JOBS,
     CONTENT_NIGHTLY: CONTENT_NIGHTLY_JOBS,
     SDK_NIGHTLY: SDK_NIGHTLY_JOBS,
     NATIVE_NIGHTLY: NATIVE_NIGHTLY_JOBS,

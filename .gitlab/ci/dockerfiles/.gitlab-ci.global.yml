@@ -1,0 +1,397 @@
+.setup-network-certs: &setup-network-certs
+  - section_start "Setup network certs" --collapsed
+  - chmod 700 ${CERTIFICATE_SETUP_SCRIPT}
+  - source ${CERTIFICATE_SETUP_SCRIPT}
+  - section_end "Setup network certs"
+
+.setup-artifactory: &setup-artifactory
+  - section_start "Setup Artifactory" --collapsed
+  - chmod 700 ${ARTIFACTORY_SETUP_SCRIPT}
+  - source ${ARTIFACTORY_SETUP_SCRIPT}
+  - section_end "Setup Artifactory"
+
+.create_artifacts_folders: &create_artifacts_folders
+  - section_start "Create Artifacts folders" --collapsed
+  - |
+    if [[ -n "${ARTIFACTS_FOLDER}" ]] && [[ ! -d "${ARTIFACTS_FOLDER}/logs" ]]; then
+      echo "Creating Artifacts folder: ${ARTIFACTS_FOLDER} and it's log folder"
+      mkdir -p -m 777 "${ARTIFACTS_FOLDER}/logs" # using the -p to create the logs folder as well.
+    fi
+  - section_end "Create Artifacts folders"
+
+.clone-content-test-conf-and-infra:
+  - section_start "Clone content-test-conf and infra" --collapsed
+  - exec 3>&1 4>&2
+  - exec > >(tee -a "${ARTIFACTS_FOLDER}/logs/clone_demisto_content_test_conf_and_infra.log") 2>&1
+  - |
+    set +e
+
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    BLUE='\033[0;34m'
+    YELLOW='\033[1;33m'
+    PURPLE='\033[0;36m'
+    NC='\033[0m'
+
+    clone_repository() {
+      local host=$1
+      local user=$2
+      local token=$3
+      local repo_name=$4
+      local branch=$5
+      local retry_count=$6
+      local sleep_time=${7:-10}  # default sleep time is 10 seconds.
+      local exit_code=0
+      local i=1
+      echo -e "${PURPLE}Checking if repository repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} already exists in ${CI_PROJECT_DIR}/artifacts/repositories/${repo_name}${NC}"
+      if [ -d "${CI_PROJECT_DIR}/artifacts/repositories/${repo_name}" ]; then
+        echo -e "${GREEN}Repository ${repo_name} already exists, no need to clone it again${NC}"
+        return 0
+      fi
+      echo -e "${PURPLE}Cloning repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} from ${host} branch:${branch} with ${retry_count} retries${NC}"
+      if [ -z "${user}" ] && [ -z "${token}" ]; then
+        user_info=""
+      else
+        user_info="${user}:${token}@"
+        # If either user or token is not empty, then we need to add them to the url.
+      fi
+      pushd "${CI_PROJECT_DIR}/artifacts/repositories" || exit 1
+      for ((i=1; i <= retry_count; i++)); do
+        git -c advice.detachedHead=false clone --depth=1 "https://${user_info}${host}/${CI_PROJECT_NAMESPACE}/${repo_name}.git" --branch "${branch}" && exit_code=0 && break || exit_code=$?
+        if [ ${i} -ne "${retry_count}" ]; then
+          echo -e "${YELLOW}Failed to clone repository:${repo_name}, with branch:${branch}, project namespace:${CI_PROJECT_NAMESPACE}, exit code:${exit_code}, sleeping for ${sleep_time} seconds and trying again${NC}"
+          sleep "${sleep_time}"
+        else
+          echo -e "${RED}Failed to clone repository:${repo_name} with branch:${branch}, project namespace:${CI_PROJECT_NAMESPACE}, exit code:${exit_code}, exhausted all ${retry_count} retries${NC}"
+          break
+        fi
+      done
+      popd || exit 1
+      return ${exit_code}
+    }
+
+    clone_repository_with_fallback_branch() {
+      local host=$1
+      local user=$2
+      local token=$3
+      local repo_name=$4
+      local branch=$5
+      local retry_count=$6
+      local sleep_time=${7:-10}  # default sleep time is 10 seconds.
+      local fallback_branch="${8:-master}"
+
+      # Check if branch exists in the repository.
+      echo -e "${PURPLE}Checking if branch/tag ${branch} exists in repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE}${NC}"
+      if [ -z "${user}" ] && [ -z "${token}" ]; then
+        user_info=""
+      else
+        # If either user or token is not empty, then we need to add them to the url.
+        user_info="${user}:${token}@"
+      fi
+      local tag_exists
+      local branch_type="branch"
+      if [[ ${branch} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "branch ${branch} is formatted like a version (v0.0.0), checking for a matching tag"
+          git ls-remote --exit-code --quiet --tags "https://${user_info}${host}/${CI_PROJECT_NAMESPACE}/${repo_name}.git" "${branch}" 1>/dev/null 2>&1
+          tag_exists=$?
+          if [[ "${tag_exists}" -ne 0 ]]; then
+            echo -e "${PURPLE}Could not find a tag called ${branch}${NC}"
+          else
+            branch_type="tag"
+            echo -e "${GREEN}Found a tag called ${branch}${NC}"
+          fi
+      else
+          echo "branch ${branch} is not formatted like a version (v0.0.0), skipping tag check"
+          tag_exists=-1 # default, for when the branch isn't version-like named
+      fi
+
+      if [[ "${tag_exists}" -ne 0 ]]; then
+          echo "Searching for a branch called ${branch}"
+          git ls-remote --exit-code --quiet --heads "https://${user_info}${host}/${CI_PROJECT_NAMESPACE}/${repo_name}.git" "${branch}" 1>/dev/null 2>&1
+          local branch_exists=$?
+      fi
+
+      if [[ "${tag_exists}" -ne 0 ]] && [[ "${branch_exists}" -ne 0 ]]; then
+        echo -e "${YELLOW}branch/tag:${branch} does not exist in repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE}, defaulting to ${fallback_branch}${NC}"
+        local exit_code=1
+      else
+        echo -e "${GREEN}${branch_type}:${branch} exists in repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE}, trying to clone${NC}"
+        clone_repository "${host}" "${user}" "${token}" "${repo_name}" "${branch}" "${retry_count}" "${sleep_time}"
+        local exit_code=$?
+        if [ "${exit_code}" -ne 0 ]; then
+          echo -e "${YELLOW}Failed to clone repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} with ${branch_type}:${branch}, exit code:${exit_code}${NC}"
+        fi
+      fi
+      if [ "${exit_code}" -ne 0 ]; then
+        # Trying to clone from fallback branch.
+        echo -e "${PURPLE}Trying to clone repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} with fallback branch ${fallback_branch}!${NC}"
+        clone_repository "${host}" "${user}" "${token}" "${repo_name}" "${fallback_branch}" "${retry_count}" "${sleep_time}"
+        local exit_code=$?
+        if [ ${exit_code} -ne 0 ]; then
+          echo -e "${RED}ERROR: Failed to clone repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} with fallback branch:${fallback_branch}, exit code:${exit_code}, exiting!${NC}"
+          exit ${exit_code}
+        else
+          echo -e "${GREEN}Successfully cloned repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} with fallback branch:${fallback_branch}${NC}"
+          return 0
+        fi
+      else
+        echo -e "${GREEN}Successfully cloned repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} with branch:${branch}${NC}"
+        return 0
+      fi
+    }
+
+    TEST_UPLOAD_BRANCH_SUFFIX="-upload_test_branch-"
+    # Search for the branch name with the suffix of '-upload_test_branch-' in case it exists using CI_COMMIT_REF_NAME to clone content-test-conf.
+    if [[ "${CI_COMMIT_REF_NAME}" == *"${TEST_UPLOAD_BRANCH_SUFFIX}"* ]]; then
+      # Using bash string pattern matching to search only the last occurrence of the suffix, that's why we use a single '%'.
+      SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF="${CI_COMMIT_REF_NAME%"${TEST_UPLOAD_BRANCH_SUFFIX}"*}"
+      echo "Found branch with suffix ${TEST_UPLOAD_BRANCH_SUFFIX} in branch name, using the branch ${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF} to clone content-test-conf repository"
+    else
+      # default to CI_COMMIT_REF_NAME when the suffix is not found.
+      echo "Didn't find a branch with suffix ${TEST_UPLOAD_BRANCH_SUFFIX} in branch name, using the branch ${CI_COMMIT_REF_NAME} to clone content-test-conf repository, with fallback to master"
+      SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF="${CI_COMMIT_REF_NAME}"
+    fi
+
+    if [[ "${CURRENT_BRANCH_NAME}" == "master" ]] || [[ ${CURRENT_BRANCH_NAME} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      echo "Getting infra with branch:${CURRENT_BRANCH_NAME}"
+      echo -e "${BLUE}NOTE: If you want to run the build on a specific branch in infra,\nYou need to replace the environment variable INFRA_BRANCH in the .gitlab-ci.yml file\nWith the name of the branch that exists in infra.${NC}"
+    else
+      echo "Getting infra with branch:${CURRENT_BRANCH_NAME}, with fallback to master"
+    fi
+
+    echo "Getting content-test-conf with branch${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF}, with fallback to master"
+
+    CI_SERVER_HOST=${CI_SERVER_HOST:-gitlab.xdr.pan.local} # disable-secrets-detection
+
+    clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "content-test-conf" "${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF}" 3 10 "master"
+
+    if [ ! -d "${CI_PROJECT_DIR}/config" ]; then mkdir -p "${CI_PROJECT_DIR}/config"; else echo "Directory ${CI_PROJECT_DIR}/config already exists"; fi
+    cp -r "${CI_PROJECT_DIR}/artifacts/repositories/content-test-conf/config/"* "${CI_PROJECT_DIR}/config/"
+
+    NAME_MAPPING_PATH="${CI_PROJECT_DIR}/config/name_mapping.json"
+    if [ ! -f "${NAME_MAPPING_PATH}" ]; then
+      echo "File ${NAME_MAPPING_PATH} does not exist, exiting!"
+      exit 1;
+    fi
+
+    clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "infra" "${CURRENT_BRANCH_NAME}" 3 10 "master"
+
+    [ ! -d "${CI_PROJECT_DIR}/Tests" ] && mkdir -p "${CI_PROJECT_DIR}/Tests" || echo "Tests directory already exists"
+    [ ! -d "${CI_PROJECT_DIR}/Utils" ] && mkdir -p "${CI_PROJECT_DIR}/Utils" || echo "Utils directory already exists"
+    [ ! -d "${CI_PROJECT_DIR}/config" ] && mkdir -p "${CI_PROJECT_DIR}/config" || echo "config directory already exists"
+    # COPY DIRECTORIES
+    cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/Tests/"* "${CI_PROJECT_DIR}/Tests"
+    cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/Utils/"* "${CI_PROJECT_DIR}/Utils"
+    # COPY FILES
+    if [ "${USE_INFRA_PYPROJECT_TOML}" = "true" ]; then
+      echo "Copying infra pyproject.toml and poetry.lock files to the root directory"
+      cp -f "${CI_PROJECT_DIR}/artifacts/repositories/infra/pyproject.toml"* "${CI_PROJECT_DIR}"
+      cp -f "${CI_PROJECT_DIR}/artifacts/repositories/infra/poetry.lock"* "${CI_PROJECT_DIR}"
+    else
+      echo "Not copying infra pyproject.toml and poetry.lock files to the root directory"
+    fi
+
+    set -e
+    echo "Successfully cloned content-test-conf and infra repositories"
+
+  - exec 1>&3 2>&4
+  - exec 3>&- 4>&-
+  - section_end "Clone content-test-conf and infra"
+
+.create-artifacts-repositories-folder:
+  - section_start "Create Artifacts Repositories Folder" --collapsed
+  - |
+    if [[ ! -d "${CI_PROJECT_DIR}/artifacts/repositories" ]]; then
+      echo "Creating repositories folder:${CI_PROJECT_DIR}/artifacts/repositories"
+      mkdir -p -m 777 "${CI_PROJECT_DIR}/artifacts/repositories" # using the -p to create the folder hierarchy.
+    fi
+  - section_end "Create Artifacts Repositories Folder"
+
+.cloning-repositories:
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - ${CI_PROJECT_DIR}/artifacts/*
+      - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
+    when: always
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.stop_contrib_external_build]
+    - !reference [.create-artifacts-repositories-folder]
+    - !reference [.clone-content-test-conf-and-infra]
+  variables:
+    ARTIFACTS_FOLDER: ${CI_PROJECT_DIR}/artifacts
+
+.check_build_files_are_up_to_date:
+  - section_start "Check Build Files Are Up To Date"
+  - |
+    if [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]] || [[ "${IS_NIGHTLY}" == "true" ]] || [[ "${BUCKET_UPLOAD}" == "true" ]] || [[ -n "${SLACK_JOB}" ]] || [[ "${BUILD_MACHINES_CLEANUP}" == "true" ]] || [[ "${DELETE_MISMATCHED_BRANCHES}" == "true" ]] || [[ "${SECURITY_SCANS}" == "true" ]] || [[ "${DEMISTO_TEST_NATIVE_CANDIDATE}" == "true" ]] || [[ "${CI_COMMIT_BRANCH}" == "master" ]] || [[ "${SDK_RELEASE}" == "true" ]] || [[ "${TRIGGER_CONTRIBUTION_BUILD}" == "true" ]]; then
+      echo "Running a build which doesn't require build files check validation"
+    else
+      git fetch origin master # allows `git diff`ing, otherwise there's no origin/master
+      ./Tests/scripts/is_file_up_to_date.sh .gitlab "${CI_COMMIT_REF_NAME}"
+    fi
+  - section_end "Check Build Files Are Up To Date"
+
+.stop_contrib_external_build:
+  - section_start "Stop contrib external build"
+  - |
+    if [[ ${CI_COMMIT_REF_NAME} =~ ^contrib/* && $CI_PIPELINE_SOURCE = "push" && $(curl --get --header "Accept: application/vnd.github.v3.raw" --header "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/demisto/content/pulls?state=open&base=master" --data-urlencode "head=demisto:${CI_COMMIT_REF_NAME}" | jq) = '[]' ]]; then
+      echo "not running on contrib/ branches when there is no open internal PR or the pipeline was manually triggered"
+      set -e
+      exit 1
+    fi
+  - section_end "Stop contrib external build"
+
+.install_venv: &install_venv
+  - section_start "Installing Virtualenv" --collapsed
+  # we still need to install even if cached. if cached, `poetry` will handle it
+  - echo "installing venv, with always copy:${POETRY_VIRTUALENVS_OPTIONS_ALWAYS_COPY}"
+  - deactivate || true
+  - poetry env remove $(which python) || true
+  - NO_HOOKS=1 .hooks/bootstrap | tee --append "${ARTIFACTS_FOLDER}/logs/installations.log"
+  - echo "Checking if pyproject.toml is consistent with poetry.lock"
+  - poetry lock --check
+  - poetry run python3 --version | tee -a "${ARTIFACTS_FOLDER}/logs/installed_python_libraries.log"
+  - poetry run python3 -m pip list | tee -a "${ARTIFACTS_FOLDER}/logs/installed_python_libraries.log"
+  - section_end "Installing Virtualenv"
+
+.ssh-config-setup:
+  - section_start "SSH config setup" --collapsed
+  - cp $GCP_SSH_CONFIGURATION ~/.ssh/config
+  - chmod 700 ~/.ssh/config
+  - section_end "SSH config setup"
+
+.neo4j-setup: &neo4j-setup
+  - section_start "Neo4j Setup" --collapsed
+  - neo4j-admin dbms set-initial-password contentgraph
+  - neo4j start
+  - echo "$(date) waiting for neo4j to start"
+  - until curl http://localhost:7474/ &> /dev/null; do sleep 1; echo "waiting..."; done
+  - echo "$(date) Neo4j started"
+  - echo "Neo4j status:"
+  - neo4j status --verbose || true
+  - section_end "Neo4j Setup"
+
+.build_parameters: &build_parameters
+  - section_start "Build Parameters" --collapsed
+  - echo "Environment Variables:"
+  - set | grep -E "^ARTIFACTS_FOLDER.*=|^JIRA_.*=|^CURRENT_BRANCH_NAME=|^INFRA_BRANCH=" | sort
+  - echo "Versions Installed:"
+  - python --version
+  - python3 --version
+  - poetry --version
+  - pip3 --version
+  - section_end "Build Parameters"
+
+.gitlab_ci_build_parameters: &gitlab_ci_build_parameters
+  - section_start "Gitlab CI Build Parameters" --collapsed
+  - set | grep -E "^CI_.*=|^GITLAB.*=" | sort
+  - section_end "Gitlab CI Build Parameters"
+
+.default-before-script:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - *setup-network-certs
+    - *setup-artifactory
+    - *gitlab_ci_build_parameters
+    - *create_artifacts_folders
+    - !reference [.create-artifacts-repositories-folder]
+    - !reference [.clone-content-test-conf-and-infra]
+    - *install_venv
+    - *neo4j-setup
+    - *build_parameters
+
+.default-job-settings:
+  interruptible: true
+  extends:
+    - .default-before-script
+
+.trigger-slack-notification:
+  stage: .post
+  trigger:
+    include:
+      - file: .gitlab/ci/dockerfiles/.gitlab-ci.slack-notify.yml
+        ref: $INFRA_BRANCH
+        project: "${CI_PROJECT_NAMESPACE}/infra"
+  inherit: # see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27775
+    variables: false
+
+.jobs-done-check:
+  stage: are-jobs-really-done
+  extends:
+    - .default-job-settings
+  script:
+    - poetry run python3 -u ./Tests/scripts/check_jobs_done.py --triggering-workflow "${WORKFLOW}" --job-done-files "${PIPELINE_JOBS_FOLDER}"
+
+.docker_services:
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+  services:
+    - name: ${DOCKER_IO}/library/docker:20.10.12-dind
+      alias: docker
+      variables:
+        KUBERNETES_MEMORY_REQUEST: ${KUBERNETES_MEMORY_REQUEST}
+        KUBERNETES_MEMORY_LIMIT: ${KUBERNETES_MEMORY_LIMIT}
+
+.set-twistlock-env:
+  - |
+    echo "CI_COMMIT_REF_NAME:${CI_COMMIT_REF_NAME}"
+    if [ "${CI_COMMIT_REF_NAME}" == "master" ] || ([ "${CI_COMMIT_REF_NAME}" == "master" ] && [ "$GENERATE_REPORT" == "true" ]) || ([ "$LAUNCH_SCAN" == "true" ] && [ "${CI_COMMIT_REF_NAME}" == "master" ]); then
+        echo "Setting twistlock to prod console"
+        export PRISMA_CONSOLE_PASS=$PRISMA_CONSOLE_PASS_PROD
+        export PRISMA_CONSOLE_TENANT=$PRISMA_CONSOLE_TENANT_PROD
+        export PRISMA_CONSOLE_USER=$PRISMA_CONSOLE_USER_PROD
+        export PRISMA_CONSOLE_URL=$PRISMA_CONSOLE_URL_PROD
+    else
+        echo "Setting twistlock to dev console"
+        export PRISMA_CONSOLE_PASS=$PRISMA_CONSOLE_PASS_DEV
+        export PRISMA_CONSOLE_TENANT=$PRISMA_CONSOLE_TENANT_DEV
+        export PRISMA_CONSOLE_USER=$PRISMA_CONSOLE_USER_DEV
+        export PRISMA_CONSOLE_URL=$PRISMA_CONSOLE_URL_DEV
+    fi
+
+.generate-content-graph:
+  - section_start "Generate content graph"
+  - EXIT_CODE=0
+  - echo "Cloning content repository"
+  - git clone --single-branch https://github.com/demisto/content.git # must clone with history to get last updated info.
+  - cd content
+  - export PYTHONPATH="$(pwd)"
+  - poetry install
+  - poetry run demisto-sdk graph update || EXIT_CODE=$?
+  - |
+    if [ "${EXIT_CODE}" -ne 0 ]; then
+      echo "Collecting neo4j logs"
+      cp -r /var/log/neo4j ${CI_PROJECT_DIR}/artifacts || true
+      neo4j status --verbose || true
+      echo "Failed to update content graph, exiting with ${EXIT_CODE}";
+      exit "${EXIT_CODE}";
+    fi
+  - section_end "Generate content graph"
+
+.install-pyenv:
+  - section_start "Apt-get update and install"
+  - apt-get update && apt-get install -y -q curl liblzma-dev libbz2-dev libssl-dev libreadline-dev libsqlite3-dev
+  - section_end "Apt-get update and install"
+  - section_start "Install Pyenv"
+  - export PYENV_ROOT="$HOME/.pyenv"
+  - export PATH="$PYENV_ROOT/bin:$PATH"
+  - curl -s https://pyenv.run | bash
+  - eval "$(pyenv init --path)"
+  - eval "$(pyenv init -)"
+  - eval "$(pyenv virtualenv-init -)"
+  - section_end "Install Pyenv"
+
+.install-python-versions:
+  - section_start "Install Python Versions"
+  - pyenv install -s 2.7.18 && pyenv versions | grep 2.7.18
+  - pyenv install -s 3.8.15 && pyenv versions | grep 3.8.15
+  - pyenv install -s 3.9.16 && pyenv versions | grep 3.9.16
+  - pyenv install -s 3.10.13 && pyenv versions | grep 3.10.13
+  - pyenv install -s 3.11.0 && pyenv versions | grep 3.11.0
+  - pyenv install -s 3.12.0 && pyenv versions | grep 3.12.0
+  - section_end "Install Python Versions"

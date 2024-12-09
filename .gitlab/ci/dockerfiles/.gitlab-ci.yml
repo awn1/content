@@ -1,0 +1,29 @@
+
+default:
+  image: ${DOCKER_IO}/devdemisto/gitlab-content-ci:1.0.0.64455
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - ${CI_PROJECT_DIR}/artifacts/*
+      - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
+    when: always
+
+stages:
+  - build
+  - Scan
+  - Generate Report
+  - Pages
+  - Find New Images
+  - Test Images
+  - Parse Report
+  - are-jobs-really-done
+  - fan-in  # concentrate pipeline artifacts to a single job before triggering child slack pipeline.
+
+include:
+  - local: .gitlab/ci/dockerfiles/.gitlab-ci.variables.yml
+  - local: .gitlab/ci/dockerfiles/.gitlab-ci.workflow.yml
+  - local: .gitlab/ci/dockerfiles/.gitlab-ci.global.yml
+  - local: .gitlab/ci/dockerfiles/.gitlab-ci.on-push.yml
+  - local: .gitlab/ci/dockerfiles/.gitlab-ci.cve-report.yml
+  - local: .gitlab/ci/dockerfiles/.gitlab-ci.twistlock-scan.yml
+  - local: .gitlab/ci/gitlab-ci.shared.variables.yml

@@ -19,6 +19,7 @@ from Tests.scripts.collect_tests.constants import CONF_FILE, TPB_DEPENDENCIES_FI
 from Tests.scripts.collect_tests.test_conf import TestConf
 from Tests.scripts.utils import logging_wrapper as logging
 
+DOCKERFILES_PR = "Dockerfiles PR"
 CONTENT_NIGHTLY = "Content Nightly"
 CONTENT_PR = "Content PR"
 CONTENT_MERGE = "Content Merge"
@@ -32,6 +33,7 @@ NATIVE_NIGHTLY = "Native Nightly"
 CONTENT_DOCS_PR = "Content Docs PR"
 CONTENT_DOCS_NIGHTLY = "Content Docs Nightly"
 WORKFLOW_TYPES = {
+    DOCKERFILES_PR,
     CONTENT_NIGHTLY,
     NATIVE_NIGHTLY,
     CONTENT_PR,

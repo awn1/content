@@ -1,0 +1,20 @@
+.launch-scan-rule:
+  rules:
+    - if: $LAUNCH_SCAN == "true"
+
+StartTwistlockScan:
+  tags:
+    - gce
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
+    USE_INFRA_PYPROJECT_TOML: "true"
+  extends:
+    - .launch-scan-rule
+    - .default-job-settings
+  stage: Scan
+  script:
+    - !reference [.set-twistlock-env]
+    - !reference [.generate-content-graph]
+    - poetry run python3 -u "${CI_PROJECT_DIR}/Tests/docker/CVE_report/scan_content_images_twistlock.py"
+    - job-done

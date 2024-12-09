@@ -1,0 +1,44 @@
+variables:
+  WORKFLOW_PIPELINE_NAME: 'Pipeline for branch: $CI_COMMIT_REF_NAME'
+
+workflow:
+  name: '$WORKFLOW_PIPELINE_NAME'
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Merge request #$CI_MERGE_REQUEST_IID pipeline for branch $CI_COMMIT_REF_NAME to $CI_MERGE_REQUEST_TARGET_BRANCH_NAME'
+
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/ && $CI_COMMIT_REF_NAME != "master"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Merge request for branch:$CI_COMMIT_REF_NAME pipeline'
+
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/ && $CI_COMMIT_REF_NAME != "master"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Merge to master pipeline'
+
+    - if: '$TRIGGER_TEST_BRANCH == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Trigger Dockerfiles test branch pipeline for infra branch: $INFRA_BRANCH'
+
+    - if: '$LAUNCH_SCAN == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Twistlock scan pipeline for branch: $CI_COMMIT_REF_NAME'
+
+    - if: '$GENERATE_REPORT == "true" && $PUBLISH_REPORT == "true" && $POST_SLACK_RESULTS == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'CVE report pipeline with publishing results & posting to slack for branch: $CI_COMMIT_REF_NAME'
+
+    - if: '$GENERATE_REPORT == "true" && $PUBLISH_REPORT == "true" && $POST_SLACK_RESULTS == "false"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'CVE report pipeline with publishing results for branch: $CI_COMMIT_REF_NAME'
+
+    - if: '$GENERATE_REPORT == "true" && $PUBLISH_REPORT == "false" && $POST_SLACK_RESULTS == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'CVE report pipeline with posting to slack for branch: $CI_COMMIT_REF_NAME'
+
+    - if: '$GENERATE_REPORT == "true" && $PUBLISH_REPORT == "false" && $POST_SLACK_RESULTS == "false"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'CVE report pipeline for branch: $CI_COMMIT_REF_NAME'
+
+    # Don't add any other rules after this one.
+    - when: always  # Other pipelines can run, but use the default name
