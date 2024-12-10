@@ -2296,8 +2296,11 @@ def sub_main():  # pragma: no cover
             from requests_ntlm import HttpNtlmAuth
             from requests.packages.urllib3.util.ssl_ import create_urllib3_context
             # Set the URL of the Exchange server
-
-            url = EWS_SERVER
+            if config:
+                url = config.service_endpoint
+            else:
+                url = EWS_SERVER
+            demisto.debug(f'URL: {url}')
             username = USERNAME
             password = PASSWORD
             # Set the username and password
@@ -2351,7 +2354,7 @@ def sub_main():  # pragma: no cover
                 headers=headers,
                 data=xml_body,
                 auth=HttpNtlmAuth(username, password),
-                verify=False
+                verify= not NON_SECURE
             )
 
             # Print the response
