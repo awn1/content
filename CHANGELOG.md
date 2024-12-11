@@ -1,3 +1,14 @@
+# Content Infrastructure 0.0.14 (2024-12-10)
+
+### Features
+
+- Migrate Dockerfiles CircleCI workflows to GitHub Actions ([CIAC-7077](https://jira-dc.paloaltonetworks.com/browse/CIAC-7077))
+- Add support for the version_config.json file in upload. ([CIAC-12327](https://jira-dc.paloaltonetworks.com/browse/CIAC-12327))
+- Added the **xlogs** project (under Utils/xlogs)
+- Changed the JIRA_MAX_TEST_PLAYBOOKS_FAILURES_TO_HANDLE_DEFAULT from 20 to 25.
+- Updated the demisto-sdk version 1.33.0 in Infra.
+
+
 # Content Infrastructure 0.0.13 (2024-12-05)
 
 ### Features
