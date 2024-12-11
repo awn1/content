@@ -10,6 +10,30 @@
     - if: '$TRIGGER_TEST_BRANCH == "true"'
       when: always
 
+.get_pr_details_github:
+  - section_start "Get PR details from GitHub"
+  - |
+    PR_NUM=""
+    POST_COMMENT="false"
+
+    pr=$(curl -sS --get --header "Accept: application/vnd.github.v3.raw" --header "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/demisto/dockerfiles/pulls?state=open&base=master" --data-urlencode "head=demisto:${CI_COMMIT_REF_NAME}" | jq '.[]')
+    EXIT_CODE=$?
+    if [[ "${EXIT_CODE}" -ne 0 ]]; then
+      echo "Failed to fetch PR details, exit code:${EXIT_CODE}"
+      exit "${EXIT_CODE}"
+    fi
+
+    if [[ -n "${pr}" ]] && [[ "${pr}" != 'null' ]]; then
+      PR_NUM=$(echo $pr | jq -r '.number')
+      POST_COMMENT="true"
+      echo "PR number: ${PR_NUM}"
+    else
+        echo "No PR found for the current branch: ${CI_COMMIT_REF_NAME}"
+    fi
+    export PR_NUM
+    export POST_COMMENT
+  - section_end "Get PR details from GitHub"
+
 cloning-repositories:
   stage: .pre
   extends:
@@ -142,6 +166,7 @@ build_docker_images:
     - section_start "Git diff"
     - git fetch origin master # allows `git diff`ing (otherwise there's no origin/master)
     - section_end "Git diff"
+    - !reference [.get_pr_details_github]
     - !reference [.install-pyenv]
     - !reference [.install-python-versions]
     - section_start "Build Docker Images"
@@ -154,6 +179,7 @@ scan_images:
   extends:
     - .build-docker-pipeline-rule
     - .default-job-settings
+    - .docker_services
   needs:
     - cloning-repositories
     - build_docker_images
@@ -161,7 +187,7 @@ scan_images:
     - section_start "Run Scans"
     - !reference [.set-twistlock-env]
     - |
-      "${CI_PROJECT_DIR}/Tests/docker/run_scans.sh" "${CI_PROJECT_DIR}/pushed_dockers.txt" "${CI_PROJECT_DIR}/image_artifacts.txt"
+      "${CI_PROJECT_DIR}/Tests/docker/run_scans.sh" "${ARTIFACTS_FOLDER}/pushed_dockers.txt" "${ARTIFACTS_FOLDER}/image_artifacts.txt"
     - section_end "Run Scans"
     - job-done
 
@@ -170,13 +196,14 @@ test_ssl_connection:
   extends:
     - .build-docker-pipeline-rule
     - .default-job-settings
+    - .docker_services
   needs:
     - cloning-repositories
     - build_docker_images
   script:
     - section_start "Test SSL Connection"
     - |
-      "${CI_PROJECT_DIR}/Tests/docker/SSLTestSuite/run_ssl_test_suite.sh" "${CI_PROJECT_DIR}/pushed_dockers.txt"
+      "${CI_PROJECT_DIR}/Tests/docker/SSLTestSuite/run_ssl_test_suite.sh" "${ARTIFACTS_FOLDER}/pushed_dockers.txt"
     - section_end "Test SSL Connection"
     - job-done
 
@@ -192,12 +219,12 @@ parse_report:
     - section_start "Parse Report"
     - echo "Parsing the report"
     - |
-      if [ ! -d "${CI_PROJECT_DIR}/scan_results" ]; then
-        echo "scan_results directory does not exist, creating it"
-        mkdir -p "${CI_PROJECT_DIR}/scan_results"
+      if [ ! -d "${ARTIFACTS_FOLDER}/scan_results" ]; then
+        echo "scan_results directory does not exist, creating it: ${ARTIFACTS_FOLDER}/scan_results"
+        mkdir -p "${ARTIFACTS_FOLDER}/scan_results"
       else
         echo "scan_results directory already exists"
       fi
-    - python "${CI_PROJECT_DIR}/Tests/docker/parse_scan_reports.py" --reports-folder "${CI_PROJECT_DIR}/scan_results" --mitigated-cves-file "${CI_PROJECT_DIR}/artifacts/repositories/content-test-conf/docker/mitigated-cves.json" --relevant-severity-levels "${RELEVANT_SEVERITY_LEVELS}"
+    - python "${CI_PROJECT_DIR}/Tests/docker/parse_scan_reports.py" --reports-folder "${ARTIFACTS_FOLDER}/scan_results" --mitigated-cves-file "${CI_PROJECT_DIR}/artifacts/repositories/content-test-conf/docker/mitigated-cves.json" --relevant-severity-levels "${RELEVANT_SEVERITY_LEVELS}"
     - section_end "Parse Report"
     - job-done
