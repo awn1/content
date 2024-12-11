@@ -27,7 +27,9 @@ if [ -z "$images_on_dockerhub" ]; then
   exit 0
 fi
 
-cd scripts/SSLTestSuite/
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+
+cd "${SCRIPT_DIR}"
 
 mkdir $SERVER_FILES_DIR/certs
 echo "private key path: $SSL_TEST_PRIVATE_KEY"
