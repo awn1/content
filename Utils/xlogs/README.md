@@ -100,6 +100,7 @@ $ log [OPTIONS] COMMAND [ARGS]...
 
 * `engine`: Generate a URL to conveniently search logs...
 * `tenant`: Generate a URL to conveniently search logs...
+* `ask-permissions`: Send a permission request to the ...
 
 ### `log engine`
 
@@ -140,5 +141,19 @@ $ log tenant [OPTIONS] PROJECT_ID QUERY
 **Options**:
 
 * `--days-back INTEGER`: [default: 30]
+* `--help`: Show this message and exit.
+
+### `log ask-permission`
+
+Send a permission request to the #xdr-permissions Slack chanel for the GCP project related to the selected Jira ticket.
+
+**Usage**:
+
+```console
+$ log ask-permission [OPTIONS]
+```
+
+**Options**:
+
 * `--help`: Show this message and exit.
 
