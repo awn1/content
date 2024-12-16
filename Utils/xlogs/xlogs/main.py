@@ -25,6 +25,17 @@ app.add_typer(bundle_app, name="bundle", help="Easier access to log bundles")
 app.add_typer(log_app, name="log", help="Easier access to GCP logs")
 
 
+@log_app.command("ask-permissions")
+def ask_permission():
+    """
+    Send the required permissions requests required to the #xdr-permissions Slack chanel via Slack webhook.
+    """
+    from xlogs.commands.permissions.ask_permissions import ask_gcp_permissions
+
+    ask_gcp_permissions()
+    logger.info("permissions request sent to the #xdr-permissions chanel in Slack")
+
+
 @log_app.command("engine")
 def open_integration_logs(
     project_id: Annotated[
