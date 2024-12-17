@@ -9,9 +9,6 @@ trigger-contribution-build:
   stage: trigger-contribution-build
   variables:
     WORKFLOW: 'Trigger contribution build'
-    GITHUB_TOKEN: $GITHUB_TOKEN
-    GITLAB_API_TOKEN: $GITLAB_API_TOKEN
-    TRIGGER_CONTRIBUTION: $TRIGGER_CONTRIBUTION
   extends:
     - .trigger-contribution-build-role
     - .default-job-settings
