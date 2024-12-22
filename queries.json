@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "name": "Select Columns with Condition",
+    "description": "Selects specified columns from the all_alerts_all_tenants_v2 table based on a given condition",
+    "query": "SELECT column1, column2\nFROM `xdr-analysis-prod.analytics.all_alerts_all_tenants_v2`\nWHERE condition = @param",
+    "parameters": [
+      {
+        "name": "param",
+        "type": "STRING",
+        "description": "The condition value to filter the results"
+      }
+    ]
+  }
+]
