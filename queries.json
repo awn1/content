@@ -1,46 +1,13 @@
 [
-    {
-        "name": "Count Unique Alerts by Tenant ID",
-        "description": "Counts the number of unique alerts generated within a specified date range, grouped by tenant ID, filtered by alert name.",
-        "sql": "SELECT t.lcaas_id, t.csp_name, COUNT(DISTINCT a.external_id) AS unique_alert_count FROM `xdr-analysis-prod.analytics.all_alerts_all_tenants_v2` AS a JOIN `xdr-analysis-prod.analytics.vw_fact_tenants` AS t ON a.tenant_id = t.lcaas_id WHERE TIMESTAMP_TRUNC(a.generatedTime, DAY) BETWEEN TIMESTAMP(@start_date) AND TIMESTAMP(@end_date) AND a.alert_name = @alert_name GROUP BY t.lcaas_id, t.csp_name ORDER BY unique_alert_count DESC;",
-        "parameters": [
-            {
-                "name": "start_date",
-                "prompt": "Enter the start date (e.g., '2023-01-01'): ",
-                "type": "date"
-            },
-            {
-                "name": "end_date",
-                "prompt": "Enter the end date (e.g., '2023-01-31'): ",
-                "type": "date"
-            },
-            {
-                "name": "alert_name",
-                "prompt": "Enter the alert name: ",
-                "type": "string"
-            }
-        ]
-    },
-    {
-        "name": "Count Latest Alert Statuses by Date Range",
-        "description": "Counts the occurrences of the latest alert statuses for alerts generated within a specified date range, filtered by alert name.",
-        "sql": "WITH latest_alerts AS ( SELECT updated_status FROM ( SELECT t2.updated_status, ROW_NUMBER() OVER ( PARTITION BY t1.external_id ORDER BY t2._telemetryIngestionTime DESC ) AS rn FROM `xdr-analysis-prod.analytics.all_alerts_all_tenants_v2` AS t1 JOIN `bi-analysis-277510.analytics.xdr_inr_case_management_status` AS t2 ON t1.case_id = t2.case_id AND t1.tenant_id = t2.lcaas_id WHERE TIMESTAMP_TRUNC(t1.generatedTime, DAY) BETWEEN TIMESTAMP(@start_date) AND TIMESTAMP(@end_date) AND t1.alert_name IN (@alert_name) ) AS sub WHERE rn = 1 ) SELECT updated_status, COUNT(*) AS status_count FROM latest_alerts GROUP BY updated_status ORDER BY status_count DESC;",
-        "parameters": [
-            {
-                "name": "start_date",
-                "prompt": "Enter the start date (e.g., '2023-01-01'): ",
-                "type": "date"
-            },
-            {
-                "name": "end_date",
-                "prompt": "Enter the end date (e.g., '2023-01-31'): ",
-                "type": "date"
-            },
-            {
-                "name": "alert_name",
-                "prompt": "Enter the alert name (or leave blank for all): ",
-                "type": "string"
-            }
-        ]
-    }
+  {
+    "name": "Select Columns with Condition",
+    "description": "Selects specific columns from the all_alerts_all_tenants_v2 table based on a given condition",
+    "query": "SELECT column1, column2\nFROM `xdr-analysis-prod.analytics.all_alerts_all_tenants_v2`\nWHERE condition = @param",
+    "parameters": [
+      {
+        "name": "param",
+        "type": "STRING"
+      }
+    ]
+  }
 ]
