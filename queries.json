@@ -1,7 +1,7 @@
 [
   {
     "name": "Select Columns with Condition",
-    "description": "Selects specific columns from the all_alerts_all_tenants_v2 table based on a given condition",
+    "description": "Retrieves column1 and column2 from all_alerts_all_tenants_v2 table based on a specified condition",
     "query": "SELECT column1, column2\nFROM `xdr-analysis-prod.analytics.all_alerts_all_tenants_v2`\nWHERE condition = @param",
     "parameters": [
       {
