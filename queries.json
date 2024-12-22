@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "name": "Get Alerts with Specific Condition",
+    "description": "Retrieves column1 and column2 from all alerts across all tenants where a specific condition is met",
+    "query": "SELECT column1, column2\nFROM `xdr-analysis-prod.analytics.all_alerts_all_tenants_v2`\nWHERE condition = @param",
+    "parameters": [
+      {
+        "name": "param",
+        "type": "STRING"
+      }
+    ]
+  }
+]
