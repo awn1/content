@@ -309,6 +309,7 @@ def install_packs(
     body = {"packs": packs_to_install, "ignoreWarnings": True}
 
     def success_handler(response_data_packs):
+        logging.debug(f"The packs in the marketplace are: {response_data_packs}")
         packs_data = [
             {"ID": response_data_pack.get("id"), "CurrentVersion": response_data_pack.get("currentVersion")}
             for response_data_pack in response_data_packs
