@@ -366,7 +366,7 @@ repos:
     description: Sort YAML content files to ensure consistency.
     entry: sort-yaml
     language: python
-    files: ^Packs/\.*ya?ml$
+    files: ^Packs/.*/(Integrations|Scripts)/.*\.ya?ml$
 
 - repo: https://github.com/sourcery-ai/sourcery
   rev: v1.6.0
