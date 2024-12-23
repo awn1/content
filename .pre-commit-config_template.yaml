@@ -1,4 +1,4 @@
-exclude: .devcontainer/|.vscode|Pipfile.lock|.gitlab/ci/|.circleci/|docs
+exclude: .devcontainer/|.vscode|Pipfile.lock|.gitlab/ci/|docs
 files: ''
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -15,6 +15,10 @@ repos:
   - id: name-tests-test
     min_py_version: '3.7'
     files: .+_test.py$
+  - id: check-added-large-files
+    args: ['--maxkb=5120', --enforce-all]
+    skip:nightly: true
+  - id: check-case-conflict
 - repo: https://github.com/python-poetry/poetry
   rev: 1.8.2
   hooks:
@@ -30,20 +34,19 @@ repos:
     args:
     - --all
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.6.9
+  rev: v0.0.272
   hooks:
-  - id: ruff-format
-  # - id: ruff
-  #   parallel: false
-  #   min_py_version: '3.7'
-  #   args:
-  #   - --fix
-  #   args:nightly:
-  #   - --config=nightly_ruff.toml
-  #   args:ci:
-  #   - --config=nightly_ruff.toml
-  #   args:docker_autoupdate:
-  #   - --config=nightly_ruff.toml
+  - id: ruff
+    parallel: false
+    min_py_version: '3.7'
+    args:
+    - --fix
+    args:nightly:
+    - --config=nightly_ruff.toml
+    args:ci:
+    - --config=nightly_ruff.toml
+    args:docker_autoupdate:
+    - --config=nightly_ruff.toml
 - repo: https://github.com/hhatto/autopep8
   rev: v2.3.1
   hooks:
@@ -357,6 +360,13 @@ repos:
     - '100'
     needs:
     - pytest-in-docker
+
+  - id: sort-yaml
+    name: sort-yaml
+    description: Sort YAML content files to ensure consistency.
+    entry: sort-yaml
+    language: python
+    files: ^Packs/\.*ya?ml$
 
 - repo: https://github.com/sourcery-ai/sourcery
   rev: v1.6.0
