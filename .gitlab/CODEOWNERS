@@ -24,7 +24,7 @@ Utils/should_trigger_test_upload.sh @ypreisler
 Utils/test_upload_flow/** @ypreisler
 
 # Test Collection
-Tests/scripts/collect_tests/ @dschwartz @mdagan
+Tests/scripts/collect_tests/ @mdagan
 
 # Build related
 .gitlab/** @yucohen
