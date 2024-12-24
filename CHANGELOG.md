@@ -1,3 +1,25 @@
+# Content Infrastructure 0.0.15 (2024-12-24)
+
+### Features
+
+- Added the **ask-permissions** command in the **xlogs** project.
+
+### Bugfixes
+
+- Fix an authentication issue in the demisto-sdk release caused by using the wrong variable.
+- Removed unnecessary variables from trigger-contribution-build flow.
+- fix pushed docker path
+
+### Deprecations and Removals
+
+- Removed Dor's code ownerships
+
+### Misc
+
+- Add logs to the search and install packs process
+- Added values to the secrets ignore list.
+
+
 # Content Infrastructure 0.0.14 (2024-12-10)
 
 ### Features
