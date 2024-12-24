@@ -40,5 +40,13 @@ workflow:
       variables:
         WORKFLOW_PIPELINE_NAME: 'CVE report pipeline for branch: $CI_COMMIT_REF_NAME'
 
+    - if: '$CI_PIPELINE_SOURCE == "trigger" && $AUTO_UPDATE_DOCKER == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Trigger Dockerfiles auto update docker pipeline'
+
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $AUTO_UPDATE_DOCKER == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Scheduled Dockerfiles auto update docker pipeline'
+
     # Don't add any other rules after this one.
     - when: always  # Other pipelines can run, but use the default name
