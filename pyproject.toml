@@ -33,7 +33,7 @@ description = ""
 name = "infra"
 package-mode = false
 readme = "README.md"
-version = "0.0.14"
+version = "0.0.15"
 
 [tool.poetry.dependencies]
 beautifulsoup4 = "^4.11.1"
