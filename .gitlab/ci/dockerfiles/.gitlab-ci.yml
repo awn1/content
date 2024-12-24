@@ -16,6 +16,7 @@ stages:
   - Find New Images
   - Test Images
   - Parse Report
+  - Auto Update Docker
   - are-jobs-really-done
   - fan-in  # concentrate pipeline artifacts to a single job before triggering child slack pipeline.
 
@@ -26,4 +27,5 @@ include:
   - local: .gitlab/ci/dockerfiles/.gitlab-ci.on-push.yml
   - local: .gitlab/ci/dockerfiles/.gitlab-ci.cve-report.yml
   - local: .gitlab/ci/dockerfiles/.gitlab-ci.twistlock-scan.yml
+  - local: .gitlab/ci/dockerfiles/.gitlab-ci.auto-update-docker.yml
   - local: .gitlab/ci/gitlab-ci.shared.variables.yml

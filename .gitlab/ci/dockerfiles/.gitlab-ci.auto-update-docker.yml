@@ -1,0 +1,88 @@
+.auto-update-docker-schedule-rule:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $AUTO_UPDATE_DOCKER == "true"'
+
+.create-staging-branch: &create-staging-branch
+  - git fetch origin
+  - git checkout master
+  - git pull
+  - |
+    if git ls-remote --heads origin "$STAGING_BRANCH" | grep "$STAGING_BRANCH"; then
+      echo "Staging branch '$STAGING_BRANCH' found on remote."
+      git checkout --track "origin/$STAGING_BRANCH" || { echo "Failed to checkout staging branch"; exit 1; }
+    else
+      echo "Staging branch '$STAGING_BRANCH' not found on remote. Creating it from 'master'."
+      git checkout -b "$STAGING_BRANCH" "origin/master" || { echo "Failed to create staging branch"; exit 1; }
+      git push --verbose -u origin "$STAGING_BRANCH" || { echo "Failed to push staging branch"; exit 1; }
+    fi
+  - echo "Current branch before rebasing:"
+  - git branch
+  - echo "Rebasing '$STAGING_BRANCH' from 'master'."
+  - git pull --rebase origin "master" || { echo "Failed to rebase from master"; exit 1; }
+  - echo "Verifying the branch before pushing:"
+  - git branch
+  - git push origin "$STAGING_BRANCH" || { echo "Failed to push rebased staging branch"; exit 1; }
+  - git checkout "master"
+
+auto-update-docker:
+  stage: Auto Update Docker
+  extends:
+    - .auto-update-docker-schedule-rule
+    - .default-job-settings
+  tags:
+    - gce
+  variables:
+    GCS_MARKET_BUCKET_DEV: "marketplace-dist-dev"
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
+    ARTIFACT_PATH: ${ARTIFACTS_FOLDER}/auto_update_docker
+  script:
+    - echo "Staging branch is $STAGING_BRANCH"
+    - echo "Docker images to run on -> $DOCKER_IMAGES_ARG"
+    - if [ ! -d "${ARTIFACT_PATH}" ]; then mkdir -p "${ARTIFACT_PATH}"; else echo "Artifacts folder already exists"; fi
+    - mkdir -p "${ARTIFACT_PATH}/logs"
+    - echo "Activate GCloud Service Account"
+    - gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACT_PATH}/logs/gcloud_auth.log" 2>&1
+    - echo "Successfully activated google cloud service account"
+    - !reference [.generate-content-graph]
+    - echo "Copying coverage report"
+    - gsutil cp "gs://${GCS_MARKET_BUCKET_DEV}/code-coverage-reports/coverage-min.json" "${ARTIFACT_PATH}/coverage_report.json"
+    - echo "Successfully copied coverage report"
+    - echo "Configuring content repository"
+    - cd "${CI_PROJECT_DIR}/content"
+    - git remote set-url origin https://$GITHUB_TOKEN@github.com/demisto/content.git  # Set the remote URL with the token for authentication
+    - git config pull.rebase true  # rebase strategy for pull
+    - *create-staging-branch
+    - |
+      MAX_BATCHES=${MAX_BATCHES}
+      FLOW_INDEX=${FLOW_INDEX}
+      BENCHMARK_DOCKER_TAGS=${BENCHMARK_DOCKER_TAGS:-""}
+      echo "Max batches is $MAX_BATCHES"
+      echo "Flow index is $FLOW_INDEX"
+      for ((i=0; i<MAX_BATCHES; i++)); do
+        echo "Processing batch $i";
+        poetry run python3 -u ${CI_PROJECT_DIR}/Tests/scripts/auto_update_docker/extract_affected_content_items.py \
+          --config-path "${CI_PROJECT_DIR}/artifacts/repositories/content-test-conf/auto_update_docker/config.json" \
+          --content-path "${CI_PROJECT_DIR}/content" \
+          --coverage-report "${ARTIFACT_PATH}/coverage_report.json" \
+          --auto-update-dir "${ARTIFACT_PATH}" \
+          --flow-index "${FLOW_INDEX}" \
+          --batch-index "${i}" \
+          --docker-images-arg "${DOCKER_IMAGES_ARG}" \
+          ${BENCHMARK_DOCKER_TAGS:+--benchmark-docker-tags $BENCHMARK_DOCKER_TAGS}
+      done
+    - |
+      for ((i=0; i<MAX_BATCHES; i++)); do
+        echo "Opening PRs for batch ${i}"
+        poetry run python3 -u ${CI_PROJECT_DIR}/Tests/scripts/auto_update_docker/open_prs_for_affected_content_items.py \
+          --batch-dir "${ARTIFACT_PATH}/flow_${FLOW_INDEX}/batch_${i}" \
+          --pr-reviewers "${PR_REVIEWERS}" \
+          --pr-assignees "${PR_ASSIGNEES}" \
+          --staging-branch "${STAGING_BRANCH}" \
+          --github-token "${GITHUB_TOKEN}" \
+          ${PRS_LIMIT:+--prs-limit $PRS_LIMIT}
+      done
+  artifacts:
+    paths:
+      - ${ARTIFACTS_FOLDER}/*
+    when: always

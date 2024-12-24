@@ -358,7 +358,8 @@
   - section_start "Generate content graph"
   - EXIT_CODE=0
   - echo "Cloning content repository"
-  - git clone --single-branch https://github.com/demisto/content.git # must clone with history to get last updated info.
+# FIXME! don't merge this change
+  - git clone https://github.com/demisto/content.git "${CI_PROJECT_DIR}/content" # must clone with history to get last updated info.
   - cd content
   - export PYTHONPATH="$(pwd)"
   - poetry install
