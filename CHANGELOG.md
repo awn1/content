@@ -1,3 +1,14 @@
+# Content Infrastructure 0.0.16 (2024-12-25)
+
+### Features
+
+- Auto update docker build
+
+### Bugfixes
+
+- Fixed an authentication issue in the demisto-sdk release caused by using the wrong variable throughout the pipeline.
+
+
 # Content Infrastructure 0.0.15 (2024-12-24)
 
 ### Features
