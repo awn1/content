@@ -1040,7 +1040,8 @@ class Server:
         installed_content_packs_successfully = self.set_marketplace_url(
             self.build.marketplace_tag_name, self.build.artifacts_folder, self.build.marketplace_buckets
         )
-        installed_content_packs_successfully &= self.install_packs(production_bucket=False)
+        if installed_content_packs_successfully:
+            installed_content_packs_successfully &= self.install_packs(production_bucket=False)
         return installed_content_packs_successfully
 
     @abstractmethod
@@ -1188,6 +1189,7 @@ class Server:
         Calculate pre and post update packs to install, install them and test them
 
         """
+
         logging.info(f"Start performing test flow on server {self.name}")
         packs_to_install_in_pre_update, packs_to_install_in_post_update = self.get_packs_to_install()
 
@@ -1203,16 +1205,16 @@ class Server:
 
         logging.info("Installing packs in post-update step")
         success = self.update_content_on_servers()
-        successful_tests_post, failed_tests_post = self.test_integrations_post_update(
-            new_module_instances, modified_module_instances
-        )
+        if success:
+            successful_tests_post, failed_tests_post = self.test_integrations_post_update(
+                new_module_instances, modified_module_instances
+            )
+            if not str2bool(os.getenv("BUCKET_UPLOAD")):  # Don't need to upload test playbooks in upload flow
+                self.create_and_upload_test_pack()
 
-        if not str2bool(os.getenv("BUCKET_UPLOAD")):  # Don't need to upload test playbooks in upload flow
-            self.create_and_upload_test_pack()
-
-        success &= self.report_tests_status(
-            failed_tests_pre, failed_tests_post, successful_tests_pre, successful_tests_post, new_integrations_names
-        )
+            success &= self.report_tests_status(
+                failed_tests_pre, failed_tests_post, successful_tests_pre, successful_tests_post, new_integrations_names
+            )
 
         return success
 
@@ -1282,10 +1284,13 @@ class XSOARServer(Server):
         return success
 
     def add_server_configuration(self, config_dict, error_msg, restart=False):
-        update_server_configuration(self.client, config_dict, error_msg)
-
+        _, status_code, _ = update_server_configuration(self.client, config_dict, error_msg)
+        logging.debug(f"Updated server configuration with status_code: {status_code=}")
         if restart:
-            self.exec_command("sudo systemctl restart demisto")
+            try:
+                self.exec_command("sudo systemctl restart demisto")
+            except subprocess.CalledProcessError:
+                logging.critical("Can't restart server.")
 
     def exec_command(self, command):
         subprocess.check_output(f"ssh {SSH_USER}@{self.internal_ip} {command}".split(), stderr=subprocess.STDOUT)
@@ -1350,10 +1355,17 @@ class XSOARServer(Server):
         return installed_content_packs_successfully
 
     def set_marketplace_url(self, marketplace_name=None, artifacts_folder=None, marketplace_buckets=None):
+        from Tests.Marketplace.search_and_uninstall_pack import sync_marketplace
+
         url_suffix = f"{quote_plus(self.build.branch_name)}/{self.build.ci_build_number}"
         config_path = "marketplace.bootstrap.bypass.url"
         config = {config_path: f"https://xdr-xsoar-content-dev-01.uc.r.appspot.com/content/builds/{url_suffix}"}
         self.add_server_configuration(config, "failed to configure marketplace custom url ", True)
+        logging.info("Syncing marketplace")
+        result = sync_marketplace(client=self.client)
+        if not result:
+            logging.critical("Failed to sync marketplace")
+            return False
         logging.success("Updated marketplace url and restarted servers")
         logging.info("sleeping for 120 seconds")
         sleep(120)
