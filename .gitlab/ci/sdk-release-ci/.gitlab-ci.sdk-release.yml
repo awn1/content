@@ -162,7 +162,6 @@ create-release-pull-request:
   when: manual
   variables:
     RELEASE_VERSION: $RELEASE_VERSION
-    GITHUB_TOKEN: $GITHUB_TOKEN
     IS_DRAFT: $IS_DRAFT
     REVIEWER: $REVIEWER
     SLACK_CHANNEL: $SLACK_CHANNEL
@@ -184,7 +183,6 @@ deploy-sdk-to-pypi:
   timeout: 6 hours
   variables:
     RELEASE_VERSION: $RELEASE_VERSION
-    GITHUB_TOKEN: $GITHUB_TOKEN
     IS_DRAFT: $IS_DRAFT
     REVIEWER: $REVIEWER
     ARTIFACTS_FOLDER: "${CI_PROJECT_DIR}/artifacts/"
@@ -207,7 +205,6 @@ wait-for-prs:
   timeout: 6 hours
   variables:
     RELEASE_VERSION: $RELEASE_VERSION
-    GITHUB_TOKEN: $GITHUB_TOKEN
     IS_DRAFT: $IS_DRAFT
     ARTIFACTS_FOLDER: "${CI_PROJECT_DIR}/artifacts/"
     SLACK_CHANNEL: $SLACK_CHANNEL
