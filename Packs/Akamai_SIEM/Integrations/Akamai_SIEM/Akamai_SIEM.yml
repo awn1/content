@@ -69,6 +69,7 @@ configuration:
   name: fetchLimit
   type: 0
   defaultvalue: '20'
+
   required: false
   additionalinfo: Limit on the number of incidents retrieved in a single fetch. The maximum is 80k.
   section: Collect
