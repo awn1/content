@@ -1,3 +1,14 @@
+# Content Infrastructure 0.0.17 (2024-12-31)
+
+### Features
+
+- Updated the demisto-sdk version 1.33.2 in Infra.
+
+### Bugfixes
+
+- Fixed an issue where the build didn't fail when unable to sync marketplace. ([CIAC-12353](https://jira-dc.paloaltonetworks.com/browse/CIAC-12353))
+
+
 # Content Infrastructure 0.0.16 (2024-12-25)
 
 ### Features
