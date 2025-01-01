@@ -6,7 +6,7 @@
 
 ### Bugfixes
 
-- Adding missing trigger script
+- Moved a missing trigger script from dockerfiles-cicd repo to Infra.
 
 ### Deprecations and Removals
 
