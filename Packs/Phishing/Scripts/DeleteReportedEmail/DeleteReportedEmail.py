@@ -105,7 +105,7 @@ class DeletionArgs:
             'using-brand': search_args['using-brand'],
         }
 
-#test
+#test 2
 def check_demisto_version():
     """
     Check if the Cortex XSOAR version is suitable for performing the polling flow (6.2 and above)
