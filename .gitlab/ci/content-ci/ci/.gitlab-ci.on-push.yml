@@ -84,10 +84,7 @@ run-pre-commit:
   parallel:
     matrix:
       - PRE_COMMIT_DOCKER_IMAGE:
-          - "native:ga"
-          - "native:maintenance"
           - "from-yml"
-          - "native:candidate"
 
 # runs in gitlab for the on-push flow (except for contributors)
 run-validations:

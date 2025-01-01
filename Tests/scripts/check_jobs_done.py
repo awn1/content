@@ -38,10 +38,7 @@ NATIVE_NIGHTLY_JOBS = [
 
 SDK_NIGHTLY_JOBS = [
     "demisto-sdk-nightly:cloning-repositories",
-    "demisto-sdk-nightly:run-pre-commit: [native:ga]",
-    "demisto-sdk-nightly:run-pre-commit: [native:maintenance]",
     "demisto-sdk-nightly:run-pre-commit: [from-yml]",
-    "demisto-sdk-nightly:run-pre-commit: [native:candidate]",
     "demisto-sdk-nightly:run-validations",
     "demisto-sdk-nightly:run-validations-new-validate-flow",
     "demisto-sdk-nightly:test-infrastructure",
@@ -57,10 +54,7 @@ SDK_NIGHTLY_JOBS = [
 
 BUCKET_UPLOAD_JOBS = [
     "cloning-repositories-upload-flow",
-    "run-pre-commit-upload-flow: [native:ga]",
-    "run-pre-commit-upload-flow: [native:maintenance]",
     "run-pre-commit-upload-flow: [from-yml]",
-    "run-pre-commit-upload-flow: [native:candidate]",
     "run-validations-upload-flow",
     "run-validations-upload-flow-new-validate-flow",
     "mpv2-prepare-testing-bucket-upload-flow",
@@ -79,10 +73,7 @@ BUCKET_UPLOAD_JOBS = [
 
 CONTENT_COMMON_JOBS = [
     "cloning-repositories",
-    "run-pre-commit: [native:ga]",
-    "run-pre-commit: [native:maintenance]",
     "run-pre-commit: [from-yml]",
-    "run-pre-commit: [native:candidate]",
     "run-validations",
     "run-validations-new-validate-flow",
     "mpv2-prepare-testing-bucket",
