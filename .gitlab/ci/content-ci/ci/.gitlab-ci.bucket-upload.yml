@@ -237,10 +237,7 @@ run-pre-commit-upload-flow:
   parallel:
     matrix:
       - PRE_COMMIT_DOCKER_IMAGE:
-          - "native:ga"
-          - "native:maintenance"
           - "from-yml"
-          - "native:candidate"
 
 jobs-done-check-upload-flow:
   extends:
