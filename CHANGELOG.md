@@ -1,3 +1,18 @@
+# Content Infrastructure 0.0.18 (2025-01-01)
+
+### Features
+
+- Updated the demisto-sdk version 1.33.3 in Infra.
+
+### Bugfixes
+
+- Moved a missing trigger script from dockerfiles-cicd repo to Infra.
+
+### Deprecations and Removals
+
+- Removed the native image from the pre-commit steps. ([12513](https://jira-dc.paloaltonetworks.com/browse/12513))
+
+
 # Content Infrastructure 0.0.17 (2024-12-31)
 
 ### Features
