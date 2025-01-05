@@ -19,6 +19,8 @@ IS_MSSP_TENANT = "is_mssp_tenant"
 
 COMMENT_FIELD_NAME = "__comment__"
 
+DEFAULT_REQUEST_TIMEOT = 240
+
 
 class TokenCache:
     TOKEN_MGMT = "token_mgmt"

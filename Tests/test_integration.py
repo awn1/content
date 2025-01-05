@@ -18,6 +18,8 @@ from demisto_sdk.commands.common.constants import PB_Status
 # Disable insecure warnings
 from demisto_sdk.commands.test_content.tools import update_server_configuration
 
+from Tests.scripts.infra.resources.constants import DEFAULT_REQUEST_TIMEOT
+
 urllib3.disable_warnings()
 
 # ----- Constants ----- #
@@ -33,7 +35,9 @@ ENTRY_TYPE_ERROR = 4
 def __get_integration_config(client, integration_name, logging_module=logging):
     body = {"page": 0, "size": 100, "query": "name:" + integration_name}
     try:
-        res_raw = demisto_client.generic_request_func(self=client, path="/settings/integration/search", method="POST", body=body)
+        res_raw = demisto_client.generic_request_func(
+            self=client, path="/settings/integration/search", method="POST", body=body, _request_timeout=DEFAULT_REQUEST_TIMEOT
+        )
     except ApiException:
         logging_module.exception(f"failed to get integration {integration_name} configuration")
         return None
@@ -69,7 +73,11 @@ def test_integration_instance(client, module_instance, logging_module=logging):
     for i in range(connection_retries):
         try:
             response_data, response_code, _ = demisto_client.generic_request_func(
-                self=client, method="POST", path="/settings/integration/test", body=module_instance, _request_timeout=240
+                self=client,
+                method="POST",
+                path="/settings/integration/test",
+                body=module_instance,
+                _request_timeout=DEFAULT_REQUEST_TIMEOT,
             )
             break
         except ApiException:
@@ -151,7 +159,11 @@ def __delete_integration_instance_if_determined_by_name(client, instance_name, l
     """
     try:
         int_resp = demisto_client.generic_request_func(
-            self=client, method="POST", path="/settings/integration/search", body={"size": 1000}
+            self=client,
+            method="POST",
+            path="/settings/integration/search",
+            body={"size": 1000},
+            _request_timeout=DEFAULT_REQUEST_TIMEOT,
         )
         int_instances = ast.literal_eval(int_resp[0])
     except ApiException:
@@ -243,7 +255,11 @@ def __create_integration_instance(
         module_instance["data"].append(param_conf)
     try:
         res = demisto_client.generic_request_func(
-            self=integration_conf_client, method="PUT", path="/settings/integration", body=module_instance
+            self=integration_conf_client,
+            method="PUT",
+            path="/settings/integration",
+            body=module_instance,
+            _request_timeout=DEFAULT_REQUEST_TIMEOT,
         )
     except ApiException:
         error_message = f"Error trying to create instance for integration: {integration_name}"
@@ -292,7 +308,11 @@ def __disable_integrations_instances(client, module_instances, logging_module=lo
         logging.debug(f'Disabling integration {module_instance.get("name")}')
         try:
             res = demisto_client.generic_request_func(
-                self=client, method="PUT", path="/settings/integration", body=module_instance
+                self=client,
+                method="PUT",
+                path="/settings/integration",
+                body=module_instance,
+                _request_timeout=DEFAULT_REQUEST_TIMEOT,
             )
         except ApiException:
             logging_module.exception("Failed to disable integration instance")
@@ -368,7 +388,7 @@ def __create_incident_with_playbook(
 def __get_investigation_playbook_state(client, inv_id, logging_manager):
     try:
         investigation_playbook_raw = demisto_client.generic_request_func(
-            self=client, method="GET", path="/inv-playbook/" + inv_id
+            self=client, method="GET", path="/inv-playbook/" + inv_id, _request_timeout=DEFAULT_REQUEST_TIMEOT
         )
         investigation_playbook = ast.literal_eval(investigation_playbook_raw[0])
     except ApiException:
@@ -382,7 +402,9 @@ def __get_investigation_playbook_state(client, inv_id, logging_manager):
 def __delete_incident(client: DefaultApi, incident: Incident, logging_manager):
     try:
         body = {"ids": [incident.id], "filter": {}, "all": False}
-        res = demisto_client.generic_request_func(self=client, method="POST", path="/incident/batchDelete", body=body)
+        res = demisto_client.generic_request_func(
+            self=client, method="POST", path="/incident/batchDelete", body=body, _request_timeout=DEFAULT_REQUEST_TIMEOT
+        )
     except ApiException:
         logging_manager.exception("Failed to delete incident, error trying to communicate with demisto server")
         return False
@@ -399,7 +421,10 @@ def __delete_incident(client: DefaultApi, incident: Incident, logging_manager):
 def __delete_integration_instance(client, instance_id, logging_manager=logging):
     try:
         res = demisto_client.generic_request_func(
-            self=client, method="DELETE", path="/settings/integration/" + urllib.parse.quote(instance_id)
+            self=client,
+            method="DELETE",
+            path="/settings/integration/" + urllib.parse.quote(instance_id),
+            _request_timeout=DEFAULT_REQUEST_TIMEOT,
         )
     except ApiException:
         logging_manager.exception("Failed to delete integration instance, error trying to communicate with demisto.")
@@ -423,7 +448,11 @@ def __print_investigation_error(client, playbook_id, investigation_id, logging_m
     try:
         empty_json = {"pageSize": 1000}
         res = demisto_client.generic_request_func(
-            self=client, method="POST", path="/investigation/" + urllib.parse.quote(investigation_id), body=empty_json
+            self=client,
+            method="POST",
+            path="/investigation/" + urllib.parse.quote(investigation_id),
+            body=empty_json,
+            _request_timeout=DEFAULT_REQUEST_TIMEOT,
         )
         if res and int(res[1]) == 200:
             resp_json = ast.literal_eval(res[0])
@@ -576,7 +605,11 @@ def disable_all_integrations(dem_client, logging_manager=logging):
     try:
         body = {"size": 1000}
         int_resp = demisto_client.generic_request_func(
-            self=dem_client, method="POST", path="/settings/integration/search", body=body
+            self=dem_client,
+            method="POST",
+            path="/settings/integration/search",
+            body=body,
+            _request_timeout=DEFAULT_REQUEST_TIMEOT,
         )
         int_instances = ast.literal_eval(int_resp[0])
     except requests.exceptions.RequestException:
