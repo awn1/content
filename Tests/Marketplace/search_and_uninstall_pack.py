@@ -239,7 +239,7 @@ def uninstall_packs(client: demisto_client, pack_ids: list):
             method="POST",
             body=body,
             accept="application/json",
-            _request_timeout=None,
+            _request_timeout=600,
         )
     except Exception as e:
         logging.exception(f"The request to uninstall packs has failed. Additional info: {e!s}")
