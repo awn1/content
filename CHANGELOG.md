@@ -1,3 +1,14 @@
+# Content Infrastructure 0.0.19 (2025-01-05)
+
+### Features
+
+- Updated the flow-type of NG nightly machines.
+
+### Misc
+
+- [CIAC-12343](https://jira-dc.paloaltonetworks.com/browse/CIAC-12343)
+
+
 # Content Infrastructure 0.0.18 (2025-01-01)
 
 ### Features
