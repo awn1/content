@@ -14,7 +14,7 @@ from skip_conditions import MetadataCondition, \
     OnlyOneRNPerPackCondition, SameRNMetadataVersionCondition, AllowedBumpCondition, UpdateType
 from utils import timestamped_print, Checkout
 from git import Repo
-from demisto_sdk.commands.update_release_notes.update_rn import UpdateRN
+from demisto_sdk.commands.update_release_notes.update_rn import UpdateRN, check_docker_image_changed
 import os
 
 urllib3.disable_warnings()
