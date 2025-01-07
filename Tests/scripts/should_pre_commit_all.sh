@@ -41,6 +41,13 @@ if [[ -n "$DIFF_RES" ]]; then
   exit 0
 fi
 
+# test if pre-commit-config_template has been modified
+DIFF_RES=$(git diff "$DIFF_COMPARE" -- .pre-commit-config_template.yaml)
+if [[ -n "$DIFF_RES" ]]; then
+  echo -e ".pre-commit-config_template.yaml has been modified"
+  exit 0
+fi
+
 # test if CommonServerPython has been modified
 DIFF_RES=$(git diff "$DIFF_COMPARE" -- Packs/Base/Scripts/CommonServerPython/CommonServerPython.py)
 if [[ -n "$DIFF_RES" ]]; then
