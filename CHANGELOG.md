@@ -1,3 +1,19 @@
+# Content Infrastructure 0.0.20 (2025-01-07)
+
+### Features
+
+- Updated the demisto-sdk version 1.33.4 in Infra. ([sdk_1_33_4](https://jira-dc.paloaltonetworks.com/browse/sdk_1_33_4))
+
+### Bugfixes
+
+- Add *_request_timeout* every time we call *generic_request_func*.
+
+### Improved Documentation
+
+- Updated the README file. ([update_readme](https://jira-dc.paloaltonetworks.com/browse/update_readme))
+- Improved the Triggers documentation. ([CIAC-11406](https://jira-dc.paloaltonetworks.com/browse/CIAC-11406))
+
+
 # Content Infrastructure 0.0.19 (2025-01-05)
 
 ### Features
