@@ -1,5 +1,6 @@
 variables:
   WORKFLOW_PIPELINE_NAME: 'Pipeline for branch: $CI_COMMIT_REF_NAME'
+  BUILD_JOB_TAG: 'cortex-content-1738'
 
 workflow:
   name: '$WORKFLOW_PIPELINE_NAME'
@@ -39,10 +40,13 @@ workflow:
     - if: '$IS_NIGHTLY == "true" && $CI_PIPELINE_SOURCE == "schedule"'
       variables:
           WORKFLOW_PIPELINE_NAME: 'Scheduled Content Nightly pipeline for branch: $CI_COMMIT_REF_NAME'
+          BUILD_JOB_TAG: 'long-running'
 
     - if: '$IS_NIGHTLY == "true" && $CI_PIPELINE_SOURCE == "trigger"'
       variables:
         WORKFLOW_PIPELINE_NAME: 'Triggered Content Nightly pipeline for branch: $CI_COMMIT_REF_NAME'
+        BUILD_JOB_TAG: 'long-running'
+
 
     - if: '$IS_NATIVE_NIGHTLY == "true" && $CI_PIPELINE_SOURCE == "schedule"'
       variables:
@@ -55,10 +59,12 @@ workflow:
     - if: '$DEMISTO_SDK_NIGHTLY == "true" && $CI_PIPELINE_SOURCE == "schedule"'
       variables:
           WORKFLOW_PIPELINE_NAME: 'Scheduled SDK Nightly pipeline'
+          BUILD_JOB_TAG: 'long-running'
 
     - if: '$DEMISTO_SDK_NIGHTLY == "true" && $CI_PIPELINE_SOURCE == "trigger"'
       variables:
         WORKFLOW_PIPELINE_NAME: 'Triggered SDK Nightly pipeline for branch: $CI_COMMIT_REF_NAME'
+        BUILD_JOB_TAG: 'long-running'
 
     - if: '$SECURITY_SCANS == "true"'
       variables:

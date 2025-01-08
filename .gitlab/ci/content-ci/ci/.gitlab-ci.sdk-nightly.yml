@@ -181,8 +181,7 @@ demisto-sdk-nightly:xsoar-prepare-testing-bucket:
   needs:
     - demisto-sdk-nightly:cloning-repositories
   tags:
-    - gce
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
+    - $BUILD_JOB_TAG
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -209,8 +208,7 @@ demisto-sdk-nightly:mpv2-prepare-testing-bucket:
   needs:
     - demisto-sdk-nightly:cloning-repositories
   tags:
-    - gce
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
+    - $BUILD_JOB_TAG
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -239,8 +237,7 @@ demisto-sdk-nightly:xpanse-prepare-testing-bucket:
   needs:
     - demisto-sdk-nightly:cloning-repositories
   tags:
-    - gce
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
+    - $BUILD_JOB_TAG
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
@@ -267,8 +264,7 @@ demisto-sdk-nightly:xsoar-saas-prepare-testing-bucket:
   needs:
     - demisto-sdk-nightly:cloning-repositories
   tags:
-    - gce
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
+    - $BUILD_JOB_TAG
   extends:
     - .default-job-settings
     - .sdk-nightly-schedule-rule
