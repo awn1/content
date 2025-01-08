@@ -382,7 +382,7 @@ xpanse-prepare-testing-bucket:
 
 .test_content_on_xsoar_server_instances_base:
   tags:
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
+    - $BUILD_JOB_TAG
   extends:
     - .default-job-settings
     - .push-rule
@@ -699,8 +699,7 @@ slack-notify-on-merge:
 
 .test_content_on_cloud_server_instances_base:
   tags:
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
-    - gce
+    - $BUILD_JOB_TAG
   extends:
     - .default-job-settings
     - .push-rule

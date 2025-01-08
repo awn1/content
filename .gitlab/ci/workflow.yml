@@ -1,5 +1,6 @@
 variables:
   WORKFLOW_PIPELINE_NAME: 'Pipeline for branch: $CI_COMMIT_REF_NAME'
+  BUILD_JOB_TAG: 'cortex-content-1738'
 
 workflow:
   name: '$WORKFLOW_PIPELINE_NAME'

@@ -272,6 +272,8 @@
   - section_end "Create Artifacts Repositories Folder"
 
 .cloning-repositories:
+  tags:
+    - cortex-content-1738
   artifacts:
     expire_in: 30 days
     paths:
@@ -758,6 +760,8 @@
     - job-done
 
 .run-pre-commit:
+  tags:
+    - $BUILD_JOB_TAG
   cache:
     policy: pull-push
   extends:
@@ -830,8 +834,7 @@
 .run-validations:
   stage: unittests-and-validations
   tags:
-    - gce
-    - cortex-content-1738
+    - $BUILD_JOB_TAG
   extends:
     - .default-job-settings
   variables:
@@ -880,8 +883,7 @@
   extends:
     - .default-job-settings
   tags:
-    - gce
-    - cortex-content-1738
+    - $BUILD_JOB_TAG
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_MEMORY_LIMIT: 16Gi

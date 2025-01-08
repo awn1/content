@@ -1,6 +1,7 @@
+
 .build-machines-cleanup-rule:
   tags:
-    - cortex-content-1738
+    - $BUILD_JOB_TAG
   rules:
     - if: '$BUILD_MACHINES_CLEANUP == "true"'
 
@@ -127,6 +128,8 @@ build-machines-cleanup:
     - !reference [.cloud-machine-information]
     - job-done
     - exit "${EXIT_CODE}"
+  tags:
+    - $BUILD_JOB_TAG
   after_script:
     - source .gitlab/helper_functions.sh
     - !reference [ .unlock-machine ]

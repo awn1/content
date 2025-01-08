@@ -329,7 +329,7 @@ xpanse-prepare-testing-bucket-upload-flow:
 
 .install_packs_in_xsoar_server:
   tags:
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
+    - $BUILD_JOB_TAG
   needs:
     - xsoar-prepare-testing-bucket-upload-flow
   stage: run-instances
@@ -423,7 +423,7 @@ install-packs-in-server-master:
 
 .install-packs-on-cloud-instances:
   tags:
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
+     - $BUILD_JOB_TAG
   stage: run-instances
   extends:
     - .default-job-settings
@@ -541,7 +541,7 @@ install-packs-in-xsoar-ng-ga:
 
 upload-packs-to-marketplace:
   tags:
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
+    - $BUILD_JOB_TAG
   needs:
     - run-validations-upload-flow
     - install-packs-in-server6_11
@@ -599,7 +599,7 @@ upload-packs-to-marketplace:
 
 upload-packs-to-marketplace-v2:
   tags:
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
+    - $BUILD_JOB_TAG
   needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "mpv2-prepare-testing-bucket-upload-flow", "install-packs-in-xsiam-ga", "run-validations-upload-flow-new-validate-flow"]
   stage: upload-to-marketplace
   artifacts:
@@ -649,7 +649,7 @@ upload-packs-to-marketplace-v2:
 
 upload-packs-to-xpanse-marketplace:
   tags:
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
+    - $BUILD_JOB_TAG
   needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "xpanse-prepare-testing-bucket-upload-flow", "run-validations-upload-flow-new-validate-flow"] # "install-packs-in-xpanse-dev"
   stage: upload-to-marketplace
   artifacts:
@@ -699,7 +699,7 @@ upload-packs-to-xpanse-marketplace:
 
 upload-packs-to-xsoar-saas-marketplace:
   tags:
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
+    - $BUILD_JOB_TAG
   needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "xsoar-saas-prepare-testing-bucket-upload-flow", "run-validations-upload-flow-new-validate-flow", "install-packs-in-xsoar-ng-ga"]
   stage: upload-to-marketplace
   artifacts:
@@ -805,7 +805,7 @@ xsoar-saas-force-pack-upload:
 
 .force-pack-upload:
   tags:
-    - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
+    - $BUILD_JOB_TAG
   stage: upload-to-marketplace
   extends:
     - .default-job-settings
