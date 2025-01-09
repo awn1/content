@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import time
+import urllib.parse
 from pathlib import Path
 
 import common
@@ -115,8 +116,9 @@ class TestBranch:
             "Content-Type": "application/json",
             "PRIVATE-TOKEN": self.gitlab_token,
         }
+        encoded_branch_name = urllib.parse.quote(self.branch_name, safe="")
         res = requests.get(
-            url=GITLAB_CONTENT_REPO_URL + self.branch_name,
+            url=GITLAB_CONTENT_REPO_URL + encoded_branch_name,
             headers=headers,
         )
         return res.status_code == requests.status_codes.codes.OK

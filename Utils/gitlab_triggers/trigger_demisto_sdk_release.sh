@@ -107,17 +107,17 @@ if [ -z "$_reviewer" ]; then
   exit 1
 fi
 
-CONTENT_PROJECT_ID=${CONTENT_PROJECT_ID:-1701}
+INFRA_PROJECT_ID=${INFRA_PROJECT_ID:-1701}
 CI_SERVER_URL=${CI_SERVER_URL:-https://gitlab.xdr.pan.local} # disable-secrets-detection
 
-export BUILD_TRIGGER_URL="${CI_SERVER_URL}/api/v4/projects/${CONTENT_PROJECT_ID}/trigger/pipeline"
+export BUILD_TRIGGER_URL="${CI_SERVER_URL}/api/v4/projects/${INFRA_PROJECT_ID}/trigger/pipeline"
 
 export URL=$(
   curl "$BUILD_TRIGGER_URL" --form "ref=${_infra_branch}" --form "token=${_ci_token}" \
     --form "variables[SDK_RELEASE]=true" \
     --form "variables[CI_TOKEN]=${_ci_token}" \
     --form "variables[REVIEWER]=${_reviewer}" \
-    --form "variables[INFRA_BRANCH]=${_infra_branch}" \
+    --form "variables[CONTENT_BRANCH_NAME]=${_content_branch}" \
     --form "variables[RELEASE_VERSION]=${_release_version}" \
     --form "variables[IS_DRAFT]=${_is_draft}" \
     --form "variables[SDK_BRANCH_NAME]=${_sdk_branch_name}" \

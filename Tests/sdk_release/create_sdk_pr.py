@@ -62,7 +62,7 @@ def main():
 
     # get pyproject.toml file sha
     url = f"{API_SUFFIX}/contents/pyproject.toml"
-    response = requests.request("GET", url, params={"ref": release_branch_name}, verify=False)
+    response = requests.request("GET", url, headers=headers, params={"ref": release_branch_name}, verify=False)
     if response.status_code != requests.codes.ok:
         logging.error(f"Failed to get the pyproject.toml file from branch {release_branch_name}")
         logging.error(response.text)
@@ -71,7 +71,7 @@ def main():
 
     # get pyproject.toml file content
     url = f"https://raw.githubusercontent.com/demisto/demisto-sdk/{release_branch_name}/pyproject.toml"
-    response = requests.request("GET", url, verify=False)
+    response = requests.request("GET", url, headers=headers, verify=False)
     if response.status_code != requests.codes.ok:
         logging.error(f"Failed to get the pyproject.toml file content from branch {release_branch_name}")
         logging.error(response.text)

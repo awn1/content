@@ -70,7 +70,7 @@ def main():
 
     # validate if branch exists
     url = GITHUB_BRANCH_URL.format(branch_name=sdk_branch_name)
-    response = requests.request("GET", url, verify=False)
+    response = requests.request("GET", url, headers=headers, verify=False)
     if response.status_code != requests.codes.ok:
         errors.append(f"Failed to retrieve the branch {sdk_branch_name} from demisto-sdk repo,\nerror: {response.text}")
 
