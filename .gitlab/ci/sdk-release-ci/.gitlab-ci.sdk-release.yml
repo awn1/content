@@ -81,10 +81,11 @@ trigger-demisto-sdk-nightly:
   variables:
     SLACK_CHANNEL: $SLACK_CHANNEL
     RELEASE_VERSION: $RELEASE_VERSION
+    CONTENT_BRANCH_NAME: $CONTENT_BRANCH_NAME
     ARTIFACTS_FOLDER: "${CI_PROJECT_DIR}/artifacts/"
   script:
     - section_start "Trigger SDK nightly build" --collapsed
-    - export SDK_PIPELINE_ID=$(./Utils/trigger_nightly_sdk_build.sh -ct "${GITLAB_SVC_USER_TOKEN}" -ch "${SLACK_CHANNEL}" -sr "${RELEASE_VERSION}" -cb "${CI_COMMIT_REF_NAME}" -ib "${INFRA_BRANCH}" | tee ${ARTIFACTS_FOLDER}/trigger_nightly_sdk.log | jq .id)
+    - export SDK_PIPELINE_ID=$(./Utils/trigger_nightly_sdk_build.sh -ct "${GITLAB_SVC_USER_TOKEN}" -ch "${SLACK_CHANNEL}" -sr "${RELEASE_VERSION}" -cb "${CONTENT_BRANCH_NAME}" -ib "${CI_COMMIT_REF_NAME}" | tee ${ARTIFACTS_FOLDER}/trigger_nightly_sdk.log | jq .id)
     - echo $SDK_PIPELINE_ID > ${ARTIFACTS_FOLDER}/SDK_PIPELINE_ID.txt
     - echo "demisto-sdk nightly build triggered successfully:"
     - echo "${CI_SERVER_URL}/xdr/cortex-content/content/-/pipelines/${SDK_PIPELINE_ID}"

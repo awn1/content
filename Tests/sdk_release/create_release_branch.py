@@ -40,7 +40,9 @@ def main():
 
     # get the sha value from the branch
     url = f"https://api.github.com/repos/demisto/demisto-sdk/branches/{sdk_branch_name}"
-    response = requests.request("GET", url)
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {access_token}"}
+
+    response = requests.request("GET", url, headers=headers)
 
     commit_sha = response.json().get("commit", {}).get("sha")
     if not commit_sha:
@@ -52,7 +54,6 @@ def main():
     url = "https://api.github.com/repos/demisto/demisto-sdk/git/refs"
 
     payload = json.dumps({"ref": f"refs/heads/{release_branch_name}", "sha": commit_sha})
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {access_token}"}
 
     response = requests.request("POST", url, headers=headers, data=payload, verify=False)
     if response.status_code != 201:

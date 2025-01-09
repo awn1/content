@@ -118,6 +118,9 @@ def main():
     headers = {"Content-Type": "application/vnd.github+json", "Authorization": f"Bearer {access_token}"}
     response = requests.request("POST", url, headers=headers, data=data, verify=False)
     if response.status_code != requests.codes.created:
+        if response.status_code == 422 and "already_exists" in response.text:
+            logging.info(f"Demisto SDK v{release_branch_name} already exist")
+            return
         logging.error(f"Failed to create release {release_branch_name} for demisto SDK")
         logging.error(response.text)
         sys.exit(1)
