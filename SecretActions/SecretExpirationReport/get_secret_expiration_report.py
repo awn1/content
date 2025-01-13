@@ -53,14 +53,11 @@ def format_secrets_to_dict(records: list[object]) -> list:
     return formatted_records
 
 
-def get_soon_to_expire_secrets(
-    gsm_client: GoogleSecreteManagerModule, expiration_date: str, project_id: str = DEV_PROJECT_ID
-) -> list[dict]:
+def get_soon_to_expire_secrets(gsm_client: GoogleSecreteManagerModule, expiration_date: str) -> list[dict]:
     """
     Args:
         gsm_client (GoogleSecreteManagerModule): Google Secret Manager Client
         expiration_date (str): A date to query all secrets by.
-        project_id (str, optional): Defaults to DEV_PROJECT_ID.
 
     Returns:
         list[dict]: Query the project secrets by metadata labels of expiration.
@@ -72,7 +69,7 @@ def get_soon_to_expire_secrets(
         f"labels.{ExpirationData.LICENSE_EXPIRATION_LABEL_NAME}<{expiration_date})"
     )
 
-    data = gsm_client.list_secrets_metadata_by_query(project_id, q)
+    data = gsm_client.list_secrets_metadata_by_query(q)
     logging.info(f"Successfully queried the project. {len(data)} items were found for query: {q}")
 
     extracted_data = format_secrets_to_dict(data)
@@ -81,9 +78,13 @@ def get_soon_to_expire_secrets(
 
 def run(options: argparse.Namespace):
     project_id = options.gsm_project_id if options.gsm_project_id else DEV_PROJECT_ID
-    gsm_client = GoogleSecreteManagerModule(options.service_account) if options.service_account else GoogleSecreteManagerModule()
+    gsm_client = (
+        GoogleSecreteManagerModule(options.service_account, project_id)
+        if options.service_account
+        else GoogleSecreteManagerModule(project_id=project_id)
+    )
     expiration_date = GoogleSecreteManagerModule.GoogleSecretTools.calculate_expiration_date(options.expiration)
-    secrets = get_soon_to_expire_secrets(gsm_client, expiration_date, project_id)
+    secrets = get_soon_to_expire_secrets(gsm_client, expiration_date)
     report = create_report(expiration_date, secrets)
 
     with open(options.output_path, "w") as f:

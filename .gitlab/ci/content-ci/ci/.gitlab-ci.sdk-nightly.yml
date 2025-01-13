@@ -373,8 +373,6 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar:
     - python3 ./Tests/scripts/wait_until_server_ready.py  -n "${IS_NIGHTLY}" --instance-role "${INSTANCE_ROLE}" || EXIT_CODE=$?
     - section_end "Wait Until Server Ready"
 
-    - !reference [.secrets-fetch]
-
     - section_start "End to End Tests"  --collapsed
     - |
       mkdir $ARTIFACTS_FOLDER/demisto-sdk
@@ -448,7 +446,6 @@ demisto-sdk-nightly:run-end-to-end-tests-xsiam:
 
     - !reference [.copy_env_results]
 
-    - !reference [.secrets-fetch]
     - !reference [.lock-machine]
 
     - !reference [.export_cloud_machine_constants]
@@ -510,7 +507,6 @@ demisto-sdk-nightly:run-end-to-end-tests-xsoar-saas:
 
     - !reference [.copy_env_results]
 
-    - !reference [.secrets-fetch]
     - !reference [.lock-machine]
 
     - !reference [.uninstall-packs-and-reset-bucket-cloud]

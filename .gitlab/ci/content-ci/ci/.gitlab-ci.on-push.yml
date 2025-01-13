@@ -411,9 +411,6 @@ xpanse-prepare-testing-bucket:
       fi
     - section_end "Check if should run Instance role"
 
-    # job secrets-fetch will be removed when test-content will be moved to infra in ./Tests/scripts/run_tests.sh
-    - !reference [.secrets-fetch]
-
     - !reference [.ssh-config-setup]
 
     - section_start "Wait Until Server Ready"
@@ -710,9 +707,6 @@ slack-notify-on-merge:
   stage: run-instances
   script:
     - EXIT_CODE=0
-
-    # job secrets-fetch will be removed when test-content will be moved to infra in ./Tests/scripts/run_tests.sh
-    - !reference [.secrets-fetch]
 
     - section_start "Are there tests to run?" --collapsed
     - |

@@ -531,8 +531,8 @@ class XsoarClient(XsoarOnPremClient):
         raise NotImplementedError("Update user data is not implemented at this env")
 
     def get_gsm_cloud_machine_details(self) -> tuple[dict, str]:
-        secret_manager = GoogleSecreteManagerModule(GSM_SERVICE_ACCOUNT)  # type: ignore[arg-type]
-        return secret_manager.get_secret(project_id=AUTOMATION_GCP_PROJECT, secret_id=self.tenant_name, with_version=True)  # type: ignore[return-value]
+        secret_manager = GoogleSecreteManagerModule(GSM_SERVICE_ACCOUNT, AUTOMATION_GCP_PROJECT)  # type: ignore[arg-type]
+        return secret_manager.get_secret(secret_id=self.tenant_name, with_version=True)  # type: ignore[return-value]
 
     def check_api_key_validity(self, cloud_machine_details: dict, secret_version: str):
         from SecretActions.add_build_machine import BUILD_MACHINE_GSM_API_KEY, BUILD_MACHINE_GSM_AUTH_ID
