@@ -135,7 +135,6 @@ class GithubClient:
         if isinstance(response, list):
             if len(response) == 0:
                 raise ValueError(f"Did not find the PR associated with {branch_name}")
-
             return response[0]["number"]
         else:
             raise ValueError(f"Did not get the expected response type from Github, got {type(response)}")

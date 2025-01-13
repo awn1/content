@@ -1777,6 +1777,7 @@ class CloudBuild(Build):
         logging.info("Starting server creation")
         servers = []
         for machine, info in self.machine_assignment_json.items():
+            # since this loop doesn't run in parallel, we update the file with the needed instances secrets at each iteration
             logging.info(f"working on machine {machine!s}")
 
             packs_to_install = info.get("packs_to_install")
@@ -1863,6 +1864,7 @@ def options_handler(args=None):
     parser.add_argument("--gsm_project_id_dev", help="The project id for the GSM dev.")
     parser.add_argument("--gsm_project_id_prod", help="The project id for the GSM prod.")
     parser.add_argument("-gt", "--github_token", help="the github token.")
+    parser.add_argument("-sf", "--json_path_file", help="Path to the secret json file.")
     # disable-secrets-detection-end
     options = parser.parse_args(args)
 

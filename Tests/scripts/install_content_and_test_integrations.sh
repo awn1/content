@@ -17,6 +17,12 @@ if [[ ! -f "$GCS_MARKET_KEY" ]]; then
   exit_on_error 1 "GCS_MARKET_KEY not set aborting pack installation"
 fi
 
+if [ "${BUCKET_UPLOAD}" == "true" ]; then
+  # for bucket upload we use the secrets directly without saving the file, as there are no sdk tests in this flow that require it
+  SECRET_CONF_PATH=""
+else
+  SECRET_CONF_PATH=$(cat secret_conf_path)
+fi
 CONF_PATH="./Tests/conf.json"
 
 echo "Copying test_pack_*.zip to artifacts folder:${ARTIFACTS_FOLDER}"
@@ -44,7 +50,8 @@ if [[ "${SERVER_TYPE}" == "XSIAM" ]] || [[ "${SERVER_TYPE}" == "XSOAR SAAS" ]]; 
       --gsm_service_account "$GSM_SERVICE_ACCOUNT" \
       --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" \
       --gsm_project_id_prod "$GSM_PROJECT_ID" \
-      --github_token "$GITHUB_TOKEN"
+      --github_token "$GITHUB_TOKEN" \
+      --json_path_file "$SECRET_CONF_PATH"
     if [ $? -ne 0 ]; then
       exit_code=1
       echo "Failed to run configure_and_test_integration_instances.py script on ${CLOUD_CHOSEN_MACHINE_IDS}"
@@ -67,7 +74,8 @@ elif [[ "${SERVER_TYPE}" == "XSOAR" ]]; then
     --marketplace_name "$MARKETPLACE_NAME" --artifacts_folder "$ARTIFACTS_FOLDER" --marketplace_buckets "$GCS_MACHINES_BUCKET" \
     --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
     --gsm_service_account "$GSM_SERVICE_ACCOUNT" \
-    --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN"
+    --gsm_project_id_dev "$GSM_PROJECT_ID_DEV" --gsm_project_id_prod "$GSM_PROJECT_ID" --github_token "$GITHUB_TOKEN" \
+    --json_path_file "$SECRET_CONF_PATH"
   exit_on_error $? "Failed to run $0 script"
 
   echo "Finished $0 successfully"

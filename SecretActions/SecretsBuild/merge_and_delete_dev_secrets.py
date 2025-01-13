@@ -6,7 +6,13 @@ import json5
 import requests
 from google.api_core.exceptions import NotFound
 
-from SecretActions.google_secret_manager_handler import SYNC_GSM_LABEL, FilterLabels, FilterOperators, GoogleSecreteManagerModule
+from SecretActions.google_secret_manager_handler import (
+    LABELS,
+    SECRET_NAME,
+    SYNC_GSM_LABEL,
+    GoogleSecreteManagerModule,
+    SecretLabels,
+)
 
 CONTENT_REPO_URL = "https://api.github.com/repos/demisto/content"
 # The max limit for the PRs API is 100, we use this variable to get more if it's 5 for example will get the last 500 PRs
@@ -73,42 +79,36 @@ def does_pr_contain_gsm_label(pr: dict):
 
 def merge_dev_secrets(
     dev_secrets_to_merge: list[dict],
-    options: argparse.Namespace,
+    project_id_prod: str,
     secret_conf: GoogleSecreteManagerModule,
 ) -> list[str]:
     """
     Merges dev secrets to the main store
     :param dev_secrets_to_merge: A list of dev secrets to add to the main store
-    :param options: The parsed script arguments
+    :param project_id_prod: The project ID in GSM we want to push secrets to.
     :param secret_conf: The GSM object to handle GSM API operations
     :return: A list of names of secrets that were merged
     """
     merged_dev_secrets_names = []
     for dev_secret in dev_secrets_to_merge:
-        dev_secret_name = dev_secret.pop("secret_name")
-        dev_secret_labels = dev_secret.pop("labels")
+        dev_secret_name = dev_secret.pop(SECRET_NAME)
+        dev_secret_labels = dev_secret.pop(LABELS)
 
         merged_dev_secrets_names.append(dev_secret_name)
-        main_secret_name = dev_secret_name.split("__", 1)[1]
-        labels_to_remove = ["dev", "pr_number"]
+        main_secret_name = dev_secret_name.split("__", 1)[-1]
+        labels_to_remove = [SecretLabels.DEV_SECRET.value, SecretLabels.PR_NUMBER.value]
         main_secret_labels = {key: value for key, value in dev_secret_labels.items() if key not in labels_to_remove}
         try:
             # Checks if the main secret exist in our store
-            secret_conf.get_secret(options.gsm_project_id_prod, main_secret_name)
+            secret_conf.get_secret(main_secret_name, project_id_prod)
         except NotFound:
             # Adding new secret to main store
-            secret_conf.create_secret(options.gsm_project_id_prod, main_secret_name, main_secret_labels)
+            secret_conf.create_secret(main_secret_name, project_id_prod, main_secret_labels)
             logging.debug(f'Adding a new secret to prod: "{main_secret_name}"')
 
         # Add a new version to master secret
-        secret_conf.add_secret_version(
-            options.gsm_project_id_prod,
-            main_secret_name,
-            json5.dumps(dev_secret, quote_keys=True),
-        )
+        secret_conf.add_secret_version(main_secret_name, json5.dumps(dev_secret, quote_keys=True), project_id_prod)
         logging.info(f'dev secret "{dev_secret_name}" was merged to "{main_secret_name}" on prod')
-        # # Update the labels for the secret
-        # secret_conf.update_secret(options.gsm_project_id_prod, main_secret_name, main_secret_labels)
     return merged_dev_secrets_names
 
 
@@ -121,22 +121,22 @@ def filter_secrets_by_pr_label(
     secrets_to_delete = []
     for secret in dev_secrets:
         try:
-            pr_number = int(secret.get("labels", {}).get("pr_number"))
+            pr_number = int(secret.get(LABELS, {}).get(SecretLabels.PR_NUMBER.value))
             if pr_number in merged_pr_numbers_with_label and validate_secret(
                 secret,
                 ("name", "params"),  # type: ignore
             ):
                 secrets_to_update.append(secret)
                 logging.info(
-                    f'Collected the secret "{secret.get("secret_name")}" from dev in order to '
-                    'merge it to prod and to delete it from dev'
+                    f"Collected the secret '{secret.get(SECRET_NAME)}' from dev in order to "
+                    "merge it to prod and to delete it from dev"
                 )
 
             if pr_number in merged_pr_numbers_without_label:
                 secrets_to_delete.append(secret)
-                logging.info(f'Collected the secret "{secret.get("secret_name")}" from dev in order to delete it from dev')
+                logging.info(f"Collected the secret '{secret.get(SECRET_NAME)}' from dev in order to delete it from dev")
         except TypeError:
-            logging.info(f'No label of "pr_number" was found, skipping the secret {secret.get("secret_name")}.')
+            logging.info(f"No label of '{SecretLabels.PR_NUMBER}' was found, skipping the secret {secret.get(SECRET_NAME)}.")
     return secrets_to_update, secrets_to_delete
 
 
@@ -144,7 +144,7 @@ def get_secrets_name(dev_secrets: list[dict]):
     """Returns a list of the secrets name from a list of secrets"""
     secrets_name = []
     for dev_secret in dev_secrets:
-        secrets_name.append(dev_secret.get("secret_name"))
+        secrets_name.append(dev_secret.get(SECRET_NAME))
 
     return secrets_name
 
@@ -178,16 +178,14 @@ def validate_secret(secret: dict, attr_validation: ()) -> bool:  # type: ignore
         json5.dumps(secret)
     except Exception as e:
         logging.error(
-            # type: ignore
-            f'Could not convert the secret "{secret.get("secret_name")}" to json5,' f"got the following error: {e!s}"  # type: ignore
+            f"Could not convert the secret '{secret.get(SECRET_NAME)}' to json5,\ngot the following error: {e!s}"  # type: ignore
         )
         return False
     # Validate mandatory properties in the secret
     missing_attrs = [attr for attr in attr_validation if attr not in secret]
     if missing_attrs:
         logging.error(
-            # type: ignore
-            f'Missing mandatory properties: {",".join(missing_attrs)}' f' for the secret "{secret.get("secret_name")}"'  # type: ignore
+            f"Missing mandatory properties: {','.join(missing_attrs)} for the secret '{secret.get(SECRET_NAME)}'"  # type: ignore
         )
         return False
     return True
@@ -195,23 +193,17 @@ def validate_secret(secret: dict, attr_validation: ()) -> bool:  # type: ignore
 
 def run(options: argparse.Namespace):
     try:
-        secret_conf = GoogleSecreteManagerModule(options.service_account)
+        secret_conf = GoogleSecreteManagerModule(options.service_account, project_id=options.gsm_project_id_dev)
 
         pr_numbers_with_label, pr_numbers_without_label = get_latest_merged()
         logging.info(f"The latest closed PR numbers are: {pr_numbers_with_label + pr_numbers_without_label}")
-        secrets_filter = {
-            FilterLabels.SECRET_ID: FilterOperators.NOT_NONE,
-            FilterLabels.IGNORE_SECRET: FilterOperators.NONE,
-            FilterLabels.SECRET_MERGE_TIME: FilterOperators.NONE,
-            FilterLabels.IS_DEV_BRANCH: FilterOperators.NOT_NONE,
-        }
-        dev_secrets = secret_conf.list_secrets(options.gsm_project_id_dev, secrets_filter, with_secrets=True)
+        dev_secrets = secret_conf.get_secrets_from_project(options.gsm_project_id_dev, is_dev=True, is_pr_set=True)
         dev_secrets_to_merge, dev_secrets_to_delete = filter_secrets_by_pr_label(
             dev_secrets, pr_numbers_with_label, pr_numbers_without_label
         )
         if len(dev_secrets_to_merge) == 0:
             logging.info("No secrets to merge for this master build")
-        secrets_to_delete = merge_dev_secrets(dev_secrets_to_merge, options, secret_conf)
+        secrets_to_delete = merge_dev_secrets(dev_secrets_to_merge, options.gsm_project_id_prod, secret_conf)
         secrets_to_delete.extend(get_secrets_name(dev_secrets_to_delete))
         delete_dev_secrets(secrets_to_delete, secret_conf, options.gsm_project_id_dev)  # type: ignore
     except Exception as e:

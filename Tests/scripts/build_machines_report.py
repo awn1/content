@@ -21,7 +21,7 @@ from slack_sdk import WebClient
 from urllib3.exceptions import InsecureRequestWarning
 
 from SecretActions.add_build_machine import BUILD_MACHINE_GSM_AUTH_ID
-from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule
+from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule, SecretLabels
 from SecretActions.SecretsBuild.merge_and_delete_dev_secrets import delete_dev_secrets
 from Tests.scripts.graph_lock_machine import (
     AVAILABLE_MACHINES,
@@ -391,8 +391,8 @@ def get_api_key_ttl_cell(client, current_date):
 
 
 def remove_keys_without_tenant(all_tenant_lcaas_id: set[str]) -> set[str]:
-    secret_conf = GoogleSecreteManagerModule(GSM_SERVICE_ACCOUNT)
-    tenants_secrets = secret_conf.list_secrets_metadata_by_query(project_id=AUTOMATION_GCP_PROJECT, query="labels.machine:*")
+    secret_conf = GoogleSecreteManagerModule(GSM_SERVICE_ACCOUNT, AUTOMATION_GCP_PROJECT)
+    tenants_secrets = secret_conf.list_secrets_metadata_by_query(query=secret_conf.filter_label_is_set(SecretLabels.MACHINE))
     logging.info(f"Got {len(tenants_secrets)} tenant's API keys from GSM.")
     all_tenant_with_api_keys = {Path(s.name).name for s in tenants_secrets}
     keys_without_tenant = all_tenant_with_api_keys.difference(all_tenant_lcaas_id)

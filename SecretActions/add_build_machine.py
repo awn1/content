@@ -8,7 +8,7 @@ from google.api_core.exceptions import NotFound, PermissionDenied
 from google.auth.exceptions import DefaultCredentialsError
 
 from SecretActions.add_gsm_secret import YELLOW_BOLD_PRINT
-from SecretActions.google_secret_manager_handler import DEV_PROJECT_ID, GoogleSecreteManagerModule
+from SecretActions.google_secret_manager_handler import DEV_PROJECT_ID, GoogleSecreteManagerModule, SecretLabels
 from Tests.scripts.infra.models import PublicApiKey
 from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT, COMMENT_FIELD_NAME, GSM_SERVICE_ACCOUNT
 from Tests.scripts.infra.xsoar_api import SERVER_TYPE_TO_CLIENT_TYPE
@@ -58,13 +58,13 @@ def create_new_values(server_value: dict | str, input_type: str) -> dict[str, st
         return {BUILD_MACHINE_GSM_TOKEN: server_value}
 
 
-def get_existing_secret(gsm_object: GoogleSecreteManagerModule, project_id: str, server_id: str) -> tuple[dict, str]:
+def get_existing_secret(gsm_object: GoogleSecreteManagerModule, server_id: str) -> tuple[dict, str]:
     # Checks if the secret exists
     try:
-        return gsm_object.get_secret(project_id, server_id, with_version=True)
+        return gsm_object.get_secret(server_id, with_version=True)
     # Secret was not found, creates new secret
     except NotFound:
-        gsm_object.create_secret(project_id, server_id)
+        gsm_object.create_secret(server_id)
         return {}, "1"
     except PermissionDenied as e:
         if "secretmanager.versions.access" in str(e):
@@ -111,14 +111,14 @@ def add_build_machine_secret_to_gsm(
     else:
         server_value = {BUILD_MACHINE_GSM_API_KEY: public_api_key.key, BUILD_MACHINE_GSM_AUTH_ID: public_api_key.id}
 
-    existing_value, secret_version = get_existing_secret(gsm_object, project_id, server_id)
+    existing_value, secret_version = get_existing_secret(gsm_object, server_id)
     updated_value: dict = existing_value | server_value
     if updated_value != existing_value:
         secret_version = gsm_object.add_secret_version(
-            project_id, server_id, json5.dumps(updated_value, quote_keys=True, indent=4, sort_keys=True)
+            server_id, json5.dumps(updated_value, quote_keys=True, indent=4, sort_keys=True)
         )
         # Update the labels for the secret
-        gsm_object.update_secret(project_id, server_id, {"machine": gsm_object.convert_to_gsm_format(machine_type)})
+        gsm_object.update_secret(server_id, {SecretLabels.MACHINE.value: gsm_object.convert_to_gsm_format(machine_type)})
     else:
         logging.debug(f"Skipping update for {server_id}, its values did not change")
     return updated_value, secret_version

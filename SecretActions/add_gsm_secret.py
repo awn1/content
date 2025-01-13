@@ -12,6 +12,7 @@ from SecretActions.google_secret_manager_handler import (
     SYNC_GSM_LABEL,
     ExpirationData,
     GoogleSecreteManagerModule,
+    SecretLabels,
     create_github_client,
 )
 from Tests.scripts.github_client import GithubClient, GithubPullRequest
@@ -106,7 +107,9 @@ def _prepare_additional_labels(
     # Validate pack_id is present
     if not options.pack_id:
         raise ValueError(
-            "The pack_id label is required for all secrets. Please provide a pack_id by using the -pi " "flag i.e., -pi 'Slack'."
+            "The pack_id label is required for all secrets. "
+            "The value should be the pack folder name of the integration which the secret is used for. "
+            "Please provide a pack_id by using the -pi flag i.e., -pi 'Slack'."
         )
     additional_labels["pack_id"] = gsm_object.convert_to_gsm_format(options.pack_id)  # Add the pack_id label
 
@@ -134,19 +137,17 @@ def upsert_secret(
     full_secret_name = gsm_object.convert_to_gsm_format(f'{secret_json.get("name", )}{instance}', secret_name=True)
 
     # Building the labels to add
-    labels = {"secret_id": gsm_object.convert_to_gsm_format(full_secret_name)}
-    labels.update(_prepare_additional_labels(gsm_object, options))
+    labels = _prepare_additional_labels(gsm_object, options)
 
     if gsm_project_id == DEV_PROJECT_ID:
         full_secret_name = f"{options.pr_number}__{full_secret_name}"
-        labels["dev"] = "true"
-        labels["pr_number"] = options.pr_number
+        labels.update({SecretLabels.DEV_SECRET.value: "true", SecretLabels.PR_NUMBER.value: options.pr_number})
     # Checks if the secret exist
     try:
-        gsm_object.get_secret(gsm_project_id, full_secret_name)
+        gsm_object.get_secret(full_secret_name)
     # Secret was not found, creates new secret
     except NotFound:
-        gsm_object.create_secret(gsm_project_id, full_secret_name, labels)
+        gsm_object.create_secret(full_secret_name, labels=labels)
     except PermissionDenied as e:
         if "secretmanager.versions.access" in str(e):
             raise PermissionDenied(
@@ -155,9 +156,9 @@ def upsert_secret(
             ) from e
         raise
     # Adds a version for the created/updated secret
-    gsm_object.add_secret_version(gsm_project_id, full_secret_name, json5.dumps(secret_json, quote_keys=True))
+    gsm_object.add_secret_version(full_secret_name, json5.dumps(secret_json, quote_keys=True))
     # Update the labels for the secret
-    gsm_object.update_secret(gsm_project_id, full_secret_name, labels)
+    gsm_object.update_secret(full_secret_name, labels)
 
 
 def update_pr(github_client: GithubClient, options: argparse.Namespace):
@@ -203,7 +204,7 @@ def run(options: argparse.Namespace):
         if project_id == DEV_PROJECT_ID:
             add_secret_to_dev(options, project_id)
         else:
-            add_secret_to_prod(argparse.Namespace, project_id)
+            add_secret_to_prod(options, project_id)
 
     except DefaultCredentialsError:
         logging.error("Insufficient permissions for gcloud. Run `gcloud auth application-default login`.")
@@ -239,7 +240,7 @@ def options_handler(args=None):
         help="The secret owner, responsible for any issues or changes.",
     )
     parser.add_argument("-cl", "--centrify", required=False, help="The secret link in Centrify Vault.")
-    parser.add_argument("-pi", "--pack_id", required=True, help="The pack which should use this secret.")
+    parser.add_argument("-pi", "--pack_id", required=True, help="The pack folder name of this secret's integration.")
     parser.add_argument("--jira_link", required=False, help="The link of the secret updating request.")
     parser.add_argument("--skip_reason", required=False, help="A skipping reason to add.")
     options = parser.parse_args(args)
