@@ -119,6 +119,11 @@ build-docs:
     - section_end "Heap stats"
     - section_start "Build docusaurus"
     - npm run build-docusaurus || EXIT_CODE=$?
+    - |
+      if [ ${EXIT_CODE} -ne 0 ]; then
+        echo "Failed to build Docusaurus, exit code: ${EXIT_CODE}"
+        exit ${EXIT_CODE}
+      fi
     - section_end "Build docusaurus"
     - section_start "Tar build dir"
     - tar czf ${CI_PROJECT_DIR}/artifacts/build-site.tar.gz build
