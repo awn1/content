@@ -1,3 +1,25 @@
+# Content Infrastructure 0.0.21 (2025-01-16)
+
+### Features
+
+- Use Google Secret filtering based on secret labels, instead of filtering them after getting all secrets.
+  Save only the relevant secrets to a file under the "Install Packs and run Test-Module" section, instead of saving all secrets under the "Secrets Fetch" section. ([CIAC-11834](https://jira-dc.paloaltonetworks.com/browse/CIAC-11834))
+- long running tag for gitlab jobs ([CIAC-12370](https://jira-dc.paloaltonetworks.com/browse/CIAC-12370))
+- Added the ability to trigger the SDK release from the Gitlab UI. ([CIAC-12459](https://jira-dc.paloaltonetworks.com/browse/CIAC-12459))
+- Added that if the *.pre-commit-config_template.yaml* file is been changed, then *pre-commit* will run in all files mode.
+- Updated the demisto-sdk version 1.33.5 in Infra.
+
+### Bugfixes
+
+- Fixed an issue where copy prod bucket to machine bucket failed. ([CIAC-12510](https://jira-dc.paloaltonetworks.com/browse/CIAC-12510))
+- In content-docs if build-docusaurus fails exit with an error.
+
+### Deprecations and Removals
+
+- Removed support for the redundant `secret_id` label for Google Secrets.
+  Removed duplicate `project_id` argument for some functions in `GoogleSecreteManagerModule`. ([CIAC-10891](https://jira-dc.paloaltonetworks.com/browse/CIAC-10891))
+
+
 # Content Infrastructure 0.0.20 (2025-01-07)
 
 ### Features
