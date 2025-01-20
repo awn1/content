@@ -266,7 +266,7 @@
 .neo4j-setup: &neo4j-setup
   - section_start "Neo4j Setup" --collapsed
   - neo4j-admin dbms set-initial-password contentgraph
-  - neo4j start
+  - neo4j start --verbose
   - echo "$(date) waiting for neo4j to start"
   - until curl http://localhost:7474/ &> /dev/null; do sleep 1; echo "waiting..."; done
   - echo "$(date) Neo4j started"
@@ -373,26 +373,3 @@
       exit "${EXIT_CODE}";
     fi
   - section_end "Generate content graph"
-
-.install-pyenv:
-  - section_start "Apt-get update and install"
-  - apt-get update && apt-get install -y -q curl liblzma-dev libbz2-dev libssl-dev libreadline-dev libsqlite3-dev
-  - section_end "Apt-get update and install"
-  - section_start "Install Pyenv"
-  - export PYENV_ROOT="$HOME/.pyenv"
-  - export PATH="$PYENV_ROOT/bin:$PATH"
-  - curl -s https://pyenv.run | bash
-  - eval "$(pyenv init --path)"
-  - eval "$(pyenv init -)"
-  - eval "$(pyenv virtualenv-init -)"
-  - section_end "Install Pyenv"
-
-.install-python-versions:
-  - section_start "Install Python Versions"
-  - pyenv install -s 2.7.18 && pyenv versions | grep 2.7.18
-  - pyenv install -s 3.8.15 && pyenv versions | grep 3.8.15
-  - pyenv install -s 3.9.16 && pyenv versions | grep 3.9.16
-  - pyenv install -s 3.10.13 && pyenv versions | grep 3.10.13
-  - pyenv install -s 3.11.0 && pyenv versions | grep 3.11.0
-  - pyenv install -s 3.12.0 && pyenv versions | grep 3.12.0
-  - section_end "Install Python Versions"
