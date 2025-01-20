@@ -2,7 +2,7 @@ from typing import Any
 
 import pytest
 
-from Tests.scripts.github_client import GithubClient, GithubPullRequest
+from Tests.scripts.github_client import DEFAULT_BASE_BRANCH, GithubClient, GithubPullRequest
 
 SHA = "mock_sha"
 BRANCH = "mock_branch"
@@ -12,7 +12,7 @@ COMMENTS_URL = "https://comments_url"  # disable-secrets-detection
 @pytest.fixture
 def pull_request(requests_mock: Any) -> GithubPullRequest:
     requests_mock.get(
-        f"{GithubClient.base_url}/search/issues?q={SHA}+repo:demisto/content+is:pull-request+head:{BRANCH}+is:open",
+        f"{GithubClient.base_url}/search/issues?q={SHA}+repo:demisto/content+is:pull-request+base:{DEFAULT_BASE_BRANCH}+head:{BRANCH}+is:open",
         json={
             "total_count": 1,
             "items": [

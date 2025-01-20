@@ -5,6 +5,8 @@ import requests
 
 from Tests.scripts.utils import logging_wrapper as logging
 
+DEFAULT_BASE_BRANCH = "master"
+
 
 class GithubClient:
     base_url = "https://api.github.com"
@@ -78,7 +80,7 @@ class GithubClient:
         q = []
         if sha1:
             q.append(sha1)
-        q.extend([f"repo:{self.repository}", "is:pull-request"])
+        q.extend([f"repo:{self.repository}", "is:pull-request", f"base:{DEFAULT_BASE_BRANCH}"])
         if branch:
             q.append(f"head:{branch}")
         if is_open is not None:
