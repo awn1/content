@@ -133,7 +133,7 @@ build-machines-cleanup:
   after_script:
     - source .gitlab/helper_functions.sh
     - !reference [ .unlock-machine ]
-  timeout: 5 hours
+  timeout: 5 hours 30 minutes
   variables:
     CLOUD_MACHINES_TYPE: $CLOUD_MACHINES_TYPE
     CLOUD_MACHINES_COUNT_MINIMUM_CONDITION: $CLOUD_MACHINES_COUNT_MINIMUM_CONDITION
