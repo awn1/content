@@ -167,8 +167,6 @@ build_docker_images:
     - git fetch origin master # allows `git diff`ing (otherwise there's no origin/master)
     - section_end "Git diff"
     - !reference [.get_pr_details_github]
-    - !reference [.install-pyenv]
-    - !reference [.install-python-versions]
     - section_start "Build Docker Images"
     - poetry run "${CI_PROJECT_DIR}/docker/build_docker.sh"
     - section_end "Build Docker Images"

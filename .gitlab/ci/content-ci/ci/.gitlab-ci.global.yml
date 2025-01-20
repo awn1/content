@@ -459,7 +459,7 @@
 .neo4j-setup: &neo4j-setup
   - section_start "Neo4j Setup" --collapsed
   - neo4j-admin dbms set-initial-password contentgraph
-  - neo4j start
+  - neo4j start --verbose
   - section_end "Neo4j Setup"
 
 .build_parameters: &build_parameters
