@@ -55,9 +55,9 @@
   - echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}"
   - section_end "Lock Machine"
 
-.uninstall-packs-and-reset-bucket-cloud:
+.uninstall-packs-and-reset-bucket-cloud-all-packs:
   - section_start "Uninstall Packs and Reset Bucket Cloud" --collapsed
-  - ./Tests/scripts/uninstall_packs_and_reset_bucket_cloud.sh || EXIT_CODE=$?
+  - ./Tests/scripts/uninstall_packs_and_reset_bucket_cloud.sh --all-packs || EXIT_CODE=$?
   - section_end "Uninstall Packs and Reset Bucket Cloud"
 
 .cloud-machine-information:
@@ -124,7 +124,7 @@ build-machines-cleanup:
     - else
     -   !reference [.lock-machine]
     - fi
-    - !reference [.uninstall-packs-and-reset-bucket-cloud]
+    - !reference [.uninstall-packs-and-reset-bucket-cloud-all-packs]
     - !reference [.cloud-machine-information]
     - job-done
     - exit "${EXIT_CODE}"

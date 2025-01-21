@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 
+all_packs="false"
+
+while [[ "$#" -gt 0 ]]; do
+  case "${1}" in
+  --all-packs)
+    all_packs="true"
+    ;;
+  *) echo "Unknown option: ${1}" ;;
+  esac
+  shift
+done
+
 function exit_on_error {
   if [ "${1}" -ne 0 ]; then
     echo "ERROR: ${2}, exiting with code ${1}" 1>&2
@@ -28,12 +40,16 @@ else
   PACKS_TO_INSTALL="${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs_to_install.txt"
   echo "PACKS_TO_INSTALL set to: ${PACKS_TO_INSTALL}"
 
+  NON_ALL_PACKS_ARGS=()
+  if [ "${all_packs}" == "false" ]; then
+    NON_ALL_PACKS_ARGS+=("--only_to_be_installed" "--pack_ids_to_install" "${PACKS_TO_INSTALL}")
+  fi
+
   poetry run python3 -u ./Tests/Marketplace/search_and_uninstall_pack.py --cloud_machine "${CLOUD_CHOSEN_MACHINE_IDS}" \
     --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" \
     --non-removable-packs "${NON_REMOVABLE_PACKS}" --one-by-one --build-number "${CI_PIPELINE_ID}" \
     --modeling_rules_to_test_files "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.json" \
-    --reset-core-pack-version "${RESET_CORE_PACK_VERSION}" --only_to_be_installed \
-    --pack_ids_to_install "${PACKS_TO_INSTALL}"
+    --reset-core-pack-version "${RESET_CORE_PACK_VERSION}" "${NON_ALL_PACKS_ARGS[@]}"
   exit_on_error $? "Failed to uninstall packs from cloud machines:${CLOUD_CHOSEN_MACHINE_IDS}"
 
   echo "Successfully finished uninstalling packs from cloud machines"
