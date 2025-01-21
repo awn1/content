@@ -33,12 +33,12 @@ description = ""
 name = "infra"
 package-mode = false
 readme = "README.md"
-version = "0.0.22"
+version = "0.0.20"
 
 [tool.poetry.dependencies]
 beautifulsoup4 = "^4.11.1"
 coloredlogs = "^15.0.1"
-demisto-sdk = "1.33.6"
+demisto-sdk = "1.34.0"
 docker = "^7.1.0"
 Faker = "^15.3.4"
 filelock = "^3.10.0"
