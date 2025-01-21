@@ -1,3 +1,16 @@
+# Content Infrastructure 0.0.22 (2025-01-21)
+
+### Features
+
+- updated docker image in the dockerfiles build ([12391](https://jira-dc.paloaltonetworks.com/browse/12391))
+- Increasing timeout for the build-machines-cleanup job to 5 hours and 30 minutes.
+- Updated the demisto-sdk version 1.33.6 in Infra.
+
+### Bugfixes
+
+- Added that when searching for pull requests in GithubClient, it will only search for PRs whose base is master (excluding PRs of contributions).
+
+
 # Content Infrastructure 0.0.21 (2025-01-16)
 
 ### Features
