@@ -160,6 +160,7 @@ validate-content-conf:
     - cortex-content-1738  # The tag is bound to an identifier that grants access to Google resources such as marketplace-ci-build-...-dev buckets etc.
   extends:
     - .default-job-settings
+    - .docker_services
   rules:
     - !reference [.filter-non-nightly-docker-updates-rule, rules]
     - if: "$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/"
@@ -302,7 +303,6 @@ xsoar-prepare-testing-bucket:
     MARKETPLACE_BUCKET: "$GCS_MARKET_BUCKET"
   extends:
     - .generic-prepare-testing-bucket
-    - .docker_services
 
 xsoar-saas-prepare-testing-bucket:
   tags:
@@ -319,7 +319,6 @@ xsoar-saas-prepare-testing-bucket:
     GCS_BUILD_BUCKET: "$GCS_BUILD_XSOAR_SAAS_BUCKET"
   extends:
     - .generic-prepare-testing-bucket
-    - .docker_services
   rules:
     - !reference [.filter-non-nightly-docker-updates-rule, rules]
     - if: "$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/"
@@ -346,7 +345,6 @@ mpv2-prepare-testing-bucket:
     PRODUCT_NAME: "Cortex XSIAM"
   extends:
     - .generic-prepare-testing-bucket
-    - .docker_services
 
 xpanse-prepare-testing-bucket:
   tags:
@@ -364,7 +362,6 @@ xpanse-prepare-testing-bucket:
     GCS_BUILD_BUCKET: "$GCS_BUILD_XPANSE_BUCKET"
   extends:
     - .generic-prepare-testing-bucket
-    - .docker_services
 
 .run_tests:
   - section_start "Run Tests"
@@ -473,6 +470,7 @@ xpanse-prepare-testing-bucket:
 tests_xsoar_server:
   extends:
     - .test_content_on_xsoar_server_instances_base
+    - .docker_services
   #  No need to trigger in case of release branch or docker update branches (non-nightly packs)
   rules:
     - !reference [.filter-non-nightly-docker-updates-rule, rules]
@@ -700,6 +698,7 @@ slack-notify-on-merge:
   extends:
     - .default-job-settings
     - .push-rule
+    - .docker_services
   variables:
     EXTRACT_PRIVATE_TESTDATA: "true"
     KUBERNETES_MEMORY_REQUEST: 8Gi
@@ -756,6 +755,7 @@ slack-notify-on-merge:
 xsiam_server_ga:
   extends:
     - .test_content_on_cloud_server_instances_base
+    - .docker_services
   rules:
     - !reference [.filter-non-nightly-docker-updates-rule, rules]
     - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
@@ -818,6 +818,7 @@ xsiam_server_ga:
 xsoar_ng_server_ga:
   extends:
     - .test_content_on_cloud_server_instances_base
+    - .docker_services
   rules:
     - !reference [.filter-non-nightly-docker-updates-rule, rules]
     - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
