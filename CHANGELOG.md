@@ -1,3 +1,19 @@
+# Content Infrastructure 0.0.23 (2025-01-22)
+
+### Features
+
+- Reintroduce demisto-sdk to the new docker registry proxy. ([CIAC-11589](https://jira-dc.paloaltonetworks.com/browse/CIAC-11589))
+- Updated the demisto-sdk version 1.34.0 in Infra.
+
+### Bugfixes
+
+- Configure the uninstall-packs-and-reset-bucket-cloud-all-packs job with the argument --all-packs.
+
+### Deprecations and Removals
+
+- Removed CommonServerPython from running with pre-commit -a (should pre-commit all). ([CIAC-9569](https://jira-dc.paloaltonetworks.com/browse/CIAC-9569))
+
+
 # Content Infrastructure 0.0.22 (2025-01-21)
 
 ### Features
