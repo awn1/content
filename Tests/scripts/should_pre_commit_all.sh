@@ -17,7 +17,7 @@ if [ -z "$CI_COMMIT_BRANCH" ]; then
   DIFF_COMPARE=origin/master
 elif [ "$CI_COMMIT_BRANCH" == "master" ]; then
   # on master we use the range obtained from CIRCLE_COMPARE_URL
-  # example of comapre url: https://github.com/demisto/content/compare/62f0bd03be73...1451bf0f3c2a
+  # example of compare url: https://github.com/demisto/content/compare/62f0bd03be73...1451bf0f3c2a
   # if CIRCLE_COMPARE_URL is not set we use last commit
   if [ -z "$CIRCLE_COMPARE_URL" ]; then
     DIFF_COMPARE="HEAD^1...HEAD"
@@ -48,13 +48,6 @@ if [[ -n "$DIFF_RES" ]]; then
   exit 0
 fi
 
-# test if CommonServerPython has been modified
-DIFF_RES=$(git diff "$DIFF_COMPARE" -- Packs/Base/Scripts/CommonServerPython/CommonServerPython.py)
-if [[ -n "$DIFF_RES" ]]; then
-  echo -e "CommonServerPython.py has been modified"
-  exit 0
-fi
-
 # test if CommonServerPowerShell has been modified
 DIFF_RES=$(git diff "$DIFF_COMPARE" -- Packs/Base/Scripts/CommonServerPowerShell/CommonServerPowerShell.ps1)
 if [[ -n "$DIFF_RES" ]]; then
@@ -69,7 +62,7 @@ if [[ -n "$DIFF_RES" ]]; then
   exit 0
 fi
 
-# test if CommonServerPython has been modified
+# test if demistomock has been modified
 DIFF_RES=$(git diff "$DIFF_COMPARE" -- Tests/demistomock/demistomock.py)
 if [[ -n "$DIFF_RES" ]]; then
   echo -e "demistomock.py has been modified"
