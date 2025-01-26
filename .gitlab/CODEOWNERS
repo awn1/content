@@ -27,14 +27,14 @@ Utils/test_upload_flow/** @ypreisler
 Tests/scripts/collect_tests/ @mdagan
 
 # Build related
-.gitlab/** @yucohen
-Tests/scripts/lock_cloud_machines.sh @yucohen
-Tests/scripts/uninstall_packs_and_reset_bucket_cloud.sh @yucohen
-Tests/Marketplace/search_and_uninstall_pack.py @yucohen
-Tests/scripts/install_content_and_test_integrations.sh @yucohen
-Tests/configure_and_test_integration_instances.py @yucohen
-Tests/scripts/print_cloud_machine_details.sh @yucohen
-Tests/scripts/run_tests.sh @yucohen
+.gitlab/** @mwienfeld
+Tests/scripts/lock_cloud_machines.sh @mwienfeld
+Tests/scripts/uninstall_packs_and_reset_bucket_cloud.sh @mwienfeld
+Tests/Marketplace/search_and_uninstall_pack.py @mwienfeld
+Tests/scripts/install_content_and_test_integrations.sh @mwienfeld
+Tests/configure_and_test_integration_instances.py @mwienfeld
+Tests/scripts/print_cloud_machine_details.sh @mwienfeld
+Tests/scripts/run_tests.sh @mwienfeld
 Tests/scripts/test_modeling_rules.sh @acarmi
-Tests/scripts/lock_cloud_machines.py @yucohen
+Tests/scripts/lock_cloud_machines.py @mwienfeld
 .gitlab/ci/.gitlab-ci.sdk-nightly.yml @sfainberg
