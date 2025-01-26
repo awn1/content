@@ -446,6 +446,7 @@ def generate_records(
                 "ttl": generate_cell(NOT_AVAILABLE, "", generate_expired_class()),
                 "slack_link": generate_cell(build_link_to_channel(XDR_UPGRADE_CHANNEL_ID_DEV)),
             }
+        lcaas_ids.add(key.split("-")[-1])
         if client := get_client(xsoar_admin_user, client_type, host, key, AUTOMATION_GCP_PROJECT):
             if (versions := get_version_info(client)) is not None:
                 record |= generate_record_from_version_info(
