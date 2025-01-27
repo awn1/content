@@ -40,6 +40,16 @@ from Tests.scripts.infra.settings import Settings, XSOARAdminUser  # noqa
 from Tests.scripts.infra.viso_api import VisoAPI  # noqa
 from Tests.scripts.infra.xsoar_api import XsoarClient, XsiamClient, SERVER_TYPE_TO_CLIENT_TYPE, InvalidAPIKey  # noqa
 
+"""
+This script is in charge of updating the build machine report.
+In order to run the script locally authenticate to gcloud with `gcloud auth application-default login`.
+
+Running this script without the correct configuration may delete secrets from the GSM.
+Consider using dry run argument --without-viso=true.
+
+In order to run locally use the artifact generated from the previous runs called records.json.
+This may be entered to the test_data parameter of the script instead of creating real time records.
+"""
 ARTIFACTS_FOLDER = os.environ["ARTIFACTS_FOLDER"]
 GITLAB_ARTIFACTS_URL = os.environ["GITLAB_ARTIFACTS_URL"]
 CI_JOB_ID = os.environ["CI_JOB_ID"]
@@ -61,8 +71,14 @@ TTL_EXPIRED_DAYS = timedelta(days=int(os.getenv("TTL_EXPIRED_DAYS", TTL_EXPIRED_
 LICENSE_EXPIRED_DAYS_DEFAULT = 5
 LICENSE_EXPIRED_DAYS = timedelta(days=int(os.getenv("LICENSE_EXPIRED_DAYS", LICENSE_EXPIRED_DAYS_DEFAULT)))
 LICENSE_DATE_FORMAT = "%Y %b %d"
-TOKENS_COUNT_PERCENTAGE_THRESHOLD_DEFAULT = 80  # % of the disposable tenants tokens usage to raise a warning.
-TOKENS_COUNT_PERCENTAGE_THRESHOLD = int(os.getenv("TOKENS_COUNT_PERCENTAGE_THRESHOLD", TOKENS_COUNT_PERCENTAGE_THRESHOLD_DEFAULT))
+TOKENS_COUNT_PERCENTAGE_THRESHOLD_WARNING_DEFAULT = 80  # % of the disposable tenants tokens usage to raise a warning.
+TOKENS_COUNT_PERCENTAGE_THRESHOLD_ERROR_DEFAULT = 90  # % of the disposable tenants tokens usage to raise an error.
+TOKENS_COUNT_PERCENTAGE_THRESHOLD_WARNING = int(
+    os.getenv("TOKENS_COUNT_PERCENTAGE_THRESHOLD_WARNING", TOKENS_COUNT_PERCENTAGE_THRESHOLD_WARNING_DEFAULT)
+)
+TOKENS_COUNT_PERCENTAGE_THRESHOLD_ERROR = int(
+    os.getenv("TOKENS_COUNT_PERCENTAGE_THRESHOLD_ERROR", TOKENS_COUNT_PERCENTAGE_THRESHOLD_ERROR_DEFAULT)
+)
 MAX_OWNERS_TO_NOTIFY_DISPLAY = 5
 MAX_SERVER_VERSIONS_DISPLAY = 3
 BUILD_MACHINES_FLOW_REQUIRING_AN_AGENT = {XsiamClient.PLATFORM_TYPE: ["build", "nightly"]}
@@ -558,6 +574,8 @@ def extract_full_version(version_string: str) -> Version | None:
     # Extract version from "vA.B.C-D" pattern to A.B.C.D
     if match := re.search(r"v([\d.]+)-(\d+)", version_string):
         return Version(f"{match.group(1)}.{match.group(2)}")
+
+    logging.error(f"{version_string} was not extracted properly as a valid version")
     return None
 
 
@@ -761,6 +779,24 @@ def generate_report(
             for flow_type, server_versions in flow_type_to_server_versions.items():
                 if flow_type in IGNORED_FLOW_TYPES:
                     continue
+
+                versions_list = [
+                    version for key in server_versions.keys() for version in [extract_full_version(key)] if version is not None
+                ]
+
+                if not versions_list:
+                    title = f"Platform:{platform_type}, Flow type:{flow_type} - All tenants versions were not"
+                    "parsed correctly for more information view the logs."
+                    slack_msg_append.append(
+                        {
+                            "color": "danger",
+                            "title": title,
+                            "fallback": title,
+                        }
+                    )
+                    css_class = generate_version_cell_css_class(NOT_AVAILABLE, platform_type, flow_type, with_prefix=True)
+                    css_classes[css_class] = {"color": "red", "font_weight": "bold"}
+
                 if len(server_versions) > 1:
                     platform_type_to_flow_type_to_server_versions_fields.append(
                         {
@@ -769,14 +805,8 @@ def generate_report(
                             "short": True,
                         }
                     )
-                # We assume here that the version with the  highest version is the preferred version.
-                for index, version in enumerate(
-                    sorted(
-                        server_versions.keys(),
-                        key=extract_full_version,  # type: ignore[arg-type]
-                        reverse=True,
-                    )
-                ):
+                # We assume here that the version with the highest version is the preferred version.
+                for index, version in enumerate(sorted(versions_list, reverse=True)):
                     css_class = generate_version_cell_css_class(version, platform_type, flow_type, with_prefix=True)
                     css_classes[css_class] = {"color": "green" if index == 0 else "red", "font_weight": "bold"}
 
@@ -794,9 +824,12 @@ def generate_report(
     if tokens_count is not None:
         tokens_percentage = int((len(tenants) / tokens_count) * 100)
         title = f"Disposable Tenants Tokens - Total:{tokens_count}, Used:{len(tenants)}"
-        if tokens_percentage >= TOKENS_COUNT_PERCENTAGE_THRESHOLD:
-            title += f", Usage >= {TOKENS_COUNT_PERCENTAGE_THRESHOLD}%"
+        if tokens_percentage >= TOKENS_COUNT_PERCENTAGE_THRESHOLD_ERROR:
+            title += f", Usage >= {TOKENS_COUNT_PERCENTAGE_THRESHOLD_ERROR}%"
             color = "danger"
+        elif tokens_percentage >= TOKENS_COUNT_PERCENTAGE_THRESHOLD_WARNING:
+            title += f", Usage >= {TOKENS_COUNT_PERCENTAGE_THRESHOLD_WARNING}%"
+            color = "warning"
         else:
             color = "good"
         slack_msg_append.append(
