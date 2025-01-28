@@ -7,16 +7,15 @@ validate-marketplace:
   variables:
     MARKETPLACES: $MARKETPLACES
 
-check-user-permissions:
-  stage: unittests-and-validations
+override-corepacks-check-user-permissions:
+  stage: check-user-permissions
   rules:
     - if: '$PIPELINE_TYPE == "override-corepacks"'
   extends:
     - .default-job-settings
   variables:
-    TEST_OVERRIDE_COREPACKS: "false"
   script:
-    - echo "the var TEST_OVERRIDE_COREPACKS is $TEST_OVERRIDE_COREPACKS"
+    - echo "Is this dry run? $DRY_RUN"
     - !reference [.check_user_permissions_to_upload_packs]
 
 create-updated-corepacks-list:
@@ -25,7 +24,7 @@ create-updated-corepacks-list:
     - cortex-content-1738
   needs:
     - validate-marketplace
-    - check-user-permissions
+    - override-corepacks-check-user-permissions
   rules:
     - if: '$PIPELINE_TYPE == "override-corepacks"'
   extends:
@@ -80,11 +79,10 @@ upload-updated-core-packs-list:
           - "xpanse"
   variables:
     SERVER_VERSION_TO_UPDATE: $SERVER_VERSION_TO_UPDATE
-    TEST_OVERRIDE_COREPACKS: "false"
     CI_PIPELINE_ID: $CI_PIPELINE_ID
   script:
     - section_start "Upload Core packs List" --collapsed
-    - python3 -u ./Tests/Marketplace/upload_override_core_packs.py -sv "$SERVER_VERSION_TO_UPDATE" -cpi "$CI_PIPELINE_ID" -t "$TEST_OVERRIDE_COREPACKS" -mp "$MARKETPLACE_VERSION"
+    - poetry run python3 -u ./Tests/Marketplace/upload_override_core_packs.py -sv "$SERVER_VERSION_TO_UPDATE" -cpi "$CI_PIPELINE_ID" -t "$DRY_RUN" -mp "$MARKETPLACE_VERSION"
     - section_end "Upload Core packs List"
 
 override-core-packs-sync-buckets-between-projects:
@@ -97,7 +95,6 @@ override-core-packs-sync-buckets-between-projects:
   tags:
     - cortex-content-1738
   variables:
-    TEST_OVERRIDE_COREPACKS: "false"
 
 override-corepacks-fan-in:
   stage: fan-in

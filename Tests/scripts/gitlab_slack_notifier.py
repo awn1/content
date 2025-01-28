@@ -113,6 +113,9 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument("-f", "--file", help="File path with the text to send")
     parser.add_argument("-t", "--attachments", help="File path with the attachments to send", required=False)
     parser.add_argument("-th", "--thread", help="A message to be sent as a thread", required=False)
+    parser.add_argument(
+        "-dr", "--dry_run", type=strtobool, help="true for a dry run pipeline, false for a prod pipeline", default="false"
+    )
     return parser.parse_args()
 
 
@@ -532,6 +535,12 @@ def bucket_upload_results(
     return slack_msg_append, threaded_messages
 
 
+def construct_slack_msg_sync_buckets(threaded_messages, slack_msg_append):
+    bucket_sync_failure, bucket_sync_success = bucket_sync_msg_builder(ROOT_ARTIFACTS_FOLDER)
+    threaded_messages.extend(bucket_sync_success)
+    slack_msg_append.extend(bucket_sync_failure)
+
+
 def construct_slack_msg(
     triggering_workflow: str,
     pipeline_url: str,
@@ -540,6 +549,7 @@ def construct_slack_msg(
     file: str | None,
     attachments: str | None,
     thread: str | None,
+    dry_run: bool = True,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str, list[dict[str, Any]]]:
     # report failing jobs
     content_fields = []
@@ -566,14 +576,15 @@ def construct_slack_msg(
     # report pack updates
     threaded_messages = []
     slack_msg_append = []
+    logging.debug(f"constructing slack msg for {triggering_workflow_lower=} and {dry_run=}")
     if "upload" in triggering_workflow_lower:
         for bucket in UPLOAD_BUCKETS:
             slack_msg, threaded_message = bucket_upload_results(*bucket)
             threaded_messages.extend(threaded_message)
             slack_msg_append.extend(slack_msg)
-        bucket_sync_failure, bucket_sync_success = bucket_sync_msg_builder(ROOT_ARTIFACTS_FOLDER)
-        threaded_messages.extend(bucket_sync_success)
-        slack_msg_append.extend(bucket_sync_failure)
+        construct_slack_msg_sync_buckets(threaded_messages, slack_msg_append)
+    elif triggering_workflow_lower in ["deploy auto upgrade packs", "override corepacks"] and not dry_run:
+        construct_slack_msg_sync_buckets(threaded_messages, slack_msg_append)
 
     has_failed_tests = False
     # report failing test-playbooks and test modeling rules.
@@ -825,7 +836,7 @@ def main():
     logging.info(
         f"Sending Slack message for pipeline {pipeline_id} in project {project_id} on server {server_url} "
         f"triggering workflow:'{triggering_workflow}' allowing failure:{options.allow_failure} "
-        f"slack channel:{computed_slack_channel}"
+        f"slack channel:{computed_slack_channel} dry run:{options.dry_run}"
     )
     pull_request = None
     if options.current_branch != DEFAULT_BRANCH:
@@ -858,7 +869,14 @@ def main():
 
     pipeline_url, pipeline_failed_jobs = collect_pipeline_data(gitlab_client, project_id, pipeline_id)
     slack_msg_data, threaded_messages, title, attachments_json = construct_slack_msg(
-        triggering_workflow, pipeline_url, pipeline_failed_jobs, pull_request, options.file, options.attachments, options.thread
+        triggering_workflow,
+        pipeline_url,
+        pipeline_failed_jobs,
+        pull_request,
+        options.file,
+        options.attachments,
+        options.thread,
+        options.dry_run,
     )
 
     slack_msg_output_file = ROOT_ARTIFACTS_FOLDER / SLACK_MESSAGE

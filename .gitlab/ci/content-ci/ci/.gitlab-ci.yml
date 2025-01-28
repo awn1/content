@@ -12,6 +12,7 @@ stages:
   - cleanup
   - security
   - unittests-and-validations
+  - check-user-permissions
   - prepare-testing-bucket
   - run-instances
   - results
@@ -19,6 +20,7 @@ stages:
   - create-updated-corepacks-list
   - validate-core-packs-list-versions
   - upload-updated-core-packs-list
+  - deploy-groups-file
   - sync-buckets
   - create-release-branch
   - trigger-nightlies
@@ -44,3 +46,4 @@ include:
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.override-content.yml
   - local: .gitlab/ci/gitlab-ci.shared.variables.yml
   - local: .gitlab/ci/content-ci/ci/override-corepacks.yml
+  - local: .gitlab/ci/content-ci/ci/deploy-auto-upgrade-packs.yml

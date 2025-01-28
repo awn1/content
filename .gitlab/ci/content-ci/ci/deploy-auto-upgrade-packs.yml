@@ -1,0 +1,86 @@
+.deploy-auto-upgrade-packs-rule:
+  rules:
+    - if: '$PIPELINE_TYPE == "deploy-auto-upgrade-packs"'
+
+.deploy-auto-upgrade-packs-rule-always:
+  rules:
+    - if: '$PIPELINE_TYPE == "deploy-auto-upgrade-packs"'
+      when: always
+
+deploy-auto-upgrade-check-user-permissions:
+  stage: check-user-permissions
+  extends:
+    - .default-job-settings
+    - .deploy-auto-upgrade-packs-rule
+  variables:
+    PERMISSION_GROUP: "content-research"
+  script:
+    - echo "Is this dry run? $DRY_RUN"
+    - !reference [ .check_user_permissions_to_upload_packs ]
+    - job-done
+
+deploy-groups-file:
+  stage: deploy-groups-file
+  tags:
+    - cortex-content-1738
+  extends:
+    - .default-job-settings
+    - .deploy-auto-upgrade-packs-rule
+  needs:
+    - deploy-auto-upgrade-check-user-permissions
+  parallel:
+    matrix:
+      - MARKETPLACE_VERSION:
+          - "xsoar_saas"
+          - "marketplacev2"
+          - "xsoar"
+          - "xpanse"
+  script:
+    - section_start "Deploy Groups File" --collapsed
+    - poetry run python3 -u ./Tests/Marketplace/deploy_groups_file.py -cpi "$CI_PIPELINE_ID" -dr "$DRY_RUN" -mp "$MARKETPLACE_VERSION"
+    - section_end "Deploy Groups File"
+    - job-done
+
+deploy-auto-upgrade-sync-buckets-between-projects:
+  extends:
+    - .sync-buckets-between-projects
+    - .deploy-auto-upgrade-packs-rule
+  needs:
+    - deploy-groups-file
+  tags:
+    - cortex-content-1738
+  variables:
+    TEST_UPLOAD: "false"
+
+
+jobs-done-deploy-auto-upgrade:
+  extends:
+    - .jobs-done-check
+    - .deploy-auto-upgrade-packs-rule
+  needs:
+    - deploy-auto-upgrade-check-user-permissions
+    - deploy-groups-file
+    - deploy-auto-upgrade-sync-buckets-between-projects
+  variables:
+    WORKFLOW: 'Deploy Auto Upgrade Packs'
+
+
+deploy-auto-upgrade-slack-notify:
+  extends:
+    - .trigger-slack-notification
+    - .deploy-auto-upgrade-packs-rule-always
+  variables:
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: "deploy-auto-upgrade-fan-in"
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_ALLOW_FAILURE: "true"
+    CURRENT_BRANCH_NAME: $INFRA_BRANCH
+    DRY_RUN: $DRY_RUN
+    WORKFLOW: 'Deploy Auto Upgrade Packs'
+
+deploy-auto-upgrade-fan-in:
+  stage: fan-in
+  extends:
+    - .deploy-auto-upgrade-packs-rule-always
+  script:
+    - echo "fan in"

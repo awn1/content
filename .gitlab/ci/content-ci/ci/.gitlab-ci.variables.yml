@@ -60,3 +60,16 @@ variables:
   INSTALL_POETRY: "true"
   DOCKER_IO: "docker.io" # defined in the project level CI/CD variables
   RESET_CORE_PACK_VERSION: "true"
+  DRY_RUN:
+    description: "Whether to deploy the files into the dev buckets (true) or the proud ones (false).
+     Used in ovverride-corepacks and deploy-auto-upgrade-packs flows. Default value is false."
+    value: "false"
+    options:
+      - "true"
+      - "false"
+  PERMISSION_GROUP:
+    description: "Specify the user group to be searched for when determining the permissions for a specific user."
+    value: "content-leaders"
+    options:
+      - "content-leaders"
+      - "content-research"
