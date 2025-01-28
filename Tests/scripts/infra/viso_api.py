@@ -1,10 +1,15 @@
 import logging
 
 import requests
-from infra.utils.requests_handler import TimeoutHTTPAdapter, raise_for_status
 from urllib3.util import Retry
 
+from Tests.scripts.infra.utils.requests_handler import TimeoutHTTPAdapter, raise_for_status
+from Tests.scripts.infra.utils.text import remove_empty_elements
+from Tests.scripts.infra.xsoar_api import XsiamClient, XsoarClient
+
 logger = logging.getLogger(__name__)
+
+DEFAULT_TTL = 48  # hours
 
 
 class VisoAPI:
@@ -18,7 +23,10 @@ class VisoAPI:
         )  # retry connection errors (not HTTPErrors)
         self.session_timout = 60  # default 1 minute timeout for all API calls
         self.session = requests.Session()
-        self.session.mount(prefix="http://", adapter=TimeoutHTTPAdapter(timeout=self.session_timout, max_retries=retry_strategy))
+        self.session.mount(
+            prefix="http://",
+            adapter=TimeoutHTTPAdapter(timeout=self.session_timout, max_retries=retry_strategy),
+        )
         self.session.headers["Content-Type"] = "application/json"
         self.session.verify = False  # Disable SSL verification since we're working with self-signed certs here.
         self.base_url = base_url
@@ -26,6 +34,11 @@ class VisoAPI:
 
     def get_request(self, url, data):
         response = self.session.get(url=f"{self.base_url}/{url}", json=self.data_api_key | data)
+        raise_for_status(response)
+        return response
+
+    def post_request(self, url: str, data: dict):
+        response = self.session.post(url=f"{self.base_url}/{url}", json=self.data_api_key | data)
         raise_for_status(response)
         return response
 
@@ -41,5 +54,68 @@ class VisoAPI:
         """
         Get disposable tenants token count for group owner.
         """
-        res = self.get_request(f"api/v4.0/disposable/get-disposable-group-max-tokens/{group_owner}", self.data_api_key)
+        res = self.get_request(
+            f"api/v4.0/disposable/get-disposable-group-max-tokens/{group_owner}",
+            self.data_api_key,
+        )
         return res.json()["disposable_max_allowed_tokens"]
+
+    def create_disposable_tenant(
+        self,
+        owner: str,
+        group_owner: str,
+        server_type: str,
+        viso_version: str = "",
+        frontend_version: str = "",
+        backend_version: str = "",
+        xsoar_version: str = "",
+        pipeline_version: str = "",
+        storybuilder_version: str = "",
+        rocksdb_version: str = "",
+        scortex_version: str = "",
+        vsg_version: str = "",
+        ttl: int = DEFAULT_TTL,
+    ) -> dict:
+        """
+        Create a new disposable tenant with the provided parameters.
+        """
+        if server_type not in (XsoarClient.SERVER_TYPE, XsiamClient.SERVER_TYPE):
+            raise ValueError(f"Invalid server type: {server_type}")
+
+        data = {
+            "owner": owner,
+            "token_group": group_owner,
+            "viso_version": viso_version,
+            "fake_license": True,
+            "versions": {
+                "frontend": frontend_version,
+                "backend": backend_version,
+                "xsoar": xsoar_version,
+                "pipeline": pipeline_version,
+                "storybuilder": storybuilder_version,
+                "rocksdb": rocksdb_version,
+                "scortex": scortex_version,
+                "vsg": vsg_version,
+            },
+            "ttl": ttl,
+            "flow_variables_override": {
+                "non_pool_provision": True,
+                "allow_xdr_gitlab_networks": True,
+            },
+        }
+
+        if server_type == XsoarClient.SERVER_TYPE:
+            data["xsoar_license"] = 1
+        elif server_type == XsiamClient.SERVER_TYPE:
+            data["xsiam_agents"] = 1
+            data["xsiam_gb"] = 1
+
+        res = self.post_request("api/v4.0/disposable/create", remove_empty_elements(data))
+        return res.json()
+
+    def get_tenant(self, tenant_id):
+        """
+        Get information about a specific tenant.
+        """
+        res = self.get_request(f"api/v4.0/tenants/{tenant_id}", {})
+        return res.json()

@@ -113,3 +113,23 @@ def convert_mb_to_bytes(mb: int | float) -> int:
 def sanitize_text_for_json_parsing(text: str) -> str:
     """Sanitizes input text by replacing certain characters, ensuring JSON parsability without altering the code block"""
     return text.replace(r"\'", "").replace('"', r"\"").replace("\\n", " ")
+
+
+def remove_empty_elements(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Remove empty elements from a dictionary recursively.
+
+    Args:
+        data (dict[str, Any]): The input dictionary to process.
+
+    Returns:
+        dict[str, Any]: A new dictionary with empty elements removed.
+    """
+
+    def empty(x):
+        return x in (None, {}, [], "")
+
+    if not isinstance(data, dict | list):
+        return data
+
+    return {k: v for k, v in ((k, remove_empty_elements(v)) for k, v in data.items()) if not empty(v)}

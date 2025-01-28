@@ -17,6 +17,7 @@ from google.auth import _default
 from infra.resources.constants import AUTOMATION_GCP_PROJECT, COMMENT_FIELD_NAME, GSM_SERVICE_ACCOUNT
 from jinja2 import Environment, FileSystemLoader
 from packaging.version import Version
+from scripts.create_disposable_tenants import AGENT_IP_DEFAULT_MESSAGE, AGENT_NAME_DEFAULT_MESSAGE
 from slack_sdk import WebClient
 from urllib3.exceptions import InsecureRequestWarning
 
@@ -386,6 +387,12 @@ def generate_cell_dict_key(record: dict, key: str, default_value: Any = NOT_AVAI
     return generate_cell(default_value, "")
 
 
+def generate_agent_cell_dict_key(record: dict, key: str) -> dict:
+    if value := record.get(key) in (None, AGENT_NAME_DEFAULT_MESSAGE, AGENT_IP_DEFAULT_MESSAGE):
+        return generate_cell(NOT_AVAILABLE, "")
+    return generate_cell(value, value)
+
+
 def get_api_key_ttl_cell(client, current_date):
     try:
         cloud_machine_details, secret_version = client.login_using_gsm()
@@ -446,8 +453,8 @@ def generate_records(
             "version": generate_cell_dict_key(value, "version"),
             # Assume any machine in the json config is a build machine.
             "build_machine": generate_cell_dict_key(value, "build_machine", True),
-            "agent_host_name": generate_cell_dict_key(value, "agent_host_name", NOT_AVAILABLE),
-            "agent_host_ip": generate_cell_dict_key(value, "agent_host_ip", NOT_AVAILABLE),
+            "agent_host_name": generate_agent_cell_dict_key(value, "agent_host_name"),
+            "agent_host_ip": generate_agent_cell_dict_key(value, "agent_host_ip"),
             "comment": generate_cell_dict_key(value, "comment", ""),
             # The connectable field is populated after trying to connect to the machine.
             "connectable": generate_cell(False),
