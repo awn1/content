@@ -88,6 +88,9 @@ workflow:
     - if: '$PIPELINE_TYPE == "content-override"'
       variables:
           WORKFLOW_PIPELINE_NAME: 'Running Content Override pipeline for $TENANT_IDS with marketplace:$MARKETPLACE and env type:$ENV_TYPE'
+    - if: '$PIPELINE_TYPE == "deploy-auto-upgrade-packs"'
+      variables:
+          WORKFLOW_PIPELINE_NAME: 'Deploy Auto Upgrade Packs Files Dry Run: $DRY_RUN'
 
     # Don't add any other rules after this one.
     - when: always  # Other pipelines can run, but use the default name

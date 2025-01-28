@@ -409,17 +409,18 @@
 .check_user_permissions_to_upload_packs:
   - section_start "Check User Permissions to Upload Packs" # if bucket upload and uploading to marketplace-dist
   - |
-    if [[ ( "${BUCKET_UPLOAD}" == "true" || "${FORCE_BUCKET_UPLOAD}" == "true" ) && "$GCS_MARKET_BUCKET" == "$GCS_PRODUCTION_BUCKET" ]] || [[ "$TEST_OVERRIDE_COREPACKS" == "false" ]]; then
-      CONTENT_LEADERS=$(curl -sS "https://api.github.com/orgs/demisto/teams/content-leaders/members" -H "Authorization: token ${GITHUB_TOKEN}")
-      echo "received content leaders"
-      LEADER_NAMES=$(echo $CONTENT_LEADERS | jq -r ".[].login")
-      LEADER_NAMES=$(echo "${LEADER_NAMES}" "content-bot" "svc -xsoar-gitlab-mirror" "svc-xsoar-gitlab-mirror" "${USERS_ALLOWED_TRIGGER_UPLOAD}" )
-      if [[ -z "$GITLAB_USER_NAME" ]] || [[ -z "`echo $LEADER_NAMES | grep -w "$GITLAB_USER_NAME"`" ]]; then
-        echo -e "User '$GITLAB_USER_NAME' is not allowed to trigger this build, only one of:\n${LEADER_NAMES}"
+    if [[ ( "${BUCKET_UPLOAD}" == "true" || "${FORCE_BUCKET_UPLOAD}" == "true" ) && "${GCS_MARKET_BUCKET}" == "${GCS_PRODUCTION_BUCKET}" ]] || [[ "${DRY_RUN}" == "false" ]]; then
+      echo "check github group: ${PERMISSION_GROUP}"
+      GROUP_MEMBERS=$(curl -sS "https://api.github.com/orgs/demisto/teams/${PERMISSION_GROUP}/members" -H "Authorization: token ${GITHUB_TOKEN}")
+      MEMBERS_NAMES=$(echo "${GROUP_MEMBERS}" | jq -r ".[].login")
+      ON_CALL_DEVS=$(jq -r '.ON_CALL_DEVS[]' .github/content_roles.json)
+      MEMBERS_NAMES=$(echo "${MEMBERS_NAMES}" "content-bot" "svc -xsoar-gitlab-mirror" "svc-xsoar-gitlab-mirror" "${USERS_ALLOWED_TRIGGER_UPLOAD}" )
+      if [[ -z "$GITLAB_USER_NAME" ]] || [[ -z "`echo $MEMBERS_NAMES | grep -w "$GITLAB_USER_NAME"`" ]]; then
+        echo -e "User '$GITLAB_USER_NAME' is not allowed to trigger $PIPELINE_TYPE, only one of:\n${MEMBERS_NAMES}"
         job-done
         exit 1
       else
-        echo "User '${GITLAB_USER_NAME}' is allowed to upload packs / force upload packs."
+        echo "User '${GITLAB_USER_NAME}' is allowed to trigger $PIPELINE_TYPE"
       fi
     else
       echo "This is a test run. All users can run it."
@@ -465,7 +466,7 @@
 .build_parameters: &build_parameters
   - section_start "Build Parameters" --collapsed
   - echo "Environment Variables:"
-  - set | grep -E "^ARTIFACTS_FOLDER.*=|^JIRA_.*=|^INSTANCE_TESTS=|^SERVER_BRANCH_NAME=|^ARTIFACT_BUILD_NUM=|^IS_NIGHTLY=|^TIME_TO_LIVE=|^CONTRIB_BRANCH=|^FORCE_PACK_UPLOAD=|^PACKS_TO_UPLOAD=|^BUCKET_UPLOAD=|^TEST_UPLOAD=|^FORCE_BUCKET_UPLOAD=|^STORAGE_BASE_PATH=|^OVERRIDE_ALL_PACKS=|^GCS_MARKET_BUCKET=|^GCS_MARKET_V2_BUCKET=|^GCS_MARKET_XPANSE_BUCKET=|^SLACK_.*=|^NVM_DIR=|^NODE_VERSION=|^PATH=|^ENV_RESULTS_PATH=|^LAST_UPLOAD_COMMIT=|^DEMISTO_SDK_LOG_FILE_SIZE=|^DEMISTO_SDK_LOG_FILE_COUNT=|^DEMISTO_SDK_LOG_FILE_PATH=|^DEMISTO_SDK_LOG_NO_COLORS=|^DEMISTO_SDK_LOG_NOTIFY_PATH=|^POETRY_VIRTUALENVS_OPTIONS_ALWAYS_COPY=|^DEMISTO_SDK_NIGHTLY=|^OVERRIDE_SDK_REF=|^SDK_REF=|^CURRENT_BRANCH_NAME=" | sort
+  - set | grep -E "^ARTIFACTS_FOLDER.*=|^JIRA_.*=|^INSTANCE_TESTS=|^SERVER_BRANCH_NAME=|^ARTIFACT_BUILD_NUM=|^IS_NIGHTLY=|^TIME_TO_LIVE=|^CONTRIB_BRANCH=|^FORCE_PACK_UPLOAD=|^PACKS_TO_UPLOAD=|^BUCKET_UPLOAD=|^TEST_UPLOAD=|^FORCE_BUCKET_UPLOAD=|^STORAGE_BASE_PATH=|^OVERRIDE_ALL_PACKS=|^GCS_MARKET_BUCKET=|^GCS_MARKET_V2_BUCKET=|^GCS_MARKET_XPANSE_BUCKET=|^SLACK_.*=|^NVM_DIR=|^NODE_VERSION=|^PATH=|^ENV_RESULTS_PATH=|^LAST_UPLOAD_COMMIT=|^DEMISTO_SDK_LOG_FILE_SIZE=|^DEMISTO_SDK_LOG_FILE_COUNT=|^DEMISTO_SDK_LOG_FILE_PATH=|^DEMISTO_SDK_LOG_NO_COLORS=|^DEMISTO_SDK_LOG_NOTIFY_PATH=|^POETRY_VIRTUALENVS_OPTIONS_ALWAYS_COPY=|^DEMISTO_SDK_NIGHTLY=|^OVERRIDE_SDK_REF=|^SDK_REF=|^CURRENT_BRANCH_NAME=|^DRY_RUN=" | sort
   - echo "Versions Installed:"
   - python --version
   - python3 --version

@@ -905,7 +905,7 @@ upload-id-set-bucket:
     MARKETPLACE_XPANSE_PROD: "marketplace-xpanse"
   script:
     - |
-      if [[ $TEST_UPLOAD == "true" ]] || [[ $TEST_OVERRIDE_COREPACKS == "true" ]]; then
+      if [[ "${TEST_UPLOAD}" == "true" ]] || [[ "${DRY_RUN}" == "true" ]]; then
         echo -n "skipped" >> ${ARTIFACTS_FOLDER}/logs/trigger_sync_all_buckets_status_code.log
         echo "Skipping syncing buckets in test upload-flow and test override core packs."
         job-done

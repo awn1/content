@@ -9,6 +9,7 @@ from Tests.scripts.common import (
     CONTENT_MERGE,
     CONTENT_NIGHTLY,
     CONTENT_PR,
+    DEPLOY_AUTO_UPGRADE_PACKS,
     DOCKERFILES_PR,
     NATIVE_NIGHTLY,
     SDK_NIGHTLY,
@@ -100,7 +101,14 @@ CONTENT_MERGE_JOBS = CONTENT_COMMON_JOBS + [
     "merge-dev-secrets",
     "xsoar_ng_server_ga",
 ]
-
+DEPLOY_AUTO_UPGRADE_PACKS_JOBS = [
+    "deploy-auto-upgrade-check-user-permissions",
+    "deploy-groups-file: [xsoar]",
+    "deploy-groups-file: [marketplacev2]",
+    "deploy-groups-file: [xpanse]",
+    "deploy-groups-file: [xsoar_saas]",
+    "deploy-auto-upgrade-sync-buckets-between-projects",
+]
 CONTENT_NIGHTLY_JOBS = CONTENT_COMMON_JOBS
 
 
@@ -121,6 +129,7 @@ JOBS_PER_TRIGGERING_WORKFLOW = {
     CONTENT_DOCS_NIGHTLY: CONTENT_DOCS_NIGHTLY_JOBS,
     CONTENT_PR: CONTENT_PR_JOBS,
     CONTENT_MERGE: CONTENT_MERGE_JOBS,
+    DEPLOY_AUTO_UPGRADE_PACKS: DEPLOY_AUTO_UPGRADE_PACKS_JOBS,
 }
 
 

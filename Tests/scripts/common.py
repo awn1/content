@@ -23,6 +23,7 @@ DOCKERFILES_PR = "Dockerfiles PR"
 CONTENT_NIGHTLY = "Content Nightly"
 CONTENT_PR = "Content PR"
 CONTENT_MERGE = "Content Merge"
+DEPLOY_AUTO_UPGRADE_PACKS = "Deploy Auto Upgrade Packs"
 BUCKET_UPLOAD = "Upload Packs to Marketplace Storage"
 SDK_NIGHTLY = "Demisto SDK Nightly"
 TEST_NATIVE_CANDIDATE = "Test Native Candidate"
@@ -46,6 +47,7 @@ WORKFLOW_TYPES = {
     SDK_RELEASE,
     CONTENT_DOCS_PR,
     CONTENT_DOCS_NIGHTLY,
+    DEPLOY_AUTO_UPGRADE_PACKS,
 }
 BUCKET_UPLOAD_BRANCH_SUFFIX = "-upload_test_branch"
 TOTAL_HEADER = "Total"
