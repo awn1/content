@@ -218,6 +218,9 @@ run-validations-upload-flow:
     - .bucket-upload-rule
 
 run-validations-upload-flow-new-validate-flow:
+  tags:
+      - cortex-content-1738
+      - gce
   needs:
     - cloning-repositories-upload-flow
   variables:
@@ -866,6 +869,7 @@ upload-id-set-bucket:
     - cloning-repositories-upload-flow
   tags:
     - gke
+    - cortex-content-1738
   stage: prepare-testing-bucket
   extends:
     - .bucket-upload-rule
@@ -887,7 +891,6 @@ upload-id-set-bucket:
       fi
 
     - !reference [.create-id-set-xsoar]
-    - gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
     - gsutil cp "${ARTIFACTS_FOLDER_SERVER_TYPE}/id_set.json" "gs://$GCS_MARKET_BUCKET/content/id_set.json"
     - job-done
 
@@ -895,6 +898,7 @@ upload-id-set-bucket:
   # syncs buckets from oproxy-dev/oproxy-prod projects to xdr-xsoar-content-dev-01/xdr-xsoar-content-prod-us-01 projects
   tags:
     - gke
+    - cortex-content-1738
   extends:
     - .bucket-upload-rule
     - .default-job-settings
@@ -917,8 +921,6 @@ upload-id-set-bucket:
         echo "GCS_XSOAR_CONTENT_DEV_KEY or GCS_XSOAR_CONTENT_PROD_KEY not set, cannot perform sync"
         job-done
         exit 1
-      else
-        gcloud auth activate-service-account --key-file="$GCS_XSOAR_CONTENT_DEV_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
 
         echo "Syncing gs://marketplace-xsoar-dev"
         gsutil -m -q rsync -r gs://marketplace-saas-dist gs://marketplace-xsoar-dev
@@ -929,7 +931,6 @@ upload-id-set-bucket:
 
         ./Tests/scripts/validate_synced_buckets.sh "dev"
 
-        gcloud auth activate-service-account --key-file="$GCS_XSOAR_CONTENT_PROD_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
 
         echo "Syncing gs://marketplace-xsoar-prod-us"
         gsutil -m -q rsync -r gs://marketplace-saas-dist gs://marketplace-xsoar-prod-us

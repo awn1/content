@@ -620,7 +620,6 @@
       if [[ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]]; then
         if [[ -e "${ARTIFACTS_FOLDER}/locked_machines_list.txt" ]]; then
           echo "Job finished, removing lock file for machine ids:${CLOUD_CHOSEN_MACHINE_IDS}"
-          gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
           gsutil rm "gs://xsoar-ci-artifacts/$GCS_LOCKS_PATH/machines_locks/*-lock-$CI_PIPELINE_ID*" || true
           echo "Finished removing lock file(s)"
         else
@@ -655,7 +654,6 @@
           if [ "${pipeline_id}" != "null" ]; then
             echo "Triggered Clean Machine pipeline id:${pipeline_id} server type:${SERVER_TYPE}"
             echo "rename lock file of ${CLOUD_CHOSEN_MACHINE_ID}, jobid: ${CI_JOB_ID} ,current pipeline id: ${CI_PIPELINE_ID} to new pipeline_id ${pipeline_id}"
-            gcloud auth activate-service-account --key-file="$GCS_ARTIFACTS_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
             gsutil mv "gs://xsoar-ci-artifacts/${GCS_LOCKS_PATH}/machines_locks/${CI_PROJECT_ID}-lock-${CLOUD_CHOSEN_MACHINE_ID}-lock-${CI_PIPELINE_ID}_${CI_JOB_ID}" "gs://xsoar-ci-artifacts/${GCS_LOCKS_PATH}/machines_locks/${INFRA_PROJECT_ID}-lock-${CLOUD_CHOSEN_MACHINE_ID}-lock-${pipeline_id}"
             echo "Successful triggered cleanup machine pipeline - ${CI_SERVER_URL}/${CI_PROJECT_NAMESPACE}/infra/-/pipelines/$pipeline_id"
             break
@@ -674,7 +672,7 @@
   - section_start "Split packs to chosen machines" --collapsed
   - IFS=', ' read -r -a CLOUD_CHOSEN_MACHINE_ID_ARRAY <<< "${CLOUD_CHOSEN_MACHINE_IDS}"
   - echo "There are ${#CLOUD_CHOSEN_MACHINE_ID_ARRAY[@]} chosen cloud machines."
-  - python3 Tests/scripts/split_packs_to_machines.py --cloud_machines "${CLOUD_CHOSEN_MACHINE_IDS}" --server_type "${SERVER_TYPE}" --service_account "${GCS_ARTIFACTS_KEY}" --artifacts-path "${ARTIFACTS_FOLDER_SERVER_TYPE}" --marketplace "${MARKETPLACE_NAME}"
+  - python3 Tests/scripts/split_packs_to_machines.py --cloud_machines "${CLOUD_CHOSEN_MACHINE_IDS}" --server_type "${SERVER_TYPE}" --artifacts-path "${ARTIFACTS_FOLDER_SERVER_TYPE}" --marketplace "${MARKETPLACE_NAME}"
   - section_end "Split packs to chosen machines"
 
 .install_packs_by_machines:
@@ -812,7 +810,7 @@
       fi
     - | # we upload the coverage report to the GCS only for the pre-commit "from-yml" job on nightly runs
       if [[ "${IS_NIGHTLY}" == "true" && "$CI_COMMIT_BRANCH" == "master" && "${PRE_COMMIT_DOCKER_IMAGE}" == "from-yml" ]]; then
-        python3 Utils/upload_code_coverage_report.py --service_account $GCS_MARKET_KEY --source_file_name "${ARTIFACTS_FOLDER}/coverage_report/coverage.json" --minimal_file_name "${ARTIFACTS_FOLDER}/coverage_report/coverage-min.json"
+        python3 Utils/upload_code_coverage_report.py --source_file_name "${ARTIFACTS_FOLDER}/coverage_report/coverage.json" --minimal_file_name "${ARTIFACTS_FOLDER}/coverage_report/coverage-min.json"
       fi
     - |
       pre_commit_result_dir="${ARTIFACTS_FOLDER}/pre-commit/${PRE_COMMIT_DOCKER_IMAGE}"
@@ -868,7 +866,6 @@
     - echo "Download index.zip"
     - INDEX_PATH=$(mktemp)
     - |
-      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
       echo "successfully activated google cloud service account"
       gsutil cp "gs://marketplace-dist/content/packs/index.zip" $INDEX_PATH
       echo "successfully downloaded index.zip"

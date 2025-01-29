@@ -45,7 +45,6 @@ if [[ ! -f "$GCS_ARTIFACTS_KEY" ]]; then
   exit 1
 fi
 
-gcloud auth activate-service-account --key-file="${GCS_ARTIFACTS_KEY}" >>"${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
 TARGET_PATH="content/$BRANCH/$CI_PIPELINE_ID$STAGING_SUFFIX"
 TARGET="gs://$GCS_ARTIFACTS_BUCKET/$TARGET_PATH"
 echo "auth loaded. uploading files at: $ARTIFACTS_DIR to target: ${TARGET}"

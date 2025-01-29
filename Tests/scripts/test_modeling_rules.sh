@@ -62,7 +62,6 @@ if [ -n "${CLOUD_CHOSEN_MACHINE_IDS}" ]; then
 
   demisto-sdk modeling-rules test --non-interactive \
     --junit-path="${MODELING_RULES_RESULTS_FILE_NAME}" \
-    --service_account "${GCS_ARTIFACTS_KEY}" \
     --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" \
     --cloud_servers_api_keys "cloud_machines_details.json" \
     --machine_assignment "${ARTIFACTS_FOLDER_SERVER_TYPE}/machine_assignment.json" \
