@@ -1,3 +1,23 @@
+# Content Infrastructure 0.0.24 (2025-01-28)
+
+### Features
+
+- Created a new pipeline for deploy the auto upgrade packs config file into the buckets. ([CIAC-1226](https://jira-dc.paloaltonetworks.com/browse/CIAC-1226))
+- Update pre-commit pycln hook version to 2.5.0.
+- Updated the demisto-sdk version 1.34.1 in Infra.
+
+### Bugfixes
+
+- Fixed an issue where duplicate lines were created if the machine was not connected.
+- Fixed an issue where tenants server version that were not parsed correctly in the build_machine_report caused the build to fail.
+- changed the command examples files names to the new standard 'command_examples.txt'
+
+### Improved Documentation
+
+- Fixed a typo in the Content infrastructure versioning README file.
+- Update code owner on build to Menachem.
+
+
 # Content Infrastructure 0.0.23 (2025-01-22)
 
 ### Features
