@@ -14,16 +14,15 @@ from typing import Any
 import common
 import urllib3
 from google.auth import _default
-from infra.resources.constants import AUTOMATION_GCP_PROJECT, COMMENT_FIELD_NAME, GSM_SERVICE_ACCOUNT
 from jinja2 import Environment, FileSystemLoader
 from packaging.version import Version
-from scripts.create_disposable_tenants import AGENT_IP_DEFAULT_MESSAGE, AGENT_NAME_DEFAULT_MESSAGE
 from slack_sdk import WebClient
 from urllib3.exceptions import InsecureRequestWarning
 
 from SecretActions.add_build_machine import BUILD_MACHINE_GSM_AUTH_ID
 from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule, SecretLabels
 from SecretActions.SecretsBuild.merge_and_delete_dev_secrets import delete_dev_secrets
+from Tests.scripts.create_disposable_tenants import AGENT_IP_DEFAULT_MESSAGE, AGENT_NAME_DEFAULT_MESSAGE
 from Tests.scripts.graph_lock_machine import (
     AVAILABLE_MACHINES,
     BUILD_IN_QUEUE,
@@ -32,6 +31,7 @@ from Tests.scripts.graph_lock_machine import (
     create_builds_waiting_in_queue_graph,
     create_lock_duration_graph,
 )
+from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT, COMMENT_FIELD_NAME, GSM_SERVICE_ACCOUNT
 from Tests.scripts.utils.slack import get_conversations_members_slack, get_messages_from_slack, get_slack_usernames_from_ids
 
 urllib3.disable_warnings(InsecureRequestWarning)
@@ -414,7 +414,8 @@ def get_api_key_ttl_cell(client, current_date):
 
 
 def remove_keys_without_tenant(all_tenant_lcaas_id: set[str]) -> set[str]:
-    secret_conf = GoogleSecreteManagerModule(GSM_SERVICE_ACCOUNT, AUTOMATION_GCP_PROJECT)
+    gsm_service_account = str(GSM_SERVICE_ACCOUNT) if GSM_SERVICE_ACCOUNT else None
+    secret_conf = GoogleSecreteManagerModule(gsm_service_account, AUTOMATION_GCP_PROJECT)
     tenants_secrets = secret_conf.list_secrets_metadata_by_query(query=secret_conf.filter_label_is_set(SecretLabels.MACHINE))
     logging.info(f"Got {len(tenants_secrets)} tenant's API keys from GSM.")
     all_tenant_with_api_keys = {Path(s.name).name for s in tenants_secrets}
