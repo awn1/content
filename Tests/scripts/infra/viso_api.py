@@ -119,3 +119,20 @@ class VisoAPI:
         """
         res = self.get_request(f"api/v4.0/tenants/{tenant_id}", {})
         return res.json()
+
+    def update_config_map(
+        self,
+        lcaas_ids: list[str],
+        config_map_name: str,
+        map_dict: dict[str, str] | None = None,
+        keys_to_delete: list[str] | None = None,
+    ) -> dict:
+        """
+        Update the configuration map for the given lcaas_ids.
+        """
+        data = {
+            "lcaas_ids": lcaas_ids,
+            "deploy_details": {"config_maps": {config_map_name: {"update": map_dict, "delete": keys_to_delete}}},
+        }
+        res = self.post_request("api/v4.0/soft-deploy/configmap", data)
+        return res.json()
