@@ -31,6 +31,7 @@ auto-update-docker:
     - .default-job-settings
   tags:
     - gce
+    - cortex-content-1738
   variables:
     GCS_MARKET_BUCKET_DEV: "marketplace-dist-dev"
     KUBERNETES_MEMORY_REQUEST: 8Gi
@@ -41,9 +42,6 @@ auto-update-docker:
     - echo "Docker images to run on -> $DOCKER_IMAGES_ARG"
     - if [ ! -d "${ARTIFACT_PATH}" ]; then mkdir -p "${ARTIFACT_PATH}"; else echo "Artifacts folder already exists"; fi
     - mkdir -p "${ARTIFACT_PATH}/logs"
-    - echo "Activate GCloud Service Account"
-    - gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACT_PATH}/logs/gcloud_auth.log" 2>&1
-    - echo "Successfully activated google cloud service account"
     - !reference [.generate-content-graph]
     - echo "Copying coverage report"
     - gsutil cp "gs://${GCS_MARKET_BUCKET_DEV}/code-coverage-reports/coverage-min.json" "${ARTIFACT_PATH}/coverage_report.json"

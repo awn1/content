@@ -44,7 +44,6 @@ def create_minimal_report(source_file: str, destination_file: str) -> tuple[bool
 
 
 def upload_files_to_google_cloud_storage(
-    service_account: str,
     bucket_name: str,
     source_file_name: str,
     minimal_file_name: str,
@@ -64,7 +63,7 @@ def upload_files_to_google_cloud_storage(
     ]
 
     # google cloud storage client initialized
-    storage_client = init_storage_client(service_account)
+    storage_client = init_storage_client()
     bucket = storage_client.bucket(bucket_name)
 
     for path_in_bucket, local_path in files_to_upload:
@@ -86,20 +85,6 @@ def options_handler():
     """
     parser = argparse.ArgumentParser(description="Store packs in cloud storage.")
     # disable-secrets-detection-start
-    parser.add_argument(
-        "-s",
-        "--service_account",
-        help=(
-            "Path to gcloud service account, "
-            "For uploading the coverage report to Google Cloud Storage. "
-            "For local development use your personal account and "
-            "authenticate using Google Cloud SDK by running: "
-            "`gcloud auth application-default login` and leave this parameter blank. "
-            "For more information go to: "
-            "https://googleapis.dev/python/google-api-core/latest/auth.html"
-        ),
-        required=True,
-    )
 
     parser.add_argument(
         "-b",
@@ -150,7 +135,6 @@ def main():
     last_updated = get_last_updated_from_file(options.minimal_file_name)
 
     upload_files_to_google_cloud_storage(
-        service_account=options.service_account,
         bucket_name=options.bucket_name,
         source_file_name=options.source_file_name,
         minimal_file_name=options.minimal_file_name,
