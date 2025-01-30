@@ -1,3 +1,17 @@
+# Content Infrastructure 0.0.25 (2025-01-30)
+
+### Features
+
+- New script create_disposable_tenants. ([CIAC-12689](https://jira-dc.paloaltonetworks.com/browse/CIAC-12689))
+- New script update_tenant_configmap. ([CIAC-12731](https://jira-dc.paloaltonetworks.com/browse/CIAC-12731))
+- Added the ***cortex-content-1738*** tag, which binds to an identifier that enables GitLab runners to access Google resources. This tag replaces the need for manual authentication via the gcloud library. ([11348](https://jira-dc.paloaltonetworks.com/browse/11348))
+
+### Bugfixes
+
+- Fixed a bug where the slack notification failed when the DRY_RUN parameter was not supplied. ([738](https://jira-dc.paloaltonetworks.com/browse/738))
+- Fix issue with the imports in build_machines_report.py file.
+
+
 # Content Infrastructure 0.0.24 (2025-01-28)
 
 ### Features
