@@ -14,6 +14,7 @@ import re
 from collections import OrderedDict
 from pathlib import Path
 
+from Tests.scripts.common import string_to_bool
 from Tests.scripts.infra.viso_api import DEFAULT_TTL, VisoAPI
 from Tests.scripts.infra.xsoar_api import XsiamClient, XsoarClient
 from Tests.scripts.utils.log_util import install_logging
@@ -58,6 +59,7 @@ def prepare_outputs(
     tenants_info: list[dict],
     server_type: str = "",
     flow_type: str = "",
+    enabled: bool = False,
 ) -> dict:
     """
     Prepare output information for created tenants.
@@ -83,7 +85,7 @@ def prepare_outputs(
             "ui_url": f"https://{tenant_url}/",
             "instance_name": instance_name,
             "base_url": f"https://api-{tenant_url}",
-            "enabled": True,
+            "enabled": enabled,
             "flow_type": flow_type,
             "build_machine": flow_type.lower() in BUILD_MACHINE_FLOWS,
             "server_type": server_type,
@@ -196,6 +198,12 @@ def options_handler() -> argparse.Namespace:
         help="The TTL (Time-to-Live) in hours for the disposable tenants (1-420).",
         default=DEFAULT_TTL,
     )
+    parser.add_argument(
+        "--enabled",
+        help="Is the disposable tenant enabled or not.",
+        default=False,
+        type=string_to_bool,
+    )
 
     return parser.parse_args()
 
@@ -240,7 +248,7 @@ def main() -> None:
                 logging.error(f"Failed to create disposable tenant: {e}")
 
         tenants_info = viso_api.get_all_tenants(group_owner=CONTENT_TENANTS_GROUP_OWNER, fields=FIELDS_TO_GET_FROM_VISO)
-        outputs = prepare_outputs(tenants_lcaas_ids, tenants_info, server_type, flow_type)
+        outputs = prepare_outputs(tenants_lcaas_ids, tenants_info, server_type, flow_type, args.enabled)
         save_to_output_file(args.output_path, outputs)
     except Exception as e:
         logging.error(f"Unexpected error occurred while running the script: {e}")
