@@ -26,8 +26,7 @@ build-machines-report-job:
   extends:
     - .build-machines-report-schedule-rule
     - .before-script-build-machines-report
-  tags:
-    - cortex-content-1738  #The tag is bound to an identifier that grants access to Google resources.
+
   stage: build-machines-report
   artifacts:
       expire_in: 30 days
@@ -43,6 +42,7 @@ build-machines-report-job:
     GITLAB_ARTIFACTS_URL: https://xdr.docs-prod.xdr.pan.local/-/cortex-content/infra/-/jobs
   script:
     - EXIT_CODE=0
+    - gcloud auth activate-service-account --key-file="${GCS_ARTIFACTS_KEY}" >> "${ARTIFACT_PATH}/logs/gcloud_auth.log" 2>&1
     - export PYTHONPATH="${PYTHONPATH}:${CI_PROJECT_DIR}"
     - poetry run python3 -u "${CI_PROJECT_DIR}/Tests/scripts/build_machines_report.py" --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" -o "${ARTIFACT_PATH}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json" 2>&1 | tee -a "${ARTIFACTS_FOLDER}/logs/build_machines_report_log.log" || EXIT_CODE=$?
     - exit $EXIT_CODE

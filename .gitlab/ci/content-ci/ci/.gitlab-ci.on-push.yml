@@ -753,8 +753,6 @@ slack-notify-on-merge:
     - !reference [.unlock-machine]
 
 xsiam_server_ga:
-  tags:
-    - cortex-content-1738
   extends:
     - .test_content_on_cloud_server_instances_base
     - .docker_services
@@ -818,8 +816,6 @@ xsiam_server_ga:
       - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*  # restoring the default artifacts path from the job default settings
 
 xsoar_ng_server_ga:
-  tags:
-    - cortex-content-1738
   extends:
     - .test_content_on_cloud_server_instances_base
     - .docker_services
@@ -883,7 +879,6 @@ test-upload-flow:
     - cloning-repositories
   tags:
     - gke
-    - cortex-content-1738
   extends:
     - .default-job-settings
   rules:

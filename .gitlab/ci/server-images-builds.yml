@@ -57,42 +57,42 @@
 
 build-images-dev:
   stage: build-server-images
-  tags:
-    - cortex-content-1738
   needs: []
   extends:
     - .build-images-dev-rule # put in comment for testing
     - .docker-job
   script:
+    - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
     - export VERSION="master"
     - export LAST_SUCCESS_BUILD_PATH=$(gsutil ls -d "gs://xsoar-ci-artifacts-server/server/dev-6-??????/0/ci_status_success" | tail -n 1 | grep -o -E "gs://xsoar-ci-artifacts-server/server/dev-6-[0-9]+/0")
     - export INSTALLER_URL="xsoar-ci-artifacts-server/$(gsutil ls -d "$LAST_SUCCESS_BUILD_PATH/demistoserver-*.sh" | grep -o -E "server/dev-6-[0-9]+/0/demistoserver-[0-9.-]+\.sh")"
+    - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
 build-images-ga-6.12:
   stage: build-server-images
-  tags:
-    - cortex-content-1738
   needs: []
   extends:
     - .build-images-ga-rule # put in comment for testing
     - .docker-job
   script:
+    - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
     - export VERSION="ga-6-12"
     - export INSTALLER_URL="xsoar-ci-artifacts-server/$(gsutil ls -d "gs://xsoar-ci-artifacts-server/server/6.12.0-[0-9]*/0/demistoserver-*.sh" | tail -n 1 | grep -o -E "server/[0-9.-]+/0/demistoserver-[0-9.-]+\.sh")"
+    - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
 build-images-ga-6.11:
   stage: build-server-images
-  tags:
-    - cortex-content-1738
   needs: []
   extends:
     - .build-images-ga-rule # put in comment for testing
     - .docker-job
   script:
+    - gcloud auth activate-service-account --key-file $XSOAR_SERVER_STORAGE_CREDS --quiet
     - export VERSION="ga-6-11"
     - export INSTALLER_URL="xsoar-ci-artifacts-server/$(gsutil ls -d "gs://xsoar-ci-artifacts-server/server/6.11.0-[0-9]*/0/demistoserver-*.sh" | tail -n 1 | grep -o -E "server/[0-9.-]+/0/demistoserver-[0-9.-]+\.sh")"
+    - gcloud auth revoke --all --quiet || echo "expected"
     - *create-image
 
 build-images-dev-fan-in:

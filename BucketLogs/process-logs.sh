@@ -2,15 +2,10 @@
 
 # exit on errors
 set -e
-# For debug purposes:
-#BUCKET_NAME=${BUCKET_NAME:-"marketplace-dist"}
-#LOG_TABLE=${LOG_TABLE:-"marketplace_logs.usage"}
-
-gcloud auth activate-service-account --key-file "${GCLOUD_SERVICE_KEY}"
 
 # print the bq version
 bq version
-gcloud --version
+gsutil --version
 
 MAX_BAD_RECORDS=${MAX_BAD_RECORDS:-40}
 
@@ -26,17 +21,20 @@ if [ -z "$BUCKET_NAME" -o -z "$LOG_TABLE" ]; then
   exit 2
 fi
 
+# BUCKET_NAME=${BUCKET_NAME:-"marketplace-dist"}
+# LOG_TABLE=${LOG_TABLE:-"marketplace_logs.usage"}
+
 echo "Using bucket: $BUCKET_NAME. Log table: $LOG_TABLE"
 NO_LOGS_WERE_FOUND="CommandException: One or more URLs matched no objects."
 
-if gcloud storage ls 'gs://oproxy-dev-logs/'$BUCKET_NAME'_usage_*' >logs_list.txt 2>gcloud-storage-ls.err; then
-  echo "gcloud storage ls completed successfully"
+if gsutil ls 'gs://oproxy-dev-logs/'$BUCKET_NAME'_usage_*' >logs_list.txt 2>gsutil-ls.err; then
+  echo "gsutil ls completed successfully"
 else
-  if grep -q "$NO_LOGS_WERE_FOUND" gcloud-storage-ls.err; then
+  if [ "$(cat gsutil-ls.err)" == "$NO_LOGS_WERE_FOUND" ]; then
     echo "No logs were found"
     exit 0
   else
-    echo "gcloud storage command failed: $(cat gcloud-storage-ls.err)"
+    echo "gsutil command failed: $(cat gsutil-ls.err)"
     exit 1
   fi
 fi
@@ -56,10 +54,10 @@ fi
 # we process in batches of 20
 echo "Running bq command to load data with up to ${MAX_BAD_RECORDS} bad records allowed to skip."
 i=0
-tail -n 2 logs_list.txt | xargs -n 20 | while read line; do
+cat logs_list.txt | xargs -n 20 | while read line; do
   i=$((i + 20))
   echo $line | tr ' ' ',' | xargs $REPLACE '{}' bq -q --project_id oproxy-dev load --allow_quoted_newlines --max_bad_records=$MAX_BAD_RECORDS --skip_leading_rows=1 "$LOG_TABLE" {} "$SCRIPT_DIR/cloud_storage_usage_schema_v0.json"
   echo "Done loading via bq. Moving to processed..."
-  echo $line | tr ' ' '\n' | xargs $REPLACE '{}' gcloud storage mv -q {} gs://oproxy-dev-logs/processed/
+  echo $line | tr ' ' '\n' | gsutil -m -q mv -I gs://oproxy-dev-logs/processed/
   echo "$(date +%H:%M:%S): total processed: $i"
 done

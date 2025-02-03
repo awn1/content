@@ -27,11 +27,12 @@ def extract_failed_to_upload(packs_results_upload: dict) -> set[str]:
     return failed_packs
 
 
-def upload_to_bucket(failed_packs_data: dict, marketplace: MarketplaceVersions = MarketplaceVersions.XSOAR):
+def upload_to_bucket(service_account: str, failed_packs_data: dict, marketplace: MarketplaceVersions = MarketplaceVersions.XSOAR):
     """
     Uploads content status data to the bucket name based on the marketplace version.
 
     Args:
+        service_account (str): Path to the service account JSON key file.
         marketplace (MarketplaceVersions): The marketplace version to determine the bucket name.
         failed_packs_data (dict): The failed_packs_data to be uploaded to the bucket.
 
@@ -40,7 +41,7 @@ def upload_to_bucket(failed_packs_data: dict, marketplace: MarketplaceVersions =
     """
     try:
         production_bucket_name = MarketplaceVersionToMarketplaceName.get(marketplace)
-        storage_client = init_storage_client()
+        storage_client = init_storage_client(service_account)
         storage_bucket = storage_client.bucket(production_bucket_name)
         content_status_storage_path = os.path.join("content/packs/", f"{GCPConfig.CONTENT_STATUS}.json")
         content_status_blob = storage_bucket.blob(content_status_storage_path)
@@ -64,6 +65,7 @@ def main():
     install_logging("extract_and_upload_failed_packs.log", logger=logging)
     option = option_handler()
 
+    service_account = option.service_account
     marketplace = MarketplaceVersions(option.marketplace)
 
     failed_packs_data = {}
@@ -81,7 +83,7 @@ def main():
             "packs_to_update_metadata": list(failed_packs_upload.intersection(packs_to_update_metadata)),
         }
 
-    upload_to_bucket(failed_packs_data, marketplace)
+    upload_to_bucket(service_account, failed_packs_data, marketplace)
 
 
 if __name__ == "__main__":

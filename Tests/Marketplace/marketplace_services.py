@@ -3777,17 +3777,18 @@ def underscore_file_name_to_dotted_version(file_name: str) -> str:
     return os.path.splitext(file_name)[0].replace("_", ".")
 
 
-def get_last_commit_from_index(marketplace=MarketplaceVersions.XSOAR):
+def get_last_commit_from_index(service_account, marketplace=MarketplaceVersions.XSOAR):
     """Downloading index.json from GCP and extract last upload commit.
 
     Args:
         marketplace: the marketplace to extract from
+        service_account: service account to connect to GCP
 
     Returns: last upload commit.
 
     """
     production_bucket_name = MarketplaceVersionToMarketplaceName.get(marketplace)
-    storage_client = init_storage_client()
+    storage_client = init_storage_client(service_account)
     storage_bucket = storage_client.bucket(production_bucket_name)
     index_storage_path = os.path.join("content/packs/", f"{GCPConfig.INDEX_NAME}.json")
     index_blob = storage_bucket.blob(index_storage_path)
@@ -3796,12 +3797,12 @@ def get_last_commit_from_index(marketplace=MarketplaceVersions.XSOAR):
     return index_json.get("commit")
 
 
-def get_failed_packs_from_previous_upload(marketplace=MarketplaceVersions.XSOAR) -> dict | None:
+def get_failed_packs_from_previous_upload(service_account: str, marketplace=MarketplaceVersions.XSOAR) -> dict | None:
     """Download content_status.json from GCP and extract the failed packs from the previous upload.
 
     Args:
         marketplace: the marketplace to extract from
-
+        service_account: service account to connect to GCP
     Returns:
         dict: The failed packs from the previous upload in the following structure:
             {
@@ -3812,7 +3813,7 @@ def get_failed_packs_from_previous_upload(marketplace=MarketplaceVersions.XSOAR)
     """
     try:
         production_bucket_name = MarketplaceVersionToMarketplaceName.get(marketplace)
-        storage_client = init_storage_client()
+        storage_client = init_storage_client(service_account)
         storage_bucket = storage_client.bucket(production_bucket_name)
         content_status_storage_path = os.path.join("content/packs/", f"{GCPConfig.CONTENT_STATUS}.json")
         content_status_blob = storage_bucket.blob(content_status_storage_path)
