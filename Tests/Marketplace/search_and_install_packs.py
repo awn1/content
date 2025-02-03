@@ -459,7 +459,7 @@ def install_all_content_packs_for_nightly(
     all_packs = []
 
     # Initiate the GCS client and get the production bucket
-    storage_client = init_storage_client()
+    storage_client = init_storage_client(service_account)
     production_bucket = storage_client.bucket(GCPConfig.PRODUCTION_BUCKET)
     logging.debug(f"Installing all content packs for nightly flow in server {host}")
 
@@ -494,7 +494,7 @@ def install_all_content_packs_from_build_bucket(
     all_packs = []
     logging.debug(f"Installing all content packs in server {host} from packs path {bucket_packs_root_path}")
 
-    storage_client = init_storage_client()
+    storage_client = init_storage_client(service_account)
     build_bucket = storage_client.bucket(GCPConfig.CI_BUILD_BUCKETS["xsoar"])
     index_folder_path, _, _ = download_and_extract_index(build_bucket, extract_destination_path, bucket_packs_root_path)
 

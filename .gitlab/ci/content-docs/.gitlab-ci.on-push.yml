@@ -70,6 +70,10 @@
       fi
     fi
 
+.gcloud-authenticate:
+  - section_start "Authenticate with GCP"
+  - gcloud auth activate-service-account --key-file="${FIREBASE_JSON_KEY}" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
+  - section_end "Authenticate with GCP"
 
 .install-firebase:
   - section_start "Install Firebase"
@@ -88,7 +92,6 @@ build-docs:
     - .content_docs_rule
   tags:
     - high-mem
-    - cortex-content-1738
   variables:
     KUBERNETES_MEMORY_REQUEST: 32Gi
     KUBERNETES_MEMORY_LIMIT: 32Gi
@@ -129,6 +132,7 @@ build-docs:
     - section_end "Tar build dir"
     - !reference [.install-firebase]
     - !reference [.authenticate-firebase]
+    - !reference [.gcloud-authenticate]
     - !reference [.get_pr_details_github]
     - !reference [.publish-to-firebase]
     - !reference [.comment-on-pr]
