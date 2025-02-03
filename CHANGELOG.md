@@ -1,3 +1,10 @@
+# Content Infrastructure 0.0.26 (2025-02-03)
+
+### Bugfixes
+
+- Revert "add support in authenticate tag".
+
+
 # Content Infrastructure 0.0.25 (2025-01-30)
 
 ### Features
