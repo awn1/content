@@ -1,3 +1,16 @@
+# Content Infrastructure 0.0.27 (2025-02-04)
+
+### Features
+
+- Added the "enabled" arg to the create_disposable_tenants script.
+- New secript wait_disposable_tenants_ready.
+- Updated the demisto-sdk version 1.35.0 in Infra.
+
+### Bugfixes
+
+- Fixed the update_tenant_configmap script with added configmap for XSIAM.
+
+
 # Content Infrastructure 0.0.26 (2025-02-03)
 
 ### Bugfixes
