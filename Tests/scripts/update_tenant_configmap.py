@@ -16,22 +16,42 @@ from Tests.scripts.infra.viso_api import VisoAPI
 from Tests.scripts.infra.xsoar_api import XsiamClient, XsoarClient
 from Tests.scripts.utils.log_util import install_logging
 
-CONFIG_MAP_NAME = "configmap-xsoar-feature-flags"
-BASE_MAP_DICT = {
+XSOAR_CONFIGMAP_NAME = "configmap-xsoar-feature-flags"
+BASE_XSOAR_CONFIGMAP_DICT = {
     "CONTENT_PACK_VERIFY": "false",
     "CONTENT_PACK_BASE_DELETE_ALLOWED": "true",
     "VERSION_CONTROL_ENABLED": "false",
 }
-XSIAM_MAP_DICT = {
+XSIAM_XSOAR_CONFIGMAP_DICT = {
     "FORWARD_REQUEST_HEADER_TIMEOUT": "600",
     "FORWARD_REQUEST_TIMEOUT": "600",
     "EXTERNAL_CONTENT_INSTALLATION_POLLING": "10",
-} | BASE_MAP_DICT
+} | BASE_XSOAR_CONFIGMAP_DICT
+CONFIG_MAP_NAME = "configmap-feature-flags"
+CONFIGMAP_DICT = {
+    # The following flags must be added in all the tenants you want to exclude from data retention.
+    # Tenants that DO have data retention enabled will cost the company lots of money
+    "retentionConf_enable_retention_enforcement_simulation": "false",
+    "ALERTSCONF_APPLY_REAL_RETENTION": "false",
+    "INCIDENTSRETENTIONCONF_ENABLED": "false",
+    "RETENTIONCONF_ENFORCEMENT_RETENTION_SERVICE_ENABLED": "false",
+    "RETENTIONCONF_ENFORCEMENT_RETENTION_SERVICE_ENABLED_INCIDENTS": "false",
+    "RETENTIONCONF_ENFORCEMENT_RETENTION_SERVICE_ENABLED_RAW_DATA": "false",
+    # The following flags are added due to a Modeling and Parsing Rule issue CIAC-11125
+    "HPL_ASSOC_LOG_INGESTER_BIGQUERY_OLD_ROW_CONSOLIDATION_ENABLED": "false",
+    "HPL_DMS_BIGQUERY_OLD_ROW_CONSOLIDATION_ENABLED": "false",
+    "HPL_EDR_BIGQUERY_OLD_ROW_CONSOLIDATION_ENABLED": "false",
+    "HPL_IT_METRICS_BIGQUERY_OLD_ROW_CONSOLIDATION_ENABLED": "false",
+    "HPL_PZ_BIGQUERY_OLD_ROW_CONSOLIDATION_ENABLED": "false",
+    "HPL_PZ_EDR_BASE_BQ_INGESTER_BIGQUERY_OLD_ROW_CONSOLIDATION_ENABLED": "false",
+    "HPL_XQL_BIGQUERY_OLD_ROW_CONSOLIDATION_ENABLED": "false",
+    "HPL_XQL_EGRESS_OLD_ROW_CONSOLIDATION_ENABLED": "false",
+}
 XSOAR_MARKETPLACE_BYPASS_URL = "marketplace-saas-dist-dev/upload-flow/builds-xsoar-ng/qa2-test-{lcaas_id}"
 XSIAM_MARKETPLACE_BYPASS_URL = "marketplace-v2-dist-dev/upload-flow/builds-xsiam/qa2-test-{lcaas_id}"
 SERVER_TYPE_TO_MAP_DICT = {
-    XsoarClient.SERVER_TYPE: BASE_MAP_DICT,
-    XsiamClient.SERVER_TYPE: XSIAM_MAP_DICT,
+    XsoarClient.SERVER_TYPE: BASE_XSOAR_CONFIGMAP_DICT,
+    XsiamClient.SERVER_TYPE: XSIAM_XSOAR_CONFIGMAP_DICT,
 }
 MARKETPLACE_BOOTSTRAP_BYPASS_URL_KEY = "MARKETPLACE_BOOTSTRAP_BYPASS_URL"
 SERVER_TYPE_TO_MARKETPLACE_BYPASS_URL = {
@@ -74,9 +94,9 @@ def main() -> None:
             logging.info(f"Updating config map for tenant: {tenant_id}")
             lcaas_id = tenant_id.split("-")[-1]
             server_type = tenant_data.get("server_type")
-            map_dict = SERVER_TYPE_TO_MAP_DICT[server_type]
+            xsoar_configmap_dict = SERVER_TYPE_TO_MAP_DICT[server_type]
             if tenant_data.get("build_machine"):
-                map_dict.update(
+                xsoar_configmap_dict.update(
                     {
                         MARKETPLACE_BOOTSTRAP_BYPASS_URL_KEY: SERVER_TYPE_TO_MARKETPLACE_BYPASS_URL[server_type].format(
                             lcaas_id=lcaas_id
@@ -84,8 +104,11 @@ def main() -> None:
                     }
                 )
 
-            viso_api.update_config_map([lcaas_id], CONFIG_MAP_NAME, map_dict)
-            logging.info(f"Successfully updated config map for tenant: {tenant_id}")
+            viso_api.update_config_map([lcaas_id], XSOAR_CONFIGMAP_NAME, xsoar_configmap_dict)
+            logging.info(f"Successfully updated '{XSOAR_CONFIGMAP_NAME}' configmap for tenant: {tenant_id}")
+            if server_type == XsiamClient.SERVER_TYPE:
+                viso_api.update_config_map([lcaas_id], CONFIG_MAP_NAME, CONFIGMAP_DICT)
+                logging.info(f"Successfully updated '{CONFIG_MAP_NAME}' configmap for tenant: {tenant_id}")
 
     except Exception as e:
         logging.error(f"Unexpected error occurred while running the script: {e}")
