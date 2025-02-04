@@ -2,7 +2,7 @@
 set -ex
 
 echo "CI_COMMIT_BRANCH: $CI_COMMIT_BRANCH CI: $CI DEMISTO_README_VALIDATION: $DEMISTO_README_VALIDATION, CI_COMMIT_SHA: $CI_COMMIT_SHA, LAST_UPLOAD_COMMIT: $LAST_UPLOAD_COMMIT"
-if [[ $CI_COMMIT_BRANCH = master ]] || [[ "${IS_NIGHTLY}" == "true" ]] || [[ "${BUCKET_UPLOAD}" == "true" ]] || [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]]; then
+if [[ $CI_COMMIT_BRANCH = master ]] || [[ "${IS_NIGHTLY}" == "true" ]] || [[ "${BUCKET_UPLOAD}" == "true" ]] || [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]] || [[ "${SHOULD_VALIDATE_ALL}" == "true" ]]; then
   if [[ -n "${PACKS_TO_UPLOAD}" ]]; then
     echo "Packs upload - Validating only the supplied packs"
     PACKS_TO_UPLOAD_SPACED=${PACKS_TO_UPLOAD//,/ }
