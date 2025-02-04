@@ -909,6 +909,15 @@
       if [[ "$CI_COMMIT_BRANCH" =~ ^AUD-demisto/.* ]]; then
         echo "In auto update docker flow, skipping validate and linter execution."
       else
+        export SHOULD_VALIDATE_ALL=false
+        # simply compare against origin/master. Local testing case..
+        DIFF_COMPARE=origin/master
+
+        DIFF_RES=$(git diff "$DIFF_COMPARE" -- validation_config.toml)
+        if [[ -n "$DIFF_RES" ]]; then
+          echo "validation config has been modified, will run new validate with -a"
+          export SHOULD_VALIDATE_ALL=true
+        fi
         ./Tests/scripts/new_validate.sh
       fi
     - section_end "Validate Files and Yaml"
