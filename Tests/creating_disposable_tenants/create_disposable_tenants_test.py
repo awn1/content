@@ -1,6 +1,6 @@
 import json
 
-from Tests.scripts.create_disposable_tenants import (
+from Tests.creating_disposable_tenants.create_disposable_tenants import (
     XSIAM_VERSION,
     XSOAR_SAAS_DEMISTO_VERSION,
     XsiamClient,
@@ -102,7 +102,7 @@ def test_prepare_outputs_missing_tenant_info(mocker):
     When: The prepare_outputs function is called with incomplete tenant info.
     Then: The function should handle missing information gracefully and return partial output.
     """
-    mocker.patch("Tests.scripts.create_disposable_tenants.extract_xsoar_ng_version", return_value="")
+    mocker.patch("Tests.creating_disposable_tenants.create_disposable_tenants.extract_xsoar_ng_version", return_value="")
 
     tenant_ids = ["123", "456"]
     tenant_info = [
@@ -126,7 +126,7 @@ def test_save_to_output_file_new_file(tmp_path, mocker):
     output_path = tmp_path / "new_output.json"
     output_data = {"test1": {"server_type": "XSOAR", "flow_type": "build"}}
 
-    mock_logger = mocker.patch("Tests.scripts.create_disposable_tenants.logging")
+    mock_logger = mocker.patch("Tests.creating_disposable_tenants.create_disposable_tenants.logging")
 
     save_to_output_file(output_path, output_data)
 
@@ -157,7 +157,7 @@ def test_save_to_output_file_existing_file(tmp_path, mocker):
         "test4": {"server_type": "XSIAM", "flow_type": "build"},
     }
 
-    mock_logger = mocker.patch("Tests.scripts.create_disposable_tenants.logging")
+    mock_logger = mocker.patch("Tests.creating_disposable_tenants.create_disposable_tenants.logging")
 
     save_to_output_file(output_path, new_output_data)
 
@@ -188,7 +188,7 @@ def test_save_to_output_file_json_decode_error(tmp_path, mocker):
 
     output_data = {"test1": {"server_type": "XSOAR", "flow_type": "build"}}
 
-    mock_logger = mocker.patch("Tests.scripts.create_disposable_tenants.logging")
+    mock_logger = mocker.patch("Tests.creating_disposable_tenants.create_disposable_tenants.logging")
 
     save_to_output_file(output_path, output_data)
 
@@ -204,7 +204,7 @@ def test_save_to_output_file_unexpected_error(tmp_path, mocker):
     output_path = tmp_path / "error_output.json"
     output_data = {"test1": {"server_type": "XSOAR", "flow_type": "build"}}
 
-    mock_logger = mocker.patch("Tests.scripts.create_disposable_tenants.logging")
+    mock_logger = mocker.patch("Tests.creating_disposable_tenants.create_disposable_tenants.logging")
     mocker.patch("builtins.open", side_effect=Exception("Unexpected error"))
 
     save_to_output_file(output_path, output_data)
