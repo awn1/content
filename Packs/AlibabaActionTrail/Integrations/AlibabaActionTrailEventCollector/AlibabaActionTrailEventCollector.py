@@ -43,11 +43,6 @@ class AlibabaEventsClient(IntegrationEventsClient):
         try:
             response = self.session.request(**self.request.dict(by_alias=True))
             demisto.debug(f"raw response is: {response.json()}")
-            demisto.debug(f"raw response text is: {response.text}")
-            demisto.debug(f"raw response content is: {response._content}")
-            demisto.debug(f"raw response encoding is: {response.encoding}")
-            demisto.debug(f"raw response url is: {response.url}")
-            demisto.debug(f"raw response headers is: {response.headers}")
             response.raise_for_status()
             return response
         except Exception as exc:
@@ -63,12 +58,10 @@ class AlibabaEventsClient(IntegrationEventsClient):
 
         signature = get_request_authorization(f'/logstores/{self.logstore_name}', self.access_key,
                                               self.request.params.dict(by_alias=True), headers)  # type: ignore
-        demisto.debug(f"signature is: {signature}")
 
         headers['Authorization'] = "LOG " + self.access_key_id + ':' + signature
         headers['x-log-date'] = headers['Date']
         del headers['Date']
-        demisto.debug(f"headers are: {headers}")
 
         self.request.headers = headers
 
@@ -146,7 +139,6 @@ def get_request_authorization(resource, key, req_params, req_headers):
     content += req_headers['Date'] + "\n"
     content += canonicalized_log_headers(req_headers)
     content += canonicalized_resource(resource, req_params)
-    demisto.debug(f"content is: {content}")
     return hmac_sha1(content, key)
 
 def get_alibaba_timestamp_format(value):
