@@ -730,6 +730,9 @@ def get_one_page_of_packs_dependencies(
 
     def success_handler(response):
         logging.success(f"Succeeded to fetch dependencies of page {page}")
+        if not isinstance(response, dict):
+            logging.error(f"Unexpected response type: {type(response)}, response: {response}")
+            raise ValueError(f"Unexpected response type: {type(response)}")
         return True, response
 
     failure_massage = f"Failed to fetch dependencies of page: {page}"
