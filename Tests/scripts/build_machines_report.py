@@ -22,7 +22,7 @@ from urllib3.exceptions import InsecureRequestWarning
 from SecretActions.add_build_machine import BUILD_MACHINE_GSM_AUTH_ID
 from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule, SecretLabels
 from SecretActions.SecretsBuild.merge_and_delete_dev_secrets import delete_dev_secrets
-from Tests.scripts.create_disposable_tenants import AGENT_IP_DEFAULT_MESSAGE, AGENT_NAME_DEFAULT_MESSAGE
+from Tests.creating_disposable_tenants.create_disposable_tenants import AGENT_IP_DEFAULT_MESSAGE, AGENT_NAME_DEFAULT_MESSAGE
 from Tests.scripts.graph_lock_machine import (
     AVAILABLE_MACHINES,
     BUILD_IN_QUEUE,
