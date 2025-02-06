@@ -884,7 +884,10 @@ def scheduled_commands_for_more_users(accounts: list, next_page_token: str) -> L
             _counter += 1
             demisto.debug(
                 "Arguments of `schedule_command` for the command `search_all_mailboxes`,"
-                f"command number {_counter}: {command.scheduled_command.__dict__}"
+                f" command number {_counter}: command={command.scheduled_command._command}"
+                f" next_run={command.scheduled_command._next_run}"
+                f" _timeout={command.scheduled_command._timeout}"
+                f" _items_remaining={command.scheduled_command._items_remaining}"
             )
     return command_results
 
