@@ -883,7 +883,7 @@ def scheduled_commands_for_more_users(accounts: list, next_page_token: str) -> L
         if command.scheduled_command:
             _counter += 1
             demisto.debug(
-                "Arguments of **schedule_command** for the command **search_all_mailboxes**,"
+                "Arguments of `schedule_command` for the command `search_all_mailboxes`,"
                 f"command number {_counter}: {command.scheduled_command.__dict__}"
             )
     return command_results
