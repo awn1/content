@@ -850,15 +850,16 @@ def scheduled_commands_for_more_users(accounts: list, next_page_token: str) -> L
 
     command_results: list[CommandResults] = []
     args = copy.deepcopy(demisto.args())
+    next_run_in_seconds = 0
     for batch in accounts_batches:
-
+        next_run_in_seconds += 10
         args.update({'list_accounts': batch})
         command_results.append(
             CommandResults(
                 readable_output='Searching mailboxes, please wait...',
                 scheduled_command=ScheduledCommand(
                     command='gmail-search-all-mailboxes',
-                    next_run_in_seconds=10,
+                    next_run_in_seconds=next_run_in_seconds,
                     args=copy.deepcopy(args),
                     timeout_in_seconds=600
                 )
