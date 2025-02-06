@@ -803,8 +803,8 @@ def search_quarantine():
     lstAlert = []
     mid = demisto.args().get('message_id')
     recipient = demisto.args().get('recipient')
-    limit_quarantine_occurred_time = demisto.args().get('limit_quarantine_occurred_time')
-    quarantine_timestamp_limit = int(demisto.args().get('quarantine_timestamp_limit'))
+    limit_quarantine_occurred_time = argToBoolean(demisto.args().get('limit_quarantine_occurred_time'))
+    quarantine_timestamp_limit = arg_to_number(demisto.args().get('quarantine_timestamp_limit'))
 
 
     request_params = {
@@ -877,7 +877,7 @@ def search_quarantine():
                 if isinstance(tsquarantine, datetime) and isinstance(tsalert, datetime):
                     diff = (tsquarantine - tsalert).total_seconds()
                     # we want to make sure quarantine starts within the timestamp limit set after creating the alert if limit_quarantine_occurred_time is set to true, if false return quarantine regardless.
-                    if limit_quarantine_occurred_time == 'False' or 0 < diff < quarantine_timestamp_limit:
+                    if not limit_quarantine_occurred_time or 0 < diff < quarantine_timestamp_limit:
                         resQ.append({
                             'quarantine': quarantine,
                             'alert': {
