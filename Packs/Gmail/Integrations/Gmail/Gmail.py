@@ -49,9 +49,13 @@ LEGACY_NAME = argToBoolean(demisto.params().get('legacy_name', False))
 SEND_AS_SMTP_FIELDS = ['host', 'port', 'username', 'password', 'securitymode']
 DATE_FORMAT = '%Y-%m-%d'  # sample - 2020-08-23
 
+# uses for `search_all_mailboxes` command
 BATCH_DIVIDER = 5
 MAX_USERS = 2500
 MAX_WITHOUT_POLLING = 500
+# A delay of a few seconds between executions of `search_all_mailboxes` command
+# to avoid excessive load on Gmail API calls.
+DELAY_BETWEEN_COMMANDS = 10
 
 ''' HELPER FUNCTIONS '''
 
@@ -852,7 +856,7 @@ def scheduled_commands_for_more_users(accounts: list, next_page_token: str) -> L
     args = copy.deepcopy(demisto.args())
     next_run_in_seconds = 0
     for batch in accounts_batches:
-        next_run_in_seconds += 10
+        next_run_in_seconds += DELAY_BETWEEN_COMMANDS
         args.update({'list_accounts': batch})
         command_results.append(
             CommandResults(
@@ -874,6 +878,14 @@ def scheduled_commands_for_more_users(accounts: list, next_page_token: str) -> L
             )
         )
 
+    _counter = 0
+    for command in command_results:
+        if command.scheduled_command:
+            _counter += 1
+            demisto.debug(
+                "Arguments of **schedule_command** for the command **search_all_mailboxes**,"
+                f"command number {_counter}: {command.scheduled_command.__dict__}"
+            )
     return command_results
 
 
