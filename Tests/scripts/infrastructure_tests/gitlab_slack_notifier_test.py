@@ -1,13 +1,12 @@
 import logging
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
+from gitlab import Gitlab
 from pytest_mock import MockerFixture
 
-from Tests.scripts.gitlab_slack_notifier import (
-    bucket_sync_msg_builder,
-    construct_coverage_slack_msg,
-)
+import Tests.scripts.gitlab_slack_notifier as gitlab_slack_notifier
 
 
 @pytest.mark.parametrize(
@@ -92,7 +91,7 @@ def test_bucket_sync_msg_builder(
     mocker.patch.object(logging, "debug")
     mocker.patch.object(logging, "info")
 
-    bucket_sync_msg, bucket_sync_thread = bucket_sync_msg_builder(Path("test"))
+    bucket_sync_msg, bucket_sync_thread = gitlab_slack_notifier.bucket_sync_msg_builder(Path("test"))
 
     assert bucket_sync_msg == expected_bucket_sync_msg
     assert bucket_sync_thread == expected_bucket_sync_thread
@@ -135,7 +134,7 @@ def test_construct_coverage_slack_msg(
         side_effect=[mock_coverage_today, mock_coverage_yesterday, 1.0],
     )
 
-    result = construct_coverage_slack_msg()
+    result = gitlab_slack_notifier.construct_coverage_slack_msg()
     assert result[0]["color"] == expected_color
 
 
@@ -156,7 +155,7 @@ def test_construct_coverage_slack_msg_coverage_last_month(
         side_effect=[1.0, 1.0, coverage_last_month, 1.0],
     )
 
-    construct_coverage_slack_msg()
+    gitlab_slack_notifier.construct_coverage_slack_msg()
     assert expected_calls == mock_get_total_coverage.call_count
 
 
@@ -177,5 +176,116 @@ def test_construct_coverage_slack_msg_no_coverage_last_month(
         return_value=0.0,
     )
 
-    result = construct_coverage_slack_msg()
+    result = gitlab_slack_notifier.construct_coverage_slack_msg()
     assert "Last month: no coverage found for last month" in result[0]["title"]
+
+
+# Define common mock objects
+mock_pipeline_1 = MagicMock(id=67889)
+mock_pipeline_2 = MagicMock(id=67890)
+mock_job_1 = MagicMock(id=67890, name="blacklist-validation-job")
+mock_job_2 = MagicMock(id=67889, name="blacklist-validation-job")
+
+
+@pytest.mark.parametrize(
+    """is_within_time_window_return, get_scheduled_pipelines_by_name_return, get_job_by_name_side_effect, is_pivot_return,
+    secrets_sha_has_been_changed_return, expected_result""",
+    [
+        pytest.param(True, None, None, None, None, (True, "Daily Heartbeat - "), id="Within time window"),
+        pytest.param(
+            False,
+            [mock_pipeline_1, mock_pipeline_2],
+            [mock_job_1, mock_job_2],
+            True,
+            None,
+            (True, "Secrets found! :warning:"),
+            id="Pivot detected",
+        ),
+        pytest.param(
+            False,
+            [mock_pipeline_1, mock_pipeline_2],
+            [mock_job_1, mock_job_2],
+            False,
+            None,
+            (True, "Successfully fixed! :muscle:"),
+            id="Pivot fixed",
+        ),
+        pytest.param(
+            False,
+            [mock_pipeline_1, mock_pipeline_2],
+            [mock_job_1, mock_job_2],
+            None,
+            True,
+            (True, "The set of detected secrets has changed! :warning:"),
+            id="No pivot, secrets SHA changed",
+        ),
+        pytest.param(
+            False,
+            [mock_pipeline_1, mock_pipeline_2],
+            [mock_job_1, mock_job_2],
+            None,
+            False,
+            (False, ""),
+            id="No pivot, secrets SHA not changed",
+        ),
+        pytest.param(False, [mock_pipeline_2], None, None, None, (False, ""), id="Not enough pipelines"),
+    ],
+)
+def test_should_send_blacklist_message(
+    mocker,
+    is_within_time_window_return,
+    get_scheduled_pipelines_by_name_return,
+    get_job_by_name_side_effect,
+    is_pivot_return,
+    secrets_sha_has_been_changed_return,
+    expected_result,
+):
+    """
+    Test the should_send_blacklist_message function with various scenarios.
+
+    Args:
+        mocker: The mocker fixture for patching.
+        is_within_time_window_return (bool): The return value for the is_within_time_window function.
+        get_scheduled_pipelines_by_name_return (list): The return value for the get_scheduled_pipelines_by_name function.
+        get_job_by_name_side_effect (list): The side effect for the get_job_by_name function.
+        is_pivot_return (bool or None): The return value for the is_pivot function.
+        secrets_sha_has_been_changed_return (bool or None): The return value for the secrets_sha_has_been_changed function.
+        expected_result (tuple): The expected result from the should_send_blacklist_message function.
+
+    Scenarios:
+        - Within time window.
+        - Pivot detected.
+        - Pivot fixed.
+        - No pivot, secrets SHA changed.
+        - No pivot, secrets SHA not changed.
+        - Not enough pipelines.
+
+    Asserts:
+        - The result from should_send_blacklist_message matches the expected result.
+    """
+    # Create a mock GitLab client
+    gitlab_client = MagicMock(spec=Gitlab)
+    project_id = "12345"
+
+    # Mock the time window check
+    mocker.patch.object(gitlab_slack_notifier, "is_within_time_window", return_value=is_within_time_window_return)
+
+    # Mock the pipelines
+    mocker.patch.object(
+        gitlab_slack_notifier, "get_scheduled_pipelines_by_name", return_value=get_scheduled_pipelines_by_name_return
+    )
+
+    # Mock the jobs
+    mocker.patch.object(gitlab_slack_notifier, "get_job_by_name", side_effect=get_job_by_name_side_effect)
+
+    # Mock the pivot check
+    mocker.patch.object(gitlab_slack_notifier, "is_pivot", return_value=is_pivot_return)
+
+    # Mock the secrets SHA check
+    mocker.patch.object(gitlab_slack_notifier, "secrets_sha_has_been_changed", return_value=secrets_sha_has_been_changed_return)
+
+    #  Mock the blacklist status details
+    mocker.patch.object(gitlab_slack_notifier, "get_blacklist_status_details", return_value="")
+
+    result = gitlab_slack_notifier.should_send_blacklist_message(gitlab_client, project_id, 1, 2, 3, "")
+    assert result == expected_result

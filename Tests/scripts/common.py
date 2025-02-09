@@ -1,17 +1,20 @@
 import json
 import operator
+import tempfile
+import zipfile
 from collections.abc import Iterable
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
+import gitlab
 import requests
 from dateutil import parser
 from demisto_sdk.commands.common.constants import MarketplaceVersions
 from gitlab import Gitlab
+from gitlab.v4.objects import ProjectJob, ProjectPipeline
 from gitlab.v4.objects.commits import ProjectCommit
-from gitlab.v4.objects.pipelines import ProjectPipeline
 from jira import Issue
 from junitparser import JUnitXml, TestSuite
 
@@ -33,6 +36,7 @@ SDK_RELEASE = "Automate Demisto SDK release"
 NATIVE_NIGHTLY = "Native Nightly"
 CONTENT_DOCS_PR = "Content Docs PR"
 CONTENT_DOCS_NIGHTLY = "Content Docs Nightly"
+BLACKLIST_VALIDATION = "Blacklist Validation"
 WORKFLOW_TYPES = {
     DOCKERFILES_PR,
     CONTENT_NIGHTLY,
@@ -48,6 +52,7 @@ WORKFLOW_TYPES = {
     CONTENT_DOCS_PR,
     CONTENT_DOCS_NIGHTLY,
     DEPLOY_AUTO_UPGRADE_PACKS,
+    BLACKLIST_VALIDATION,
 }
 BUCKET_UPLOAD_BRANCH_SUFFIX = "-upload_test_branch"
 TOTAL_HEADER = "Total"
@@ -390,43 +395,50 @@ def get_person_in_charge(commit: ProjectCommit) -> tuple[str, str, str] | tuple[
         return None, None, None
 
 
-def are_pipelines_in_order(pipeline_a: ProjectPipeline, pipeline_b: ProjectPipeline) -> bool:
+def are_entities_in_order(entity_a: ProjectPipeline | ProjectJob, entity_b: ProjectPipeline | ProjectJob) -> bool:
     """
-    Check if the pipelines are in the same order of their commits.
+    Check if the entities (pipelines or jobs) are in the same order of their creation timestamps.
+
     Args:
-        pipeline_a: The first pipeline object.
-        pipeline_b: The second pipeline object.
+        entity_a: The first entity object (pipeline or job).
+        entity_b: The second entity object (pipeline or job).
+
     Returns:
-        bool
+        bool: True if entity_a is created after entity_b, False otherwise.
     """
+    entity_a_timestamp = parser.parse(entity_a.created_at)
+    entity_b_timestamp = parser.parse(entity_b.created_at)
+    return entity_a_timestamp > entity_b_timestamp
 
-    pipeline_a_timestamp = parser.parse(pipeline_a.created_at)
-    pipeline_b_timestamp = parser.parse(pipeline_b.created_at)
-    return pipeline_a_timestamp > pipeline_b_timestamp
 
-
-def is_pivot(current_pipeline: ProjectPipeline, pipeline_to_compare: ProjectPipeline) -> bool | None:
+def is_pivot(current_entity: ProjectPipeline | ProjectJob, entity_to_compare: ProjectPipeline | ProjectJob) -> bool | None:
     """
-    Is the current pipeline status a pivot from the previous pipeline status.
+    Is the current entity status a pivot from the previous entity status.
     Args:
-        current_pipeline: The current pipeline object.
-        pipeline_to_compare: a pipeline object to compare to.
+        current_entity: The current entity object (pipeline or job).
+        entity_to_compare: An entity object (pipeline or job) to compare to.
     Returns:
-        True status changed from success to failed
-        False if the status changed from failed to success
-        None if the status didn't change or the pipelines are not in order of commits
+        True if the status changed from success to failed.
+        False if the status changed from failed to success.
+        None if the status didn't change or the entities are not in order of creation.
     """
 
-    in_order = are_pipelines_in_order(pipeline_a=current_pipeline, pipeline_b=pipeline_to_compare)
+    in_order = are_entities_in_order(entity_a=current_entity, entity_b=entity_to_compare)
     if in_order:
         logging.info(
-            f"The status of the current pipeline {current_pipeline.id} is {current_pipeline.status} and the "
-            f"status of the compared pipeline {pipeline_to_compare.id} is {pipeline_to_compare.status}"
+            f"The status of the current entity {current_entity.id} is {current_entity.status} and the "
+            f"status of the compared entity {entity_to_compare.id} is {entity_to_compare.status}"
         )
-        if pipeline_to_compare.status == "success" and current_pipeline.status == "failed":
+
+        if entity_to_compare.status == "success" and current_entity.status == "failed":
             return True
-        if pipeline_to_compare.status == "failed" and current_pipeline.status == "success":
+        if entity_to_compare.status == "failed" and current_entity.status == "success":
             return False
+    else:
+        logging.error(
+            f"The entities are not in order of creation, current entity: {current_entity.id}, "
+            f"compared entity: {entity_to_compare.id}"
+        )
     return None
 
 
@@ -567,6 +579,91 @@ def was_message_already_sent(commit_index: int, list_of_commits: list, list_of_p
     return False
 
 
+def get_job_by_name(gitlab_client: gitlab.Gitlab, project_id: str, pipeline_id: int, job_name: str) -> ProjectJob | None:
+    """
+    Retrieve a job within a given pipeline that match a specific job name. (Only one job is expected to match the name.)
+    Args:
+        gitlab_client - The GitLab client instance.
+        project_id - The ID of the project.
+        pipeline_id - The ID of the pipeline.
+        job_name - The name of the job to filter.
+
+    Returns:
+         The job object if found, None otherwise
+    """
+    project = gitlab_client.projects.get(project_id)
+    pipeline = project.pipelines.get(pipeline_id)
+    jobs = pipeline.jobs.list(all=True)
+
+    # Find the job by the specified job name
+    for job in jobs:
+        if job.name == job_name:
+            return job
+    logging.error(f"Job {job_name} not found in pipeline {pipeline_id}")
+    return None
+
+
+def download_and_read_artifact(gitlab_client: gitlab.Gitlab, project_id: str, job_id: int, artifact_path: Path) -> str:
+    """
+    Download (for reading only, without saving the file) the artifact of a specific job and read the content of a file.
+
+    Args:
+        gitlab_client (gitlab.Gitlab): The GitLab client instance.
+        project_id (str): The ID of the project.
+        job_id (int): The ID of the job.
+        artifact_path (str): The path of the file to read within the artifact.
+    Returns:
+        str: The content of the specified file.
+    """
+    try:
+        # Get the job object
+        job = gitlab_client.projects.get(project_id).jobs.get(job_id)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifacts_zip_file = Path(temp_dir) / "artifacts.zip"
+
+            # Download and extract the artifact
+            with open(artifacts_zip_file, "wb") as f:
+                job.artifacts(streamed=True, action=f.write)
+            with zipfile.ZipFile(artifacts_zip_file, "r") as zip_ref:
+                zip_ref.extractall(temp_dir)
+
+            # Read the content of the specified file within the extracted directory
+            return (Path(temp_dir) / artifact_path).read_text()
+            return (Path(temp_dir) / artifact_path).read_text()
+
+    except Exception as e:
+        error_message = f"Failed to download or extract artifacts for job {job_id}: {e}"
+        raise Exception(error_message) from e
+
+
+def secrets_sha_has_been_changed(
+    gitlab_client: gitlab.Gitlab, project_id: str, last_job_id: int, second_to_last_job_id, artifact_path: Path
+) -> bool:
+    """
+    Check if the SHA representing a list of secrets has changed between the last and second-to-last jobs.
+
+    Args:
+        gitlab_client (gitlab.Gitlab): The GitLab client instance.
+        project_id (str): The ID of the GitLab project.
+        last_job_id (int): The job ID of the last run.
+        second_to_last_job_id (int): The job ID of the second-to-last run.
+        artifact_path (str): The path to the artifact containing the secrets data.
+
+    Returns:
+        bool: True if the SHA of secrets has changed, False otherwise.
+    """
+    last_job_artifacts = download_and_read_artifact(gitlab_client, project_id, last_job_id, artifact_path)
+    second_to_last_job_artifacts = download_and_read_artifact(gitlab_client, project_id, second_to_last_job_id, artifact_path)
+    sha_of_secrets_in_last_job = json.loads(last_job_artifacts)[0].get("hash")
+    sha_of_secrets_in_second_to_last_job = json.loads(second_to_last_job_artifacts)[0].get("hash")
+    logging.info(
+        f"The SHA of secrets found in last_job is : {sha_of_secrets_in_last_job},"
+        f"and in previous run it was is : {sha_of_secrets_in_second_to_last_job}",
+    )
+    return sha_of_secrets_in_last_job != sha_of_secrets_in_second_to_last_job
+
+
 def get_nearest_newer_commit_with_pipeline(
     list_of_pipelines: list[ProjectPipeline], list_of_commits: list[ProjectCommit], current_commit_index: int
 ) -> tuple[ProjectPipeline, list] | tuple[None, None]:
@@ -662,3 +759,60 @@ def join_list_by_delimiter_in_chunks(list_to_join: Iterable[str], delimiter: str
     if current_chunk:
         chunks.append(current_chunk)
     return chunks
+
+
+def is_within_time_window(target_hours: int, target_minutes: int, window_minutes: int) -> bool:
+    """
+    Check if the current time is within a specified time window of a target time.
+
+    Args:
+        target_hours - The starting hour (0-23) in UTC for the range window when the Slack message should be sent.
+        target_minutes- The starting minute (0-59) in UTC for the range window when the Slack message should be sent.
+        window_minutes - The duration of the range window in minutes during which the Slack message can be sent.
+
+    Returns:
+        True if the current time is within the time window of the target time, False otherwise.
+    """
+    now = datetime.now(tz=timezone.utc)
+    target_time = now.replace(hour=target_hours, minute=target_minutes, second=0, microsecond=0)
+
+    # Calculate the time difference
+    time_difference = abs(now - target_time)
+
+    logging.info(
+        f"Current time (UTC): {now}, "
+        f"Target time (UTC): {target_time}, "
+        f"Time difference: {time_difference}, "
+        f"Window duration: {timedelta(minutes=window_minutes)}"
+    )
+
+    # Check if the time difference is within the specified time window
+    return time_difference <= timedelta(minutes=window_minutes)
+
+
+def get_scheduled_pipelines_by_name(
+    gitlab_client: Gitlab, project_id: str, pipeline_name: str, look_back_hours: int
+) -> list[ProjectPipeline]:
+    """
+    Get all scheduled pipelines of a specific name within the last X hours.
+    Args:
+        gitlab_client - The GitLab client instance.
+        project_id - The ID of the project to query.
+        pipeline_name - The name of the scheduled pipeline to filter.
+        look_back_hours - The number of hours to look back for scheduled pipelines.
+
+    Returns:
+        A list of GitLab pipelines that match the criteria.
+    """
+    project = gitlab_client.projects.get(project_id)
+    time_threshold = (datetime.utcnow() - timedelta(hours=look_back_hours)).isoformat()
+
+    return project.pipelines.list(
+        all=True,
+        updated_after=time_threshold,
+        ref="master",
+        source="schedule",
+        order_by="id",
+        sort="asc",
+        name=pipeline_name,
+    )

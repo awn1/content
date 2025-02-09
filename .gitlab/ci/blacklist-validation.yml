@@ -66,3 +66,6 @@ blacklist-validation-slack-notify:
     SLACK_ALLOW_FAILURE: "false"
     ARTIFACT_PATH: "${CI_PROJECT_DIR}/artifacts"
     SLACK_MSG_THREAD: "${ARTIFACT_PATH}/black_list_report_for_slack.json"
+    TARGET_HOUR: $TARGET_HOUR
+    TARGET_MINUTES: $TARGET_MINUTES
+    WINDOW_MINUTES: $WINDOW_MINUTES
