@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -475,7 +476,9 @@ def get_all_github_links(secrets_filenames, matching_secrets):
     return secret_files_links_with_secrets
 
 
-def create_slack_report(secrets_found: bool, secrets_filenames: list, matching_secrets: list) -> list[dict]:
+def create_slack_report(
+    secrets_found: bool, secrets_filenames: list, matching_secrets: list, matching_secrets_hash: str
+) -> list[dict]:
     """
     Create a Slack report based on the results of the secrets search.
 
@@ -483,13 +486,16 @@ def create_slack_report(secrets_found: bool, secrets_filenames: list, matching_s
     secrets_found (bool): Indicates whether secrets were found.
     secrets_filenames (list): List of filenames where secrets were found.
     matching_secrets (list): List of matching secrets.
+    matching_secrets_hash (str): The hash of all matching secrets, or the hash of an empty list if no secrets are found.
 
     Returns:
     list[dict]: A list of dictionaries representing the Slack report.
     """
     text = ""
+    color = "good"
     secret_links_thread = []
     if secrets_found:
+        color = "danger"
         logging.info("Secrets were found in the repository. Creating Slack report.")
         secret_files_links = get_all_github_links(secrets_filenames, matching_secrets)
         if secret_files_links:
@@ -501,7 +507,36 @@ def create_slack_report(secrets_found: bool, secrets_filenames: list, matching_s
         else:
             text = "Secrets found. An error occurred while extracting results."
 
-    return [{"text": text, "short": False, "color": "danger"}] + secret_links_thread
+    return [{"text": text, "hash": matching_secrets_hash, "short": False, "color": color}] + secret_links_thread
+
+
+def deterministic_hash_from_list(strings: list) -> str:
+    """
+    Generate a deterministic hash for a list of strings.
+    Args:
+        strings (list): The input list of strings.
+    Returns:
+        str: The hexadecimal representation of the hash.
+    """
+    # Remove duplicates and sort the list to ensure deterministic order
+    unique_sorted_strings = sorted(set(strings))
+    # Convert the sorted list to a single string
+    combined_string = "".join(unique_sorted_strings)
+    return deterministic_hash(combined_string)
+
+
+def deterministic_hash(text: str) -> str:
+    """
+    Generate a deterministic hash for a given input string.
+    Args:
+        text (str): The input text to hash.
+    Returns:
+        str: The hexadecimal representation of the hash.
+    """
+    text_bytes = text.encode("utf-8")
+    hash_object = hashlib.sha256()
+    hash_object.update(text_bytes)
+    return hash_object.hexdigest()
 
 
 def main():
@@ -519,7 +554,8 @@ def main():
 
         packs_dirs_list = glob(os.path.join(content_root_dir, "Packs/*"))
         secrets_found, secrets_filenames, matching_secrets = parallel_secrets_detection(packs_dirs_list, blacklist_data)
-        slack_report = create_slack_report(secrets_found, secrets_filenames, matching_secrets)
+        matching_secrets_hash = deterministic_hash_from_list(matching_secrets)
+        slack_report = create_slack_report(secrets_found, secrets_filenames, matching_secrets, matching_secrets_hash)
 
     except Exception as e:
         secrets_found = "error"

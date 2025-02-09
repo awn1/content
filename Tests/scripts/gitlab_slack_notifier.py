@@ -22,6 +22,7 @@ from slack_sdk import WebClient
 
 from Tests.Marketplace.marketplace_constants import BucketUploadFlow
 from Tests.scripts.common import (
+    BLACKLIST_VALIDATION,
     BUCKET_UPLOAD,
     BUCKET_UPLOAD_BRANCH_SUFFIX,
     CONTENT_DOCS_NIGHTLY,
@@ -33,11 +34,16 @@ from Tests.scripts.common import (
     TEST_MODELING_RULES_REPORT_FILE_NAME,
     TEST_PLAYBOOKS_REPORT_FILE_NAME,
     get_instance_directories,
+    get_job_by_name,
     get_properties_for_test_suite,
+    get_scheduled_pipelines_by_name,
     get_slack_user_name,
     get_test_results_files,
+    is_pivot,
+    is_within_time_window,
     join_list_by_delimiter_in_chunks,
     replace_escape_characters,
+    secrets_sha_has_been_changed,
     slack_link,
 )
 from Tests.scripts.github_client import GithubPullRequest
@@ -89,6 +95,12 @@ OLD_SLACK_MESSAGE_THREADS = "threaded_messages.json"
 OLD_SLACK_MESSAGE_CHANNEL_TO_THREAD = "channel_to_thread.json"
 DAYS_TO_SEARCH = 30
 ALLOWED_COVERAGE_PROXIMITY = 0.25  # Percentage threshold for allowed coverage proximity.
+BLACKLIST_VALIDATION_JOB = "blacklist-validation-job"
+BLACKLIST_VALIDATION_PIPELINE = "Blacklist validation pipeline"
+TARGET_HOUR = 6
+TARGET_MINUTES = 0
+WINDOW_MINUTES = 25
+LOOK_BACK_HOURS = 2
 
 
 def options_handler() -> argparse.Namespace:
@@ -114,6 +126,22 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument("-t", "--attachments", help="File path with the attachments to send", required=False)
     parser.add_argument("-th", "--thread", help="A message to be sent as a thread", required=False)
     parser.add_argument("-dr", "--dry_run", help="true for a dry run pipeline, false for a prod pipeline", default="false")
+    parser.add_argument(
+        "--target_hours",
+        help="The starting hour (0-23) in UTC for the range window when the Slack message should be sent.",
+        default=TARGET_HOUR,
+    )
+    parser.add_argument(
+        "--target_minutes",
+        help="The starting minute (0-59) in UTC for the range window when the Slack message should be sent",
+        default=TARGET_MINUTES,
+    )
+    parser.add_argument(
+        "--window_minutes",
+        help="The duration of the range window in minutes during which the Slack message can be sent.",
+        default=WINDOW_MINUTES,
+    )
+
     return parser.parse_args()
 
 
@@ -502,8 +530,8 @@ def bucket_upload_results(
         )
         threaded_messages.append(
             {
-                "fallback": f'Successfully uploaded {marketplace_name} Pack(s): '
-                f'{", ".join(sorted({*successful_packs},key=lambda s: s.lower()))} to {marketplace_name}',
+                "fallback": f"Successfully uploaded {marketplace_name} Pack(s): "
+                f"{', '.join(sorted({*successful_packs}, key=lambda s: s.lower()))} to {marketplace_name}",
                 "title": f"Successfully uploaded {len(successful_packs)} Pack(s) to {marketplace_name}:",
                 "color": "good",
                 "fields": [
@@ -522,8 +550,8 @@ def bucket_upload_results(
         )
         threaded_messages.append(
             {
-                "fallback": f'Failed to upload {marketplace_name} Pack(s): '
-                f'{", ".join(sorted({*failed_packs}, key=lambda s: s.lower()))}',
+                "fallback": f"Failed to upload {marketplace_name} Pack(s): "
+                f"{', '.join(sorted({*failed_packs}, key=lambda s: s.lower()))}",
                 "title": f"Failed to upload {len(failed_packs)} Pack(s) to {marketplace_name}:",
                 "color": "danger",
                 "fields": [{"title": "", "value": ", ".join(sorted({*failed_packs}, key=lambda s: s.lower())), "short": False}],
@@ -548,6 +576,7 @@ def construct_slack_msg(
     attachments: str | None,
     thread: str | None,
     dry_run: str = "true",
+    custom_title: str = "",
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str, list[dict[str, Any]]]:
     # report failing jobs
     content_fields = []
@@ -648,11 +677,12 @@ def construct_slack_msg(
         # No color is needed in case of success, as it's controlled by the color of the test failures' indicator.
 
     title += title_append
+
     return (
         [{"fallback": title, "color": color, "title": title, "title_link": pipeline_url, "fields": content_fields}]
         + slack_msg_append,
         threaded_messages,
-        title,
+        custom_title or title,
         attachments_json,
     )
 
@@ -671,6 +701,33 @@ def read_and_parse(file_path: str, error_title: str, on_error_append_to: list):
             }
         )
     return []
+
+
+def get_blacklist_status_details(thread_message: str) -> str:
+    """
+    Parses the blacklist check result from the given file path and returns its detailed status.
+
+    Args:
+        thread_message (str): The file path containing the blacklist check result.
+
+    Returns:
+        str: A description of the blacklist check status.
+    """
+    try:
+        msg = read_and_parse(file_path=thread_message, error_title="", on_error_append_to=[])[0]
+
+        if msg.get("color") == "good" and not msg.get("text"):
+            return "No secrets found"
+        if msg.get("color") == "danger" and msg.get("text"):
+            return "Secrets found"
+        if msg.get("color") == "warning" and msg.get("text") == "error":
+            return "An error occurred"
+
+        return "Unknown status"
+
+    except Exception as e:
+        logging.exception(f"Failed to get blacklist status details: {e}")
+        return "Error occurred"
 
 
 def missing_content_packs_test_conf(artifact_folder: Path) -> list[dict[str, Any]]:
@@ -702,7 +759,7 @@ def collect_pipeline_data(gitlab_client: Gitlab, project_id: str, pipeline_id: s
         logging.info(f"status of gitlab job with id {job.id} and name {job.name} is {job.status}")
         if job.status == "failed":
             logging.info(f"collecting failed job {job.name}")
-            logging.info(f'pipeline associated with failed job is {job.pipeline.get("web_url")}')
+            logging.info(f"pipeline associated with failed job is {job.pipeline.get('web_url')}")
             failed_jobs.append(job)  # type: ignore[arg-type]
 
     return pipeline.web_url, failed_jobs
@@ -733,8 +790,7 @@ def construct_coverage_slack_msg(sleep_interval: int = 1) -> list[dict[str, Any]
         else "danger"
     )
     title = (
-        f"Content code coverage: {coverage_today:.3f}% (Yesterday: {coverage_yesterday:.3f}%, "
-        f"Last month: {coverage_last_month})"
+        f"Content code coverage: {coverage_today:.3f}% (Yesterday: {coverage_yesterday:.3f}%, Last month: {coverage_last_month})"
     )
 
     return [
@@ -824,6 +880,73 @@ def get_pipeline_slack_data(gitlab_client: Gitlab, pipeline_id: str, project_id:
     return slack_message, slack_message_threads, slack_message_channel_to_thread, pipeline
 
 
+def should_send_blacklist_message(
+    gitlab_client: Gitlab, project_id: str, target_hours: int, target_minutes: int, window_minutes: int, thread_message: str
+) -> tuple[bool, str]:
+    """
+    Check if a message should be sent for the blacklist validation pipeline.
+    Conditions to send a message:
+    - Within a time window of 25 minutes from 6:00 UTC, a message is sent daily.
+    - If the status of the job that scanned for blacklist changes from the previous job, a message is sent.
+    - If the artifacts of the job that scanned for blacklist have changed from the previous job, a message is sent.
+        (This is to handle cases where the job status remains the same because a new secret was found).
+    Args:
+        gitlab_client (Gitlab): The Gitlab client.
+        project_id (str): The project id.
+        target_hours (int): The starting hour for sending the message.
+        target_minutes (int): The starting minute for sending the message.
+        window_minutes (int): The range window for sending the message.
+        thread_message (str): The message to be sent in the thread.
+    Returns:
+        tuple[bool, str]: A tuple of a boolean indicating if a message should be sent and a short message to append.
+    """
+    if is_within_time_window(target_hours, target_minutes, window_minutes):
+        status_details = get_blacklist_status_details(thread_message)
+        return True, f"Daily Heartbeat - {status_details}"
+    logging.info("The time is not within the time window - moving on to check the pipelines status.")
+
+    last_pipelines = get_scheduled_pipelines_by_name(gitlab_client, project_id, BLACKLIST_VALIDATION_PIPELINE, LOOK_BACK_HOURS)
+    if len(last_pipelines) < 2:
+        logging.info("Not enough pipelines to compare, quitting")
+        return False, ""
+    # Extract the last two Blacklist validation pipeline IDs
+    second_to_last_pipeline_id, last_pipeline_id = (pipeline.id for pipeline in last_pipelines[-2:])
+
+    # Fetch jobs for the 'blacklist-validation-job' in the last two pipelines
+    last_blacklist_job = get_job_by_name(gitlab_client, project_id, last_pipeline_id, BLACKLIST_VALIDATION_JOB)
+    second_to_last_blacklist_job = get_job_by_name(
+        gitlab_client, project_id, second_to_last_pipeline_id, BLACKLIST_VALIDATION_JOB
+    )
+
+    if not (last_blacklist_job and second_to_last_blacklist_job):
+        logging.info("Failed to get jobs for the blacklist validation pipelines, quitting")
+        return False, ""
+    pivot = is_pivot(last_blacklist_job, second_to_last_blacklist_job)
+
+    if pivot:
+        return True, "Secrets found! :warning:"
+    if pivot is False:
+        return True, "Successfully fixed! :muscle:"
+    # If both the previous and current jobs failed, we still need to check if the
+    # detected secrets have changed and send a message if they have.
+
+    elif secrets_sha_has_been_changed(
+        gitlab_client,
+        project_id,
+        last_blacklist_job.id,
+        second_to_last_blacklist_job.id,
+        artifact_path=Path("./artifacts") / "black_list_report_for_slack.json",
+    ):
+        logging.info("Although the job status hasn't changed, the SHA of the detected secrets has changed - sending a message.")
+        return True, "The set of detected secrets has changed! :warning:"
+    else:
+        logging.info(
+            "No message will be sent for the 'blacklist validation' pipeline."
+            "The status and the set of detected secrets have not changed."
+        )
+        return False, ""
+
+
 def main():
     install_logging("Slack_Notifier.log")
     options = options_handler()
@@ -836,11 +959,25 @@ def main():
     gitlab_client = Gitlab(server_url, private_token=ci_token, ssl_verify=GITLAB_SSL_VERIFY)
     slack_token = options.slack_token
     slack_client = WebClient(token=slack_token)
+    custom_title = ""
     logging.info(
         f"Sending Slack message for pipeline {pipeline_id} in project {project_id} on server {server_url} "
         f"triggering workflow:'{triggering_workflow}' allowing failure:{options.allow_failure} "
         f"slack channel:{computed_slack_channel} dry run:{options.dry_run}"
     )
+    if triggering_workflow == BLACKLIST_VALIDATION:
+        should_send_message, informative_title = should_send_blacklist_message(
+            gitlab_client,
+            project_id,
+            int(options.target_hours),
+            int(options.target_minutes),
+            int(options.window_minutes),
+            options.thread,
+        )
+        custom_title = informative_title
+
+        if not should_send_message:
+            return
     pull_request = None
     if options.current_branch != DEFAULT_BRANCH:
         try:
@@ -880,6 +1017,7 @@ def main():
         options.attachments,
         options.thread,
         options.dry_run,
+        custom_title,
     )
 
     slack_msg_output_file = ROOT_ARTIFACTS_FOLDER / SLACK_MESSAGE
@@ -999,7 +1137,7 @@ def main():
     write_json_to_file(channel_to_thread, channel_to_thread_output_file)
 
     if errors:
-        logging.error(f'Failed to send Slack message to channels: {", ".join(errors)}')
+        logging.error(f"Failed to send Slack message to channels: {', '.join(errors)}")
         sys.exit(1)
 
 

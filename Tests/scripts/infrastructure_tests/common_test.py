@@ -3,7 +3,7 @@ from pathlib import Path
 from requests_mock import MockerCore
 
 from Tests.scripts.common import (
-    are_pipelines_in_order,
+    are_entities_in_order,
     get_nearest_newer_commit_with_pipeline,
     get_nearest_older_commit_with_pipeline,
     get_person_in_charge,
@@ -84,39 +84,39 @@ def test_get_person_in_charge__no_number_sign(mocker):
     assert result == (None, None, None)
 
 
-def test_pipelines_are_in_correct_order__false(mocker):
+def test_entities_are_in_correct_order__false(mocker):
     """
     Given:
-        Two pipelines that are out of order in respect to their creation time
+        Two entities (pipelines for example) that are out of order in respect to their creation time
     When:
-        The function are_pipelines_in_order is called with the two pipelines
+        The function are_entities_in_order is called with the two pipelines
     Then:
-        It should return False as the pipelines are out of order
+        It should return False as the entities are out of order
     """
     pipeline1 = mocker.Mock()
     pipeline1.created_at = "2020-01-01T00:00:00Z"
     pipeline2 = mocker.Mock()
     pipeline2.created_at = "2020-01-02T00:00:00Z"
 
-    result = are_pipelines_in_order(pipeline1, pipeline2)
+    result = are_entities_in_order(pipeline1, pipeline2)
     assert result is False
 
 
-def test_pipelines_are_in_correct_order__true(mocker):
+def test_entities_are_in_correct_order__true(mocker):
     """
     Given:
-        Two pipelines that are in order in respect to their creation time
+        Two entities (pipelines for example) that are in order in respect to their creation time
     When:
-        The function are_pipelines_in_order is called with both pipelines
+        The function are_entities_in_order is called with both pipelines
     Then:
-        It should return True as the pipelines are in order
+        It should return True as the entities are in order
     """
     pipeline1 = mocker.Mock()
     pipeline1.created_at = "2020-01-02T00:00:00Z"
     pipeline2 = mocker.Mock()
     pipeline2.created_at = "2020-01-01T00:00:00Z"
 
-    result = are_pipelines_in_order(pipeline1, pipeline2)
+    result = are_entities_in_order(pipeline1, pipeline2)
     assert result is True
 
 
@@ -134,7 +134,7 @@ def test_is_pivot__previously_pipeline_success_and_current_failed(mocker):
     current_pipeline = mocker.Mock()
     current_pipeline.status = "failed"
 
-    mocker.patch("Tests.scripts.common.are_pipelines_in_order", return_value=(True))
+    mocker.patch("Tests.scripts.common.are_entities_in_order", return_value=(True))
 
     result = is_pivot(current_pipeline, previously_pipeline)
     assert result is True
@@ -154,7 +154,7 @@ def test_is_pivot__previously_pipeline_success_and_current_success(mocker):
     current_pipeline = mocker.Mock()
     current_pipeline.status = "success"
 
-    mocker.patch("Tests.scripts.common.are_pipelines_in_order", return_value=(True))
+    mocker.patch("Tests.scripts.common.are_entities_in_order", return_value=(True))
 
     result = is_pivot(current_pipeline, previously_pipeline)
     assert result is None
@@ -174,7 +174,7 @@ def test_is_pivot__previously_pipeline_failed_and_current_failed(mocker):
     current_pipeline = mocker.Mock()
     current_pipeline.status = "failed"
 
-    mocker.patch("Tests.scripts.common.are_pipelines_in_order", return_value=(True))
+    mocker.patch("Tests.scripts.common.are_entities_in_order", return_value=(True))
 
     result = is_pivot(current_pipeline, previously_pipeline)
     assert result is None
@@ -194,7 +194,7 @@ def test_is_pivot__previously_pipeline_failed_and_current_success(mocker):
     current_pipeline = mocker.Mock()
     current_pipeline.status = "success"
 
-    mocker.patch("Tests.scripts.common.are_pipelines_in_order", return_value=(True))
+    mocker.patch("Tests.scripts.common.are_entities_in_order", return_value=(True))
 
     result = is_pivot(current_pipeline, previously_pipeline)
     assert result is False
@@ -213,7 +213,7 @@ def test_is_pivot__previously_pipeline_not_success_or_faild_and_current_failed(m
     current_pipeline.status = "failed"
     previously_pipeline = mocker.Mock()
     previously_pipeline.status = "in progress"
-    mocker.patch("Tests.scripts.common.are_pipelines_in_order", return_value=(True))
+    mocker.patch("Tests.scripts.common.are_entities_in_order", return_value=(True))
 
     result = is_pivot(current_pipeline, previously_pipeline)
     assert result is None

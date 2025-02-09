@@ -51,6 +51,15 @@ slack-notify:
       if [ -n "${SLACK_MSG_THREAD}" ]; then
         SLACK_ARGS+=("--thread" "${SLACK_MSG_THREAD}")
       fi
+      if [ -n "${TARGET_HOUR}" ]; then
+        SLACK_ARGS+=("--target_hours" "${TARGET_HOUR}")
+      fi
+      if [ -n "${TARGET_MINUTES}" ]; then
+        SLACK_ARGS+=("--target_minutes" "${TARGET_MINUTES}")
+      fi
+      if [ -n "${WINDOW_MINUTES}" ]; then
+        SLACK_ARGS+=("--window_minutes" "${WINDOW_MINUTES}")
+      fi
       poetry run python3 -u ./Tests/scripts/gitlab_slack_notifier.py -p "${PIPELINE_TO_QUERY}" -s "${SLACK_TOKEN}" -c "${GITLAB_STATUS_TOKEN}" -ch "${SLACK_CHANNEL}" -tw "${WORKFLOW}"  --allow-failure "${SLACK_ALLOW_FAILURE}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json" "${SLACK_ARGS[@]}"
   retry:
     max: 2
