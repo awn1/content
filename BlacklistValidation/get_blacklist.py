@@ -283,7 +283,7 @@ def get_secrets_from_raw_data(raw_blacklist_data):
             "https://portal.demisto.works/acc_Issues#/settings/lists - " + str(e)
         )
 
-    secrets = {"compute.amazonaws.com", "content.demisto.works"}
+    secrets = {"compute.amazonaws.com", "content.demisto.works", "ferrum", "ferrum-techs"}
 
     def add_value_to_set(value_to_add):
         if not value_to_add:
