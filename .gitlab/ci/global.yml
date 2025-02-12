@@ -24,7 +24,8 @@
 .poetry-install:
   - section_start "poetry-install" --collapsed
   # Install Poetry
-  - curl -sSL https://install.python-poetry.org | python3 - --version "${POETRY_VERSION}"
+  - python3 .hooks/install.python-poetry.py --version "${POETRY_VERSION}"
+  # - curl -sSL https://install.python-poetry.org | python3 - --version "${POETRY_VERSION}"
   - poetry install
   - section_end "poetry-install"
 

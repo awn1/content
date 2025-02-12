@@ -14,6 +14,7 @@
           - .gitlab/ci/sdk-release-ci/**/*
           - .gitlab/ci/pre-commit/**/*
           - .gitlab/ci/trigger-content-build/.gitlab-ci.trigger-content-build.yml
+          - .hooks/**/*
         compare_to: master
 
 .before-script-trigger-content-build:
