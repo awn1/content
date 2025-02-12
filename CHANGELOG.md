@@ -1,3 +1,18 @@
+# Content Infrastructure 0.0.28 (2025-02-12)
+
+### Features
+
+- Added support for sending blacklist validation Slack messages only under specific conditions. ([8885](https://jira-dc.paloaltonetworks.com/browse/8885))
+- Added two more secrets to the blacklist validation flow.
+- Adding logs to the search_and_install_packs function in case an invalid API response is returned.
+- All scripts related to creating new disposable tenants have been moved to the creating_disposable_tenants folder.
+- Fix poetry install.
+
+### Misc
+
+- [CIAC-12665](https://jira-dc.paloaltonetworks.com/browse/CIAC-12665)
+
+
 # Content Infrastructure 0.0.27 (2025-02-04)
 
 ### Features
