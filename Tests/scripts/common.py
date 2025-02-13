@@ -4,6 +4,7 @@ import tempfile
 import zipfile
 from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 from itertools import pairwise
 from pathlib import Path
 from typing import Any
@@ -63,9 +64,16 @@ TEST_SUITE_CELL_EXPLANATION = "(Table headers: Skipped/Failures/Errors/Total)"
 NO_COLOR_ESCAPE_CHAR = "\033[0m"
 RED_COLOR = "\033[91m"
 GREEN_COLOR = "\033[92m"
+AUTO_CLOSE_COLOR = "#8B008B"
 TEST_PLAYBOOKS_REPORT_FILE_NAME = "test_playbooks_report.xml"
 TEST_MODELING_RULES_REPORT_FILE_NAME = "test_modeling_rules_report.xml"
 E2E_RESULT_FILE_NAME = "e2e_tests_result.xml"
+TEST_PLAYBOOKS_AUTO_CLOSE_FILE_NAME = "test_playbook_auto_close.json"
+TEST_MODELING_RULES_AUTO_CLOSE_FILE_NAME = "test_modeling_rules_auto_close.json"
+AUTO_CLOSE_LABEL = "auto-close"
+AUTO_CLOSE_TOTAL_SUCCESSFUL_RUNS = 3
+AUTO_CLOSE_PROPERTY = "auto-close-counter"
+AWAITING_CREDENTIALS_LABEL = "awaiting-credentials"
 
 FAILED_TO_COLOR_ANSI = {
     True: RED_COLOR,
@@ -105,6 +113,11 @@ STRING_TO_BOOL_MAP = {
     "t": True,
     "f": False,
 }
+
+
+class Execution_Type(Enum):
+    TEST_PLAYBOOKS = "TestPlaybooks"
+    MODELING_RULES = "ModelingRules"
 
 
 def string_to_bool(

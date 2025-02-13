@@ -4,14 +4,16 @@ import re
 from collections import defaultdict, namedtuple
 from datetime import datetime, timedelta
 from distutils.util import strtobool
+from pathlib import Path
 from typing import Any
 
 import requests
-from jira import JIRA, Issue
+from jira import JIRA, Issue, JIRAError
 from jira.client import ResultList
 from requests.exceptions import HTTPError
 from tenacity import RetryCallState, retry, retry_if_exception, stop_after_attempt, wait_exponential
 
+from Tests.scripts.common import AUTO_CLOSE_LABEL, AUTO_CLOSE_PROPERTY, AUTO_CLOSE_TOTAL_SUCCESSFUL_RUNS, Execution_Type
 from Tests.scripts.utils import logging_wrapper as logging
 
 GITLAB_PROJECT_ID = os.getenv("CI_PROJECT_ID")
@@ -217,3 +219,222 @@ def jira_issue_permalink(server_url: str, jira_ticket: Issue):
         str: browsable URL of the issue
     """
     return f"{server_url}/browse/{jira_ticket.key}"
+
+
+def set_property_value(jira_server: JIRA, issue_key: str, property_issue_key: str, new_value: int | None = None):
+    """
+    Sets the auto-close property of a JIRA issue to a specific integer value.
+
+    Args:
+
+        jira_server (JIRA): The JIRA server instance to interact with.
+        issue_key (str): The key of the JIRA issue to set the property for.
+        new_value(int): The new value to set for the auto-close property.
+        property_issue_key: the key of the JIRA issue to set the property for.
+
+    Returns:
+        None
+    """
+    try:
+        jira_server.add_issue_property(issue=issue_key, key=property_issue_key, data=new_value)
+    except JIRAError as e:
+        logging.info(f"failed to reset the auto-close property for {issue_key}: {e}")
+
+
+def get_property_value(jira_server: JIRA, issue_key: str, property_issue_key: str) -> int:
+    """
+    Retrieves the auto-close property value of a JIRA issue.
+
+    Args:
+        jira_server (JIRA): The JIRA server instance to interact with.
+        issue_key (str): The key of the JIRA issue to retrieve the property for.
+        property_issue_key: the key of the JIRA issue to set the property for.
+
+    Returns:
+        int: The value of the property, or 0 if not set.
+    """
+    try:
+        properties = jira_server.issue_properties(issue_key)
+        return next((issue_property.value for issue_property in properties if issue_property.key == property_issue_key), 0)
+    except JIRAError as e:
+        logging.error(f"failed to retrieve {property_issue_key} property for {issue_key}: {e}")
+        return 0
+
+
+def jira_closing_issue(jira_server: JIRA, issue: Issue, comment: str = "Automatically closed"):
+    """
+    Closes a JIRA issue by transitioning it to the 'Done' status and optionally resets its auto-close property.
+
+    Args:
+        jira_server (JIRA): The JIRA server instance to interact with.
+        issue (Issue): The issue to close.
+        comment (str, optional): A comment to add to the issue when transitioning to 'Done'. Defaults to
+                                "Automatically closed".
+
+    Returns:
+        None
+    """
+    set_property_value(jira_server=jira_server, issue_key=issue.key, property_issue_key=AUTO_CLOSE_PROPERTY)
+    jira_server.transition_issue(issue=issue.key, transition="Done", fields={"resolution": {"name": "Fixed"}}, comment=comment)
+    issue.update(update={"labels": [{"remove": AUTO_CLOSE_LABEL}]})
+
+
+def jira_auto_close_issue(
+    jira_server: JIRA, jira_tickets_dict: dict[str, Issue], failed_executions: dict
+) -> tuple[dict[str, Issue], dict[str, Issue], dict[str, Issue]]:
+    """
+    Automatically handle Jira issues with the "auto-resolve" label based on playbook results.
+
+    Args:
+        jira_server (JIRA): The Jira server instance.
+        jira_tickets_dict (dict[str, Issue]): Mapping of issue names to Jira issues.
+        failed_playbooks (dict): Mapping of issue names to playbook failure details.
+
+    Returns:
+        dict[str, Any]: Summary of actions taken on Jira issues.
+    """
+
+    runs_with_property, failed_runs_with_property, successful_closed_tickets = {}, {}, {}
+    logging.info("starting auto-close mechanism.. ")
+    for issue_name, issue in jira_tickets_dict.items():
+        if AUTO_CLOSE_LABEL not in issue.fields.labels:
+            continue
+        test_failed = failed_executions.get(issue_name, {}).get("failures", 0)
+        counter_value = get_property_value(jira_server=jira_server, issue_key=issue.key, property_issue_key=AUTO_CLOSE_PROPERTY)
+        logging.debug(f"{issue_name=} has {AUTO_CLOSE_PROPERTY}:{counter_value=} ")
+
+        if test_failed:
+            # Reset counter if the test playbook failed
+            if counter_value != 0:
+                set_property_value(jira_server=jira_server, issue_key=issue.key, property_issue_key=AUTO_CLOSE_PROPERTY)
+                logging.debug(f"{issue_name=} has failed. The counter was reset")
+            failed_runs_with_property[issue_name] = issue
+
+        else:
+            if counter_value + 1 >= AUTO_CLOSE_TOTAL_SUCCESSFUL_RUNS:
+                logging.debug(f"{issue_name=} closed after consecutive successful." f" Removing {AUTO_CLOSE_LABEL} label.")
+                jira_closing_issue(
+                    jira_server=jira_server,
+                    issue=issue,
+                    comment=f"Automatically closed after {AUTO_CLOSE_TOTAL_SUCCESSFUL_RUNS} "
+                    f"consecutive successful runs using the {AUTO_CLOSE_LABEL} mechanism.",
+                )
+                successful_closed_tickets[issue_name] = issue
+            else:
+                set_property_value(
+                    jira_server=jira_server,
+                    issue_key=issue.key,
+                    property_issue_key=AUTO_CLOSE_PROPERTY,
+                    new_value=counter_value + 1,
+                )
+                runs_with_property[issue_name] = issue
+    logging.info("finished auto-close mechanism.. ")
+    return runs_with_property, failed_runs_with_property, successful_closed_tickets
+
+
+def create_jira_mapping_dict(server_url: str, jira_tickets_logs: dict[str, Issue]) -> dict[str, Any]:
+    """
+    Creates a mapping dictionary from playbook IDs to their corresponding JIRA ticket JSON data.
+
+    Args:
+        server_url (str): The URL of the JIRA server.
+        jira_tickets_logs (dict[str, Issue]): A dictionary where keys are playbook IDs and values are JIRA Issue objects.
+
+    Returns:
+        dict: A dictionary mapping playbook IDs to their JIRA ticket JSON data.
+    """
+    return {
+        playbook_id: jira_ticket_to_json_data(server_url, jira_ticket) for playbook_id, jira_ticket in jira_tickets_logs.items()
+    }
+
+
+def save_jira_mapping_to_file(file_path: Path, jira_mapping_dict: dict[str, Any]):
+    """
+    Saves a JIRA mapping dictionary to a specified file.
+
+    Args:
+        file_path (Path): The path to the file where the dictionary will be saved.
+        jira_mapping_dict (dict[str, Any]): The mapping dictionary to be saved.
+
+    Returns:
+        None
+    """
+    logging.info(f"Writing JIRA mapping to {file_path}")
+    with file_path.open("w") as file:
+        json.dump(jira_mapping_dict, file, indent=4, sort_keys=True, default=str)
+
+
+def write_test_execution_to_jira_mapping(
+    server_url: str,
+    artifacts_path: Path,
+    path_log_file: str,
+    jira_tickets_dict: dict[str, Issue],
+):
+    """
+    Writes test playbook/ modeling rule -to-JIRA mapping and auto-resolved ticket logs to files.
+
+    Args:
+
+        path_auto_close:  The path to the directory where the auto resolve files will be saved.
+        path_log_file:  The path to the directory where the logs files will be saved.
+        server_url (str): The URL of the JIRA server.
+        artifacts_path (Path): The path to the directory where the files will be saved.
+        jira_tickets_dict (dict[str, Issue]): A dictionary mapping playbook IDs to JIRA Issue objects.
+
+    Returns:
+        None
+    """
+    test_execution_result_to_jira_mapping = create_jira_mapping_dict(server_url, jira_tickets_dict)
+    save_jira_mapping_to_file(artifacts_path / path_log_file, test_execution_result_to_jira_mapping)
+    logging.debug(f"JIRA Mapping saved to {artifacts_path / path_log_file}")
+
+
+def write_auto_close_to_jira_mapping(
+    server_url: str,
+    artifacts_path: Path,
+    path_auto_close: str,
+    test_execution_type: Execution_Type,
+    runs_with_property: dict[str, Issue] | None = None,
+    failed_property: dict[str, Issue] | None = None,
+    successful_property: dict[str, Issue] | None = None,
+):
+    """
+    Writes test playbook/ modeling rule -to-JIRA mapping and auto-resolved ticket logs to files.
+
+    Args:
+
+        path_auto_close:  The path to the directory where the auto resolve files will be saved.
+        server_url (str): The URL of the JIRA server.
+        artifacts_path (Path): The path to the directory where the files will be saved.
+        runs_with_property (dict[str, Any]): A dictionary of playbook IDs and their corresponding JIRA
+                                                        Issues for tickets with auto-close label.
+        failed_property (dict[str, Any]): A dictionary of playbook IDs and their corresponding JIRA
+                                                        Issues for tickets with auto-close label that failed.
+        successful_property (dict[str, Any]): A dictionary of playbook IDs and their corresponding JIRA
+                                                        Issues for tickets with auto-close label that closed after
+                                                        successful max runs.
+        test_execution_type: Determine Type of test execution ('ModelingRules' or 'TestPlaybooks').
+
+    Returns:
+        None
+    """
+    property_ticket_logs_to_file = {}
+
+    if runs_with_property:
+        property_ticket_logs_to_file[f"Current {test_execution_type.value} running with auto close"] = create_jira_mapping_dict(
+            server_url, runs_with_property
+        )
+    if failed_property:
+        property_ticket_logs_to_file[f"Failed {test_execution_type.value}"] = create_jira_mapping_dict(
+            server_url, failed_property
+        )
+    if successful_property:
+        property_ticket_logs_to_file[f"Closed {test_execution_type.value} After Successful Runs"] = create_jira_mapping_dict(
+            server_url, successful_property
+        )
+    if property_ticket_logs_to_file:
+        logging.debug(f"JIRA auto-close results saved to {artifacts_path / path_auto_close}")
+        save_jira_mapping_to_file(
+            artifacts_path / path_auto_close,
+            property_ticket_logs_to_file,
+        )

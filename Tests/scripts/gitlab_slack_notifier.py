@@ -22,6 +22,7 @@ from slack_sdk import WebClient
 
 from Tests.Marketplace.marketplace_constants import BucketUploadFlow
 from Tests.scripts.common import (
+    AUTO_CLOSE_COLOR,
     BLACKLIST_VALIDATION,
     BUCKET_UPLOAD,
     BUCKET_UPLOAD_BRANCH_SUFFIX,
@@ -31,7 +32,9 @@ from Tests.scripts.common import (
     CONTENT_NIGHTLY,
     CONTENT_PR,
     DOCKERFILES_PR,
+    TEST_MODELING_RULES_AUTO_CLOSE_FILE_NAME,
     TEST_MODELING_RULES_REPORT_FILE_NAME,
+    TEST_PLAYBOOKS_AUTO_CLOSE_FILE_NAME,
     TEST_PLAYBOOKS_REPORT_FILE_NAME,
     get_instance_directories,
     get_job_by_name,
@@ -93,6 +96,7 @@ SLACK_MESSAGE_CHANNEL_TO_THREAD = "slack_message_channel_to_thread.json"
 OLD_SLACK_MESSAGE = "slack_msg.json"
 OLD_SLACK_MESSAGE_THREADS = "threaded_messages.json"
 OLD_SLACK_MESSAGE_CHANNEL_TO_THREAD = "channel_to_thread.json"
+
 DAYS_TO_SEARCH = 30
 ALLOWED_COVERAGE_PROXIMITY = 0.25  # Percentage threshold for allowed coverage proximity.
 BLACKLIST_VALIDATION_JOB = "blacklist-validation-job"
@@ -325,6 +329,61 @@ def failed_test_data_to_slack_link(failed_test: str, jira_ticket_data: dict[str,
     return False, failed_test
 
 
+def auto_close_results_to_slack_msg(
+    auto_close_playbook: dict[str, Any], auto_close_modeling: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """
+    Generates a Slack message summarizing auto-close results.
+
+    Args:
+        auto_close_logs (dict): A dictionary where each key is a category (str),
+                                 and the value is a dictionary of log items.
+                                 Each log item contains 'url', 'name', and 'key'.
+
+    Returns:
+        list: A list containing a dictionary formatted for Slack mTests/scripts/test_playbooks_report.pyessage.
+    """
+    fields_playbook, fields_modeling = [], []
+
+    def generate_fields(logs):
+        return [
+            {
+                "title": category,
+                "value": ", ".join([f"{failed_test_data_to_slack_link(name, item)[1]}" for name, item in logs.items()]),
+                "short": False,
+            }
+            for category, logs in logs.items()
+        ]
+
+    fields_playbook = generate_fields(auto_close_playbook) if auto_close_playbook else []
+    fields_modeling = generate_fields(auto_close_modeling) if auto_close_modeling else []
+    slack_msg = []
+
+    if fields_playbook:
+        slack_msg.append(
+            {
+                "fallback": "Auto Close Playbooks",
+                "color": AUTO_CLOSE_COLOR,
+                "title": "Auto Close Playbooks",
+                "mrkdwn_in": ["fields"],
+                "fields": fields_playbook,
+            }
+        )
+
+    if fields_modeling:
+        slack_msg.append(
+            {
+                "fallback": "Auto Close Modeling Rules",
+                "color": AUTO_CLOSE_COLOR,
+                "title": "Auto Close Modeling Rules",
+                "mrkdwn_in": ["fields"],
+                "fields": fields_modeling,
+            }
+        )
+
+    return slack_msg
+
+
 def test_playbooks_results_to_slack_msg(
     instance_role: str,
     succeeded_tests: set[str],
@@ -393,7 +452,9 @@ def split_results_file(tests_data: str | None, delim: str = "\n") -> list[str]:
     return list(filter(None, tests_data.split(delim))) if tests_data else []
 
 
-def get_playbook_tests_data(artifact_folder: Path) -> tuple[set[str], set[str], set[str], set[str]]:
+def get_playbook_tests_data(
+    artifact_folder: Path,
+) -> tuple[set[str], set[str], set[str], set[str]]:
     succeeded_tests = set()
     failed_tests = set()
     skipped_tests = set()
@@ -446,6 +507,24 @@ def test_playbooks_results(artifact_folder: Path, pipeline_url: str, title: str)
             )
 
     return test_playbook_slack_msg, has_failed_tests
+
+
+def auto_close_results() -> list[dict[str, Any]]:
+    """
+    Loads auto-close test results from artifact files and formats them for Slack.
+
+    Returns:
+        list[dict[str, Any]]: Formatted Slack message content if results exist, else an empty list.
+    """
+    try:
+        auto_close_playbook = json.load((ARTIFACTS_FOLDER_XSOAR / TEST_PLAYBOOKS_AUTO_CLOSE_FILE_NAME).open())
+        auto_close_modeling = json.load((ARTIFACTS_FOLDER_XSIAM / TEST_MODELING_RULES_AUTO_CLOSE_FILE_NAME).open())
+        if auto_close_playbook or auto_close_modeling:
+            auto_resolve_slack_msg = auto_close_results_to_slack_msg(auto_close_playbook, auto_close_modeling)
+            return auto_resolve_slack_msg
+    except Exception:
+        logging.debug("Auto Close logs files are empty.")
+    return []
 
 
 def bucket_sync_msg_builder(artifact_path: Path) -> tuple[list, list]:
@@ -635,6 +714,7 @@ def construct_slack_msg(
             test_playbooks_has_failure_xsoar or test_playbooks_has_failure_xsiam or test_modeling_rules_has_failure_xsiam
         )
         slack_msg_append += missing_content_packs_test_conf(ARTIFACTS_FOLDER_XSOAR_SERVER_TYPE)
+        slack_msg_append += auto_close_results()
     if triggering_workflow == CONTENT_NIGHTLY:
         # The coverage Slack message is only relevant for nightly and not for PRs.
         slack_msg_append += construct_coverage_slack_msg()

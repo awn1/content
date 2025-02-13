@@ -12,8 +12,10 @@ from tabulate import tabulate
 
 from Tests.configure_and_test_integration_instances import get_custom_user_agent
 from Tests.scripts.common import (
+    TEST_MODELING_RULES_AUTO_CLOSE_FILE_NAME,
     TEST_MODELING_RULES_REPORT_FILE_NAME,
     TEST_SUITE_CELL_EXPLANATION,
+    Execution_Type,
     calculate_results_table,
     get_all_failed_results,
     get_properties_for_test_suite,
@@ -23,16 +25,19 @@ from Tests.scripts.jira_issues import (
     generate_query_by_component_and_issue_type,
     get_jira_server_info,
     get_jira_ticket_info,
+    jira_auto_close_issue,
     jira_search_all_by_query,
     jira_server_information,
+    write_auto_close_to_jira_mapping,
+    write_test_execution_to_jira_mapping,
 )
 from Tests.scripts.test_modeling_rule_report import (
     TEST_MODELING_RULES_BASE_HEADERS,
+    TEST_MODELING_RULES_TO_JIRA_MAPPING,
     TEST_MODELING_RULES_TO_JIRA_TICKETS_CONVERTED,
     calculate_test_modeling_rule_results,
     create_jira_issue_for_test_modeling_rule,
     get_summary_for_test_modeling_rule,
-    write_test_modeling_rule_to_jira_mapping,
 )
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
@@ -137,6 +142,9 @@ def main():
 
             sys.exit(1)
 
+        runs_with_auto_close, failed_auto_close, successful_auto_close = jira_auto_close_issue(
+            jira_server, jira_tickets_for_modeling_rule, failed_test_modeling_rule
+        )
         for result_file in test_modeling_rules_results_files.values():
             xml = JUnitXml.fromfile(result_file.as_posix())
             for test_suite in xml.iterchildren(TestSuite):
@@ -148,7 +156,21 @@ def main():
                     if summary := get_summary_for_test_modeling_rule(properties):
                         jira_tickets_for_modeling_rule[summary] = issue
 
-        write_test_modeling_rule_to_jira_mapping(server_url, artifacts_path, jira_tickets_for_modeling_rule)
+        write_test_execution_to_jira_mapping(
+            server_url=server_url,
+            artifacts_path=artifacts_path,
+            path_log_file=TEST_MODELING_RULES_TO_JIRA_MAPPING,
+            jira_tickets_dict=jira_tickets_for_modeling_rule,
+        )
+        write_auto_close_to_jira_mapping(
+            server_url=server_url,
+            artifacts_path=artifacts_path,
+            path_auto_close=TEST_MODELING_RULES_AUTO_CLOSE_FILE_NAME,
+            runs_with_property=runs_with_auto_close,
+            failed_property=failed_auto_close,
+            successful_property=successful_auto_close,
+            test_execution_type=Execution_Type.MODELING_RULES,
+        )
         open(artifacts_path / TEST_MODELING_RULES_TO_JIRA_TICKETS_CONVERTED, "w")
 
         logging.info("Finished creating/updating Jira issues for test modeling rules")
