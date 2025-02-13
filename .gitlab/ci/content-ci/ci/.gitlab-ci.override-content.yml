@@ -121,6 +121,8 @@ override-content:push-content-prod:
   extends:
     - .override-content-rule-prod
   variables:
+    KUBERNETES_MEMORY_REQUEST: 2Gi
+    KUBERNETES_MEMORY_LIMIT: 2Gi
     TENANT_IDS: $TENANT_IDS
     CONTENT_TO_UPLOAD_DIRECTORY: "${ARTIFACTS_FOLDER}/content_to_override/content_to_upload"
   script:
