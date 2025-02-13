@@ -21,12 +21,12 @@ from Tests.scripts.jira_issues import (
     get_jira_ticket_info,
     jira_search_all_by_query,
     jira_server_information,
+    write_test_execution_to_jira_mapping,
 )
 from Tests.scripts.test_playbooks_report import (
     TEST_PLAYBOOKS_BASE_HEADERS,
     calculate_test_playbooks_results,
     get_jira_tickets_for_playbooks,
-    write_test_playbook_to_jira_mapping,
 )
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
@@ -134,7 +134,12 @@ def print_test_playbooks_summary(
     )
     logging.info(f"Writing test playbook report to {test_playbooks_report}")
     xml.write(test_playbooks_report.as_posix(), pretty=True)
-    write_test_playbook_to_jira_mapping(server_url, artifacts_path, jira_tickets_for_playbooks)
+    write_test_execution_to_jira_mapping(
+        server_url=server_url,
+        artifacts_path=artifacts_path,
+        path_log_file=test_playbooks_report,
+        jira_tickets_dict=jira_tickets_for_playbooks,
+    )
 
     table = tabulate(tabulate_data, headers="firstrow", tablefmt="pretty", colalign=column_align)
     logging.info(f"Test Playbook Results: {TEST_SUITE_CELL_EXPLANATION}\n{table}")

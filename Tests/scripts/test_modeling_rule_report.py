@@ -10,7 +10,11 @@ from jira.client import ResultList
 from junitparser import JUnitXml, TestSuite
 from tabulate import tabulate
 
-from Tests.scripts.common import FAILED_TO_COLOR_NAME, FAILED_TO_MSG, get_properties_for_test_suite
+from Tests.scripts.common import (
+    FAILED_TO_COLOR_NAME,
+    FAILED_TO_MSG,
+    get_properties_for_test_suite,
+)
 from Tests.scripts.jira_issues import (
     JiraTicketInfo,
     convert_jira_time_to_datetime,
@@ -21,7 +25,6 @@ from Tests.scripts.jira_issues import (
     jira_color_text,
     jira_file_link,
     jira_sanitize_file_name,
-    jira_ticket_to_json_data,
     search_issues_with_retry,
     transition_jira_ticket_to_unresolved,
 )
@@ -152,21 +155,6 @@ def calculate_test_modeling_rule_results(
                     jira_tickets_for_modeling_rule[summary] = sorted_issues_matching_summary[0]
 
     return modeling_rules_to_test_suite, jira_tickets_for_modeling_rule, server_versions
-
-
-def write_test_modeling_rule_to_jira_mapping(
-    server_url: str, artifacts_path: Path, jira_tickets_for_modeling_rule: dict[str, Issue]
-):
-    test_modeling_rule_to_jira_mapping_file = artifacts_path / TEST_MODELING_RULES_TO_JIRA_MAPPING
-    logging.info(f"Writing test_modeling_rules_to_jira_mapping to {test_modeling_rule_to_jira_mapping_file}")
-    with open(test_modeling_rule_to_jira_mapping_file, "w") as test_modeling_rule_to_jira_mapping_fp:
-        test_modeling_rule_to_jira_mapping = {
-            modeling_rule: jira_ticket_to_json_data(server_url, jira_ticket)
-            for modeling_rule, jira_ticket in jira_tickets_for_modeling_rule.items()
-        }
-        test_modeling_rule_to_jira_mapping_fp.write(
-            json.dumps(test_modeling_rule_to_jira_mapping, indent=4, sort_keys=True, default=str)
-        )
 
 
 def read_test_modeling_rule_to_jira_mapping(artifacts_path: Path) -> dict[str, dict[str, str]]:
