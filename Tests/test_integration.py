@@ -303,7 +303,7 @@ def __disable_integrations_instances(client, module_instances, logging_module=lo
                 "isIntegrationScript",
             ]
         }
-        module_instance["enable"] = "false"
+        module_instance["enabled"] = "false"
         module_instance["version"] = -1
         logging.debug(f'Disabling integration {module_instance.get("name")}')
         try:
