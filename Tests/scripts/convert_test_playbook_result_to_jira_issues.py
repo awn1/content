@@ -15,13 +15,10 @@ from tabulate import tabulate
 
 from Tests.configure_and_test_integration_instances import get_custom_user_agent
 from Tests.scripts.common import (
-    AWAITING_CREDENTIALS_LABEL,
     FAILED_TO_COLOR_NAME,
     FAILED_TO_MSG,
-    TEST_PLAYBOOKS_AUTO_CLOSE_FILE_NAME,
     TEST_PLAYBOOKS_REPORT_FILE_NAME,
     TEST_SUITE_CELL_EXPLANATION,
-    Execution_Type,
     calculate_results_table,
     get_all_failed_results,
     get_test_results_files,
@@ -34,23 +31,20 @@ from Tests.scripts.jira_issues import (
     generate_ticket_summary,
     get_jira_server_info,
     get_jira_ticket_info,
-    jira_auto_close_issue,
     jira_color_text,
     jira_file_link,
     jira_sanitize_file_name,
     jira_search_all_by_query,
     jira_server_information,
     transition_jira_ticket_to_unresolved,
-    write_auto_close_to_jira_mapping,
-    write_test_execution_to_jira_mapping,
 )
 from Tests.scripts.test_playbooks_report import (
     TEST_PLAYBOOKS_BASE_HEADERS,
     TEST_PLAYBOOKS_JIRA_BASE_HEADERS,
-    TEST_PLAYBOOKS_TO_JIRA_MAPPING,
     TEST_PLAYBOOKS_TO_JIRA_TICKETS_CONVERTED,
     calculate_test_playbooks_results,
     get_jira_tickets_for_playbooks,
+    write_test_playbook_to_jira_mapping,
 )
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
@@ -224,10 +218,6 @@ def main():
             )
 
             sys.exit(1)
-        runs_with_auto_close, failed_auto_close, successful_auto_close = jira_auto_close_issue(
-            jira_server, jira_tickets_for_playbooks, failed_playbooks
-        )
-
         for playbook_id, test_suites in playbooks_results.items():
             # We create the table without Jira tickets columns, as we don't want to have them within the Jira issue.
             # We also add the skipped tests, as we want to have them within the Jira issue.
@@ -254,11 +244,6 @@ def main():
                     jira_tickets_for_playbooks[playbook_id] = jira_ticket
                     logging.debug(f"Skipped updating Jira issue for resolved test playbook:{playbook_id}")
                     continue
-                if AWAITING_CREDENTIALS_LABEL in jira_ticket.fields.labels:
-                    jira_tickets_for_playbooks[playbook_id] = jira_ticket
-                    logging.debug(f"Skipped updating Jira issue since {AWAITING_CREDENTIALS_LABEL} label:{playbook_id}")
-                    continue
-
                 junit_file_name = get_attachment_file_name(playbook_id, options.build_number)
                 jira_ticket = create_jira_issue(
                     jira_ticket_info,
@@ -277,26 +262,7 @@ def main():
             else:
                 logging.debug(f"Skipped creating Jira issue for successful test playbook:{playbook_id}")
 
-        write_test_execution_to_jira_mapping(
-            server_url=server_url,
-            artifacts_path=artifacts_path,
-            path_log_file=TEST_PLAYBOOKS_TO_JIRA_MAPPING,
-            path_auto_close=TEST_PLAYBOOKS_AUTO_CLOSE_FILE_NAME,
-            jira_tickets_dict=jira_tickets_for_playbooks,
-            runs_with_property=runs_with_auto_close,
-            failed_property=failed_auto_close,
-            successful_property=successful_auto_close,
-        )
-        write_auto_close_to_jira_mapping(
-            server_url=server_url,
-            artifacts_path=artifacts_path,
-            path_auto_close=TEST_PLAYBOOKS_AUTO_CLOSE_FILE_NAME,
-            runs_with_property=runs_with_auto_close,
-            failed_property=failed_auto_close,
-            successful_property=successful_auto_close,
-            test_execution_type=Execution_Type.MODELING_RULES,
-        )
-
+        write_test_playbook_to_jira_mapping(server_url, artifacts_path, jira_tickets_for_playbooks)
         open(artifacts_path / TEST_PLAYBOOKS_TO_JIRA_TICKETS_CONVERTED, "w")
         logging.info("Finished creating/updating Jira issues")
 
