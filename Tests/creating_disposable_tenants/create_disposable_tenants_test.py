@@ -1,6 +1,7 @@
 import json
 
 from Tests.creating_disposable_tenants.create_disposable_tenants import (
+    BUILD_MACHINE_FLOWS,
     XSIAM_VERSION,
     XSOAR_SAAS_DEMISTO_VERSION,
     XsiamClient,
@@ -44,6 +45,31 @@ def test_extract_xsoar_ng_version_empty():
     assert result == ""
 
 
+def test_prepare_outputs_multiple_flows(mocker):
+    """
+    Given: A list of tenant IDs and tenant info for multiple flow types.
+    When: The prepare_outputs function is called with multiple flow types.
+    Then: The function should return correctly formatted output information for all flow types.
+    """
+    new_tenants_info = {"build": ["123"], "nightly": ["456"], "@test": ["789"]}
+    tenants_info = [
+        {"lcaas_id": "123", "fqdn": "tenant1.com", "xsoar_version": "master-v8.8.0-1436883-667f2e66"},
+        {"lcaas_id": "456", "fqdn": "tenant2.com", "xsoar_version": "master-v8.8.0-1436884-667f2e67"},
+        {"lcaas_id": "789", "fqdn": "tenant3.com", "xsoar_version": "master-v8.8.0-1436885-667f2e68"},
+    ]
+
+    result = prepare_outputs(new_tenants_info, tenants_info, XsiamClient.SERVER_TYPE, True)
+
+    assert len(result) == 3
+    assert result["qa2-test-123"]["flow_type"] == "build"
+    assert result["qa2-test-456"]["flow_type"] == "nightly"
+    assert result["qa2-test-789"]["flow_type"] == "@test"
+    assert all(tenant["xsiam_version"] == XSIAM_VERSION for tenant in result.values())
+    assert all(tenant["demisto_version"] == "8.8.0" for tenant in result.values())
+    assert all(tenant["build_machine"] is True for tenant in result.values() if tenant["flow_type"] in BUILD_MACHINE_FLOWS)
+    assert result["qa2-test-789"]["build_machine"] is False
+
+
 def test_prepare_outputs_xsiam():
     """
     Given: A list of tenant IDs and tenant info for XSIAM server type.
@@ -55,8 +81,9 @@ def test_prepare_outputs_xsiam():
         {"lcaas_id": "123", "fqdn": "tenant1.com", "xsoar_version": "master-v8.8.0-1436883-667f2e66"},
         {"lcaas_id": "456", "fqdn": "tenant2.com", "xsoar_version": "master-v8.9.0-1436884-667f2e67"},
     ]
+    new_tenants_info = {"build": tenant_ids}
 
-    result = prepare_outputs(tenant_ids, tenant_info, XsiamClient.SERVER_TYPE, "build")
+    result = prepare_outputs(new_tenants_info, tenant_info, XsiamClient.SERVER_TYPE, "build")
 
     assert len(result) == 2
     assert result["qa2-test-123"]["xsiam_version"] == XSIAM_VERSION
@@ -74,8 +101,9 @@ def test_prepare_outputs_xsoar():
     """
     tenant_ids = ["789"]
     tenant_info = [{"lcaas_id": "789", "fqdn": "tenant3.com", "xsoar_version": "master-v9.0.0-1436885-667f2e68"}]
+    new_tenants_info = {"upload": tenant_ids}
 
-    result = prepare_outputs(tenant_ids, tenant_info, XsoarClient.SERVER_TYPE, "upload")
+    result = prepare_outputs(new_tenants_info, tenant_info, XsoarClient.SERVER_TYPE, "upload")
 
     assert len(result) == 1
     assert result["qa2-test-789"]["xsoar_ng_version"] == "9.0.0"
@@ -91,7 +119,7 @@ def test_prepare_outputs_empty_input():
     When: The prepare_outputs function is called with empty inputs.
     Then: The function should return an empty dictionary.
     """
-    result = prepare_outputs([], [], "XSOAR", "nightly")
+    result = prepare_outputs({}, [], "XSOAR", "nightly")
 
     assert result == {}
 
@@ -108,8 +136,9 @@ def test_prepare_outputs_missing_tenant_info(mocker):
     tenant_info = [
         {"lcaas_id": "123", "fqdn": "tenant1.com"},
     ]
+    new_tenants_info = {"upload": tenant_ids}
 
-    result = prepare_outputs(tenant_ids, tenant_info, XsiamClient.SERVER_TYPE, "nightly")
+    result = prepare_outputs(new_tenants_info, tenant_info, XsiamClient.SERVER_TYPE, "nightly")
 
     assert len(result) == 2
     assert result["qa2-test-123"]["ui_url"] == "https://tenant1.com/"
