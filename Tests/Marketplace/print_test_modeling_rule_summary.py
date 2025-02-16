@@ -20,11 +20,11 @@ from Tests.scripts.jira_issues import (
     get_jira_ticket_info,
     jira_search_all_by_query,
     jira_server_information,
-    write_test_execution_to_jira_mapping,
 )
 from Tests.scripts.test_modeling_rule_report import (
     TEST_MODELING_RULES_BASE_HEADERS,
     calculate_test_modeling_rule_results,
+    write_test_modeling_rule_to_jira_mapping,
 )
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
@@ -80,12 +80,8 @@ def print_test_modeling_rule_summary(artifacts_path: Path, without_jira: bool, b
         test_modeling_rules_results_files, issues
     )
 
-    write_test_execution_to_jira_mapping(
-        server_url=server_url,
-        artifacts_path=artifacts_path,
-        path_log_file=artifacts_path / TEST_MODELING_RULES_REPORT_FILE_NAME,
-        jira_tickets_dict=jira_tickets_for_modeling_rule,
-    )
+    write_test_modeling_rule_to_jira_mapping(server_url, artifacts_path, jira_tickets_for_modeling_rule)
+
     if modeling_rules_to_test_suite:
         logging.info(
             f"Found {len(jira_tickets_for_modeling_rule)} Jira tickets out of {len(modeling_rules_to_test_suite)} "
