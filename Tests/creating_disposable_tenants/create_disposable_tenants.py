@@ -11,8 +11,10 @@ import json
 import logging
 import os
 import re
-from collections import OrderedDict
+import sys
+from collections import OrderedDict, defaultdict
 from pathlib import Path
+from typing import Any
 
 from Tests.scripts.common import string_to_bool
 from Tests.scripts.infra.viso_api import DEFAULT_TTL, VisoAPI
@@ -55,20 +57,21 @@ def extract_xsoar_ng_version(version: str) -> str:
 
 
 def prepare_outputs(
-    tenants_lcaas_ids: list[str],
+    new_tenants_info: dict[str, list[str]],
     tenants_info: list[dict],
     server_type: str = "",
-    flow_type: str = "",
     enabled: bool = False,
-) -> dict:
+) -> dict[str, dict[str, Any]]:
     """
     Prepare output information for created tenants.
 
     Args:
-        tenants_lcaas_ids (list[str]): List of tenant lcaas IDs.
+        new_tenants_info (dict[str, list[str]]):
+            Dictionary that maps the flow type (e.g., 'build', 'nightly', 'upload') to a list of
+            tenant IDs for which new tenants were created.
         tenants_info (list[dict]): List of tenant information dictionaries.
         server_type (str, optional): Type of server (XSIAM or XSOAR). Defaults to "".
-        flow_type (str, optional): Type of flow. Defaults to "".
+        enabled (bool, optional): Whether the tenant is enabled. Defaults to False.
 
     Returns:
         dict: Dictionary containing prepared output information for each tenant.
@@ -76,36 +79,37 @@ def prepare_outputs(
     outputs_info = {}
     dict_tenants_info = {item["lcaas_id"]: item for item in tenants_info}
 
-    for tenant_id in tenants_lcaas_ids:
-        tenant_info = dict_tenants_info.get(tenant_id, {})
-        demisto_version = extract_xsoar_ng_version(tenant_info.get("xsoar_version", ""))
-        instance_name = f"{INSTANCE_NAME_PREFIX}{tenant_id}"
-        tenant_url = tenant_info.get("fqdn")
-        outputs_info[instance_name] = {
-            "ui_url": f"https://{tenant_url}/",
-            "instance_name": instance_name,
-            "base_url": f"https://api-{tenant_url}",
-            "enabled": enabled,
-            "flow_type": flow_type,
-            "build_machine": flow_type.lower() in BUILD_MACHINE_FLOWS,
-            "server_type": server_type,
-        }
-        if server_type == XsiamClient.SERVER_TYPE:
-            outputs_info[instance_name].update({"xsiam_version": XSIAM_VERSION, "demisto_version": demisto_version})
-            if flow_type.lower() in FLOWS_WITH_AGENT:
+    for flow_type, tenant_ids in new_tenants_info.items():
+        for tenant_id in tenant_ids:
+            tenant_info = dict_tenants_info.get(tenant_id, {})
+            demisto_version = extract_xsoar_ng_version(tenant_info.get("xsoar_version", ""))
+            instance_name = f"{INSTANCE_NAME_PREFIX}{tenant_id}"
+            tenant_url = tenant_info.get("fqdn")
+            outputs_info[instance_name] = {
+                "ui_url": f"https://{tenant_url}/",
+                "instance_name": instance_name,
+                "base_url": f"https://api-{tenant_url}",
+                "enabled": enabled,
+                "flow_type": flow_type,
+                "build_machine": flow_type.lower() in BUILD_MACHINE_FLOWS,
+                "server_type": server_type,
+            }
+            if server_type == XsiamClient.SERVER_TYPE:
+                outputs_info[instance_name].update({"xsiam_version": XSIAM_VERSION, "demisto_version": demisto_version})
+                if flow_type.lower() in FLOWS_WITH_AGENT:
+                    outputs_info[instance_name].update(
+                        {
+                            "agent_host_name": AGENT_IP_DEFAULT_MESSAGE,
+                            "agent_host_ip": AGENT_IP_DEFAULT_MESSAGE,
+                        }
+                    )
+            elif server_type == XsoarClient.SERVER_TYPE:
                 outputs_info[instance_name].update(
                     {
-                        "agent_host_name": AGENT_IP_DEFAULT_MESSAGE,
-                        "agent_host_ip": AGENT_IP_DEFAULT_MESSAGE,
+                        "xsoar_ng_version": demisto_version,
+                        "demisto_version": XSOAR_SAAS_DEMISTO_VERSION,
                     }
                 )
-        elif server_type == XsoarClient.SERVER_TYPE:
-            outputs_info[instance_name].update(
-                {
-                    "xsoar_ng_version": demisto_version,
-                    "demisto_version": XSOAR_SAAS_DEMISTO_VERSION,
-                }
-            )
     outputs_info = dict(sorted(outputs_info.items()))
     logging.debug(f"The outputs info:\n{json.dumps(outputs_info, indent=4)}")
     return outputs_info
@@ -156,11 +160,10 @@ def save_to_output_file(output_path: Path, output_data: dict) -> None:
 
 
 def options_handler() -> argparse.Namespace:
-    install_logging("Create_disposable_tenants.log", logger=logging)
     parser = argparse.ArgumentParser(description="Script to create a disposable tenants.")
     parser.add_argument(
         "-c",
-        "--count",
+        "--count-per-type",
         type=int,
         required=False,
         help="The number of disposable tenants to create.",
@@ -186,12 +189,15 @@ def options_handler() -> argparse.Namespace:
         help="The path to the file containing the server versions.",
     )
     parser.add_argument(
-        "--owner", default=getpass.getuser(), help="The owner of the disposable tenants. Default: the current user."
+        "--owner",
+        default=getpass.getuser(),
+        help="The owner of the disposable tenants. Default: the current user.",
     )
     parser.add_argument(
-        "--flow-type",
-        help="The flow type for the disposable tenants.",
-        default="",
+        "--flow-types",
+        help="The flow type for the disposable tenants. Can be one or more.",
+        default=[""],
+        nargs="+",
     )
     parser.add_argument(
         "--ttl",
@@ -209,12 +215,12 @@ def options_handler() -> argparse.Namespace:
 
 
 def main() -> None:
-    args = options_handler()
-
-    count = args.count
-    server_type = args.server_type
-    flow_type = args.flow_type
+    install_logging("Create_disposable_tenants.log", logger=logging)
     try:
+        args = options_handler()
+        count_per_type: int = args.count_per_type
+        server_type: str = args.server_type
+        flow_types: list[str] = args.flow_types
         VISO_API_URL = os.environ["VISO_API_URL"]
         VISO_API_KEY = os.environ["VISO_API_KEY"]
         viso_api = VisoAPI(base_url=VISO_API_URL, api_key=VISO_API_KEY)
@@ -222,10 +228,15 @@ def main() -> None:
         versions = {}
         if args.versions_file_path:
             versions = load_json_file(args.versions_file_path).get(server_type, {})
-
-        logging.info(f"Starting to create {count} disposable tenants, for {server_type=} and {flow_type=} with {versions=}")
-        tenants_lcaas_ids = []
-        for i in range(1, count + 1):
+        total_count = count_per_type * len(flow_types)
+        logging.info(
+            f"Starting to create total of {total_count} disposable tenants, "
+            f"for {server_type=} and flow_types={', '.join(flow_types)} with {versions=}"
+        )
+        new_tenants_info = defaultdict(list)
+        pairs = [(flow_type, i) for flow_type in flow_types for i in range(1, count_per_type + 1)]
+        is_error = False
+        for total, (flow_type, _) in enumerate(pairs, start=1):
             try:
                 tenant_lcaas_id = viso_api.create_disposable_tenant(
                     owner=args.owner,
@@ -242,16 +253,22 @@ def main() -> None:
                     vsg_version=versions.get("vsg_version", ""),
                     ttl=args.ttl,
                 )["lcaas_id"]
-                tenants_lcaas_ids.append(tenant_lcaas_id)
-                logging.info(f"Created {i}/{count} disposable tenants with LCAAS ID: {tenant_lcaas_id}")
+                new_tenants_info[flow_type].append(tenant_lcaas_id)
+                logging.info(
+                    f"Created {total}/{total_count} disposable tenants for {flow_type=} with LCAAS ID: {tenant_lcaas_id}"
+                )
             except Exception as e:
-                logging.error(f"Failed to create disposable tenant: {e}")
+                is_error = True
+                logging.error(f"Failed to create disposable tenant {total}/{total_count} for {flow_type=}:\n{e}")
 
         tenants_info = viso_api.get_all_tenants(group_owner=CONTENT_TENANTS_GROUP_OWNER, fields=FIELDS_TO_GET_FROM_VISO)
-        outputs = prepare_outputs(tenants_lcaas_ids, tenants_info, server_type, flow_type, args.enabled)
-        save_to_output_file(args.output_path, outputs)
+        if outputs := prepare_outputs(new_tenants_info, tenants_info, server_type, args.enabled):
+            save_to_output_file(args.output_path, outputs)
+        if is_error:
+            sys.exit(1)
     except Exception as e:
-        logging.error(f"Unexpected error occurred while running the script: {e}")
+        logging.error(f"Unexpected error occurred while running the script:\n{e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
