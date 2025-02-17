@@ -11,10 +11,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-import common
 import urllib3
 from google.auth import _default
 from jinja2 import Environment, FileSystemLoader
+from lock_cloud_machines import generate_tenant_token_map
 from packaging.version import Version
 from slack_sdk import WebClient
 from urllib3.exceptions import InsecureRequestWarning
@@ -23,6 +23,7 @@ from SecretActions.add_build_machine import BUILD_MACHINE_GSM_AUTH_ID
 from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule, SecretLabels
 from SecretActions.SecretsBuild.merge_and_delete_dev_secrets import delete_dev_secrets
 from Tests.creating_disposable_tenants.create_disposable_tenants import AGENT_IP_DEFAULT_MESSAGE, AGENT_NAME_DEFAULT_MESSAGE
+from Tests.scripts.common import join_list_by_delimiter_in_chunks, string_to_bool
 from Tests.scripts.graph_lock_machine import (
     AVAILABLE_MACHINES,
     BUILD_IN_QUEUE,
@@ -197,7 +198,7 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument(
         "-wv",
         "--without-viso",
-        type=common.string_to_bool,
+        type=string_to_bool,
         default=WITHOUT_VISO,
         help="Don't connect to Viso to get tenants data.",
         required=False,
@@ -205,7 +206,7 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument(
         "-ws",
         "--without-statistics",
-        type=common.string_to_bool,
+        type=string_to_bool,
         default=False,
         help="Don't generate statistics.",
         required=False,
@@ -393,9 +394,11 @@ def generate_agent_cell_dict_key(record: dict, key: str) -> dict:
     return generate_cell(value, value)
 
 
-def get_api_key_ttl_cell(client, current_date):
+def get_api_key_ttl_cell(client, current_date, token_map):
     try:
-        cloud_machine_details, secret_version = client.login_using_gsm()
+        client_token = token_map.get(client.tenant_name)
+        cloud_machine_details, secret_version = client.login_using_gsm(client_token)
+
         auth_id = cloud_machine_details[BUILD_MACHINE_GSM_AUTH_ID]
         api_keys = client.search_api_keys()
         if api_key := next((key for key in api_keys if key.id == auth_id), None):
@@ -431,6 +434,7 @@ def generate_records(
     tenants: dict,
     without_viso: bool,
     current_date: datetime,
+    token_map: dict,
 ) -> list[dict]:
     records = []
     lcaas_ids = set()
@@ -483,7 +487,7 @@ def generate_records(
                     if tenant:
                         record |= get_record_for_tenant(tenant, current_date)
             record |= get_licenses_cells(client, current_date)
-            record["api_key_ttl"] = get_api_key_ttl_cell(client, current_date)
+            record["api_key_ttl"] = get_api_key_ttl_cell(client, current_date, token_map)
 
         records.append(record)
 
@@ -520,7 +524,7 @@ def generate_records(
                     if tenant := tenants.get(tenant["lcaas_id"]):
                         record |= get_record_for_tenant(tenant, current_date)
                 record |= get_licenses_cells(client, current_date)
-                record["api_key_ttl"] = get_api_key_ttl_cell(client, current_date)
+                record["api_key_ttl"] = get_api_key_ttl_cell(client, current_date, token_map)
             record |= get_record_for_tenant(tenant, current_date)
             records.append(record)
 
@@ -721,7 +725,7 @@ def generate_report(
                         "value": chunk,
                         "short": False,
                     }
-                    for i, chunk in enumerate(common.join_list_by_delimiter_in_chunks(invalid_api_key_ttl_count))
+                    for i, chunk in enumerate(join_list_by_delimiter_in_chunks(invalid_api_key_ttl_count))
                 ],
             }
         )
@@ -738,7 +742,7 @@ def generate_report(
                         "value": chunk,
                         "short": False,
                     }
-                    for i, chunk in enumerate(common.join_list_by_delimiter_in_chunks(keys_without_tenant))
+                    for i, chunk in enumerate(join_list_by_delimiter_in_chunks(keys_without_tenant))
                 ],
             }
         )
@@ -949,7 +953,7 @@ def main() -> None:
 
     try:
         tenants, tokens_count, slack_msg_append = get_viso_tenants_data(args.without_viso)
-
+        tenant_token_map = generate_tenant_token_map(tenants_data=tenants)
         current_date = datetime.utcnow()
         current_date_str = current_date.strftime("%Y-%m-%d")
         attachments_json = []
@@ -963,7 +967,7 @@ def main() -> None:
         else:
             cloud_servers_path_json: dict = load_json_file(args.cloud_servers_path)  # type: ignore[assignment]
             records = generate_records(
-                cloud_servers_path_json, Settings.xsoar_admin_user, tenants, args.without_viso, current_date
+                cloud_servers_path_json, Settings.xsoar_admin_user, tenants, args.without_viso, current_date, tenant_token_map
             )
             if not args.without_viso:
                 keys_without_tenant = remove_keys_without_tenant(
