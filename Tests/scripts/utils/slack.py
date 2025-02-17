@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Iterable
 from time import sleep
 
 from retry import retry
@@ -41,7 +42,7 @@ def get_messages_from_slack(client: WebClient, channel_id: str, sleep_interval: 
 
 
 @retry((SlackApiError,), delay=1, backoff=2)
-def get_conversations_members(
+def _get_conversations_members(
     client: WebClient, channel_name: str, cursor: str | None, request_limit: int = 200
 ) -> SlackResponse:
     return client.conversations_members(channel=channel_name, limit=request_limit, cursor=cursor)
@@ -52,7 +53,7 @@ def get_conversations_members_slack(client: WebClient, channel_id: str, sleep_in
         members = []
         cursor = None
         while True:
-            result = get_conversations_members(client, channel_id, cursor)
+            result = _get_conversations_members(client, channel_id, cursor)
             cursor = result["response_metadata"]["next_cursor"]
             members.extend(result["members"])
             if not cursor or not result["has_more"]:
@@ -75,3 +76,26 @@ def get_slack_usernames_from_ids(client: WebClient, user_ids: list[str]) -> dict
             print(f"Error fetching user {user_id}: {e.response['error']}")
             usernames[user_id] = None
     return usernames
+
+
+def get_slack_usernames_mapping(
+    client: WebClient, user_ids: list[str], allow_bots: bool, profile_name_entries: Iterable[str]
+) -> list[tuple[str, str]]:
+    usernames = {}
+    for user_id in user_ids:
+        try:
+            response = client.users_info(user=user_id)
+            user_info = response["user"]
+            if user_info["is_bot"] and not allow_bots:
+                continue
+            for name_entry in profile_name_entries:
+                if profile_entry := user_info["profile"][name_entry]:
+                    usernames[profile_entry] = user_info["name"]
+        except SlackApiError as e:
+            print(f"Error fetching user {user_id}: {e.response['error']}")
+            usernames[user_id] = None
+    return sorted(usernames.items(), key=lambda item: len(item[0]), reverse=True)
+
+
+def tag_user(user: str) -> str:
+    return f"@{user}"

@@ -1,0 +1,69 @@
+.daily-build-status-schedule-rule:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $DAILY_BUILD_STATUS == "true"'
+
+.daily-build-status-schedule-rule-pages:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $DAILY_BUILD_STATUS == "true" && $DAILY_BUILD_STATUS_PAGES == "true"'
+
+.daily-build-status-schedule-rule-always:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $DAILY_BUILD_STATUS == "true"'
+      when: always
+
+.before-script-daily-build-status:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.poetry-install]
+    - !reference [.granting_execute_permissions_on_files]
+    - !reference [.setup-artifactory]
+    - !reference [.create_artifacts_folder]
+    - !reference [.create-artifacts-repositories-folder]
+    - !reference [.clone-content-test-conf]
+
+daily-build-status-job:
+  extends:
+    - .daily-build-status-schedule-rule
+    - .before-script-daily-build-status
+  tags:
+    - $BUILD_JOB_TAG
+  stage: daily-build-status
+  artifacts:
+      expire_in: 30 days
+      paths:
+        - ${ARTIFACTS_FOLDER}/*
+        - public
+      when: always
+  variables:
+    ARTIFACTS_FOLDER: artifacts
+    ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    CI_PIPELINE_URL: $CI_PIPELINE_URL
+  script:
+    - EXIT_CODE=0
+    - export PYTHONPATH="${PYTHONPATH}:${CI_PROJECT_DIR}"
+    - poetry run python3 -u "${CI_PROJECT_DIR}/Tests/scripts/daily_build_status.py" -o "${ARTIFACT_PATH}" --service_account "${XSOAR_CONTENT_BUILD_GITLAB_AMI_BUILD}" 2>&1 | tee -a "${ARTIFACTS_FOLDER}/logs/daily_build_status_log.log" || EXIT_CODE=$?
+    - exit $EXIT_CODE
+
+daily-build-status-fan-in:
+  stage: fan-in
+  extends:
+    - .daily-build-status-schedule-rule-always
+  script:
+    - echo "fan in"
+
+daily-build-status-slack-notify:
+  extends:
+    - .daily-build-status-schedule-rule-always
+    - .trigger-slack-notification
+  variables:
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: "daily-build-status-fan-in"
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_JOB: 'true'
+    ARTIFACTS_FOLDER: artifacts
+    ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+    SLACK_MSG_FILE: "${ARTIFACT_PATH}/slack_msg.txt"
+    WORKFLOW: "Daily Build Status"
+    SLACK_ALLOW_FAILURE: 'false'
