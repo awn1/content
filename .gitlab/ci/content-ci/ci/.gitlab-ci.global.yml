@@ -303,6 +303,7 @@
       # we want to checkout if it's not up-to-date
       ./Tests/scripts/is_file_up_to_date.sh poetry.lock $CI_COMMIT_BRANCH true
       ./Tests/scripts/is_file_up_to_date.sh pyproject.toml $CI_COMMIT_BRANCH true
+      ./Tests/scripts/is_file_up_to_date.sh validation_config.toml $CI_COMMIT_BRANCH true
       ./Tests/scripts/is_file_up_to_date.sh Config/core_packs_list.json $CI_COMMIT_BRANCH true
       ./Tests/scripts/is_file_up_to_date.sh Config/core_packs_mpv2_list.json $CI_COMMIT_BRANCH true
       ./Tests/scripts/is_file_up_to_date.sh Config/core_packs_xpanse_list.json $CI_COMMIT_BRANCH true
