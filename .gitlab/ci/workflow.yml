@@ -14,6 +14,9 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_MACHINES_REPORT == "true"'
       variables:
         WORKFLOW_PIPELINE_NAME: 'Build machines report pipeline'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $DAILY_BUILD_STATUS == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Daily build status pipeline'
     - if: '$UPDATE_BIG_QUERY_LOGS == "true"'
       variables:
           WORKFLOW_PIPELINE_NAME: 'Update marketplace bucket logs pipeline'

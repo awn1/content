@@ -16,6 +16,7 @@ stages:
   - secret-expiration-report
   - build-machines-report
   - build-machines-report-pages
+  - daily-build-status
   - unittests-and-validations
   - trigger-content-build
   - content-build
@@ -37,6 +38,7 @@ include:
   - local: .gitlab/ci/bucket-logs.yml
   - local: .gitlab/ci/secret-expiration-report.yml
   - local: .gitlab/ci/build-machines-report.yml
+  - local: .gitlab/ci/daily_build_status.yml
   - local: .gitlab/ci/trigger-content-build/.gitlab-ci.trigger-content-build.yml
   - local: .gitlab/ci/pre-commit/.gitlab-ci.pre-commit.yml
   - local: .gitlab/ci/sdk-release-ci/.gitlab-ci.sdk-release.yml

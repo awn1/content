@@ -816,3 +816,16 @@ def get_scheduled_pipelines_by_name(
         sort="asc",
         name=pipeline_name,
     )
+
+
+def day_suffix(day: int) -> str:
+    if 4 <= day <= 20 or 24 <= day <= 30:
+        return str(day) + "th"
+    elif day % 10 == 1:
+        return str(day) + "st"
+    elif day % 10 == 2:
+        return str(day) + "nd"
+    elif day % 10 == 3:
+        return str(day) + "rd"
+    else:
+        return str(day) + "th"
