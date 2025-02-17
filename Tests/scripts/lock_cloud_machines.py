@@ -2,20 +2,24 @@ import argparse
 import random
 import sys
 import time
+import warnings
 from collections.abc import Iterable
 from datetime import datetime
 from time import sleep
 from typing import Any
 
 import requests
+import urllib3
+from google.auth import _default
 from google.cloud import storage  # type: ignore[attr-defined]
 from slack_sdk import WebClient as SlackWebClient
+from urllib3.exceptions import InsecureRequestWarning
 
 from Tests.Marketplace.common import get_json_file
 from Tests.scripts.common import evaluate_condition
 from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT
 from Tests.scripts.infra.settings import Settings
-from Tests.scripts.infra.xsoar_api import SERVER_TYPE_TO_CLIENT_TYPE
+from Tests.scripts.infra.xsoar_api import SERVER_TYPE_TO_CLIENT_TYPE, XsiamClient
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 from Utils.github_workflow_scripts.utils import get_env_var
@@ -30,6 +34,14 @@ GITLAB_PROJECT_ID = get_env_var("CI_PROJECT_ID", "1061")  # default is Content
 COMMENT_FIELD_NAME = "__comment__"
 SLACK_TOKEN = get_env_var("SLACK_TOKEN", "")
 SLACK_CHANNEL = get_env_var("WAIT_SLACK_CHANNEL", "dmst-wait-in-line")
+
+urllib3.disable_warnings(InsecureRequestWarning)
+warnings.filterwarnings("ignore", _default._CLOUD_SDK_CREDENTIALS_WARNING)
+from Tests.scripts.infra.viso_api import VisoAPI  # noqa
+
+VISO_API_URL: str = get_env_var("VISO_API_URL")
+VISO_API_KEY = get_env_var("VISO_API_KEY")
+CONTENT_TENANTS_GROUP_OWNER = get_env_var("CONTENT_TENANTS_GROUP_OWNER")
 
 
 def send_slack_notification(slack_client: SlackWebClient, text_list: list[str]):
@@ -507,7 +519,24 @@ def wait_for_build_to_be_first_in_queue(
             sleep(random.randint(8, 13))
 
 
-def validate_connection_for_machines(machine_list: list[str], cloud_servers: dict[str, dict]):
+def get_viso_tenants() -> dict[str, dict]:
+    tenants = {}
+    if not VISO_API_URL or not VISO_API_KEY:
+        logging.error("VISO_API_URL or VISO_API_KEY env vars are not set.")
+    else:
+        viso_api = VisoAPI(VISO_API_URL, VISO_API_KEY)
+        try:
+            tenants_list = viso_api.get_all_tenants(CONTENT_TENANTS_GROUP_OWNER)
+            tenants = {tenant["lcaas_id"]: tenant for tenant in tenants_list}
+        except Exception as e:
+            logging.debug(f"Failed to get tenants: {e}")
+            logging.error("Failed to get tenants")
+            tenants = {}
+
+    return tenants
+
+
+def validate_connection_for_machines(machine_list: list[str], cloud_servers: dict[str, dict], token_map: dict[str, str]):
     """
     For relevant server types, gets the cloud machine API key from GSM and checks it.
     If it is not valid or doesn't exist, creates one and saves it to GSM.
@@ -525,7 +554,30 @@ def validate_connection_for_machines(machine_list: list[str], cloud_servers: dic
                 tenant_name=cloud_machine,
                 project_id=AUTOMATION_GCP_PROJECT,
             )
-            client.login_using_gsm()
+            client_token = token_map.get(client.tenant_name)
+            client.login_using_gsm(client_token)
+
+
+def generate_tenant_token_map(tenants_data: dict[str, dict]) -> dict:
+    """
+    Generates a dictionary mapping tenant IDs to their corresponding collection tokens.
+
+    Args:
+        tenants_data (dict[str, dict]): A dictionary where keys are tenant identifiers,
+                                        and values are dictionaries containing tenant data.
+
+    Returns:
+        dict: A dictionary mapping tenant IDs to their corresponding
+              collection tokens for tenants with the product type "XSIAM".
+    """
+    data_dict = {
+        f"qa2-test-{item['lcaas_id']}": item["xdr_http_collection_token"]
+        for item in tenants_data.values()
+        if item["product_type"] == XsiamClient.PRODUCT_TYPE
+    }
+    if data_dict:
+        logging.info(f"Successfully created tenants token dictionary. Found {len(data_dict)} tenants tokens.")
+    return data_dict
 
 
 def main():
@@ -629,7 +681,9 @@ def main():
     with open(options.response_machine, "w") as f:
         f.write(f"{','.join(lock_machine_list)}")
 
-    validate_connection_for_machines(lock_machine_list, cloud_servers_path_json)
+    tenants = get_viso_tenants()
+    tenant_token_map = generate_tenant_token_map(tenants_data=tenants)
+    validate_connection_for_machines(lock_machine_list, cloud_servers_path_json, tenant_token_map)
 
     end_time = time.time()
     duration_minutes = (end_time - start_time) // 60

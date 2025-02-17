@@ -292,7 +292,7 @@ def test_validate_connection_for_machines(mocker):
         },
     }
 
-    machine_list = ["machine-xsoar1", "machine-xsiam2"]
+    machine_list = ["machine-xsoar1", "machine-xsiam2", "machine-xsiam1"]
     Xsoar_Admin_User = collections.namedtuple("Xsoar_Admin_User", ["username", "password"])
     mocker.patch.object(Settings, "xsoar_admin_user", return_value=Xsoar_Admin_User("u", "p"))
     mocker.patch(
@@ -304,9 +304,38 @@ def test_validate_connection_for_machines(mocker):
         requests, "get", side_effect=[Machine_Health_Response(False), Machine_Health_Response(True)] * len(machine_list)
     )
     mocker.patch.object(XsoarClient, "login_via_okta")
-    mocker.patch.object(XsoarClient, "create_api_key", return_value=PublicApiKey(id="3", key="b"))
-    mocker.patch(
+    mocker_get_api_key = mocker.patch.object(XsoarClient, "create_api_key", return_value=PublicApiKey(id="3", key="b"))
+
+    mocker_add_secret = mocker.patch(
         "SecretActions.add_build_machine.add_build_machine_secret_to_gsm",
         return_value=({"api-key": "b", "x-xdr-auth-id": 3}, "4"),
     )
-    validate_connection_for_machines(machine_list, cloud_servers)
+
+    token_map = {"machine-xsiam1": "3", "machine-xsiam2": "4"}
+
+    validate_connection_for_machines(machine_list, cloud_servers, token_map)
+
+    expected_args = [
+        {
+            "server_id": "machine-xsiam2",
+            "machine_type": "xsiam",
+            "token_value": "4",
+            "public_api_key": mocker_get_api_key.return_value,
+        },
+        {
+            "server_id": "machine-xsiam1",
+            "machine_type": "xsiam",
+            "token_value": "3",
+            "public_api_key": mocker_get_api_key.return_value,
+        },
+        {
+            "server_id": "machine-xsoar1",
+            "machine_type": "xsoar-ng",
+            "public_api_key": mocker_get_api_key.return_value,
+            "token_value": None,
+        },
+    ]
+
+    # Check that only XSIAM machines were called with token
+    for expected_arg in expected_args:
+        assert any(call.kwargs == expected_arg for call in mocker_add_secret.call_args_list)

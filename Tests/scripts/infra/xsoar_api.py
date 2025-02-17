@@ -18,6 +18,7 @@ from pendulum import DateTime
 from requests import ConnectionError, HTTPError, TooManyRedirects
 from urllib3.util import Retry
 
+from SecretActions.add_build_machine import BUILD_MACHINE_GSM_TOKEN
 from SecretActions.google_secret_manager_handler import GoogleSecreteManagerModule
 from Tests.scripts.infra.enums.papi import KeySecurityLevel
 from Tests.scripts.infra.enums.tables import XdrTables
@@ -559,7 +560,7 @@ class XsoarClient(XsoarOnPremClient):
             )
         logger.info(f"Health check passed successfully for {self.tenant_name} with secret version {secret_version}.")
 
-    def create_and_save_api_key(self) -> tuple[dict, str]:
+    def create_and_save_api_key(self, token: str | None = None) -> tuple[dict, str]:
         from SecretActions.add_build_machine import add_build_machine_secret_to_gsm
 
         public_api_key = self.create_api_key(
@@ -568,14 +569,15 @@ class XsoarClient(XsoarOnPremClient):
         )
         logger.info(f"Created API key for {self.tenant_name}")
         cloud_machine_details, secret_version = add_build_machine_secret_to_gsm(
-            server_id=self.tenant_name, machine_type=self.PLATFORM_TYPE, public_api_key=public_api_key
+            server_id=self.tenant_name, machine_type=self.PLATFORM_TYPE, public_api_key=public_api_key, token_value=token
         )
-        return cloud_machine_details, secret_version  # includes XSIAM token
+        return cloud_machine_details, secret_version
 
-    def login_using_gsm(self) -> tuple[dict, str]:
+    def login_using_gsm(self, token: str | None = None) -> tuple[dict, str]:
         """
         Gets the cloud machine API key from GSM and checks it.
         If it is not valid or doesn't exist, creates one and saves it to GSM.
+        When providing a token for XsiamClient, also saves the token.
         """
         try:
             cloud_machine_details, secret_version = self.get_gsm_cloud_machine_details()
@@ -584,8 +586,9 @@ class XsoarClient(XsoarOnPremClient):
             logger.error(f"Got an error while fetching API key for {self.tenant_name} from GSM: {e}")
             logger.info(f"Generating a new API key for {self.tenant_name}.")
             self.login_auth(force_login=True)
-            cloud_machine_details, secret_version = self.create_and_save_api_key()
+            cloud_machine_details, secret_version = self.create_and_save_api_key(token)
             self.check_api_key_validity(cloud_machine_details, secret_version)
+
         return cloud_machine_details, secret_version
 
     def login_via_okta(self, is_prod: bool):
@@ -1217,6 +1220,22 @@ class XsiamClient(XsoarClient):
     def public_api_key(self):
         self._public_api_key = self.create_api_key(comment="Session key")  # type: ignore[assignment]
         return self._public_api_key
+
+    def save_tenant_token_to_gsm(self, token: str | None = None) -> tuple[dict, str]:
+        from SecretActions.add_build_machine import add_build_machine_secret_to_gsm
+
+        logger.info(f"Saving token of {self.tenant_name} to GSM.")
+        cloud_machine_details, secret_version = add_build_machine_secret_to_gsm(
+            server_id=self.tenant_name, machine_type=self.PLATFORM_TYPE, token_value=token
+        )
+        return cloud_machine_details, secret_version  # includes XSIAM token
+
+    def login_using_gsm(self, token: str | None = None):
+        cloud_machine_details, secret_version = super().login_using_gsm(token)
+        if BUILD_MACHINE_GSM_TOKEN not in cloud_machine_details:
+            cloud_machine_details, secret_version = self.save_tenant_token_to_gsm(token)
+
+        return cloud_machine_details, secret_version
 
     #
     # def load_incident(self, incident_id: str, direct_load_from_xsoar: bool = False, **kwargs) -> Incident:
