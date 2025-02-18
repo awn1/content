@@ -1995,189 +1995,98 @@ def get_impersonation_logs():
     return results
 
 
+from datetime import datetime, timedelta
+
 def fetch_incidents():
     last_run = demisto.getLastRun()
     last_fetch = last_run.get('time', {})
-    last_fetch_click_logs = last_fetch.get('click_logs')
-    last_fetch_attachment_logs = last_fetch.get('attachment_logs')
-    last_fetch_impersonation_logs = last_fetch.get('impersonation_logs')
-    last_fetch_held_messages = last_fetch.get('held_messages')
     dedup_incidents = last_run.get('dedup_incidents', {})
-    next_dedup_incidents_click_logs = dedup_incidents_click_logs = dedup_incidents.get('click_logs', [])
-    next_dedup_incidents_attachment_logs = dedup_incidents_attachment_logs = dedup_incidents.get('attachment_logs', [])
-    next_dedup_incidents_impersonation_logs = dedup_incidents_impersonation_logs = dedup_incidents.get('impersonation_logs', [])
-    next_dedup_incidents_held_messages = dedup_incidents_held_messages = dedup_incidents.get('held_messages', [])
+
+    # Define log types dynamically
+    log_types = ["click_logs", "attachment_logs", "impersonation_logs", "held_messages"]
+    
+    # Initialize fetch timestamps and deduplication lists
+    last_fetch_times = {}
+    dedup_incidents_dict = {}
+
+    # Handle first-time fetch
+    first_fetch_time = datetime.now() - timedelta(hours=FETCH_DELTA)
+
+    for log_type in log_types:
+        last_fetch_times[log_type] = datetime.strptime(last_fetch.get(log_type, ''), '%Y-%m-%dT%H:%M:%SZ') if last_fetch.get(log_type) else first_fetch_time
+        dedup_incidents_dict[log_type] = dedup_incidents.get(log_type, [])
+
     demisto.debug(f"Before fetch {last_run=}")
 
-    # handle first time fetch
-    if last_fetch is None:
-        last_fetch_click_logs = last_fetch_attachment_logs = last_fetch_impersonation_logs = last_fetch_held_messages = datetime.now() - timedelta(hours=FETCH_DELTA)
-        last_fetch_date_time_click_logs = last_fetch_click_logs.strftime("%Y-%m-%dT%H:%M:%S") + '+0000'
-        last_fetch_date_time_attachment_logs = last_fetch_attachment_logs.strftime("%Y-%m-%dT%H:%M:%S") + '+0000'
-        last_fetch_date_time_impersonation_logs = last_fetch_impersonation_logs.strftime("%Y-%m-%dT%H:%M:%S") + '+0000'
-        last_fetch_date_time_held_messages = last_fetch_held_messages.strftime("%Y-%m-%dT%H:%M:%S") + '+0000'
-    else:
-        last_fetch_click_logs = datetime.strptime(last_fetch_click_logs, '%Y-%m-%dT%H:%M:%SZ')
-        last_fetch_attachment_logs = datetime.strptime(last_fetch_attachment_logs, '%Y-%m-%dT%H:%M:%SZ')
-        last_fetch_impersonation_logs = datetime.strptime(last_fetch_impersonation_logs, '%Y-%m-%dT%H:%M:%SZ')
-        last_fetch_held_messages = datetime.strptime(last_fetch_held_messages, '%Y-%m-%dT%H:%M:%SZ')
-        last_fetch_date_time_click_logs = last_fetch_click_logs.strftime("%Y-%m-%dT%H:%M:%S") + '+0000'
-        last_fetch_date_time_attachment_logs = last_fetch_attachment_logs.strftime("%Y-%m-%dT%H:%M:%S") + '+0000'
-        last_fetch_date_time_impersonation_logs = last_fetch_impersonation_logs.strftime("%Y-%m-%dT%H:%M:%S") + '+0000'
-        last_fetch_date_time_held_messages = last_fetch_held_messages.strftime("%Y-%m-%dT%H:%M:%S") + '+0000'
-    current_fetch_click_logs = last_fetch_click_logs
-    current_fetch_attachment_logs = last_fetch_attachment_logs
-    current_fetch_impersonation_logs = last_fetch_impersonation_logs
-    current_fetch_held_messages = last_fetch_held_messages
-    incidents = []  # type: List[Any]
-    if FETCH_URL:
-        search_params = {
-            'from': last_fetch_date_time_click_logs,
-            'scanResult': 'malicious',
-            'oldestFirst': True
-        }
-        url_logs, _ = request_with_pagination(api_endpoint='/api/ttp/url/get-logs',
-                                              data=[search_params],
-                                              response_param='clickLogs',
-                                              limit=MAX_FETCH)
-        demisto.debug(f"number of url_logs={len(url_logs)}")
-        for url_log in url_logs:
-            # The unique identifier is the messageId concatinated with url
-            identifier = url_log.get('messageId', '')+url_log.get('url', '')
-            if identifier not in dedup_incidents_click_logs:
-                incident = url_to_incident(url_log)
-                temp_date = datetime.strptime(incident['occurred'], '%Y-%m-%dT%H:%M:%SZ')
-                # update last run
-                if temp_date > last_fetch_click_logs:
-                    demisto.debug(f"Increasing last_fetch since {temp_date=} > {last_fetch_click_logs=}")
-                    last_fetch_click_logs = temp_date
-                    next_dedup_incidents_click_logs = [identifier]
-                    demisto.debug(f"Increased last_fetch to {last_fetch}")
-                elif temp_date == last_fetch_click_logs:
-                    next_dedup_incidents_click_logs.append(identifier)
-                else:
-                    demisto.debug(f"Did not appended incident with identifier {identifier} since {temp_date=} < {last_fetch_click_logs=}")
+    incidents = []
 
-                # avoid duplication due to weak time query
-                if temp_date >= current_fetch_click_logs:
-                    incidents.append(incident)
-            else:
-                demisto.debug(f"Dropped url log with identifier {identifier}")
+    # Function to process log fetching
+    def process_logs(fetch_flag, api_endpoint, response_param, log_key, identifier_func, incident_func):
+        if not fetch_flag:
+            return
 
-    if FETCH_ATTACHMENTS:
-        search_params = {
-            'from': last_fetch_date_time_attachment_logs,
-            'result': 'malicious'
-        }
-        demisto.debug(search_params, 'search_params')
-        attachment_logs, _ = request_with_pagination(api_endpoint='/api/ttp/attachment/get-logs',
-                                                     data=[search_params],
-                                                     response_param='attachmentLogs',
-                                                     limit=MAX_FETCH)
-        demisto.debug(f"number of attachment_logs={len(attachment_logs)}")
-        for attachment_log in attachment_logs:
-            identifier = attachment_log.get('messageId') + attachment_log.get('fileName')
-            if identifier not in dedup_incidents_attachment_logs:
-                incident = attachment_to_incident(attachment_log)
-                temp_date = datetime.strptime(incident['occurred'], '%Y-%m-%dT%H:%M:%SZ')
-                # update last run
-                if temp_date > last_fetch_attachment_logs:
-                    demisto.debug(f"Increasing last_fetch since {temp_date=} > {last_fetch_attachment_logs=}")
-                    last_fetch_attachment_logs = temp_date
-                    next_dedup_incidents_attachment_logs = [identifier]
-                    demisto.debug(f"Increased last_fetch to {last_fetch}")
-                elif temp_date == last_fetch_attachment_logs:
-                    next_dedup_incidents_attachment_logs.append(identifier)
-                else:
-                    demisto.debug(f"Did not appended incident with identifier {identifier} since {temp_date=} < {last_fetch_attachment_logs=}")
+        search_params = {'from': last_fetch_times[log_key].strftime("%Y-%m-%dT%H:%M:%S") + '+0000'}
+        if log_key == "click_logs":
+            search_params['scanResult'] = 'malicious'
+            search_params['oldestFirst'] = True
+        elif log_key == "attachment_logs":
+            search_params['result'] = 'malicious'
+            search_params['oldestFirst'] = True
+        elif log_key == "impersonation_logs":
+            search_params['taggedMalicious'] = True
+            search_params['oldestFirst'] = True
+        elif log_key == "held_messages":
+            search_params['admin'] = True
+            search_params['start'] = search_params.pop('from')
 
-                # avoid duplication due to weak time query
-                if temp_date >= current_fetch_attachment_logs:
-                    incidents.append(incident)
-                else:
-                    demisto.debug(f"Did not appended incident with identifier {identifier} since {temp_date=} < {current_fetch_attachment_logs=}")
-            else:
-                demisto.debug(f"Dropped attachment log with identifier {identifier}")
+        logs, _ = request_with_pagination(api_endpoint, [search_params], response_param, limit=MAX_FETCH)
+        demisto.debug(f"Number of {log_key} logs={len(logs)}")
 
-    if FETCH_IMPERSONATIONS:
-        search_params = {
-            'from': last_fetch_date_time_impersonation_logs,
-            'taggedMalicious': True
-        }
-        impersonation_logs, _ = request_with_pagination(api_endpoint='/api/ttp/impersonation/get-logs',
-                                                        data=[search_params],
-                                                        response_param='impersonationLogs',
-                                                        limit=MAX_FETCH)
-        demisto.debug(f"number of impersonation_logs={len(impersonation_logs)}")
-        for impersonation_log in impersonation_logs:
-            impersonation_log_id = impersonation_log.get('id')
-            if impersonation_log_id not in dedup_incidents_impersonation_logs:
-                incident = impersonation_to_incident(impersonation_log)
+        for log in logs:
+            identifier = identifier_func(log)
+            if identifier not in dedup_incidents_dict[log_key]:
+                incident = incident_func(log)
                 temp_date = datetime.strptime(incident['occurred'], '%Y-%m-%dT%H:%M:%SZ')
 
-                # update last run
-                if temp_date > last_fetch_impersonation_logs:
-                    demisto.debug(f"Increasing last_fetch since {temp_date=} but {last_fetch=}")
-                    last_fetch_impersonation_logs = temp_date
-                    dedup_incidents_impersonation_logs = [impersonation_log_id]
-                    demisto.debug(f"Increased last_fetch to {last_fetch}")
-                elif temp_date == last_fetch_impersonation_logs:
-                    dedup_incidents_impersonation_logs.append(impersonation_log_id)
-                else:
-                    demisto.debug(f"Did not appended incident with id {impersonation_log_id} since {temp_date=} < {current_fetch_impersonation_logs=}")
+                # Update last run timestamp
+                if temp_date > last_fetch_times[log_key]:
+                    demisto.debug(f"Updating last_fetch for {log_key}: {temp_date=} > {last_fetch_times[log_key]=}")
+                    last_fetch_times[log_key] = temp_date
+                    dedup_incidents_dict[log_key] = [identifier]
+                elif temp_date == last_fetch_times[log_key]:
+                    dedup_incidents_dict[log_key].append(identifier)
 
-                # avoid duplication due to weak time query
-                if temp_date >= current_fetch_impersonation_logs:
+                # Avoid duplication due to weak time query
+                if temp_date >= last_fetch_times[log_key]:
                     incidents.append(incident)
                 else:
-                    demisto.debug(f"Did not appended incident with name {incident.get('name')} since {temp_date=} < {current_fetch_impersonation_logs=}")
-            else:
-                demisto.debug(f"Dropped impersonation log with id {impersonation_log_id}")
+                    demisto.debug(f"Skipping {log_key} incident with identifier {identifier} due to timestamp {temp_date=} < {last_fetch_times[log_key]=}")
 
-    if FETCH_HELD_MESSAGES:
-        search_params = {
-            'start': last_fetch_date_time_held_messages,
-            'admin': True
-        }
-        held_messages, _ = request_with_pagination(api_endpoint='/api/gateway/get-hold-message-list',
-                                                   data=[search_params],
-                                                   limit=MAX_FETCH)
-        demisto.debug(f"Got from request {len(held_messages)} held messages.")
-        for held_message in held_messages:
-            incident = held_to_incident(held_message)
-            temp_date = datetime.strptime(incident['occurred'], '%Y-%m-%dT%H:%M:%SZ')
-            held_message_id = held_message.get('id')
-            if held_message_id not in dedup_incidents_held_messages:
-                # update last run
-                if temp_date > last_fetch_held_messages:
-                    demisto.debug(f"Increasing last_fetch since {temp_date=} but {last_fetch=}")
-                    last_fetch_held_messages = temp_date
-                    next_dedup_incidents_held_messages = [held_message_id]
-                    demisto.debug(f"Increased last_fetch to {last_fetch}")
-                elif temp_date == last_fetch_held_messages:
-                    next_dedup_incidents_held_messages.append(held_message_id)
-                else:
-                    demisto.debug(f"Did not appended incident with name {held_message_id} since {temp_date=} < {current_fetch_held_messages=}")
-
-                # avoid duplication due to weak time query
-                if temp_date >= current_fetch_held_messages:
-                    incidents.append(incident)
-                else:
-                    demisto.debug(f"Did not appended incident with id {held_message_id} since {temp_date=} > {current_fetch_held_messages=}")
             else:
-                demisto.debug(f"Dropped held message with id {held_message_id}")
-        
-    new_last_run = {'time': {'click_logs':last_fetch_click_logs.isoformat().split('.')[0] + 'Z',
-                                 'attachment_logs':last_fetch_attachment_logs.isoformat().split('.')[0] + 'Z',
-                                 'impersonation_logs':last_fetch_impersonation_logs.isoformat().split('.')[0] + 'Z',
-                                 'held_messages':last_fetch_held_messages.isoformat().split('.')[0] + 'Z'},
-                        'dedup_incidents': {'click_logs':next_dedup_incidents_click_logs,
-                                 'attachment_logs':next_dedup_incidents_attachment_logs,
-                                 'impersonation_logs':next_dedup_incidents_impersonation_logs,
-                                 'held_messages':next_dedup_incidents_held_messages}}
+                demisto.debug(f"Dropped {log_key} log with identifier {identifier}")
+
+    # Process each log type
+    process_logs(FETCH_URL, "/api/ttp/url/get-logs", "clickLogs", "click_logs",
+                 lambda log: log.get("messageId", "") + log.get("url", ""), url_to_incident)
+
+    process_logs(FETCH_ATTACHMENTS, "/api/ttp/attachment/get-logs", "attachmentLogs", "attachment_logs",
+                 lambda log: log.get("messageId", "") + log.get("fileName", ""), attachment_to_incident)
+
+    process_logs(FETCH_IMPERSONATIONS, "/api/ttp/impersonation/get-logs", "impersonationLogs", "impersonation_logs",
+                 lambda log: log.get("id", ""), impersonation_to_incident)
+
+    process_logs(FETCH_HELD_MESSAGES, "/api/gateway/get-hold-message-list", "heldMessages", "held_messages",
+                 lambda log: log.get("id", ""), held_to_incident)
+
+    # Set the new last run data
+    new_last_run = {
+        "time": {key: last_fetch_times[key].isoformat().split('.')[0] + 'Z' for key in log_types},
+        "dedup_incidents": dedup_incidents_dict
+    }
     demisto.setLastRun(new_last_run)
-    demisto.debug(f"Next last run dict is {new_last_run=}")
+    demisto.debug(f"Updated last run: {new_last_run=}")
     demisto.incidents(incidents)
+
 
 
 def url_to_incident(url_log):
