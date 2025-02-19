@@ -2,6 +2,8 @@ import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
+from gitlab_slack_notifier import ARTIFACTS_FOLDER_XSIAM, ARTIFACTS_FOLDER_XSOAR, IS_CHOSEN_MACHINE_FILE_NAME, get_artifact_data
+
 from Tests.scripts.common import (
     BUCKET_UPLOAD,
     CONTENT_DOCS_NIGHTLY,
@@ -161,6 +163,13 @@ def main():
             should_fail = True
         elif job_file.read_text().strip() != "done":
             logging.error(f"something isn't OK with job name {job}")
+            should_fail = True
+
+    if args.triggering_workflow == CONTENT_PR:
+        if get_artifact_data(ARTIFACTS_FOLDER_XSOAR, IS_CHOSEN_MACHINE_FILE_NAME) or get_artifact_data(
+            ARTIFACTS_FOLDER_XSIAM, IS_CHOSEN_MACHINE_FILE_NAME
+        ):
+            logging.error("The machine has been chosen by a customer label.")
             should_fail = True
 
     if should_fail:

@@ -16,10 +16,11 @@ from slack_sdk import WebClient as SlackWebClient
 from urllib3.exceptions import InsecureRequestWarning
 
 from Tests.Marketplace.common import get_json_file
-from Tests.scripts.common import evaluate_condition
+from Tests.scripts.common import BUCKET_UPLOAD_BRANCH_SUFFIX, evaluate_condition, get_slack_user_name
+from Tests.scripts.github_client import GithubClient
 from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT
 from Tests.scripts.infra.settings import Settings
-from Tests.scripts.infra.xsoar_api import SERVER_TYPE_TO_CLIENT_TYPE, XsiamClient
+from Tests.scripts.infra.xsoar_api import SERVER_TYPE_TO_CLIENT_TYPE, XsiamClient, XsoarClient
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 from Utils.github_workflow_scripts.utils import get_env_var
@@ -84,6 +85,10 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument(
         "--machines-count-timeout-condition", help="The condition to keep searching for machines until the timeout is reached."
     )
+    parser.add_argument("--github_token", help="The github token.")
+    parser.add_argument("--branch_name", help="The name of the branch.")
+    parser.add_argument("--name-mapping_path", help="Path to name mapping file.", required=False)
+    parser.add_argument("--chosen_machine_path", help="File to update if a machine is chosen by labels.")
     options = parser.parse_args()
     return options
 
@@ -580,13 +585,151 @@ def generate_tenant_token_map(tenants_data: dict[str, dict]) -> dict:
     return data_dict
 
 
+def get_github_pr_labels(github_client: GithubClient, pr_number: int):
+    """
+    Fetches the labels of a GitHub pull request using a GithubClient instance.
+    Args:
+        github_client: An instance of GithubClient to interact with the GitHub API.
+        pr_number: Pull request number.
+
+    Returns:
+        List of label names if successful, otherwise logs an error message.
+    """
+    try:
+        return github_client.get_github_pr_labels(pr_number)
+    except Exception as e:
+        if "Failed to fetch labels:" in str(e):
+            logging.info(f"Failed to fetch labels to the pr number {pr_number}.")
+        else:
+            logging.info(f"Got the following error when trying to contact Github: {e!s}")
+
+
+def get_pr_number(github_client: GithubClient, branch_name: str) -> int | None:
+    """
+    Retrieves the PR number associated with a given branch using a GithubClient instance.
+    Args:
+        github_client: An instance of GithubClient to interact with the GitHub API.
+        branch_name: The branch name to look up.
+
+    Returns:
+        The PR number if found, otherwise None.
+    """
+    try:
+        return github_client.get_pr_number_from_branch_name(branch_name)
+    except Exception as e:
+        if "Did not find the PR" in str(e):
+            logging.info(f"Did not find the associated PR with the branch {branch_name}.")
+        else:
+            logging.info(f"Got the following error when trying to contact Github: {e!s}")
+
+    return None
+
+
+def get_pr_author(github_client: GithubClient, pr_number: int):
+    """
+    Fetches the GitHub username of the author of a given pull request.
+    Args:
+        github_client: An instance of GithubClient to interact with the GitHub API.
+        pr_number: Pull request number.
+
+    Returns:
+        The username of the PR author.
+    """
+    try:
+        return github_client.get_pr_author(pr_number)
+    except Exception as e:
+        if "Failed to fetch PR author" in str(e):
+            logging.info(f"Failed to fetch PR author of the pr number {pr_number}.")
+        else:
+            logging.info(f"Got the following error when trying to contact Github: {e!s}")
+
+
+def get_chosen_machines_by_labels(github_client: GithubClient, labels: list, pr_number: int, options: argparse.Namespace) -> str:
+    """
+    Determines the chosen machine's flow type based on GitHub PR labels.
+    Checks for specific XSOAR or XSIAM labels and extracts the flow type. If found, maps the GitHub PR author
+    to a Slack username and writes the result to a file.
+
+    Args:
+        github_client (GithubClient): GitHub client instance.
+        labels (list): Labels attached to the pull request.
+        pr_number (int): Pull request number.
+        options (dict): Config options.
+
+    Returns:
+        str: The flow type (Slack username or extracted name), or an empty string if no match is found.
+    """
+    name_mapping_path = options.name_mapping_path
+    server_type = options.server_type
+    if server_type == XsoarClient.SERVER_TYPE:
+        CHOSEN_MACHINE_USER = "chosen-machine-xsoar-user"
+        CHOSEN_MACHINE_FLOW_TYPE = "chosen-machine-xsoar"
+    elif server_type == XsiamClient.SERVER_TYPE:
+        CHOSEN_MACHINE_USER = "chosen-machine-xsiam-user"
+        CHOSEN_MACHINE_FLOW_TYPE = "chosen-machine-xsiam"
+
+    flow_type = ""
+    for label in labels:
+        if CHOSEN_MACHINE_USER == label:
+            logging.info(f"Found custom machine label: {label}")
+            github_username = get_pr_author(github_client, pr_number)
+            gitlab_username = get_slack_user_name(name=github_username, default="not found", name_mapping_path=name_mapping_path)
+            logging.info(f"{github_username=} and {gitlab_username=}")
+            if gitlab_username == "not found":
+                logging.info(f"gitlab username of github username {github_username} not found.")
+            else:
+                flow_type = gitlab_username
+            break
+
+        elif CHOSEN_MACHINE_FLOW_TYPE in label:
+            logging.info(f"Found custom flow type label: {label}")
+            parts = label.split("-")
+            if len(parts) >= 4:
+                flow_type_arr = parts[3:]
+                flow_type = "".join(flow_type_arr)
+            else:
+                logging.info(
+                    f"The label {label} is not valid. The correct format is: 'chosen-machine-<MACHINE_TYPE>-<FLOW_TYPE>'."
+                )
+            break
+
+    if flow_type:
+        logging.info(f"Found chosen-machine label. The flow_type is {flow_type}.")
+        with open(options.chosen_machine_path, "w") as f:
+            f.write(flow_type)
+
+    return flow_type
+
+
+def get_chosen_machines(options) -> str:
+    github_client = GithubClient(options.github_token)
+    branch_name = options.branch_name
+    if BUCKET_UPLOAD_BRANCH_SUFFIX in branch_name:
+        branch_name = branch_name[: branch_name.find(BUCKET_UPLOAD_BRANCH_SUFFIX)]
+
+    pr_number = get_pr_number(github_client, branch_name)
+    if not pr_number:
+        return ""
+
+    labels = get_github_pr_labels(github_client, pr_number)
+    if not labels:
+        return ""
+
+    flow_type_by_label: str = get_chosen_machines_by_labels(github_client, labels, pr_number, options)
+    return flow_type_by_label
+
+
 def main():
     start_time = time.time()
     install_logging("lock_cloud_machines.log", logger=logging)
     options = options_handler()
+    flow_type = options.flow_type
+    flow_type_by_label: str = get_chosen_machines(options)
+    if flow_type_by_label:
+        flow_type = flow_type_by_label
+
     logging.info(
-        f"Starting to search for a CLOUD machine/s to lock, flow type: {options.flow_type}, "
-        f"server type: {options.server_type}"
+        f"Starting to search for a CLOUD machine/s to lock, flow type: {flow_type}, " f"server type: {options.server_type}"
     )
     storage_client = storage.Client.from_service_account_json(options.service_account)
     storage_bucket = storage_client.bucket(LOCKS_BUCKET)
@@ -597,15 +740,13 @@ def main():
         if (
             machine != COMMENT_FIELD_NAME
             and machine_details["enabled"]
-            and machine_details["flow_type"] == options.flow_type
+            and machine_details["flow_type"] == flow_type
             and machine_details["server_type"] == options.server_type
         ):
             available_machines[machine] = machine_details
 
     if not available_machines:
-        logging.error(
-            f"No available machines found for the given flow type: {options.flow_type} and server type: {options.server_type}"
-        )
+        logging.error(f"No available machines found for the given flow type: {flow_type} and server type: {options.server_type}")
         sys.exit(1)
 
     if options.lock_machine_name:
