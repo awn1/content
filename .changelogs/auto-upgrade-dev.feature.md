@@ -1,0 +1,1 @@
+When running the auto-upgrade pipeline in dry run mode, the dev bucket will be copied into the pipeline bucket.

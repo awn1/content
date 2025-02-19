@@ -1,6 +1,6 @@
 import argparse
 import json
-import os
+import subprocess
 import sys
 from distutils.util import strtobool
 from pathlib import Path
@@ -30,7 +30,7 @@ def option_handler():
     return parser.parse_args()
 
 
-def upload_to_bucket(bucket_name: str, group_name: str, group_packs: list[dict], dev_file_path: str):
+def upload_to_bucket(bucket_name: str, group_name: str, group_packs: list[dict], dev_file_path: Path):
     """
     Upload the group config file to the bucket.
 
@@ -38,13 +38,13 @@ def upload_to_bucket(bucket_name: str, group_name: str, group_packs: list[dict],
         bucket_name (str): The name of the bucket.
         group_name (str): The group name.
         group_packs (list): List of packs for a group.
-        dev_file_path (str): The dev file path.
+        dev_file_path (Path): The dev file path.
     """
     try:
         storage_client = init_storage_client()
         storage_bucket = storage_client.bucket(bucket_name)
-        deploy_path = os.path.join(dev_file_path, f"content/config/auto_upgrade_{group_name}.json")
-        path_blob = storage_bucket.blob(deploy_path)
+        deploy_path = dev_file_path / "content" / "config" / f"auto_upgrade_{group_name}.json"
+        path_blob = storage_bucket.blob(deploy_path.as_posix())
         path_blob.upload_from_string(json.dumps(group_packs), content_type="application/json")
         logging.info(f"The deploy to {deploy_path} finish successfully")
     except Exception as e:
@@ -52,22 +52,17 @@ def upload_to_bucket(bucket_name: str, group_name: str, group_packs: list[dict],
         sys.exit(1)
 
 
-def get_bucket_name_and_dev_path(marketplace: str, dry_run: str, ci_pipeline_id: str):
+def get_buckets_name(marketplace: str) -> tuple[str, str]:
     """
-    Get the bucket name and the dev file path. the dev file path is based on the pipeline id.
+    Get the buckets names for the marketplace.
     Args:
         marketplace (str): The marketplace name.
-        dry_run (str): true for a dry run pipeline, false for a prod pipeline.
-        ci_pipeline_id (str): The id of the pipeline.
     """
     marketplaces_prod_buckets_names, marketplaces_dev_buckets_names = get_buckets_from_marketplaces(marketplace)
     if not marketplaces_prod_buckets_names or not marketplaces_dev_buckets_names:
         logging.exception(f"Failed to retrieve the buckets name for {marketplace=}")
         sys.exit(1)
-    if not dry_run:
-        return marketplaces_prod_buckets_names[0], ""
-    dev_file_path = os.path.join("upload-flow/builds/test_groups_file", ci_pipeline_id)
-    return marketplaces_dev_buckets_names[0], dev_file_path
+    return marketplaces_prod_buckets_names[0], marketplaces_dev_buckets_names[0]
 
 
 def read_config_file() -> dict[str, list]:
@@ -79,7 +74,7 @@ def read_config_file() -> dict[str, list]:
     return json.loads(Path("config/auto_upgrade_config.json").read_text())
 
 
-def filter_groups_per_marketplace(parsed_file, marketplace):
+def filter_groups_per_marketplace(parsed_file: dict, marketplace: str) -> dict:
     """
     Filter the groups per marketplace.
     Args:
@@ -116,9 +111,20 @@ def main():
     ci_pipeline_id = options.ci_pipeline_id
     dry_run = options.dry_run
     marketplace = options.marketplace
+    dev_file_path = Path("")
 
-    marketplace_bucket_name, dev_file_path = get_bucket_name_and_dev_path(marketplace, dry_run, ci_pipeline_id)
     groups_name_to_packs = get_groups_packs_for_marketplace(marketplace)
+    marketplace_prod_bucket_name, marketplace_dev_bucket_name = get_buckets_name(marketplace)
+    marketplace_bucket_name = marketplace_prod_bucket_name
+
+    if dry_run:
+        dev_file_path = Path("upload-flow") / "builds" / "test_groups_file" / ci_pipeline_id
+        marketplace_bucket_name = marketplace_dev_bucket_name
+        if groups_name_to_packs:
+            # copy prod bucket to the new created dev bucket only if there are groups to upload
+            subprocess.run(
+                ["./Tests/scripts/prepare_auto_upgrade_dev_bucket.sh", marketplace_dev_bucket_name, marketplace_prod_bucket_name]
+            )
     for group_name, group_packs in groups_name_to_packs.items():
         upload_to_bucket(
             bucket_name=marketplace_bucket_name, group_name=group_name, group_packs=group_packs, dev_file_path=dev_file_path
