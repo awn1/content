@@ -72,6 +72,7 @@ class Client(BaseClient):
         # Reference: https://devforum.okta.com/t/how-to-get-saml-assertion-through-an-api/24580
         full_url = f'{self.application_url}?onetimetoken={self.get_session_token()}'
         result = self._http_request('POST', full_url=full_url, resp_type='response')
+        demisto.debug(f"raw results from api {result.text}")
         soup = BeautifulSoup(result.text, features='html.parser')
         saml_response = soup.find("input", {'name': 'SAMLResponse'}).get('value')
 
