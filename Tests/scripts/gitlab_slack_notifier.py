@@ -65,6 +65,7 @@ ARTIFACTS_FOLDER_XSOAR_SAAS_SERVER_TYPE = ARTIFACTS_FOLDER_XSOAR / "server_type_
 ARTIFACTS_FOLDER_XPANSE_SERVER_TYPE = ARTIFACTS_FOLDER_XPANSE / "server_type_XPANSE"
 ARTIFACTS_FOLDER_XSIAM_SERVER_TYPE = ARTIFACTS_FOLDER_XSIAM / "server_type_XSIAM"
 LOCKED_MACHINES_LIST_FILE_NAME = "locked_machines_list.txt"
+IS_CHOSEN_MACHINE_FILE_NAME = "is_chosen_machine.txt"
 GITLAB_SERVER_URL = os.getenv("CI_SERVER_URL", "https://gitlab.xdr.pan.local")  # disable-secrets-detection
 GITLAB_PROJECT_ID = os.getenv("CI_PROJECT_ID") or 1061
 GITLAB_SSL_VERIFY = bool(strtobool(os.getenv("GITLAB_SSL_VERIFY", "true")))
@@ -195,25 +196,30 @@ def machines_saas_and_xsiam(failed_jobs):
     lock_xsiam_machine_raw_txt = split_results_file(
         get_artifact_data(ARTIFACTS_FOLDER_XSIAM, LOCKED_MACHINES_LIST_FILE_NAME), ","
     )
+
+    chosen_machine_by_label_xsoar = get_artifact_data(ARTIFACTS_FOLDER_XSOAR, IS_CHOSEN_MACHINE_FILE_NAME)
+    chosen_machine_by_label_xsiam = get_artifact_data(ARTIFACTS_FOLDER_XSIAM, IS_CHOSEN_MACHINE_FILE_NAME)
     machines = []
 
+    custom_flow_type_xsoar = f"Flow type: {chosen_machine_by_label_xsoar}\n" if chosen_machine_by_label_xsoar else ""
     if lock_xsoar_machine_raw_txt:
         machines.extend(
             get_msg_machines(
                 failed_jobs,
                 {"xsoar_ng_server_ga"},
                 {"xsoar-test_playbooks_results"},
-                f"XSOAR SAAS:\n{','.join(lock_xsoar_machine_raw_txt)}",
+                f"XSOAR SAAS:\n{custom_flow_type_xsoar}{','.join(lock_xsoar_machine_raw_txt)}",
             )
         )
 
+    custom_flow_type_xsiam = f"Flow type: {chosen_machine_by_label_xsiam}\n" if chosen_machine_by_label_xsiam else ""
     if lock_xsiam_machine_raw_txt:
         machines.extend(
             get_msg_machines(
                 failed_jobs,
                 {"xsiam_server_ga", "install-packs-in-xsiam-ga", "install-packs-in-xsoar-ng-ga"},
                 {"xsiam-test_playbooks_results", "xsiam-test_modeling_rule_results"},
-                f"XSIAM:\n{','.join(lock_xsiam_machine_raw_txt)}",
+                f"XSIAM:\n{custom_flow_type_xsiam}{','.join(lock_xsiam_machine_raw_txt)}",
             )
         )
 

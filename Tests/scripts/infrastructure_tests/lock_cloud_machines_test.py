@@ -1,17 +1,20 @@
 import collections
 import json
 import os
+from argparse import Namespace
 
 import pytest
 import requests
 from requests import ConnectionError, Response
 
+from Tests.scripts.github_client import GithubClient
 from Tests.scripts.infra.models import PublicApiKey
 from Tests.scripts.infra.settings import Settings
-from Tests.scripts.infra.xsoar_api import XsoarClient
+from Tests.scripts.infra.xsoar_api import XsiamClient, XsoarClient
 from Tests.scripts.lock_cloud_machines import (
     check_job_status,
     get_and_lock_all_needed_machines,
+    get_chosen_machines_by_labels,
     get_machines_locks_details,
     get_my_place_in_the_queue,
     try_to_lock_machine,
@@ -310,7 +313,6 @@ def test_validate_connection_for_machines(mocker):
         "SecretActions.add_build_machine.add_build_machine_secret_to_gsm",
         return_value=({"api-key": "b", "x-xdr-auth-id": 3}, "4"),
     )
-
     token_map = {"machine-xsiam1": "3", "machine-xsiam2": "4"}
 
     validate_connection_for_machines(machine_list, cloud_servers, token_map)
@@ -339,3 +341,86 @@ def test_validate_connection_for_machines(mocker):
     # Check that only XSIAM machines were called with token
     for expected_arg in expected_args:
         assert any(call.kwargs == expected_arg for call in mocker_add_secret.call_args_list)
+
+
+def test_xsoar_user_label_found(mocker):
+    """
+    Test case to verify that when an XSOAR user label is found,
+    the function correctly retrieves the GitHub PR author, maps it to a Slack username,
+    and returns the Slack username.
+    """
+    github_client = GithubClient("")
+    labels = ["chosen-machine-xsoar-user"]
+    pr_number = 123
+    options = Namespace()
+    options.server_type = XsoarClient.SERVER_TYPE
+    options.name_mapping_path = "/mock/path"
+    options.chosen_machine_path = "/mock/chosen_machine.txt"
+
+    mock_get_pr_author = mocker.patch("Tests.scripts.lock_cloud_machines.get_pr_author", return_value="mock_github_user")
+    mock_get_slack_user_name = mocker.patch(
+        "Tests.scripts.lock_cloud_machines.get_slack_user_name", return_value="mock_slack_user"
+    )
+    mocker.patch("builtins.open")
+
+    result = get_chosen_machines_by_labels(github_client, labels, pr_number, options)
+
+    assert result == "mock_slack_user"
+    mock_get_pr_author.assert_called_once_with(github_client, pr_number)
+    mock_get_slack_user_name.assert_called_once_with(name="mock_github_user", default="not found", name_mapping_path="/mock/path")
+
+
+def test_xsoar_user_label_not_found():
+    """
+    Test case to verify that if no matching label is found in the provided list,
+    the function returns an empty string and does not attempt to fetch GitHub or Slack usernames.
+    """
+    github_client = GithubClient("")
+    labels = ["random-label"]
+    pr_number = 123
+    options = Namespace()
+    options.server_type = XsoarClient.SERVER_TYPE
+    options.name_mapping_path = "/mock/path"
+    options.chosen_machine_path = "/mock/chosen_machine.txt"
+
+    result = get_chosen_machines_by_labels(github_client, labels, pr_number, options)
+
+    assert result == ""  # No matching label found
+
+
+def test_xsiam_flow_type_label_found(mocker):
+    """
+    Test case to verify that when a valid XSIAM flow type label is found,
+    the function extracts the flow type correctly and returns it.
+    """
+    github_client = GithubClient("")
+    labels = ["chosen-machine-xsiam-testflow"]
+    pr_number = 123
+    options = Namespace()
+    options.server_type = XsiamClient.SERVER_TYPE
+    options.name_mapping_path = "/mock/path"
+    options.chosen_machine_path = "/mock/chosen_machine.txt"
+
+    mocker.patch("builtins.open")
+
+    result = get_chosen_machines_by_labels(github_client, labels, pr_number, options)
+
+    assert result == "testflow"  # Extracted from label
+
+
+def test_invalid_label_format():
+    """
+    Test case to verify that if an invalid label format is provided,
+    the function returns an empty string instead of an incorrectly parsed value.
+    """
+    github_client = GithubClient("")
+    labels = ["chosen-machine-xsiam"]
+    pr_number = 123
+    options = Namespace()
+    options.server_type = XsiamClient.SERVER_TYPE
+    options.name_mapping_path = "/mock/path"
+    options.chosen_machine_path = "/mock/chosen_machine.txt"
+
+    result = get_chosen_machines_by_labels(github_client, labels, pr_number, options)
+
+    assert result == ""  # Invalid format should return empty string

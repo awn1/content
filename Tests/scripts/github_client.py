@@ -141,6 +141,34 @@ class GithubClient:
         else:
             raise ValueError(f"Did not get the expected response type from Github, got {type(response)}")
 
+    def get_github_pr_labels(self, pr_number: int):
+        """Fetches the labels of a GitHub pull request."""
+        url = f"{self.base_url}/repos/{self.repository}/issues/{pr_number}/labels"
+        headers = {"Authorization": f"token {self.github_token}"}
+
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 200:
+            json_data = response.json()
+            if json_data:
+                return [label["name"] for label in json_data]
+            else:
+                return []
+        else:
+            raise ValueError(f"Failed to fetch labels: {response.status_code}, {response.text}")
+
+    def get_pr_author(self, pr_number):
+        """Fetches the GitHub username of the author of a given pull request."""
+        pr_endpoint = f"{self.base_url}/repos/{self.repository}/pulls/{pr_number}"
+        headers = {"Authorization": f"token {self.github_token}"}
+
+        response = requests.get(pr_endpoint, headers=headers)
+
+        if response.status_code == 200:
+            return response.json()["user"]["login"]
+        else:
+            raise ValueError(f"Failed to fetch PR author: {response.status_code}, {response.text}")
+
 
 class GithubPullRequest(GithubClient):
     def __init__(
