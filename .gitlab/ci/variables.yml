@@ -8,3 +8,4 @@ variables:
   PIPELINE_JOBS_FOLDER: "${CI_PROJECT_DIR}/pipeline_jobs_folder"
   ARTIFACTS_FOLDER: artifacts
   ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+  SLACK_CHANNEL: "dmst-build-test"
