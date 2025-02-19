@@ -90,6 +90,7 @@ NON_CODE_FILE_TYPES_TO_COLLECT: set[FileType] = {
     FileType.CASE_FIELD,
     FileType.CASE_LAYOUT_RULE,
     FileType.CASE_LAYOUT,
+    FileType.VERSION_CONFIG,
 }
 
 

@@ -72,6 +72,7 @@ class TestUpdateIndexAndPack:
         Metadata.CREATED: "",
         Metadata.UPDATED: None,
     }
+    version_config = {"8.9.0": {"to": "1.1.1"}, "8.10.0": {"from": "1.1.2"}}
 
     def test_update_index_folder_new_version(self, mocker):
         """
@@ -206,6 +207,7 @@ class TestUpdateIndexAndPack:
                 ("HelloWorld/metadata.json", "metadata.json"),
                 ("HelloWorld/changelog.json", "changelog.json"),
                 ("HelloWorld/README.md", "README.md"),
+                ("HelloWorld/version_config.json", "version_config.json"),
             ]
         )
         index_dirs = scan_dir(
@@ -216,10 +218,13 @@ class TestUpdateIndexAndPack:
                 ("Index/HelloWorld/metadata.json", "metadata.json"),
                 ("Index/HelloWorld/changelog.json", "changelog.json"),
                 ("Index/HelloWorld/README.md", "README.md"),
+                ("Index/HelloWorld/version_config.json", "version_config.json"),
             ]
         )
 
         mocker.patch("os.scandir", side_effect=[index_dirs, pack_dirs])
+        mocker.patch("os.scandir", side_effect=[index_dirs, pack_dirs])
+        mocker.patch("shutil.copy")
 
         dummy_pack = Pack("HelloWorld", "HelloWorld", is_modified=False, is_metadata_updated=False)
         dummy_pack.current_version = "2.0.0"
@@ -228,6 +233,7 @@ class TestUpdateIndexAndPack:
         expected_copy_args = [
             ("Index/HelloWorld/metadata.json", self.statistics_metadata),
             ("Index/HelloWorld/metadata-2.0.0.json", self.statistics_metadata),
+            ("Index/HelloWorld/version_config.json", self.version_config),
         ]
 
         copy_call_count = json_write_mock.call_count

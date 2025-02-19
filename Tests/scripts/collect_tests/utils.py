@@ -225,6 +225,7 @@ class ContentItem(DictFileBased):
         file_path_splitted = self.path.parts
         return (
             self.path.name == "pack_metadata.json"
+            or self.path.name == "version_config.json"
             or self.path.name.endswith("_schema.json")
             or self.path.name.endswith("testdata.json")
             or len(file_path_splitted) > 1
