@@ -14,9 +14,9 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_MACHINES_REPORT == "true"'
       variables:
         WORKFLOW_PIPELINE_NAME: 'Build machines report pipeline'
-    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $DAILY_BUILD_STATUS == "true"'
+    - if: '$DAILY_BUILD_STATUS == "true"'
       variables:
-        WORKFLOW_PIPELINE_NAME: 'Daily build status pipeline'
+        WORKFLOW_PIPELINE_NAME: 'Daily build status pipeline - triggered by:$CI_PIPELINE_SOURCE'
     - if: '$UPDATE_BIG_QUERY_LOGS == "true"'
       variables:
           WORKFLOW_PIPELINE_NAME: 'Update marketplace bucket logs pipeline'
@@ -43,4 +43,4 @@ workflow:
         WORKFLOW_PIPELINE_NAME: 'SDK release pipeline - content:$CI_COMMIT_REF_NAME, infra:$INFRA_BRANCH, SDK branch name:$SDK_BRANCH_NAME, Release version:$RELEASE_VERSION, Reviewer:$REVIEWER, Draft:$IS_DRAFT'
 
     # Don't add any other rules after this one.
-    - when: always  # Other pipelines can run, but use the default name
+    - when: always  # Other pipelines can run but use the default name

@@ -1,14 +1,10 @@
 .daily-build-status-schedule-rule:
   rules:
-    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $DAILY_BUILD_STATUS == "true"'
-
-.daily-build-status-schedule-rule-pages:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $DAILY_BUILD_STATUS == "true" && $DAILY_BUILD_STATUS_PAGES == "true"'
+    - if: '$DAILY_BUILD_STATUS == "true"'
 
 .daily-build-status-schedule-rule-always:
   rules:
-    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $DAILY_BUILD_STATUS == "true"'
+    - if: '$DAILY_BUILD_STATUS == "true"'
       when: always
 
 .before-script-daily-build-status:
@@ -38,8 +34,6 @@ daily-build-status-job:
   variables:
     ARTIFACTS_FOLDER: artifacts
     ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
-    SLACK_CHANNEL: $SLACK_CHANNEL
-    CI_PIPELINE_URL: $CI_PIPELINE_URL
   script:
     - EXIT_CODE=0
     - export PYTHONPATH="${PYTHONPATH}:${CI_PROJECT_DIR}"
