@@ -244,12 +244,14 @@ def update_index_folder(index_folder_path: str, pack: Pack, pack_versions_to_kee
                     os.path.join(index_pack_path, "metadata.json"),
                     os.path.join(index_pack_path, f"metadata-{pack.current_version}.json"),
                 )
-
+            if os.path.exists(os.path.join(pack.path, Pack.VERSION_CONFIG)):
+                shutil.copy(os.path.join(pack.path, Pack.VERSION_CONFIG), index_pack_path)
             task_status = True
             return task_status
 
         # Copy new files and add metadata for latest version
         for d in os.scandir(pack.path):
+            logging.info(f"Copying pack's {d.name} file to pack '{pack.name}' index folder")
             if d.name not in Pack.INDEX_FILES_TO_UPDATE:
                 continue
 

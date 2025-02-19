@@ -831,7 +831,7 @@ class BranchTestCollector(TestCollector):
         Sorts the packs to upload into two sets: packs_to_upload and packs_to_update_metadata.
         packs_to_upload: Set of packs to upload (hard upload - changed files with RN and version bump).
         packs_to_update_metadata: Set of packs to update
-                                  (soft upload - changes only to packmetadata file without RN and version bump).
+                                  (soft upload - changes only to packmetadata or version_config file without RN and version bump).
 
         :param: result contains packs_to_upload: The resultant list of packs to upload
         """
@@ -839,11 +839,14 @@ class BranchTestCollector(TestCollector):
             current_version = PACK_MANAGER.get_current_version(pack_id) or ""
             rn_path = f"Packs/{pack_id}/ReleaseNotes/{current_version.replace('.', '_')}.md"
             pack_metadata_path = f"Packs/{pack_id}/pack_metadata.json"
+            version_config_path = f"Packs/{pack_id}/version_config.json"
 
             if pack_metadata_path in self.added_files:  # first version, skip
                 continue
 
-            if rn_path not in self.changed_files and pack_metadata_path in self.changed_files:
+            if rn_path not in self.changed_files and (
+                pack_metadata_path in self.changed_files or version_config_path in self.changed_files
+            ):
                 result.packs_to_update_metadata.add(pack_id)
 
         result.packs_to_upload -= result.packs_to_update_metadata
