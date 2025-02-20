@@ -1,0 +1,1 @@
+Fixed an issue where the user permissions step failed due to a mismatch between GitHub and GitLab naming conventions.

@@ -573,7 +573,7 @@ upload-packs-to-marketplace:
     - .default-job-settings
   script:
     - !reference [.ssh-config-setup]
-    - !reference [.check_user_permissions_to_upload_packs]
+    - !reference [.check_user_permissions]
     - *upload_packs_to_the_marketplace
     - *upload_failed_to_upload_packs
     - section_start "Download packs from GCP"
@@ -623,7 +623,7 @@ upload-packs-to-marketplace-v2:
     - .bucket-upload-rule
     - .default-job-settings
   script:
-    - !reference [.check_user_permissions_to_upload_packs]
+    - !reference [.check_user_permissions]
     - *upload_packs_to_the_marketplace_v2
     - *upload_failed_to_upload_packs
     - section_start "Download packs from GCP"
@@ -673,7 +673,7 @@ upload-packs-to-xpanse-marketplace:
     - .bucket-upload-rule
     - .default-job-settings
   script:
-    - !reference [.check_user_permissions_to_upload_packs]
+    - !reference [.check_user_permissions]
     - *upload_packs_to_the_marketplace_xpanse
     - *upload_failed_to_upload_packs
     - section_start "Download packs from GCP"
@@ -723,7 +723,7 @@ upload-packs-to-xsoar-saas-marketplace:
     - .bucket-upload-rule
     - .default-job-settings
   script:
-    - !reference [.check_user_permissions_to_upload_packs]
+    - !reference [.check_user_permissions]
     - *upload_packs_to_the_marketplace_xsoar_saas
     - *upload_failed_to_upload_packs
     - section_start "Download packs from GCP"
@@ -811,7 +811,7 @@ xsoar-saas-force-pack-upload:
   extends:
     - .default-job-settings
   script:
-    - !reference [.check_user_permissions_to_upload_packs]
+    - !reference [.check_user_permissions]
     - EXTRACT_FOLDER=$(mktemp -d)
     - PACK_ARTIFACTS="${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs.zip"
     - PACKS_DEPENDENCIES="${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json"
