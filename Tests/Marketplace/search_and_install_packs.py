@@ -53,7 +53,7 @@ GITLAB_PACK_METADATA_URL = (
 )
 
 BATCH_SIZE = 10
-PAGE_SIZE_DEFAULT = 50
+PAGE_SIZE_DEFAULT = 25
 CYCLE_SEPARATOR = "<->"
 HYBRID_PACKS = ["PrismaCloud"]
 
@@ -730,9 +730,6 @@ def get_one_page_of_packs_dependencies(
 
     def success_handler(response):
         logging.success(f"Succeeded to fetch dependencies of page {page}")
-        if not isinstance(response, dict):
-            logging.error(f"Unexpected response type: {type(response)}, response: {response}")
-            raise ValueError(f"Unexpected response type: {type(response)}")
         return True, response
 
     failure_massage = f"Failed to fetch dependencies of page: {page}"
@@ -753,6 +750,9 @@ def get_one_page_of_packs_dependencies(
         sleep_interval=sleep_interval,
         success_handler=success_handler,
     )
+    if not isinstance(data, dict):
+        logging.error(f"Unexpected response type: {type(data)}, response:ֿ\n{data}")
+        raise ValueError(f"Unexpected response type: {type(data)}")
     return data
 
 
