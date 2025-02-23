@@ -19,6 +19,7 @@ if [ "$#" -lt "1" ]; then
   [-sn, --scheduled-nightly]                Whether this build is a scheduled nightly build.
   [-tmr, --test-modeling-rule-jira-tickets] Whether to enable test modeling rule jira tickets creation.
   [-tpr, --test-playbooks-jira-tickets]     Whether to enable test playbooks jira tickets creation.
+  [-tuc, --test-use-case-jira-tickets]     Whether to enable test use case jira tickets creation.
   [-nn, --native-nightly]                   Whether this build is a native nightly build.
   "
   echo "Get the trigger token from here https://vault.paloaltonetworks.local/home#R2VuZXJpY1NlY3JldERldGFpbHM6RGF0YVZhdWx0OmIyMzJiNDU0LWEzOWMtNGY5YS1hMTY1LTQ4YjRlYzM1OTUxMzpSZWNvcmRJbmRleDowOklzVHJ1bmNhdGVk" # disable-secrets-detection
@@ -30,6 +31,7 @@ _infra_branch="$(git branch --show-current)"
 _scheduled_nightly="false"
 _slack_channel="dmst-build-test"
 TEST_MODELING_RULE_JIRA_TICKETS="false"
+TEST_USE_CASE_JIRA_TICKETS="false"
 TEST_PLAYBOOKS_JIRA_TICKETS="false"
 _sdk_ref="${SDK_REF:-master}"
 _override_sdk_ref="${DEMISTO_SDK_NIGHTLY:-false}"
@@ -80,6 +82,12 @@ while [[ "$#" -gt 0 ]]; do
     TEST_MODELING_RULE_JIRA_TICKETS="true"
     shift
     ;;
+
+  -tuc | --test-use-case-jira-tickets)
+    TEST_USE_CASE_JIRA_TICKETS="true"
+    shift
+    ;;
+
   -tpr | --test-playbooks-jira-tickets)
     TEST_PLAYBOOKS_JIRA_TICKETS="true"
     shift
@@ -112,6 +120,7 @@ curl "$BUILD_TRIGGER_URL" --form "ref=${_branch}" --form "token=${_ci_token}" \
   --form "variables[IS_NIGHTLY]=${_is_nightly}" \
   --form "variables[IS_NATIVE_NIGHTLY]=${_is_native_nightly}" \
   --form "variables[TEST_MODELING_RULE_JIRA_TICKETS]=${TEST_MODELING_RULE_JIRA_TICKETS}" \
+  --form "variables[TEST_USE_CASE_JIRA_TICKETS]=${TEST_USE_CASE_JIRA_TICKETS}" \
   --form "variables[TEST_PLAYBOOKS_JIRA_TICKETS]=${TEST_PLAYBOOKS_JIRA_TICKETS}" \
   --form "variables[SLACK_CHANNEL]=${_slack_channel}" \
   --form "variables[BRANCH]=${_branch}" \

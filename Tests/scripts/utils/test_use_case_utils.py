@@ -5,10 +5,10 @@ from pathlib import Path
 DEPENDENCIES_KEY = "additional_needed_packs"
 
 
-class FlowDataExtractor:
+class TestUseCaseDataExtractor:
     def extract_config(self, file_path: str) -> dict:
         """
-        Extracting the pack dependencies packs from a flow test file.
+        Extracting the pack dependencies packs from a test use case file.
         The data is found as json in the file in the following format:
         {
         "marketplaces": ["XSIAM"],
@@ -23,28 +23,28 @@ class FlowDataExtractor:
         parsed_ast = ast.parse(file_content)
 
         if not parsed_ast:
-            raise ValueError("Failed to parse flow test. Make sure the file exists.")
+            raise ValueError("Failed to parse test use case. Make sure the file exists.")
 
         # Get the module-level docstring
         try:
             docstr = ast.get_docstring(parsed_ast) if parsed_ast else ""
 
-            if not docstr:
-                raise ValueError("Failed to parse docstring for configuration. Verify the docstring contain valid json format.")
             config = json.loads(docstr) if docstr else {}
 
         except Exception as e:
             raise ValueError(
-                "Flow Test's configuration could not be parsed. Verify the docstring contain valid json format." f"Error: {e!s}"
+                "Test Use Case's configuration could not be parsed. Verify the docstring contain valid json format."
+                ""
+                f"Error: {e!s}"
             )
 
         return config
 
     def get_additional_packs_data(self, file_path: str | Path) -> list[dict[str, str]]:
-        """Extracting the additional packs needed to be installed from a given Flow Test
+        """Extracting the additional packs needed to be installed from a given Use Case
 
         Args:
-            file_path (str | Path): the flow test path
+            file_path (str | Path): the test use case path
 
         Returns:
             list: List of dependencies packs to install.
@@ -53,7 +53,8 @@ class FlowDataExtractor:
         packs = config.get("additional_needed_packs", {})
         return list(packs.keys())
 
-    def get_playbook_flow_test_path(self, playbook_flow_test_name, pack):
-        p = Path("Packs", pack, "PlaybookFlowTests", f"{playbook_flow_test_name}.py")
+    @staticmethod
+    def get_test_use_case_path(test_use_case_name, pack):
+        p = Path("Packs", pack, "TestUseCases", f"{test_use_case_name}.py")
 
         return p

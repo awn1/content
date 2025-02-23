@@ -65,6 +65,8 @@ RED_COLOR = "\033[91m"
 GREEN_COLOR = "\033[92m"
 TEST_PLAYBOOKS_REPORT_FILE_NAME = "test_playbooks_report.xml"
 TEST_MODELING_RULES_REPORT_FILE_NAME = "test_modeling_rules_report.xml"
+TEST_USE_CASE_REPORT_FILE_NAME = "test_use_case_report.xml"
+
 E2E_RESULT_FILE_NAME = "e2e_tests_result.xml"
 
 FAILED_TO_COLOR_ANSI = {

@@ -178,7 +178,6 @@ validate-content-conf:
   stage: prepare-testing-bucket
   script:
     - !reference [.create-release-notes-and-common-docs]
-
     - section_start "Create or update content graph" --collapsed
     - gcloud auth configure-docker --quiet ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
     - |
@@ -250,6 +249,7 @@ validate-content-conf:
     - |
       if [[ "${BUCKET_UPLOAD}" == "true" || "${IS_NIGHTLY}" == "true" ||
       -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.json" ||
+      -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/test_use_cases_to_test.json" ||
       -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" || "${has_label}" == "true" ]]; then
 
         section_start "Prepare Content Packs for Testing" --collapsed
@@ -523,6 +523,7 @@ jobs-done-check-nightly:
     - xsoar-test_playbooks_results
     - xsiam-test_playbooks_results
     - xsiam-test_modeling_rule_results
+    - xsiam-test_use_case_results
   tags:
     - gke
   rules:
@@ -571,6 +572,7 @@ jobs-done-check-on-push:
     - xsoar-test_playbooks_results
     - xsiam-test_playbooks_results
     - xsiam-test_modeling_rule_results
+    - xsiam-test_use_case_results
   tags:
     - gke
   variables:
@@ -615,6 +617,7 @@ jobs-done-check-on-merge:
     - xsoar-test_playbooks_results
     - xsiam-test_playbooks_results
     - xsiam-test_modeling_rule_results
+    - xsiam-test_use_case_results
   tags:
     - gke
   variables:
@@ -709,11 +712,12 @@ slack-notify-on-merge:
 
     - section_start "Are there tests to run?" --collapsed
     - |
-      if ! [[ -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.json" || -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" ]]; then
+      if ! [[ -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.json" || -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" || -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/test_use_cases_to_test.json" ]]; then
         # The files are empty.
         echo "Not running the instance flow, no tests to run were found."
         ./Tests/scripts/run_tests.sh --generate-empty-result-file
         ./Tests/scripts/test_modeling_rules.sh --generate-empty-result-file
+        ./Tests/scripts/test_use_case.sh --generate-empty-result-file
         job-done
         exit $EXIT_CODE
       fi
@@ -729,6 +733,9 @@ slack-notify-on-merge:
     - section_start "Test Modeling Rules"
     - ./Tests/scripts/test_modeling_rules.sh || EXIT_CODE=$?
     - section_end "Test Modeling Rules"
+    - section_start "Test Use Case"
+    - ./Tests/scripts/test_use_case.sh || EXIT_CODE=$?
+    - section_end "Test Use Case"
 
     - section_start "Packs re-installation test"
     - |
@@ -808,9 +815,11 @@ xsiam_server_ga:
     reports:
       junit:
         - "${ARTIFACTS_FOLDER_INSTANCE}/test_modeling_rules_report.xml"
+        - "${ARTIFACTS_FOLDER_INSTANCE}/test_use_case_report.xml"
         - "${ARTIFACTS_FOLDER_INSTANCE}/test_playbooks_report.xml"
     paths:
       - "${ARTIFACTS_FOLDER_INSTANCE}/test_modeling_rules_report.xml"
+      - "${ARTIFACTS_FOLDER_INSTANCE}/test_use_case_report.xml"
       - "${ARTIFACTS_FOLDER_INSTANCE}/test_playbooks_report.xml"
       - ${CI_PROJECT_DIR}/artifacts/*  # restoring the default artifacts path from the job default settings
       - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*  # restoring the default artifacts path from the job default settings
@@ -1010,6 +1019,20 @@ test-upload-flow:
     - ./Tests/scripts/test_modeling_rule_results.sh
     - job-done
 
+.test_use_case_results:
+  stage: results
+  rules:
+    - !reference [.filter-non-nightly-docker-updates-rule, rules]
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
+    - if: '$TRIGGER_TEST_BRANCH == "true"'
+    - if: '$IS_NIGHTLY == "true"'
+      when: always
+  extends:
+    - .default-job-settings
+  script:
+    - ./Tests/scripts/test_use_case_results.sh
+    - job-done
+
 xsoar-test_playbooks_results:
   variables:
     SERVER_TYPE: "XSOAR"
@@ -1067,6 +1090,20 @@ xsiam-test_modeling_rule_results:
     JIRA_ISSUE_TYPE: "XSOAR Dev Bug"
     JIRA_LABELS: '["XSIAM", "nightly"]'
   extends: .test_modeling_rule_results
+  needs:
+    - xsiam_server_ga
+  dependencies:
+    - xsiam_server_ga
+
+xsiam-test_use_case_results:
+  variables:
+    SERVER_TYPE: "XSIAM"
+    PRODUCT_TYPE: "XSIAM"
+    ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_MPV2}"
+    JIRA_COMPONENT: "Test Use Case Failure"
+    JIRA_ISSUE_TYPE: "XSOAR Dev Bug"
+    JIRA_LABELS: '["XSIAM", "nightly"]'
+  extends: .test_use_case_results
   needs:
     - xsiam_server_ga
   dependencies:

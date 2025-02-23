@@ -21,6 +21,12 @@ from junitparser import JUnitXml, TestSuite
 from slack_sdk import WebClient
 
 from Tests.Marketplace.marketplace_constants import BucketUploadFlow
+from Tests.scripts.collect_tests.constants import (
+    TEST_MODELING_RULES_TO_JIRA_MAPPING,
+    TEST_MODELING_RULES_TO_JIRA_TICKETS_CONVERTED,
+    TEST_USE_CASE_TO_JIRA_MAPPING,
+    TEST_USE_CASE_TO_JIRA_TICKETS_CONVERTED,
+)
 from Tests.scripts.common import (
     BLACKLIST_VALIDATION,
     BUCKET_UPLOAD,
@@ -33,6 +39,7 @@ from Tests.scripts.common import (
     DOCKERFILES_PR,
     TEST_MODELING_RULES_REPORT_FILE_NAME,
     TEST_PLAYBOOKS_REPORT_FILE_NAME,
+    TEST_USE_CASE_REPORT_FILE_NAME,
     get_instance_directories,
     get_job_by_name,
     get_properties_for_test_suite,
@@ -46,13 +53,12 @@ from Tests.scripts.common import (
     secrets_sha_has_been_changed,
     slack_link,
 )
-from Tests.scripts.github_client import GithubPullRequest
-from Tests.scripts.test_modeling_rule_report import (
-    TEST_MODELING_RULES_TO_JIRA_TICKETS_CONVERTED,
-    calculate_test_modeling_rule_results,
-    get_summary_for_test_modeling_rule,
-    read_test_modeling_rule_to_jira_mapping,
+from Tests.scripts.generic_test_report import (
+    calculate_test_results,
+    get_summary_for_test,
+    read_test_objects_to_jira_mapping,
 )
+from Tests.scripts.github_client import GithubPullRequest
 from Tests.scripts.test_playbooks_report import TEST_PLAYBOOKS_TO_JIRA_TICKETS_CONVERTED, read_test_playbook_to_jira_mapping
 from Tests.scripts.utils.log_util import install_logging
 
@@ -257,9 +263,9 @@ def test_modeling_rules_results(artifact_folder: Path, pipeline_url: str, title:
             }
         ], True
 
-    failed_test_to_jira_mapping = read_test_modeling_rule_to_jira_mapping(artifact_folder)
+    failed_test_to_jira_mapping = read_test_objects_to_jira_mapping(artifact_folder, TEST_MODELING_RULES_TO_JIRA_MAPPING)
 
-    modeling_rules_to_test_suite, _, _ = calculate_test_modeling_rule_results(test_modeling_rules_results_files)
+    modeling_rules_to_test_suite, _, _ = calculate_test_results(test_modeling_rules_results_files)
 
     if not modeling_rules_to_test_suite:
         logging.info("Test Modeling rules - No test modeling rule results found for this build")
@@ -279,7 +285,7 @@ def test_modeling_rules_results(artifact_folder: Path, pipeline_url: str, title:
             total_test_suites += 1
             if test_suite.failures or test_suite.errors:
                 properties = get_properties_for_test_suite(test_suite)
-                if modeling_rule := get_summary_for_test_modeling_rule(properties):
+                if modeling_rule := get_summary_for_test(properties):
                     failed_test_suites_tuples.append(
                         failed_test_data_to_slack_link(modeling_rule, failed_test_to_jira_mapping.get(modeling_rule))
                     )
@@ -315,6 +321,86 @@ def test_modeling_rules_results(artifact_folder: Path, pipeline_url: str, title:
         ], True
 
     title = f"{title} - All Test Modeling rules Passed - ({total_test_suites})"
+    return [
+        {
+            "fallback": title,
+            "color": "good",
+            "title": title,
+            "title_link": get_test_report_pipeline_url(pipeline_url),
+        }
+    ], False
+
+
+def test_use_case_results(artifact_folder: Path, pipeline_url: str, title: str) -> tuple[list[dict[str, Any]], bool]:
+    if not (test_use_case_files := get_test_results_files(artifact_folder, TEST_USE_CASE_REPORT_FILE_NAME)):
+        logging.error(f"Could not find any test use case result files in {artifact_folder}")
+        title = f"{title} - Failed to get Test Use Case results"
+        return [
+            {
+                "fallback": title,
+                "color": "warning",
+                "title": title,
+            }
+        ], True
+
+    failed_test_to_jira_mapping = read_test_objects_to_jira_mapping(artifact_folder, TEST_USE_CASE_TO_JIRA_MAPPING)
+
+    use_case_to_test_suite, _, _ = calculate_test_results(test_use_case_files)
+
+    if not use_case_to_test_suite:
+        logging.info("Test Use Case - No test use case results found for this build")
+        title = f"{title} - Test Use Case - No test use case results found for this build"
+        return [
+            {
+                "fallback": title,
+                "color": "good",
+                "title": title,
+            }
+        ], False
+
+    failed_test_suites_tuples = []
+    total_test_suites = 0
+    for test_suites in use_case_to_test_suite.values():
+        for test_suite in test_suites.values():
+            total_test_suites += 1
+            if test_suite.failures or test_suite.errors:
+                properties = get_properties_for_test_suite(test_suite)
+                if use_case := get_summary_for_test(properties):
+                    failed_test_suites_tuples.append(
+                        failed_test_data_to_slack_link(use_case, failed_test_to_jira_mapping.get(use_case))
+                    )
+
+    if failed_test_suites_tuples:
+        if (artifact_folder / TEST_USE_CASE_TO_JIRA_TICKETS_CONVERTED).exists():
+            title_suffix = ALL_FAILURES_WERE_CONVERTED_TO_JIRA_TICKETS
+            color = "warning"
+        else:
+            title_suffix = ""
+            color = "danger"
+        failed_test_suites = map(lambda x: x[1], sorted(failed_test_suites_tuples, key=lambda x: (x[0], x[1])))
+        title = (
+            f"{title} - Failed Test Use Case - Passed:{total_test_suites - len(failed_test_suites_tuples)}, "
+            f"Failed:{len(failed_test_suites_tuples)}"
+        )
+
+        return [
+            {
+                "fallback": title,
+                "color": color,
+                "title": title,
+                "title_link": get_test_report_pipeline_url(pipeline_url),
+                "fields": [
+                    {
+                        "title": f"Failed Test Use Cases {title_suffix if i == 0 else ' - Continued'}",
+                        "value": chunk,
+                        "short": False,
+                    }
+                    for i, chunk in enumerate(join_list_by_delimiter_in_chunks(failed_test_suites))
+                ],
+            }
+        ], True
+
+    title = f"{title} - All Test Use Cases Passed - ({total_test_suites})"
     return [
         {
             "fallback": title,
@@ -636,9 +722,20 @@ def construct_slack_msg(
         test_modeling_rules_slack_msg_xsiam, test_modeling_rules_has_failure_xsiam = test_modeling_rules_results(
             ARTIFACTS_FOLDER_XSIAM, pipeline_url, title="XSIAM"
         )
-        slack_msg_append += test_playbooks_slack_msg_xsoar + test_playbooks_slack_msg_xsiam + test_modeling_rules_slack_msg_xsiam
+        test_use_case_slack_msg_xsiam, test_use_acse_has_failure_xsiam = test_use_case_results(
+            ARTIFACTS_FOLDER_XSIAM, pipeline_url, title="XSIAM"
+        )
+        slack_msg_append += (
+            test_playbooks_slack_msg_xsoar
+            + test_playbooks_slack_msg_xsiam
+            + test_modeling_rules_slack_msg_xsiam
+            + test_use_case_slack_msg_xsiam
+        )
         has_failed_tests |= (
-            test_playbooks_has_failure_xsoar or test_playbooks_has_failure_xsiam or test_modeling_rules_has_failure_xsiam
+            test_playbooks_has_failure_xsoar
+            or test_playbooks_has_failure_xsiam
+            or test_modeling_rules_has_failure_xsiam
+            or test_use_acse_has_failure_xsiam
         )
         slack_msg_append += missing_content_packs_test_conf(ARTIFACTS_FOLDER_XSOAR_SERVER_TYPE)
     if triggering_workflow == CONTENT_NIGHTLY:
@@ -786,7 +883,7 @@ def construct_coverage_slack_msg(sleep_interval: int = 1) -> list[dict[str, Any]
     else:
         coverage_last_month = "no coverage found for last month"
 
-    if isinstance(coverage_last_month, float):  #  The coverage file is found
+    if isinstance(coverage_last_month, float):  # The coverage file is found
         coverage_last_month = f"{coverage_last_month:.3f}%"
 
     color = (

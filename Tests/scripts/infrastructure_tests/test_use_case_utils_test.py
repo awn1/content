@@ -4,7 +4,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from Tests.scripts.utils.playbook_flow_test_utils import FlowDataExtractor
+from Tests.scripts.utils.test_use_case_utils import TestUseCaseDataExtractor
 
 TEST_CASES = [
     (
@@ -90,7 +90,7 @@ def test_extract_config(file_content, expected_output):
     temp_file = create_temp_file_with_docstring(file_content, suffix=".py")
 
     with patch("builtins.open", mock_open(read_data='''\n"""''' + file_content + '''\n"""\n''')):
-        result = FlowDataExtractor().extract_config(temp_file.name)
+        result = TestUseCaseDataExtractor().extract_config(temp_file.name)
         assert result["additional_needed_packs"] == expected_output
 
     temp_file.close()
@@ -108,7 +108,7 @@ def test_extract_config(file_content, expected_output):
 )
 def test_get_additional_packs_data(file_content, expected_packs):
     with patch("builtins.open", mock_open(read_data=file_content)):
-        with patch("Tests.scripts.utils.playbook_flow_test_utils.FlowDataExtractor.extract_config") as mock_extract:
+        with patch("Tests.scripts.utils.test_use_case_utils.TestUseCaseDataExtractor.extract_config") as mock_extract:
             mock_extract.return_value = {"additional_needed_packs": json.loads(file_content)["additional_needed_packs"]}
-            result = FlowDataExtractor().get_additional_packs_data("dummy_path")
+            result = TestUseCaseDataExtractor().get_additional_packs_data("dummy_path")
             assert result == expected_packs
