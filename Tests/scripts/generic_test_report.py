@@ -27,18 +27,14 @@ from Tests.scripts.jira_issues import (
 )
 from Tests.scripts.utils import logging_wrapper as logging
 
-TEST_MODELING_RULES_BASE_HEADERS = ["Test Modeling Rule"]
-TEST_MODELING_RULES_TO_JIRA_MAPPING = "test_modeling_rule_to_jira_mapping.json"
-TEST_MODELING_RULES_TO_JIRA_TICKETS_CONVERTED = "test_modeling_rule_to_jira_tickets_converted.txt"
 
-
-def get_summary_for_test_modeling_rule(properties: dict[str, str]) -> str | None:
+def get_summary_for_test(properties: dict[str, str]) -> str | None:
     if "pack_id" not in properties or "file_name" not in properties:
         return None
     return f"{properties['pack_id']} - {properties['file_name']}"
 
 
-def create_jira_issue_for_test_modeling_rule(
+def create_jira_issue_for_test(
     jira_ticket_info: JiraTicketInfo, jira_server: JIRA, test_suite: TestSuite, max_days_to_reopen: int, now: datetime
 ) -> Issue | None:
     properties = get_properties_for_test_suite(test_suite)
@@ -47,8 +43,8 @@ def create_jira_issue_for_test_modeling_rule(
 
     junit_file_name = jira_sanitize_file_name(f"unit-test{ci_pipeline_id_dash}-{properties['pack_id']}-{properties['file_name']}")
     junit_file_name_with_suffix = f"{junit_file_name}.xml"
-    description = generate_description_for_test_modeling_rule(ci_pipeline_id, properties, test_suite, junit_file_name_with_suffix)
-    summary = generate_ticket_summary(get_summary_for_test_modeling_rule(properties))  # type: ignore[arg-type]
+    description = generate_description_for_test(ci_pipeline_id, properties, test_suite, junit_file_name_with_suffix)
+    summary = generate_ticket_summary(get_summary_for_test(properties))  # type: ignore[arg-type]
     jql_query = generate_query_with_summary(jira_ticket_info, summary)
     search_issues: ResultList[Issue] = search_issues_with_retry(jira_server, jql_query, 1)
     jira_issue, link_to_issue, use_existing_issue, unresolved_transition_id = find_existing_jira_ticket(
@@ -98,7 +94,7 @@ def create_jira_issue_for_test_modeling_rule(
     return jira_issue
 
 
-def generate_description_for_test_modeling_rule(
+def generate_description_for_test(
     ci_pipeline_id: str,
     properties: dict[str, str],
     test_suite: TestSuite,
@@ -127,21 +123,21 @@ def generate_description_for_test_modeling_rule(
     return description
 
 
-def calculate_test_modeling_rule_results(
-    test_modeling_rules_results_files: dict[str, Path],
+def calculate_test_results(
+    test_results_files: dict[str, Path],
     issues: dict[str, list[Issue]] | None = None,
 ) -> tuple[dict[str, dict[str, TestSuite]], dict[str, Issue], set[str]]:
     issues = issues or {}
-    modeling_rules_to_test_suite: dict[str, dict[str, TestSuite]] = defaultdict(dict)
-    jira_tickets_for_modeling_rule: dict[str, Issue] = {}
+    test_objects_to_test_suite: dict[str, dict[str, TestSuite]] = defaultdict(dict)
+    jira_tickets_for_test_object: dict[str, Issue] = {}
     server_versions: set[str] = set()
-    for instance_role, result_file in test_modeling_rules_results_files.items():
+    for instance_role, result_file in test_results_files.items():
         xml = JUnitXml.fromfile(result_file.as_posix())
         server_versions.add(instance_role)
         for test_suite in xml.iterchildren(TestSuite):
             properties = get_properties_for_test_suite(test_suite)
-            if summary := get_summary_for_test_modeling_rule(properties):
-                modeling_rules_to_test_suite[summary][instance_role] = test_suite
+            if summary := get_summary_for_test(properties):
+                test_objects_to_test_suite[summary][instance_role] = test_suite
                 ticket_summary = generate_ticket_summary(summary).lower()
                 if issues_matching_summary := issues.get(ticket_summary, []):
                     sorted_issues_matching_summary = sorted(
@@ -149,31 +145,28 @@ def calculate_test_modeling_rule_results(
                         key=lambda issue: convert_jira_time_to_datetime(issue.get_field("created")),
                         reverse=True,
                     )
-                    jira_tickets_for_modeling_rule[summary] = sorted_issues_matching_summary[0]
+                    jira_tickets_for_test_object[summary] = sorted_issues_matching_summary[0]
 
-    return modeling_rules_to_test_suite, jira_tickets_for_modeling_rule, server_versions
+    return test_objects_to_test_suite, jira_tickets_for_test_object, server_versions
 
 
-def write_test_modeling_rule_to_jira_mapping(
-    server_url: str, artifacts_path: Path, jira_tickets_for_modeling_rule: dict[str, Issue]
+def write_test_to_jira_mapping(
+    server_url: str, artifacts_path: Path, jira_tickets_for_test_objects: dict[str, Issue], test_to_jira_mapping_path: str
 ):
-    test_modeling_rule_to_jira_mapping_file = artifacts_path / TEST_MODELING_RULES_TO_JIRA_MAPPING
-    logging.info(f"Writing test_modeling_rules_to_jira_mapping to {test_modeling_rule_to_jira_mapping_file}")
-    with open(test_modeling_rule_to_jira_mapping_file, "w") as test_modeling_rule_to_jira_mapping_fp:
-        test_modeling_rule_to_jira_mapping = {
-            modeling_rule: jira_ticket_to_json_data(server_url, jira_ticket)
-            for modeling_rule, jira_ticket in jira_tickets_for_modeling_rule.items()
+    logging.info(f"Writing test_object_to_jira_mapping to {test_to_jira_mapping_path}")
+    with open(artifacts_path / test_to_jira_mapping_path, "w") as test_object_to_jira_mapping_fp:
+        test_objects_to_jira_mapping = {
+            tested_obj: jira_ticket_to_json_data(server_url, jira_ticket)
+            for tested_obj, jira_ticket in jira_tickets_for_test_objects.items()
         }
-        test_modeling_rule_to_jira_mapping_fp.write(
-            json.dumps(test_modeling_rule_to_jira_mapping, indent=4, sort_keys=True, default=str)
-        )
+        test_object_to_jira_mapping_fp.write(json.dumps(test_objects_to_jira_mapping, indent=4, sort_keys=True, default=str))
 
 
-def read_test_modeling_rule_to_jira_mapping(artifacts_path: Path) -> dict[str, dict[str, str]]:
-    logging.debug(f"Reading test_modeling_rules_to_jira_mapping from {TEST_MODELING_RULES_TO_JIRA_MAPPING}")
+def read_test_objects_to_jira_mapping(artifacts_path: Path, test_to_jira_mapping_path: str) -> dict[str, dict[str, str]]:
+    logging.debug(f"Reading test_objects_to_jira_mapping_path from {test_to_jira_mapping_path}")
     with (
         contextlib.suppress(Exception),
-        open(artifacts_path / TEST_MODELING_RULES_TO_JIRA_MAPPING) as playbook_to_jira_mapping_file,
+        open(artifacts_path / test_to_jira_mapping_path) as test_objects_to_jira_mapping_file,
     ):
-        return json.load(playbook_to_jira_mapping_file)
+        return json.load(test_objects_to_jira_mapping_file)
     return {}

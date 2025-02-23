@@ -12,13 +12,13 @@ from tabulate import tabulate
 
 from Tests.configure_and_test_integration_instances import get_custom_user_agent
 from Tests.scripts.collect_tests.constants import (
-    TEST_MODELING_RULES_BASE_HEADERS,
-    TEST_MODELING_RULES_TO_JIRA_MAPPING,
-    TEST_MODELING_RULES_TO_JIRA_TICKETS_CONVERTED,
+    TEST_USE_CASE_BASE_HEADERS,
+    TEST_USE_CASE_TO_JIRA_MAPPING,
+    TEST_USE_CASE_TO_JIRA_TICKETS_CONVERTED,
 )
 from Tests.scripts.common import (
-    TEST_MODELING_RULES_REPORT_FILE_NAME,
     TEST_SUITE_CELL_EXPLANATION,
+    TEST_USE_CASE_REPORT_FILE_NAME,
     calculate_results_table,
     get_all_failed_results,
     get_properties_for_test_suite,
@@ -45,15 +45,15 @@ JIRA_MAX_DAYS_TO_REOPEN_DEFAULT = 30
 JIRA_MAX_DAYS_TO_REOPEN = (
     os.environ.get("JIRA_MAX_DAYS_TO_REOPEN", JIRA_MAX_DAYS_TO_REOPEN_DEFAULT) or JIRA_MAX_DAYS_TO_REOPEN_DEFAULT
 )
-JIRA_MAX_TEST_MODELING_RULE_FAILURES_TO_HANDLE_DEFAULT = 20
-JIRA_MAX_TEST_MODELING_RULE_FAILURES_TO_HANDLE = (
-    os.environ.get("JIRA_MAX_TEST_MODELING_RULE_FAILURES_TO_HANDLE", JIRA_MAX_TEST_MODELING_RULE_FAILURES_TO_HANDLE_DEFAULT)
-    or JIRA_MAX_TEST_MODELING_RULE_FAILURES_TO_HANDLE_DEFAULT
+JIRA_MAX_TEST_USE_CASE_FAILURES_TO_HANDLE_DEFAULT = 20
+JIRA_MAX_TEST_USE_CASE_FAILURES_TO_HANDLE = (
+    os.environ.get("JIRA_MAX_TEST_USE_CASE_FAILURES_TO_HANDLE", JIRA_MAX_TEST_USE_CASE_FAILURES_TO_HANDLE_DEFAULT)
+    or JIRA_MAX_TEST_USE_CASE_FAILURES_TO_HANDLE_DEFAULT
 )
 
 
 def options_handler() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Converts Test modeling rule report to Jira issues")
+    parser = argparse.ArgumentParser(description="Converts test use case report to Jira issues")
     parser.add_argument("-a", "--artifacts-path", help="Artifacts path", required=True)
     parser.add_argument("--build-number", help="CI job number where the instances were created", required=True)
     parser.add_argument(
@@ -67,7 +67,7 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument(
         "-f",
         "--max-failures-to-handle",
-        default=JIRA_MAX_TEST_MODELING_RULE_FAILURES_TO_HANDLE,
+        default=JIRA_MAX_TEST_USE_CASE_FAILURES_TO_HANDLE,
         type=int,
         required=False,
         help="The max days to reopen a closed issue",
@@ -77,13 +77,13 @@ def options_handler() -> argparse.Namespace:
 
 def main():
     try:
-        install_logging("convert_test_modeling_result_to_jira_issues.log", logger=logging)
+        install_logging("convert_test_use_case_result_to_jira_issues.log", logger=logging)
         now = datetime.now(tz=timezone.utc)
         options = options_handler()
         artifacts_path = Path(options.artifacts_path)
         jira_server_info = get_jira_server_info()
         jira_ticket_info = get_jira_ticket_info()
-        logging.info("Converting test modeling rule report to Jira issues with the following settings:")
+        logging.info("Converting test use case report to Jira issues with the following settings:")
         logging.info(f"\tArtifacts path: {artifacts_path}")
         logging.info(f"\tJira server url: {jira_server_info.server_url}")
         logging.info(f"\tJira verify SSL: {jira_server_info.verify_ssl}")
@@ -104,43 +104,40 @@ def main():
         )
         jira_server_info = jira_server_information(jira_server)
         server_url = jira_server_info["baseUrl"]
-        if not (
-            test_modeling_rules_results_files := get_test_results_files(artifacts_path, TEST_MODELING_RULES_REPORT_FILE_NAME)
-        ):
-            logging.critical(f"Could not find any test modeling rules result files in {artifacts_path}")
+        if not (test_use_case_results_files := get_test_results_files(artifacts_path, TEST_USE_CASE_REPORT_FILE_NAME)):
+            logging.critical(f"Could not find any test use case result files in {artifacts_path}")
             sys.exit(1)
 
-        logging.info(f"Found {len(test_modeling_rules_results_files)} test modeling rules files")
+        logging.info(f"Found {len(test_use_case_results_files)} test use case files")
 
         issues = jira_search_all_by_query(jira_server, generate_query_by_component_and_issue_type(jira_ticket_info))
 
-        modeling_rules_to_test_suite, jira_tickets_for_modeling_rule, server_versions = calculate_test_results(
-            test_modeling_rules_results_files, issues
+        use_case_to_test_suite, jira_ticket_for_use_case, server_versions = calculate_test_results(
+            test_use_case_results_files, issues
         )
 
-        logging.info(
-            f"Found {len(jira_tickets_for_modeling_rule)} Jira tickets out "
-            f"of {len(modeling_rules_to_test_suite)} Test modeling rules"
+        logging.debug(
+            f"Found {len(jira_ticket_for_use_case)} Jira tickets out " f"of {len(use_case_to_test_suite)}" f" test use case"
         )
 
-        # Search if we have too many test modeling rules that failed beyond the max allowed limit to open, if so we print the
+        # Search if we have too many test use cases that failed beyond the max allowed limit to open, if so we print the
         # list and exit. This is to avoid opening too many Jira issues.
-        failed_test_modeling_rule = get_all_failed_results(modeling_rules_to_test_suite)
+        failed_use_case_tests = get_all_failed_results(use_case_to_test_suite)
 
-        if len(failed_test_modeling_rule) >= options.max_failures_to_handle:
+        if len(failed_use_case_tests) >= options.max_failures_to_handle:
             column_align, tabulate_data, _, _ = calculate_results_table(
-                jira_tickets_for_modeling_rule, failed_test_modeling_rule, server_versions, TEST_MODELING_RULES_BASE_HEADERS
+                jira_ticket_for_use_case, failed_use_case_tests, server_versions, TEST_USE_CASE_BASE_HEADERS
             )
             table = tabulate(tabulate_data, headers="firstrow", tablefmt="pretty", colalign=column_align)
-            logging.info(f"Test Modeling rule Results: {TEST_SUITE_CELL_EXPLANATION}\n{table}")
+            logging.info(f"Test Use Case Results: {TEST_SUITE_CELL_EXPLANATION}\n{table}")
             logging.critical(
-                f"Found {len(failed_test_modeling_rule)} failed test modeling rule, "
+                f"Found {len(failed_use_case_tests)} failed use cases, "
                 f"which is more than the max allowed limit of {options.max_failures_to_handle} to handle."
             )
 
             sys.exit(1)
 
-        for result_file in test_modeling_rules_results_files.values():
+        for result_file in test_use_case_results_files.values():
             xml = JUnitXml.fromfile(result_file.as_posix())
             for test_suite in xml.iterchildren(TestSuite):
                 if issue := create_jira_issue_for_test(
@@ -149,14 +146,12 @@ def main():
                     # if the ticket was created/updated successfully, we add it to the mapping and override the previous ticket.
                     properties = get_properties_for_test_suite(test_suite)
                     if summary := get_summary_for_test(properties):
-                        jira_tickets_for_modeling_rule[summary] = issue
+                        jira_ticket_for_use_case[summary] = issue
 
-        write_test_to_jira_mapping(
-            server_url, artifacts_path, jira_tickets_for_modeling_rule, TEST_MODELING_RULES_TO_JIRA_MAPPING
-        )
-        open(artifacts_path / TEST_MODELING_RULES_TO_JIRA_TICKETS_CONVERTED, "w")
+        write_test_to_jira_mapping(server_url, artifacts_path, jira_ticket_for_use_case, TEST_USE_CASE_TO_JIRA_MAPPING)
+        open(artifacts_path / TEST_USE_CASE_TO_JIRA_TICKETS_CONVERTED, "w")
 
-        logging.info("Finished creating/updating Jira issues for test modeling rules")
+        logging.info("Finished creating/updating Jira issues for test use case")
 
     except Exception as e:
         logging.exception(f"Failed to create jira issues from JUnit results: {e}")

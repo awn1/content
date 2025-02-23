@@ -156,12 +156,19 @@ XSOAR_ON_PREM = "server_type_XSOAR"
 CONF_FILE = "conf.json"
 TPB_DEPENDENCIES_FILE = "tpb_dependencies_packs.json"
 MODELING_RULES_TO_TEST_FILE = "modeling_rules_to_test.json"
-PLAYBOOK_FLOW_TO_TEST_FILE = "playbook_flow_tests_to_test.json"
+USE_CASE_TO_TEST_FILE = "test_use_cases_to_test.json"
 
 # Test types:
 TEST_PLAYBOOKS = "TestPlaybooks"
 TEST_MODELING_RULES = "TestModelingRules"
-PLAYBOOKS_FLOW_TEST = "PlaybookFlowTest"
+TEST_USE_CASES = "TestUseCases"
 
+USE_CASE_POSTFIX = "_use_case_test"
 
-FLOW_TEST_POSTFIX = "_flow_test"
+TEST_MODELING_RULES_BASE_HEADERS = ["Test Modeling Rule"]
+TEST_MODELING_RULES_TO_JIRA_MAPPING = "test_modeling_rule_to_jira_mapping.json"
+TEST_MODELING_RULES_TO_JIRA_TICKETS_CONVERTED = "test_modeling_rule_to_jira_tickets_converted.txt"
+
+TEST_USE_CASE_BASE_HEADERS = ["Test Use Case"]
+TEST_USE_CASE_TO_JIRA_MAPPING = "test_use_case_to_jira_mapping.json"
+TEST_USE_CASE_TO_JIRA_TICKETS_CONVERTED = "test_use_case_to_jira_tickets_converted.txt"
