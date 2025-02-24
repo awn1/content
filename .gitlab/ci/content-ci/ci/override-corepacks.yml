@@ -16,7 +16,7 @@ override-corepacks-check-user-permissions:
   variables:
   script:
     - echo "Is this dry run? $DRY_RUN"
-    - !reference [.check_user_permissions]
+    - !reference [.check_user_permissions_to_upload_packs]
 
 create-updated-corepacks-list:
   stage: create-updated-corepacks-list

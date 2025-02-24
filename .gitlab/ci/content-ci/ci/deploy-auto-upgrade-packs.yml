@@ -16,7 +16,7 @@ deploy-auto-upgrade-check-user-permissions:
     PERMISSION_GROUP: "content-research"
   script:
     - echo "Is this dry run? $DRY_RUN"
-    - !reference [ .check_user_permissions ]
+    - !reference [ .check_user_permissions_to_upload_packs ]
     - job-done
 
 deploy-groups-file:
