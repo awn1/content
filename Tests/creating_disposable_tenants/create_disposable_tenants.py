@@ -5,7 +5,6 @@
 
 
 import argparse
-import contextlib
 import getpass
 import json
 import logging
@@ -13,21 +12,33 @@ import os
 import re
 import sys
 from collections import OrderedDict, defaultdict
+from distutils.util import strtobool
 from pathlib import Path
 from typing import Any
+
+from dotenv import load_dotenv
 
 from Tests.scripts.common import string_to_bool
 from Tests.scripts.infra.viso_api import DEFAULT_TTL, VisoAPI
 from Tests.scripts.infra.xsoar_api import XsiamClient, XsoarClient
 from Tests.scripts.utils.log_util import install_logging
 
+load_dotenv()
+
 CONTENT_TENANTS_GROUP_OWNER = os.getenv("CONTENT_TENANTS_GROUP_OWNER", "")
+CONTENT_GITLAB_CI = bool(strtobool(os.getenv("CONTENT_GITLAB_CI", "true")))
+NEW_TENANTS_INFO_PATH = os.getenv("NEW_TENANTS_INFO_PATH", "new_tenants_info.json")
+VERSIONS_FILE_PATH = os.getenv("VERSIONS_FILE_PATH", "")
+
 INSTANCE_NAME_PREFIX = "qa2-test-"
 XSIAM_VERSION = "ga"
 XSOAR_SAAS_DEMISTO_VERSION = "99.99.98"
 FIELDS_TO_GET_FROM_VISO = ["fqdn", "xsoar_version"]
 AGENT_NAME_DEFAULT_MESSAGE = "<ADD_AGENT_HOST_NAME_HERE>"
 AGENT_IP_DEFAULT_MESSAGE = "<ADD_AGENT_HOST_IP_HERE>"
+SERVER_TYPES = [XsoarClient.SERVER_TYPE, XsiamClient.SERVER_TYPE]
+
+MAX_TTL = 420  # hours
 
 
 class FlowType:
@@ -40,11 +51,37 @@ BUILD_MACHINE_FLOWS = [FlowType.BUILD, FlowType.NIGHTLY, FlowType.UPLOAD]
 FLOWS_WITH_AGENT = [FlowType.BUILD, FlowType.NIGHTLY]
 
 
-def load_json_file(file_path: Path) -> dict:
-    with contextlib.suppress(Exception):
-        return json.loads(file_path.read_text())
-    logging.error(f"Error loading JSON file at: {file_path}")
-    return {}
+def get_invalid_args(
+    viso_api: VisoAPI,
+    count_per_type: int,
+    total_count: int,
+    server_type: str,
+    versions_file_path: Path | None,
+    ttl: int,
+    owner: str,
+) -> list[str]:
+    errors = []
+    if (available_tokens := viso_api.get_available_tokens_for_group(CONTENT_TENANTS_GROUP_OWNER)) < total_count:
+        errors.append(
+            f"Insufficient tokens available. {total_count} tenants requested, but only {available_tokens} tokens available."
+        )
+    if count_per_type <= 0:
+        errors.append("count_per_type must be a positive integer")
+    if server_type not in SERVER_TYPES:
+        errors.append(f"server_type must be either {' or '.join(SERVER_TYPES)}")
+    if ttl < 1 or ttl > MAX_TTL:
+        errors.append(f"TTL value must be between 1 and {MAX_TTL} hours")
+    if versions_file_path:
+        if not versions_file_path.exists():
+            errors.append(f"Versions file not found at {versions_file_path.as_posix()}")
+        else:
+            try:
+                json.loads(versions_file_path.read_text())
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                errors.append(f"Error parsing versions file at {versions_file_path.as_posix()}")
+    if not owner and CONTENT_GITLAB_CI:
+        errors.append("Owner must be provided if running in GitLab CI")
+    return errors
 
 
 def extract_xsoar_ng_version(version: str) -> str:
@@ -137,7 +174,7 @@ def save_to_output_file(output_path: Path, output_data: dict) -> None:
         existing_data = {}
         if output_path.exists():
             logging.debug(f"Loaded existing data from: {output_path}")
-            existing_data = load_json_file(output_path)
+            existing_data = json.loads(output_path.read_text())
         else:
             logging.debug(f"No existing data found at: {output_path}, starting fresh.")
 
@@ -172,25 +209,25 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument(
         "--server-type",
         required=True,
-        choices=[XsoarClient.SERVER_TYPE, XsiamClient.SERVER_TYPE],
+        choices=SERVER_TYPES,
         help="The type of server to create the tenant for (XSOAR or XSIAM).",
     )
     parser.add_argument(
         "-o",
         "--output-path",
-        required=True,
         type=Path,
         help="The path to write the output file to.",
+        default=NEW_TENANTS_INFO_PATH,
     )
     parser.add_argument(
         "--versions-file-path",
         required=False,
         type=Path,
         help="The path to the file containing the server versions.",
+        default=VERSIONS_FILE_PATH,
     )
     parser.add_argument(
         "--owner",
-        default=getpass.getuser(),
         help="The owner of the disposable tenants. Default: the current user.",
     )
     parser.add_argument(
@@ -200,9 +237,7 @@ def options_handler() -> argparse.Namespace:
         nargs="+",
     )
     parser.add_argument(
-        "--ttl",
-        help="The TTL (Time-to-Live) in hours for the disposable tenants (1-420).",
-        default=DEFAULT_TTL,
+        "--ttl", help=f"The TTL (Time-to-Live) in hours for the disposable tenants (1-{MAX_TTL}).", default=DEFAULT_TTL, type=int
     )
     parser.add_argument(
         "--enabled",
@@ -217,18 +252,32 @@ def options_handler() -> argparse.Namespace:
 def main() -> None:
     install_logging("Create_disposable_tenants.log", logger=logging)
     try:
+        load_dotenv()
         args = options_handler()
+        owner: str = args.owner
         count_per_type: int = args.count_per_type
         server_type: str = args.server_type
         flow_types: list[str] = args.flow_types
+        versions_file_path: Path | None = args.versions_file_path
+        ttl: int = args.ttl
+        total_count: int = count_per_type * len(flow_types)
         VISO_API_URL = os.environ["VISO_API_URL"]
         VISO_API_KEY = os.environ["VISO_API_KEY"]
         viso_api = VisoAPI(base_url=VISO_API_URL, api_key=VISO_API_KEY)
-
+        if invalid_args := get_invalid_args(
+            viso_api=viso_api,
+            count_per_type=count_per_type,
+            total_count=total_count,
+            server_type=server_type,
+            versions_file_path=versions_file_path,
+            ttl=ttl,
+            owner=owner,
+        ):
+            logging.error(f"The following errors were found in the input arguments:\n- {f'{os.linesep}- '.join(invalid_args)}")
+            sys.exit(1)
         versions = {}
-        if args.versions_file_path:
-            versions = load_json_file(args.versions_file_path).get(server_type, {})
-        total_count = count_per_type * len(flow_types)
+        if versions_file_path:
+            versions = json.loads(versions_file_path.read_text()).get(server_type, {})
         logging.info(
             f"Starting to create total of {total_count} disposable tenants, "
             f"for {server_type=} and flow_types={', '.join(flow_types)} with {versions=}"
@@ -236,10 +285,11 @@ def main() -> None:
         new_tenants_info = defaultdict(list)
         pairs = [(flow_type, i) for flow_type in flow_types for i in range(1, count_per_type + 1)]
         is_error = False
+        owner = owner or getpass.getuser()
         for total, (flow_type, _) in enumerate(pairs, start=1):
             try:
                 tenant_lcaas_id = viso_api.create_disposable_tenant(
-                    owner=args.owner,
+                    owner=owner,
                     group_owner=CONTENT_TENANTS_GROUP_OWNER,
                     server_type=server_type,
                     viso_version=versions.get("viso_version", ""),
@@ -251,7 +301,7 @@ def main() -> None:
                     rocksdb_version=versions.get("rocksdb_version", ""),
                     scortex_version=versions.get("scortex_version", ""),
                     vsg_version=versions.get("vsg_version", ""),
-                    ttl=args.ttl,
+                    ttl=ttl,
                 )["lcaas_id"]
                 new_tenants_info[flow_type].append(tenant_lcaas_id)
                 logging.info(
@@ -267,7 +317,7 @@ def main() -> None:
         if is_error:
             sys.exit(1)
     except Exception as e:
-        logging.error(f"Unexpected error occurred while running the script:\n{e}")
+        logging.exception(f"Unexpected error occurred while running the script:\n{e}")
         sys.exit(1)
 
 

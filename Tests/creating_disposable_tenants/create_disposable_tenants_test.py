@@ -221,7 +221,7 @@ def test_save_to_output_file_json_decode_error(tmp_path, mocker):
 
     save_to_output_file(output_path, output_data)
 
-    mock_logger.error.assert_called_once_with(f"Error loading JSON file at: {output_path}")
+    mock_logger.error.assert_called_once_with(f"Error decoding JSON from file: {output_path}. The file may be corrupted.")
 
 
 def test_save_to_output_file_unexpected_error(tmp_path, mocker):
