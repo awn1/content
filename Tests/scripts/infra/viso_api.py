@@ -136,3 +136,11 @@ class VisoAPI:
         }
         res = self.post_request("api/v4.0/soft-deploy/configmap", data)
         return res.json()
+
+    def get_available_tokens_for_group(self, group_owner: str) -> int:
+        """
+        Get the number of available disposable tokens for the given group owner.
+        """
+        tokens_count = self.get_disposable_token_count(group_owner)
+        tenants_used = len(self.get_all_tenants(group_owner, fields=[]))
+        return tokens_count - tenants_used
