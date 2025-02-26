@@ -1,3 +1,30 @@
+# Content Infrastructure 0.0.29 (2025-02-26)
+
+### Features
+
+- When running the auto-upgrade pipeline in dry run mode, the dev bucket will be copied into the pipeline bucket. ([auto-upgrade-dev](https://jira-dc.paloaltonetworks.com/browse/auto-upgrade-dev))
+- Added support for selecting the build machine by label using flow_type. ([CIAC-10446](https://jira-dc.paloaltonetworks.com/browse/CIAC-10446))
+- Added test-use-case flow to test use cases in the build and nightly. ([CIAC-11100](https://jira-dc.paloaltonetworks.com/browse/CIAC-11100))
+- Added support for uploading XSIAM machines tokens to GSM during build, nightly and build_machines_report. ([CIAC-12261](https://jira-dc.paloaltonetworks.com/browse/CIAC-12261))
+- Added support for version_config.json soft upload. ([CIAC-12602](https://jira-dc.paloaltonetworks.com/browse/CIAC-12602))
+- Add support for multiple flow_types in create_disposable_tenants script.
+- New script update_tenants_workloads.
+- New scripts: create_mr_for_new_tenants.py and wait_for_new_tenants_mr.py.
+- Updated the demisto-sdk version 1.35.1 in Infra.
+- daily build status
+
+### Bugfixes
+
+- Reduced to 25 integrations per dependency request in search_and_install_packs.
+- fix daily build status
+- fix memory limits for override pipeline:push-content-prod
+- fixed the "enabled" key in the disable integration instance function.
+
+### Misc
+
+- Added a step to enforce validation_config file is up to date in prs
+
+
 # Content Infrastructure 0.0.28 (2025-02-12)
 
 ### Features
