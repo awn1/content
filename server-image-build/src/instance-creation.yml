@@ -8,7 +8,7 @@
     gcp_cred_kind: "serviceaccount"
     gcp_project: "xsoar-content-build"
     instance_zone: us-central1-a
-    inctance_region: us-central1
+    instance_region: us-central1
     base_instance_name: "{{ lookup('env', 'BASE_INSTANCE_NAME') }}"
     ci_running: "{{ lookup('env', 'CI') }}"
 
@@ -26,7 +26,7 @@
   - name: login with gcloud
     shell: "gcloud auth activate-service-account --key-file {{ xsoar_content_build_creds }}"
 
-  - name: tunnle command
+  - name: tunnel command
     shell: "gcloud compute start-iap-tunnel {{ base_instance_name }} 22 --local-host-port=localhost:4477 --zone={{ instance_zone }} --project={{ gcp_project }}"
     async: 100000
     poll: 0
@@ -38,7 +38,7 @@
       minutes: 1
     when: ci_running is undefined or not ci_running | bool
 
-  - name: ssh key permittions change
+  - name: ssh key permissions change
     shell: chmod 400 /server-image-build/secrets/ssh_key
     become: true
 
@@ -66,7 +66,7 @@
     xsoar_content_build_creds: /server-image-build/secrets/xsoar_content_build_creds
     download_dir: /temp
     adminpass: "{{ lookup('env', 'XSOAR_ADMIN_PASS') }}"
-    gcp_serevr_storage_cred_file: /server-image-build/secrets/xsoar_server_storage_creds
+    gcp_server_storage_cred_file: /server-image-build/secrets/xsoar_server_storage_creds
     gcs_url: "{{ lookup('env', 'INSTALLER_URL') }}"
   tasks:
   - import_tasks: machine_installation.yml
@@ -88,7 +88,7 @@
     gcp_cred_kind: "serviceaccount"
     gcp_project: "xsoar-content-build"
     instance_zone: us-central1-a
-    inctance_region: us-central1
+    instance_region: us-central1
     server_img_name: "{{ lookup('env', 'SERVER_IMG_NAME') }}"
     base_instance_name: "{{ lookup('env', 'BASE_INSTANCE_NAME') }}"
     ci_running: "{{ lookup('env', 'CI') }}"
@@ -112,6 +112,6 @@
     pause:
       minutes: 1
   - name: Create image
-    shell: "gcloud compute images create {{ server_img_name }} --project={{ gcp_project }} --family=xsoar-{{ server_version }} --source-disk={{ base_instance_name }} --source-disk-zone={{ instance_zone }} --storage-location={{ inctance_region }} --quiet"
+    shell: "gcloud compute images create {{ server_img_name }} --project={{ gcp_project }} --family=xsoar-{{ server_version }} --source-disk={{ base_instance_name }} --source-disk-zone={{ instance_zone }} --storage-location={{ instance_region }} --quiet"
   - name: Delete disk
     shell: "gcloud compute disks delete {{ base_instance_name }} --project={{ gcp_project }} --zone={{ instance_zone }} --quiet"

@@ -20,7 +20,7 @@
 - name: get subnetwork info
   gcp_compute_subnetwork_info:
     project: "{{ gcp_project }}"
-    region: "{{ inctance_region }}"
+    region: "{{ instance_region }}"
     filters:
     - name = "{{ subnetwork_type }}"
     auth_kind: "{{ gcp_cred_kind }}"

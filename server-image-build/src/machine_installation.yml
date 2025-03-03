@@ -54,29 +54,6 @@
     mode: 0755
     force: yes
 
-- name: Install proxy
-  script: /server-image-build/resources/install_proxy.sh
-  become_user: gcp-user
-
-
-- name: Create mitmdump service
-  template:
-    src: /server-image-build/resources/mitmdump_systemd_file.service
-    dest: /lib/systemd/system/mitmdump.service
-    owner: root
-    mode: 0600
-    force: yes
-  become: yes
-
-- name: Create mitmdump executable file
-  template:
-    src: /server-image-build/resources/mitmproxy_starter.sh
-    dest: /home/gcp-user/mitmproxy_starter.sh
-    owner: root
-    mode: 0111
-    force: yes
-  become: yes
-
 - name: Create gitconfig file
   template:
     src: /server-image-build/resources/gitconfig.j2
@@ -90,15 +67,3 @@
   shell: "apt-get reinstall git"
   become: yes
 
-- name: Creates content-test-data directory
-  file:
-    path: /home/gcp-user/content-test-data
-    state: directory
-    mode: 0775
-  become_user: gcp-user
-
-- name: Clone content-test-data
-  shell:
-    cmd: gcloud source repos clone content-test-data content-test-data
-    chdir: /home/gcp-user
-  become_user: gcp-user
