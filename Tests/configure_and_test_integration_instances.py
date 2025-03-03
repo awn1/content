@@ -21,7 +21,6 @@ from demisto_sdk.commands.common.constants import FileType, MarketplaceVersions
 from demisto_sdk.commands.common.git_util import GitUtil
 from demisto_sdk.commands.common.tools import find_type, format_version, get_yaml, listdir_fullpath, run_command, str2bool
 from demisto_sdk.commands.test_content.constants import SSH_USER
-from demisto_sdk.commands.test_content.mock_server import RESULT, MITMProxy, run_with_mock
 from demisto_sdk.commands.test_content.tools import is_redhat_instance, update_server_configuration
 from packaging.version import Version
 from ruamel import yaml
@@ -39,7 +38,6 @@ from Tests.scripts.utils.log_util import install_logging
 from Tests.test_content import get_server_numeric_version
 from Tests.test_integration import __get_integration_config as get_integration_config
 from Tests.test_integration import disable_all_integrations, test_integration_instance
-from Tests.tools import run_with_proxy_configured
 
 MARKET_PLACE_MACHINES = ("master",)
 SKIPPED_PACKS = ["NonSupported", "ApiModules"]
@@ -694,12 +692,6 @@ class Server:
                 integration["byoi"] = matched_integration_params.get("byoi", True)
                 integration["instance_name"] = matched_integration_params.get("instance_name", integration["name"])
                 integration["validate_test"] = matched_integration_params.get("validate_test", True)
-                if integration["name"] not in self.build.unmockable_integrations:
-                    integration["params"].update({"proxy": True})
-                    logging.debug(f'Configuring integration "{integration["name"]}" with proxy=True')
-                else:
-                    integration["params"].update({"proxy": False})
-                    logging.debug(f'Configuring integration "{integration["name"]}" with proxy=False')
 
         return True
 
@@ -966,10 +958,6 @@ class Server:
     def configure_and_test_integrations_pre_update(self, new_integrations, modified_integrations) -> tuple:
         pass
 
-    @abstractmethod
-    def test_integration_with_mock(self, instance: dict, pre_update: bool):
-        pass
-
     def instance_testing(
         self, all_module_instances: list, pre_update: bool, use_mock: bool = True, first_call: bool = True
     ) -> tuple[set, set]:
@@ -1002,11 +990,8 @@ class Server:
             logging.info(f"Start of Instance Testing {instance_name=}")
 
             # If there is a failure, test_integration_instance will print it
-            if integration_of_instance not in self.build.unmockable_integrations and use_mock:
-                success = self.test_integration_with_mock(instance, pre_update)
-            else:
-                testing_client = self.reconnect_client()
-                success, _ = test_integration_instance(testing_client, instance)
+            testing_client = self.reconnect_client()
+            success, _ = test_integration_instance(testing_client, instance)
             if not success:
                 failed_tests.add((instance_name, integration_of_instance))
                 failed_instances.append(instance)
@@ -1251,38 +1236,6 @@ class XSOARServer(Server):
         self.__client.api_client.user_agent = custom_user_agent
         return self.__client
 
-    def test_integration_with_mock(self, instance: dict, pre_update: bool):
-        """
-        Runs 'test-module' for given integration with mitmproxy
-        In case the playback mode fails and this is a pre-update run - a record attempt will be executed.
-        Args:
-            instance: A dict containing the instance details
-            pre_update: Whether this instance testing is before or after the content update on the server.
-
-        Returns:
-            The result of running the 'test-module' command for the given integration.
-            If a record was executed - will return the result of the 'test--module' with the record mode only.
-        """
-        testing_client = self.reconnect_client()
-        integration_of_instance = instance.get("brand", "")
-        logging.debug(f'Integration "{integration_of_instance}" is mockable, running test-module with mitmproxy')
-        has_mock_file = self.build.proxy.has_mock_file(integration_of_instance)
-        success = False
-        if has_mock_file:
-            with run_with_mock(self.build.proxy, integration_of_instance) as result_holder:
-                success, _ = test_integration_instance(testing_client, instance)
-                result_holder[RESULT] = success
-                if not success:
-                    logging.warning(f'Running test-module for "{integration_of_instance}" has failed in playback mode')
-        if not success and not pre_update:
-            logging.debug(f'Recording a mock file for integration "{integration_of_instance}".')
-            with run_with_mock(self.build.proxy, integration_of_instance, record=True) as result_holder:
-                success, _ = test_integration_instance(testing_client, instance)
-                result_holder[RESULT] = success
-                if not success:
-                    logging.debug(f'Record mode for integration "{integration_of_instance}" has failed.')
-        return success
-
     def add_server_configuration(self, config_dict, error_msg, restart=False):
         _, status_code, _ = update_server_configuration(self.client, config_dict, error_msg)
         logging.debug(f"Updated server configuration with status_code: {status_code=}")
@@ -1295,7 +1248,6 @@ class XSOARServer(Server):
     def exec_command(self, command):
         subprocess.check_output(f"ssh {SSH_USER}@{self.internal_ip} {command}".split(), stderr=subprocess.STDOUT)
 
-    @run_with_proxy_configured
     def configure_and_test_integrations_pre_update(self, new_integrations, modified_integrations) -> tuple:
         """
         Configures integration instances that exist in the current version and for each integration runs 'test-module'.
@@ -1371,7 +1323,6 @@ class XSOARServer(Server):
         sleep(120)
         return True
 
-    @run_with_proxy_configured
     def test_integrations_post_update(self, new_module_instances: list, modified_module_instances: list) -> tuple:
         """
         Runs 'test-module on all integrations for post-update check
@@ -1435,10 +1386,6 @@ class CloudServer(Server):
         logging.debug(f"Setting user-agent on client to '{custom_user_agent}'.")
         self.__client.api_client.user_agent = custom_user_agent
         return self.__client
-
-    def test_integration_with_mock(self, instance: dict, pre_update: bool):
-        # No need of this step in CLOUD.
-        pass
 
     def install_packs(self, pack_ids: list | None = None, install_packs_in_batches=False, production_bucket: bool = True) -> bool:
         """
@@ -1592,7 +1539,6 @@ class Build(ABC):
         conf = get_json_file(options.conf)
         self.tests = conf["tests"]
         self.skipped_integrations_conf = conf["skipped_integrations"]
-        self.unmockable_integrations = conf["unmockable_integrations"]
         self.service_account = options.service_account
         self.marketplace_tag_name = None
         self.artifacts_folder = None
@@ -1662,22 +1608,6 @@ class XSOARBuild(Build):
         self.server_numeric_version = (
             self.servers[0].server_numeric_version if self.run_environment == Running.CI_RUN else self.DEFAULT_SERVER_VERSION
         )
-
-    @property
-    def proxy(self) -> MITMProxy:
-        """
-        A property method that should create and return a single proxy instance throughout the build
-        Returns:
-            The single proxy instance that should be used in this build.
-        """
-        if not self._proxy:
-            self._proxy = MITMProxy(
-                self.servers[0].internal_ip,
-                logging_module=logging,
-                build_number=self.ci_build_number,
-                branch_name=self.branch_name,
-            )
-        return self._proxy
 
     @property
     def marketplace_name(self) -> str:

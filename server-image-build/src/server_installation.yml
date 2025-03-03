@@ -5,7 +5,7 @@
 
 - name: Copy service Account file
   copy:
-    src: "{{ gcp_serevr_storage_cred_file }}"
+    src: "{{ gcp_server_storage_cred_file }}"
     dest: "{{ google_service_account_credentials.path }}"
     force: yes
     mode: 0755
