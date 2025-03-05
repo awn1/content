@@ -107,7 +107,9 @@ run-validations-new-validate-flow:
     - if: '$IS_NIGHTLY == "true"'
     - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
     - if: '$TRIGGER_TEST_BRANCH == "true"'
-
+  after_script:
+    - !reference [.default-after-script]
+    - !reference [.comment_validation_summary_on_pr]
 
 # runs in gitlab for the on-push flow, on every new commit pushed to the branch.
 validate-content-conf:
