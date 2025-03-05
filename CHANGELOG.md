@@ -1,3 +1,22 @@
+# Content Infrastructure 0.0.30 (2025-03-05)
+
+### Features
+
+- Renamed the report_pytest.xml file ([CIAC-11936](https://jira-dc.paloaltonetworks.com/browse/CIAC-11936))
+- Added support for validate summary GH annotation in content prs. ([12516](https://jira-dc.paloaltonetworks.com/browse/12516))
+- Add validate input arguments for create_disposable_tenants script.
+- Updated content-docs build tag to `cortex-content-high-memory`
+- Updated the demisto-sdk version 1.36.0 in Infra
+
+### Bugfixes
+
+- Fixed an issue where the user permissions step failed due to a mismatch between GitHub and GitLab naming conventions. ([user_permissions](https://jira-dc.paloaltonetworks.com/browse/user_permissions))
+
+### Deprecations and Removals
+
+- The MITMProxy server used in the mocking mechanism has been removed. ([CIAC-11016](https://jira-dc.paloaltonetworks.com/browse/CIAC-11016))
+
+
 # Content Infrastructure 0.0.29 (2025-02-26)
 
 ### Features
