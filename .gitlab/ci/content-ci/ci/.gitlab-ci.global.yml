@@ -721,6 +721,17 @@
     fi
   - section_end "Validate content-test-conf Branch Merged"
 
+.comment_validation_summary_on_pr:
+  - section_start "Comment Validation Summary on PR"
+  - |
+    pr=$(curl -sS --get --header "Accept: application/vnd.github.v3.raw" --header "Authorization: token ${GITHUB_TOKEN}" "https://api.github.com/repos/demisto/content/pulls?state=open&base=master" --data-urlencode "head=demisto:${CI_COMMIT_REF_NAME}" | jq '.[0]')
+    if [[ $pr != 'null' ]]; then
+      PR_NUMBER=$(echo $pr | jq -r '.number')
+    fi
+    echo "Commenting validate summary for PR: ${PR_NUMBER}"
+    poetry run python3 -u "${CI_PROJECT_DIR}/Utils/comment_validate_summary_on_pr.py" -p "${PR_NUMBER}" -ght "${GITHUB_TOKEN}"
+  - section_end "Comment Validation Summary on PR"
+
 .pre-commit-settings:
   tags:
     - gce
