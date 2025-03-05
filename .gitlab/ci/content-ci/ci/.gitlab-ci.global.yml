@@ -407,26 +407,15 @@
   - chmod 700 ~/.ssh/config
   - section_end "SSH config setup"
 
-.check_user_permissions_to_upload_packs:
-  - section_start "Check User Permissions to Upload Packs" # if bucket upload and uploading to marketplace-dist
+.check_user_permissions:
+  - section_start "Check User Permissions" --collapsed
   - |
     if [[ ( "${BUCKET_UPLOAD}" == "true" || "${FORCE_BUCKET_UPLOAD}" == "true" ) && "${GCS_MARKET_BUCKET}" == "${GCS_PRODUCTION_BUCKET}" ]] || [[ "${DRY_RUN}" == "false" ]]; then
-      echo "check github group: ${PERMISSION_GROUP}"
-      GROUP_MEMBERS=$(curl -sS "https://api.github.com/orgs/demisto/teams/${PERMISSION_GROUP}/members" -H "Authorization: token ${GITHUB_TOKEN}")
-      MEMBERS_NAMES=$(echo "${GROUP_MEMBERS}" | jq -r ".[].login")
-      ON_CALL_DEVS=$(jq -r '.ON_CALL_DEVS[]' .github/content_roles.json)
-      MEMBERS_NAMES=$(echo "${MEMBERS_NAMES}" "content-bot" "svc -xsoar-gitlab-mirror" "svc-xsoar-gitlab-mirror" "${USERS_ALLOWED_TRIGGER_UPLOAD}" )
-      if [[ -z "$GITLAB_USER_NAME" ]] || [[ -z "`echo $MEMBERS_NAMES | grep -w "$GITLAB_USER_NAME"`" ]]; then
-        echo -e "User '$GITLAB_USER_NAME' is not allowed to trigger $PIPELINE_TYPE, only one of:\n${MEMBERS_NAMES}"
-        job-done
-        exit 1
-      else
-        echo "User '${GITLAB_USER_NAME}' is allowed to trigger $PIPELINE_TYPE"
-      fi
+      poetry run python3 -u "${CI_PROJECT_DIR}/Tests/scripts/user_permissions_check.py" --group "${PERMISSION_GROUP}" --user "${GITLAB_USER_LOGIN}" --token "${GITHUB_TOKEN}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json" --content_roles "${CI_PROJECT_DIR}/.github/content_roles.json"
     else
       echo "This is a test run. All users can run it."
     fi
-  - section_end "Check User Permissions to Upload Packs"
+  - section_end "Check User Permissions"
 
 .install_ssh_keys: &install_ssh_keys
   - section_start "Installing SSH keys" --collapsed
