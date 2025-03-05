@@ -91,7 +91,7 @@ build-docs:
     - .default-job-settings
     - .content_docs_rule
   tags:
-    - high-mem
+    - cortex-content-high-mem
   variables:
     KUBERNETES_MEMORY_REQUEST: 32Gi
     KUBERNETES_MEMORY_LIMIT: 32Gi
