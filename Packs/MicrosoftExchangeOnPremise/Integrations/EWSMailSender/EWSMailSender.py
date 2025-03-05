@@ -11,7 +11,7 @@ import getpass
 
 
 # workaround for bug in exchangelib: https://github.com/ecederstrand/exchangelib/issues/448
-class FixGetPass(object):
+class FixGetPass:
     def __init__(self):
         self.getpass_getuser_org = getpass.getuser
 
@@ -95,18 +95,18 @@ def exchangelib_cleanup():      # pragma: no cover
     try:
         exchangelib.close_connections()
     except Exception as ex:
-        demisto.error("Error was found in exchangelib cleanup, ignoring: {}".format(ex))
+        demisto.error(f"Error was found in exchangelib cleanup, ignoring: {ex}")
     for key, protocol in key_protocols:
         try:
             if "thread_pool" in protocol.__dict__:
-                demisto.debug('terminating thread pool key{} id: {}'.format(key, id(protocol.thread_pool)))
+                demisto.debug(f'terminating thread pool key{key} id: {id(protocol.thread_pool)}')
                 protocol.thread_pool.terminate()
                 del protocol.__dict__["thread_pool"]
             else:
                 demisto.info(
-                    'Thread pool not found (ignoring terminate) in protcol dict: {}'.format(dir(protocol.__dict__)))
+                    f'Thread pool not found (ignoring terminate) in protcol dict: {dir(protocol.__dict__)}')
         except Exception as ex:
-            demisto.error("Error with thread_pool.terminate, ignoring: {}".format(ex))
+            demisto.error(f"Error with thread_pool.terminate, ignoring: {ex}")
 
 
 def get_account(account_email):
@@ -118,7 +118,7 @@ def get_account(account_email):
             response.root  # Check if you have access to root directory
             return response
         except UnauthorizedError:
-            demisto.debug("Got unauthorized error, This is attempt number {}".format(i))
+            demisto.debug(f"Got unauthorized error, This is attempt number {i}")
             continue
     return response
 
@@ -293,7 +293,7 @@ def process_attachments(attachCIDs="", attachIDs="", attachNames="", manualAttac
             try:
                 file_info = demisto.getFilePath(att_id_inline)
             except Exception as ex:
-                demisto.info("EWS error from getFilePath: {}".format(ex))
+                demisto.info(f"EWS error from getFilePath: {ex}")
                 raise Exception("entry %s does not contain a file" % att_id_inline)
             att_name_inline = file_info["name"]
             with open(file_info["path"], 'rb') as f:
@@ -306,7 +306,7 @@ def process_attachments(attachCIDs="", attachIDs="", attachNames="", manualAttac
         try:
             res = demisto.getFilePath(entry_id)
         except Exception as ex:
-            raise Exception("entry {} does not contain a file: {}".format(entry_id, str(ex)))
+            raise Exception(f"entry {entry_id} does not contain a file: {str(ex)}")
         file_path = res["path"]
         with open(file_path, 'rb') as f:
             attachments.append(FileAttachment(content=f.read(), name=attachment_name))
@@ -432,7 +432,7 @@ def main():     # pragma: no cover
             debug_log += "\nFull stacktrace:\n" + stacktrace
 
         demisto.error(
-            "EWS Mail Sender failed {}. Error: {}. Debug: {}".format(demisto.command(), error_message, debug_log))
+            f"EWS Mail Sender failed {demisto.command()}. Error: {error_message}. Debug: {debug_log}")
         if IS_TEST_MODULE:
             demisto.results(error_message)
         else:
@@ -445,7 +445,7 @@ def main():     # pragma: no cover
                 log_stream.close()
                 log_stream = None
             except Exception as ex:
-                demisto.error("EWS Mail Sender: unexpected exception when trying to remove log handler: {}".format(ex))
+                demisto.error(f"EWS Mail Sender: unexpected exception when trying to remove log handler: {ex}")
 
 
 # python2 uses __builtin__ python3 uses builtins

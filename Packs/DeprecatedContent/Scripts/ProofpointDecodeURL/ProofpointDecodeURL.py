@@ -14,7 +14,7 @@ else:
         "Data": decoded_url
     }
     return_outputs(
-        readable_output="Decoded URL is: {0}".format(decoded_url),
+        readable_output=f"Decoded URL is: {decoded_url}",
         raw_response=decoded_url,
         outputs={
             'URL(val.Data && val.Data == obj.Data)': entry_context

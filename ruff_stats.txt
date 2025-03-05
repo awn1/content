@@ -1,0 +1,64 @@
+497	UP031  	[ ] printf-string-formatting
+413	C408   	[*] unnecessary-collection-call
+226	SIM118 	[*] in-dict-keys
+173	SIM102 	[ ] collapsible-if
+166	RET503 	[*] implicit-return
+148	SIM401 	[ ] if-else-block-instead-of-dict-get
+100	C417   	[*] unnecessary-map
+ 82	E501   	[ ] line-too-long
+ 72	SIM210 	[*] if-expr-with-true-false
+ 72	UP030  	[*] format-literals
+ 70	B007   	[ ] unused-loop-control-variable
+ 70	UP038  	[*] non-pep604-isinstance
+ 45	SIM103 	[ ] needless-bool
+ 29	C416   	[*] unnecessary-comprehension
+ 29	RUF001 	[ ] ambiguous-unicode-character-string
+ 26	B011   	[*] assert-false
+ 26	PT015  	[ ] pytest-assert-always-false
+ 23	PT018  	[*] pytest-composite-assertion
+ 22	B015   	[ ] useless-comparison
+ 22	B018   	[ ] useless-expression
+ 22	SIM211 	[*] if-expr-with-false-true
+ 20	SIM117 	[ ] multiple-with-statements
+ 20	SIM212 	[*] if-expr-with-twisted-arms
+ 17	C405   	[*] unnecessary-literal-set
+ 16	PT009  	[*] pytest-unittest-assertion
+ 16	PT013  	[ ] pytest-incorrect-pytest-import
+ 15	C402   	[*] unnecessary-generator-dict
+ 15	C419   	[*] unnecessary-comprehension-in-call
+ 15	UP008  	[*] super-call-with-parameters
+ 12	F821   	[ ] undefined-name
+ 11	C403   	[*] unnecessary-list-comprehension-set
+ 11	E721   	[ ] type-comparison
+ 10	C400   	[*] unnecessary-generator-list
+ 10	PIE810 	[*] multiple-starts-ends-with
+  9	UP028  	[*] yield-in-for-loop
+  7	SIM101 	[ ] duplicate-isinstance-call
+  7	SIM110 	[*] reimplemented-builtin
+  6	UP022  	[*] replace-stdout-stderr
+  5	B005   	[ ] strip-with-multi-characters
+  5	C414   	[*] unnecessary-double-cast-or-process
+  5	ISC001 	[ ] single-line-implicit-string-concatenation
+  4	T201   	[*] print
+  3	B027   	[ ] empty-method-without-abstract-decorator
+  3	C401   	[*] unnecessary-generator-set
+  3	SIM222 	[*] expr-or-true
+  3	PD002  	[*] pandas-use-of-inplace-argument
+  3	UP032  	[ ] f-string
+  2	       	[ ] syntax-error
+  2	C411   	[*] unnecessary-list-call
+  2	SIM109 	[*] compare-with-tuple
+  2	PLR0133	[ ] comparison-of-constant
+  2	PLW0129	[ ] assert-on-string-literal
+  1	S307   	[ ] suspicious-eval-usage
+  1	B020   	[ ] loop-variable-overrides-iterator
+  1	B023   	[ ] function-uses-loop-variable
+  1	B032   	[ ] unintentional-type-annotation
+  1	C404   	[*] unnecessary-list-comprehension-dict
+  1	PIE794 	[*] duplicate-class-field-definition
+  1	RSE102 	[*] unnecessary-paren-on-raise-exception
+  1	E712   	[*] true-false-comparison
+  1	E741   	[ ] ambiguous-variable-name
+  1	F823   	[ ] undefined-local
+  1	UP007  	[ ] non-pep604-annotation
+[*] fixable with `ruff check --fix`

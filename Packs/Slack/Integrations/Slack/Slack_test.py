@@ -732,7 +732,7 @@ def test_mirror_investigation_new_mirror(mocker):
     new_conversations = js.loads(new_context['conversations'])
     our_conversation_filter = list(filter(lambda c: c['id'] == 'new_group', new_conversations))
     our_conversation = our_conversation_filter[0]
-    our_mirror_filter = list(filter(lambda m: '999' == m['investigation_id'], new_mirrors))
+    our_mirror_filter = list(filter(lambda m: m['investigation_id'] == '999', new_mirrors))
     our_mirror = our_mirror_filter[0]
 
     # Assert
@@ -810,7 +810,7 @@ def test_mirror_investigation_new_mirror_with_name(mocker):
     new_conversations = js.loads(new_context['conversations'])
     our_conversation_filter = list(filter(lambda c: c['id'] == 'new_group', new_conversations))
     our_conversation = our_conversation_filter[0]
-    our_mirror_filter = list(filter(lambda m: '999' == m['investigation_id'], new_mirrors))
+    our_mirror_filter = list(filter(lambda m: m['investigation_id'] == '999', new_mirrors))
     our_mirror = our_mirror_filter[0]
 
     # Assert
@@ -890,7 +890,7 @@ def test_mirror_investigation_new_mirror_with_topic(mocker):
     new_conversations = js.loads(new_context['conversations'])
     our_conversation_filter = list(filter(lambda c: c['id'] == 'new_group', new_conversations))
     our_conversation = our_conversation_filter[0]
-    our_mirror_filter = list(filter(lambda m: '999' == m['investigation_id'], new_mirrors))
+    our_mirror_filter = list(filter(lambda m: m['investigation_id'] == '999', new_mirrors))
     our_mirror = our_mirror_filter[0]
 
     calls = slack.WebClient.api_call.call_args_list
@@ -1051,7 +1051,7 @@ def test_mirror_investigation_existing_investigation(mocker):
 
     new_context = demisto.setIntegrationContext.call_args[0][0]
     new_mirrors = js.loads(new_context['mirrors'])
-    our_mirror_filter = list(filter(lambda m: '681' == m['investigation_id'], new_mirrors))
+    our_mirror_filter = list(filter(lambda m: m['investigation_id'] == '681', new_mirrors))
     our_mirror = our_mirror_filter[0]
 
     assert len(our_mirror_filter) == 1
@@ -1110,7 +1110,7 @@ def test_mirror_investigation_existing_channel(mocker):
 
     new_context = demisto.setIntegrationContext.call_args[0][0]
     new_mirrors = js.loads(new_context['mirrors'])
-    our_mirror_filter = list(filter(lambda m: '999' == m['investigation_id'], new_mirrors))
+    our_mirror_filter = list(filter(lambda m: m['investigation_id'] == '999', new_mirrors))
     our_mirror = our_mirror_filter[0]
 
     assert len(our_mirror_filter) == 1
@@ -1185,7 +1185,7 @@ def test_mirror_investigation_existing_channel_remove_mirror(mocker):
 
     new_context = demisto.setIntegrationContext.call_args[0][0]
     new_mirrors = js.loads(new_context['mirrors'])
-    our_mirror_filter = list(filter(lambda m: '999' == m['investigation_id'], new_mirrors))
+    our_mirror_filter = list(filter(lambda m: m['investigation_id'] == '999', new_mirrors))
     our_mirror = our_mirror_filter[0]
 
     assert len(our_mirror_filter) == 1
@@ -1241,7 +1241,7 @@ def test_mirror_investigation_existing_channel_with_topic(mocker):
 
     new_context = demisto.setIntegrationContext.call_args[0][0]
     new_mirrors = js.loads(new_context['mirrors'])
-    our_mirror_filter = list(filter(lambda m: '999' == m['investigation_id'], new_mirrors))
+    our_mirror_filter = list(filter(lambda m: m['investigation_id'] == '999', new_mirrors))
     our_mirror = our_mirror_filter[0]
 
     assert len(our_mirror_filter) == 1
@@ -1317,9 +1317,9 @@ def test_check_for_mirrors(mocker):
     new_context = demisto.setIntegrationContext.call_args[0][0]
     new_mirrors = js.loads(new_context['mirrors'])
     new_users = js.loads(new_context['users'])
-    our_mirror_filter = list(filter(lambda m: '999' == m['investigation_id'], new_mirrors))
+    our_mirror_filter = list(filter(lambda m: m['investigation_id'] == '999', new_mirrors))
     our_mirror = our_mirror_filter[0]
-    our_user_filter = list(filter(lambda u: 'U012B3CUI' == u['id'], new_users))
+    our_user_filter = list(filter(lambda u: u['id'] == 'U012B3CUI', new_users))
     our_user = our_user_filter[0]
 
     invited_users = [c[1]['json']['users'] for c in invite_call]
@@ -1739,7 +1739,7 @@ async def test_handle_dm_empty_message(mocker):
         elif method == 'chat.postMessage':
             text = json['text']
             if not text:
-                raise InterruptedError()
+                raise InterruptedError
         else:
             return None
 
@@ -3697,7 +3697,7 @@ def test_set_topic_no_args_investigation(mocker):
 
     new_context = demisto.setIntegrationContext.call_args[0][0]
     new_mirrors = js.loads(new_context['mirrors'])
-    our_mirror_filter = list(filter(lambda m: '681' == m['investigation_id'], new_mirrors))
+    our_mirror_filter = list(filter(lambda m: m['investigation_id'] == '681', new_mirrors))
     our_mirror = our_mirror_filter[0]
 
     # Assert
@@ -3958,7 +3958,7 @@ def test_rename_no_args_investigation(mocker):
 
     new_context = demisto.setIntegrationContext.call_args[0][0]
     new_mirrors = js.loads(new_context['mirrors'])
-    our_mirror_filter = list(filter(lambda m: '681' == m['investigation_id'], new_mirrors))
+    our_mirror_filter = list(filter(lambda m: m['investigation_id'] == '681', new_mirrors))
     our_mirror = our_mirror_filter[0]
 
     # Assert

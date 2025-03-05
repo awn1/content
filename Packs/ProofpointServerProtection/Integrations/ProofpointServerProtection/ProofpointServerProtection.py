@@ -115,7 +115,7 @@ def download_email_command():
         pre_index = parsed_response.index('</PRE>')
 
     except ValueError:
-        return_error('Could not extract email content from the server response:\n{}'.format(parsed_response))
+        return_error(f'Could not extract email content from the server response:\n{parsed_response}')
 
     eml_content = parsed_response[auth_index:pre_index]
     file_name = message_id + '.eml'
@@ -123,7 +123,7 @@ def download_email_command():
 
 
 def download_email(message_id):
-    cmd_url = '/admin?module=Message&qtype=0&msgid={0}&file=quarantine/show_src.tt'.format(message_id)
+    cmd_url = f'/admin?module=Message&qtype=0&msgid={message_id}&file=quarantine/show_src.tt'
 
     response = http_request('GET', cmd_url)
 
@@ -204,15 +204,15 @@ def quarantine_messages(folder, sender, subject, recipient):
     }
     raw_search_query = 'wSender=c;wRecipients=c;wSubject=c;'
     if folder:
-        raw_search_query += 'Folder={};'.format(folder)
+        raw_search_query += f'Folder={folder};'
     else:
         raw_search_query += 'Folder=/;'
     if sender:
-        raw_search_query += 'Sender={};'.format(sender)
+        raw_search_query += f'Sender={sender};'
     if subject:
-        raw_search_query += 'Subject={};'.format(subject)
+        raw_search_query += f'Subject={subject};'
     if recipient:
-        raw_search_query += 'Recipients={};'.format(recipient)
+        raw_search_query += f'Recipients={recipient};'
     search_query = urllib.quote(raw_search_query)
     session.cookies.set('searchquery', search_query)
     response = http_request('POST', cmd_url, data=data)
@@ -225,7 +225,7 @@ def release_email_command():
     folder = demisto.args()['folder']
     response = release_email(message_id, folder)
     if 'message successfully' in response:
-        demisto.results('Released message {} successfully'.format(message_id))
+        demisto.results(f'Released message {message_id} successfully')
     else:
         return_error('Failed to release message')
 
@@ -333,7 +333,7 @@ def get_pps_token(pps_magic):
         pps_token = parsed_service_url[1]
         return pps_token
     except Exception as e:
-        raise Exception('Failed retrieving pps_token - {}'.format(str(e)))
+        raise Exception(f'Failed retrieving pps_token - {str(e)}')
 
 
 def smart_search(data):
@@ -423,12 +423,12 @@ def add_to_blocked_senders_list_command():
     current_blocked_senders_list = re.findall(r'var _blacklist = "([^"]*)";', raw_senders_list)[0]
 
     if current_blocked_senders_list:
-        blocked_senders_list = '{0},{1}'.format(current_blocked_senders_list, blocked_sender)
+        blocked_senders_list = f'{current_blocked_senders_list},{blocked_sender}'
     else:
         blocked_senders_list = blocked_sender
     add_to_blocked_senders_list(blocked_senders_list)
 
-    demisto.results('Successfully added {} to the Blocked Senders list'.format(blocked_sender))
+    demisto.results(f'Successfully added {blocked_sender} to the Blocked Senders list')
 
 
 def add_to_blocked_senders_list(blocked_senders_list):
@@ -463,12 +463,12 @@ def add_to_safe_senders_list_command():
     current_safe_senders_list = re.findall(r'var _whitelist = "([^"]*)";', raw_senders_list)[0]
 
     if current_safe_senders_list:
-        safe_senders_list = '{0},{1}'.format(current_safe_senders_list, safe_sender)
+        safe_senders_list = f'{current_safe_senders_list},{safe_sender}'
     else:
         safe_senders_list = safe_sender
     add_to_safe_senders_list(safe_senders_list)
 
-    demisto.results('Successfully added {} to the Safe Senders list'.format(safe_sender))
+    demisto.results(f'Successfully added {safe_sender} to the Safe Senders list')
 
 
 def add_to_safe_senders_list(safe_senders_list):
@@ -509,7 +509,7 @@ def remove_from_blocked_senders_list_command():
 
     remove_from_blocked_senders_list(blocked_senders_list, unblocked_sender)
 
-    demisto.results('Successfully removed {} from the Blocked Senders list'.format(unblocked_sender))
+    demisto.results(f'Successfully removed {unblocked_sender} from the Blocked Senders list')
 
 
 def remove_from_blocked_senders_list(blocked_senders_list, unblocked_sender):
@@ -551,7 +551,7 @@ def remove_from_safe_senders_list_command():
 
     remove_from_safe_senders_list(safe_senders_list, unsafe_sender)
 
-    demisto.results('Successfully removed {} from the Safe Senders list'.format(unsafe_sender))
+    demisto.results(f'Successfully removed {unsafe_sender} from the Safe Senders list')
 
 
 def remove_from_safe_senders_list(safe_senders_list, unsafe_sender):
@@ -597,7 +597,7 @@ def get_senders_list():
         'guid': '257',
     }
 
-    cmd_url = '/admin?module=EnduserEntry&load=1&guid=257&pps_magic={}'.format(pps_magic)
+    cmd_url = f'/admin?module=EnduserEntry&load=1&guid=257&pps_magic={pps_magic}'
     http_request('GET', cmd_url, headers=headers)
 
     cmd_url = '/admin'

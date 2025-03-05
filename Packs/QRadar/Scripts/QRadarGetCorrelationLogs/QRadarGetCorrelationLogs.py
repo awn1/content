@@ -41,7 +41,7 @@ def main():
         data = demisto.get(resp[0], 'Contents.events')
 
         if not data:
-            resp[0]['HumanReadable'] = "No logs were found for correlation id {0}".format(correlation_id)
+            resp[0]['HumanReadable'] = f"No logs were found for correlation id {correlation_id}"
         else:
             data = data if isinstance(data, list) else [data]
 

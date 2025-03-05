@@ -44,12 +44,7 @@ class PolyswarmAPI:
         full_url = '{base_url}{path_url}'.format(base_url=self.config['base_url'],
                                                  path_url=path_url)
 
-        logging.debug('[{method}] URL: {full_url} - params/data: {data} - files: {files} - headers: {headers}'.
-                      format(method=method.upper(),
-                             full_url=full_url,
-                             data=data,
-                             files=files,
-                             headers=self.headers))
+        logging.debug(f'[{method.upper()}] URL: {full_url} - params/data: {data} - files: {files} - headers: {self.headers}')
 
         if method.lower() == "get":
             r = requests.get(full_url,
@@ -62,9 +57,7 @@ class PolyswarmAPI:
                               headers=self.headers)
         r.raise_for_status()
 
-        logging.debug('[Response] Status code: {status_code} - Content: {response}'.
-                      format(status_code=r.status_code,
-                             response=r.content))
+        logging.debug(f'[Response] Status code: {r.status_code} - Content: {r.content}')
 
         return (r.status_code, r.content)
 
@@ -169,8 +162,7 @@ class PolyswarmAPI:
         """
         hash_type = get_hash_type(hash)
 
-        return self._http_request('get', '/download/{hash_type}/{hash}'.
-                                  format(hash_type=hash_type, hash=hash))
+        return self._http_request('get', f'/download/{hash_type}/{hash}')
 
     def detonate_file(self, file_name, file_path):
         """
@@ -228,9 +220,7 @@ class PolyswarmConnector():
     def _get_results(self, title, total_scans, positives, uuid, artifact):
         contxt = makehash()
 
-        permalink = '{url_results}/{uuid}'.\
-            format(url_results=POLYSWARM_URL_RESULTS,
-                   uuid=uuid)
+        permalink = f'{POLYSWARM_URL_RESULTS}/{uuid}'
 
         contxt['Scan_UUID'] = uuid
         contxt['Total'] = str(total_scans)
@@ -294,8 +284,7 @@ class PolyswarmConnector():
             try:
                 artifact_instances = json.loads(response)['result'][0]['artifact_instances']
             except Exception:
-                return_error('Error in response. Details: {response}'.
-                             format(response=str(response)))
+                return_error(f'Error in response. Details: {str(response)}')
 
             # TODO: implement rescan logic
             if not artifact_instances[0]['bounty_result']:
@@ -310,8 +299,7 @@ class PolyswarmConnector():
                         positives += 1
                 total_scans += 1
 
-            demisto.debug('Positives: {positives} - Total Scans: {total_scans}'.
-                          format(positives=positives, total_scans=total_scans))
+            demisto.debug(f'Positives: {positives} - Total Scans: {total_scans}')
 
         except requests.exceptions.HTTPError as err:
             if err.response.status_code == 404:
@@ -319,9 +307,7 @@ class PolyswarmConnector():
                 # returning default values == 0
                 pass
             else:
-                return_error('{ERROR_ENDPOINT}{err}'.
-                             format(ERROR_ENDPOINT=ERROR_ENDPOINT,
-                                    err=err))
+                return_error(f'{ERROR_ENDPOINT}{err}')
 
         return self._get_results(title, total_scans,
                                  positives, uuid,
@@ -344,9 +330,7 @@ class PolyswarmConnector():
             if err.response.status_code == 404:
                 return_error('File not found.')
             else:
-                return_error('{ERROR_ENDPOINT}{err}'.
-                             format(ERROR_ENDPOINT=ERROR_ENDPOINT,
-                                    err=err))
+                return_error(f'{ERROR_ENDPOINT}{err}')
 
     def detonate_file(self, param):
         title = 'PolySwarm File Detonation for Entry ID: %s' % param['entryID']
@@ -378,8 +362,7 @@ class PolyswarmConnector():
             try:
                 assertions = json.loads(response)['result']['files'][0]['assertions']
             except Exception:
-                return_error('Error in response. Details: {response}'.
-                             format(response=str(response)))
+                return_error(f'Error in response. Details: {str(response)}')
 
             # iterate for getting positives and total_scan number
             for assertion in assertions:
@@ -389,9 +372,7 @@ class PolyswarmConnector():
                 total_scans += 1
 
         except requests.exceptions.HTTPError as err:
-            return_error('{ERROR_ENDPOINT}{err}'.
-                         format(ERROR_ENDPOINT=ERROR_ENDPOINT,
-                                err=err))
+            return_error(f'{ERROR_ENDPOINT}{err}')
 
         return self._get_results(title, total_scans,
                                  positives, uuid,
@@ -420,8 +401,7 @@ class PolyswarmConnector():
             try:
                 assertions = json.loads(response)['result']['files'][0]['assertions']
             except Exception:
-                return_error('Error in response. Details: {response}'.
-                             format(response=str(response)))
+                return_error(f'Error in response. Details: {str(response)}')
 
             # iterate for getting positives and total_scan number
             for assertion in assertions:
@@ -437,9 +417,7 @@ class PolyswarmConnector():
                 pass
             else:
                 # we got another err - report it
-                return_error('{ERROR_ENDPOINT}{err}'.
-                             format(ERROR_ENDPOINT=ERROR_ENDPOINT,
-                                    err=err))
+                return_error(f'{ERROR_ENDPOINT}{err}')
 
         return self._get_results(title, total_scans,
                                  positives, uuid,
@@ -467,9 +445,8 @@ class PolyswarmConnector():
         if artifact == 'ip':
             try:
                 socket.inet_aton(param[artifact])
-            except socket.error:
-                return_error('Invalid IP Address: {ip}'.
-                             format(ip=param[artifact]))
+            except OSError:
+                return_error(f'Invalid IP Address: {param[artifact]}')
 
         try:
             status_code, response, uuid = self.polyswarm_api.search_url(param[artifact])
@@ -478,8 +455,7 @@ class PolyswarmConnector():
             try:
                 assertions = json.loads(response)['result']['files'][0]['assertions']
             except Exception:
-                return demisto.results('Error in response. Details: {}'.
-                                       format(str(response)))
+                return demisto.results(f'Error in response. Details: {str(response)}')
 
             # iterate for getting positives and total_scan number
             for assertion in assertions:
@@ -489,9 +465,7 @@ class PolyswarmConnector():
                 total_scans += 1
 
         except requests.exceptions.HTTPError as err:
-            return_error('{ERROR_ENDPOINT}{err}'.
-                         format(ERROR_ENDPOINT=ERROR_ENDPOINT,
-                                err=err))
+            return_error(f'{ERROR_ENDPOINT}{err}')
 
         return self._get_results(title, total_scans,
                                  positives, uuid,
@@ -518,8 +492,7 @@ class PolyswarmConnector():
             try:
                 assertions = json.loads(response)['result']['files'][0]['assertions']
             except Exception:
-                return_error('Error in response. Details: {}'.
-                             format(str(response)))
+                return_error(f'Error in response. Details: {str(response)}')
 
             # iterate for getting positives and total_scan number
             for assertion in assertions:
@@ -532,9 +505,7 @@ class PolyswarmConnector():
             if err.response.status_code == 404:
                 return_error('UUID not found.')
             else:
-                return_error('{ERROR_ENDPOINT}{err}'.
-                             format(ERROR_ENDPOINT=ERROR_ENDPOINT,
-                                    err=err))
+                return_error(f'{ERROR_ENDPOINT}{err}')
 
         return self._get_results(title, total_scans,
                                  positives,

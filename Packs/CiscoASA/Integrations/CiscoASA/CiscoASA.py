@@ -1476,7 +1476,7 @@ def create_object_command(client: Client, args: dict[str, Any]) -> CommandResult
     obj_type = args.get('object_type')
     obj_name = args.get('object_name')
     obj_value = args.get('object_value')
-    if obj_type not in OBJECT_TYPES_DICT.keys():
+    if obj_type not in OBJECT_TYPES_DICT:
         raise ValueError("Please enter an object type from the given dropdown list.")
     client.create_object(obj_name, obj_type, obj_value)
     return list_objects_command(client, {'object_name': obj_name})

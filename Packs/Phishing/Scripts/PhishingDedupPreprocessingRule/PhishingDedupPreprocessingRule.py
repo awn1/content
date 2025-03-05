@@ -61,14 +61,14 @@ def get_existing_incidents(input_args, current_incident_type):
     elif status_scope == 'All':
         pass
     else:
-        return_error('Unsupported statusScope: {}'.format(status_scope))
+        return_error(f'Unsupported statusScope: {status_scope}')
     type_values = input_args.get('incidentTypes', current_incident_type)
     if type_values != IGNORE_INCIDENT_TYPE_VALUE:
         type_field = input_args.get('incidentTypeFieldName', 'type')
         type_query = generate_incident_type_query_component(type_field, type_values)
         query_components.append(type_query)
     if len(query_components) > 0:
-        get_incidents_args['query'] = ' and '.join('({})'.format(c) for c in query_components)
+        get_incidents_args['query'] = ' and '.join(f'({c})' for c in query_components)
     incidents_query_res = demisto.executeCommand('GetIncidentsByQuery', get_incidents_args)
     if is_error(incidents_query_res):
         return_error(get_error(incidents_query_res))
@@ -112,7 +112,7 @@ def eliminate_urls_extensions(text):
     urls_list = re.findall(URL_REGEX, text)
     for url in urls_list:
         parsed_uri = urlparse(url)
-        url_with_no_path = '{uri.scheme}://{uri.netloc}/'.format(uri=parsed_uri)
+        url_with_no_path = f'{parsed_uri.scheme}://{parsed_uri.netloc}/'
         text = text.replace(url, url_with_no_path)
     return text
 
@@ -237,7 +237,7 @@ def return_entry(message, existing_incident=None, similarity=0):
 
 def close_new_incident_and_link_to_existing(new_incident, existing_incident, similarity):
     formatted_incident = format_similar_incident(existing_incident, similarity)
-    message = tableToMarkdown("Duplicate incident found with similarity {:.1f}%".format(similarity * 100),
+    message = tableToMarkdown(f"Duplicate incident found with similarity {similarity * 100:.1f}%",
                               formatted_incident)
     if demisto.args().get('closeAsDuplicate', 'true') == 'true':
         res = demisto.executeCommand("CloseInvestigationAsDuplicate", {
@@ -259,7 +259,7 @@ def format_similar_incident(incident, similairy):
             'Closed': incident.get('closed') != "0001-01-01T00:00:00Z",
             'Time': str(incident['created']),
             'Email from': incident.get(demisto.args().get('emailFrom')),
-            'Text Similarity': "{:.1f}%".format(similairy * 100),
+            'Text Similarity': f"{similairy * 100:.1f}%",
             }
 
 
@@ -270,7 +270,7 @@ def create_new_incident_low_similarity(existing_incident, similarity):
         formatted_incident = format_similar_incident(existing_incident, similarity)
         message += tableToMarkdown("Most similar incident found", formatted_incident)
         message += 'The threshold for considering 2 incidents as duplicate is a similarity ' \
-                   'of {:.1f}%.\n'.format(SIMILARITY_THRESHOLD * 100)
+                   f'of {SIMILARITY_THRESHOLD * 100:.1f}%.\n'
         message += 'Therefore these 2 incidents will not be considered as duplicate and the current incident ' \
                    'will remain active.\n'
     return_entry(message)
@@ -297,29 +297,29 @@ def main():
     FROM_POLICY = input_args.get('fromPolicy', FROM_POLICY)
     new_incident = demisto.incidents()[0]
     existing_incidents = get_existing_incidents(input_args, new_incident.get('type', IGNORE_INCIDENT_TYPE_VALUE))
-    demisto.debug('found {} incidents by query'.format(len(existing_incidents)))
+    demisto.debug(f'found {len(existing_incidents)} incidents by query')
     if len(existing_incidents) == 0:
         create_new_incident()
-        return
+        return None
     if not incident_has_text_fields(new_incident):
         create_new_incident_no_text_fields()
-        return
+        return None
     new_incident_df = preprocess_incidents_df([new_incident])
     if len(new_incident_df) == 0:  # len(new_incident_df)==0 means new incident is too short
         create_new_incident_too_short()
-        return
+        return None
     existing_incidents_df = preprocess_incidents_df(existing_incidents)
     existing_incidents_df = filter_out_same_incident(existing_incidents_df, new_incident)
     existing_incidents_df = filter_newer_incidents(existing_incidents_df, new_incident)
     if len(existing_incidents_df) == 0:
         create_new_incident()
-        return
+        return None
     new_incident_preprocessed = new_incident_df.iloc[0].to_dict()
     duplicate_incident_row, similarity = find_duplicate_incidents(new_incident_preprocessed,
                                                                   existing_incidents_df)
     if duplicate_incident_row is None:
         create_new_incident()
-        return
+        return None
     if similarity < SIMILARITY_THRESHOLD:
         create_new_incident_low_similarity(duplicate_incident_row, similarity)
     else:

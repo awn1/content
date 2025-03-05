@@ -18,5 +18,5 @@ def test_mimecast_find_email(reg_path, score, mocker):
     main()
     results = demisto.results.call_args[0][0]
 
-    assert results.get('HumanReadable') == "The Registry Path reputation for: {} is: {}".format(reg_path.upper(), score)
+    assert results.get('HumanReadable') == f"The Registry Path reputation for: {reg_path.upper()} is: {score}"
     assert results.get('Contents') == score

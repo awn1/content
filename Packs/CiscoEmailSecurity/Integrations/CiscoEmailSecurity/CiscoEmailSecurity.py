@@ -2,7 +2,7 @@ import demistomock as demisto
 from CommonServerPython import *
 
 import urllib3
-from typing import Any, Dict
+from typing import Any
 
 # Disable insecure warnings
 urllib3.disable_warnings()
@@ -42,14 +42,14 @@ class Client(BaseClient):
         jwt_token = response_token.get('data').get('jwtToken')
         return jwt_token
 
-    def list_report(self, url_params) -> Dict[str, Any]:
+    def list_report(self, url_params) -> dict[str, Any]:
         return self._http_request(
             method='GET',
             url_suffix='/sma/api/v2.0/reporting' + url_params,
             timeout=self.timeout
         )
 
-    def list_messages(self, url_params) -> Dict[str, Any]:
+    def list_messages(self, url_params) -> dict[str, Any]:
         return self._http_request(
             method='GET',
             url_suffix='/sma/api/v2.0/message-tracking/messages' + url_params,
@@ -223,7 +223,7 @@ def set_var_to_output_prefix(counter):
     return counter_output_prefix
 
 
-def list_report_command(client: Client, args: Dict[str, Any]):
+def list_report_command(client: Client, args: dict[str, Any]):
     counter = args.get('counter')
     url_params = build_url_params_for_list_report(args, counter)
     report_response_data = client.list_report(url_params)

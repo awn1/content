@@ -60,13 +60,12 @@ def get_headers(body=''):
 def send_request(path, headers=get_headers(), method='get', body=None, params=None):
     body = body if body is not None else {}
     params = params if params is not None else {}
-    url = '{}/{}'.format(SERVER_URL, path)
+    url = f'{SERVER_URL}/{path}'
 
     res = requests.request(method, url, headers=headers, data=json.dumps(body), params=params, verify=VERIFY_SSL)
 
     if res.status_code < 200 or res.status_code >= 300:
-        raise Exception('Got status code {} with url {} with body {} with headers {}'.format(
-            str(res.status_code), url, res.content, str(res.headers)))
+        raise Exception(f'Got status code {str(res.status_code)} with url {url} with body {res.content} with headers {str(res.headers)}')
 
     try:
         return res.json()

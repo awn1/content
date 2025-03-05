@@ -691,7 +691,7 @@ def create_url_report_output(url, response, threshold, max_len, short_format):
     3. dbot entry context.
     """
     if demisto.get(response, 'response_code') == -1:
-        md = '### Invalid URL: the url {} is invalid.'.format(url)
+        md = f'### Invalid URL: the url {url} is invalid.'
         return md, {}, {}
 
     positives = demisto.get(response, 'positives')
@@ -735,7 +735,7 @@ def create_url_report_output(url, response, threshold, max_len, short_format):
 
         response_sha256 = additional_info.get('Response content SHA-256', None)
         if response_sha256:
-            md += 'Response content SHA-256: {}\n'.format(response_sha256)
+            md += f'Response content SHA-256: {response_sha256}\n'
             update_entry_context_url(ec_url, url, field_name='ResponseContentSHA256', field_value=response_sha256)
 
         response_headers = additional_info.get('Response headers', None)

@@ -177,12 +177,12 @@ def test_main_qradar(mocker):
     mocker.patch.object(demisto, 'args', return_value=args)
     mapper = main()
 
-    assert 'source_address_ids.[0]' == get_complex_value_key(mapper['Source IP']['complex'])
-    assert 'local_destination_address_ids.[0]' == get_complex_value_key(mapper['Destination IP']['complex'])
-    assert 'start_time' == get_complex_value_key(mapper['occurred']['complex'])
-    assert 'severity' == get_complex_value_key(mapper['severity']['complex'])
-    assert 'destination_networks.[0]' == get_complex_value_key(mapper['Destination Network']['complex'])
-    assert 'source_network' == get_complex_value_key(mapper['Source Network']['complex'])
+    assert get_complex_value_key(mapper['Source IP']['complex']) == 'source_address_ids.[0]'
+    assert get_complex_value_key(mapper['Destination IP']['complex']) == 'local_destination_address_ids.[0]'
+    assert get_complex_value_key(mapper['occurred']['complex']) == 'start_time'
+    assert get_complex_value_key(mapper['severity']['complex']) == 'severity'
+    assert get_complex_value_key(mapper['Destination Network']['complex']) == 'destination_networks.[0]'
+    assert get_complex_value_key(mapper['Source Network']['complex']) == 'source_network'
 
 
 def test_main_arcsight(mocker):
@@ -193,17 +193,17 @@ def test_main_arcsight(mocker):
     mocker.patch.object(demisto, 'args', return_value=args)
     mapper = main()
 
-    assert 'Event-Severity' == get_complex_value_key(mapper['severity']['complex'])
-    assert 'Name' == get_complex_value_key(mapper['name']['complex'])
-    assert 'Event-File Path' == get_complex_value_key(mapper['File Path']['complex'])
-    assert 'Event-File Name' == get_complex_value_key(mapper['File Name']['complex'])
-    assert 'Event-File Type' == get_complex_value_key(mapper['File Type']['complex'])
-    assert 'Event-Destination Address' == get_complex_value_key(mapper['Destination IP']['complex'])
-    assert 'Event-Source Address' == get_complex_value_key(mapper['Source IP']['complex'])
-    assert 'Event-Source Geo Country Code' == get_complex_value_key(mapper['Country']['complex'])
-    assert 'Event-Source Host Name' == get_complex_value_key(mapper['Source Hostname']['complex'])
-    assert 'Event-Start Time' == get_complex_value_key(mapper['occurred']['complex'])
-    assert 'Event-Agent ID' == get_complex_value_key(mapper['Agent ID']['complex'])
+    assert get_complex_value_key(mapper['severity']['complex']) == 'Event-Severity'
+    assert get_complex_value_key(mapper['name']['complex']) == 'Name'
+    assert get_complex_value_key(mapper['File Path']['complex']) == 'Event-File Path'
+    assert get_complex_value_key(mapper['File Name']['complex']) == 'Event-File Name'
+    assert get_complex_value_key(mapper['File Type']['complex']) == 'Event-File Type'
+    assert get_complex_value_key(mapper['Destination IP']['complex']) == 'Event-Destination Address'
+    assert get_complex_value_key(mapper['Source IP']['complex']) == 'Event-Source Address'
+    assert get_complex_value_key(mapper['Country']['complex']) == 'Event-Source Geo Country Code'
+    assert get_complex_value_key(mapper['Source Hostname']['complex']) == 'Event-Source Host Name'
+    assert get_complex_value_key(mapper['occurred']['complex']) == 'Event-Start Time'
+    assert get_complex_value_key(mapper['Agent ID']['complex']) == 'Event-Agent ID'
 
 
 def test_main_splunk(mocker):
@@ -214,9 +214,9 @@ def test_main_splunk(mocker):
     mocker.patch.object(demisto, 'args', return_value=args)
     mapper = main()
 
-    assert 'Name' == get_complex_value_key(mapper['name']['complex'])
-    assert 'severity' == get_complex_value_key(mapper['severity']['complex'])
-    assert 'rule_description' == get_complex_value_key(mapper['details']['complex'])
+    assert get_complex_value_key(mapper['name']['complex']) == 'Name'
+    assert get_complex_value_key(mapper['severity']['complex']) == 'severity'
+    assert get_complex_value_key(mapper['details']['complex']) == 'rule_description'
 
 
 def test_main_outgoing(mocker):
@@ -229,9 +229,9 @@ def test_main_outgoing(mocker):
     }
     mocker.patch.object(demisto, 'args', return_value=args)
     mapper = main()
-    assert 'severity' == get_complex_value_key(mapper.get('user_priority', {})) \
-           or 'severity' == get_complex_value_key(mapper.get('src_priority', {}))
-    assert 'category' == get_complex_value_key(mapper['category'])
+    assert get_complex_value_key(mapper.get('user_priority', {})) == 'severity' \
+           or get_complex_value_key(mapper.get('src_priority', {})) == 'severity'
+    assert get_complex_value_key(mapper['category']) == 'category'
 
 
 def test_main_splunk_schemes(mocker, capfd):
@@ -244,15 +244,15 @@ def test_main_splunk_schemes(mocker, capfd):
     }
     mocker.patch.object(demisto, 'args', return_value=args)
     mapper = main()
-    assert 'protocol' == get_complex_value_key(mapper['Protocol']['complex'])
-    assert 'severity' == get_complex_value_key(mapper['severity']['complex'])
-    assert 'body' == get_complex_value_key(mapper['Email Body']['complex'])
+    assert get_complex_value_key(mapper['Protocol']['complex']) == 'protocol'
+    assert get_complex_value_key(mapper['severity']['complex']) == 'severity'
+    assert get_complex_value_key(mapper['Email Body']['complex']) == 'body'
     assert 'subject_email' in get_complex_value_key(mapper['Email Subject']['complex'])
-    assert 'country' == get_complex_value_key(mapper['Country']['complex'])
-    assert 'vendor_product' == get_complex_value_key(mapper['Vendor Product']['complex'])
-    assert 'signature' == get_complex_value_key(mapper['Signature']['complex'])
-    assert 'os' == get_complex_value_key(mapper['OS']['complex'])
-    assert 'app' == get_complex_value_key(mapper['App']['complex'])
+    assert get_complex_value_key(mapper['Country']['complex']) == 'country'
+    assert get_complex_value_key(mapper['Vendor Product']['complex']) == 'vendor_product'
+    assert get_complex_value_key(mapper['Signature']['complex']) == 'signature'
+    assert get_complex_value_key(mapper['OS']['complex']) == 'os'
+    assert get_complex_value_key(mapper['App']['complex']) == 'app'
 
 
 def test_custom_field(mocker, capfd):
@@ -268,7 +268,7 @@ def test_custom_field(mocker, capfd):
     mocker.patch.object(demisto, 'args', return_value=args)
     mapper = main()
     assert len(mapper) == 1
-    assert 'payload_type' == get_complex_value_key(mapper['Payload Type']['complex'])
+    assert get_complex_value_key(mapper['Payload Type']['complex']) == 'payload_type'
 
 
 def test_unmapped_field(mocker):

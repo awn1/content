@@ -39,12 +39,12 @@ def censys_view_command():
     query = args.get('query')
     index = args.get('index')
 
-    url_suffix = 'view/{0}/{1}'.format(index, query)
+    url_suffix = f'view/{index}/{query}'
     raw = send_request('GET', url_suffix)
     if raw:
         demisto.results(raw)
     else:
-        demisto.results("No view results for {0}.".format(query))
+        demisto.results(f"No view results for {query}.")
 
 
 def censys_search_command():
@@ -53,19 +53,19 @@ def censys_search_command():
     index = args.get('index')
     page = arg_to_number(str(args.get('page', '1')))
 
-    url_suffix = 'search/{0}'.format(index)
+    url_suffix = f'search/{index}'
     data = {
         "query": query,
         "page": page
     }
     raw = send_request('POST', url_suffix, json.dumps(data))
-    readable = tableToMarkdown("Search results for {0} in {1} - page {2}".format(query, index, page), raw["results"])
+    readable = tableToMarkdown(f"Search results for {query} in {index} - page {page}", raw["results"])
     return_outputs(readable, raw)
 
 
 ''' EXECUTION CODE '''
 command = demisto.command()
-LOG('command is {0}'.format(command))
+LOG(f'command is {command}')
 try:
     handle_proxy()
     if command == 'test-module':

@@ -35,7 +35,7 @@ def __json_list_to_headers(value_list: List[Dict[str, Any]]) -> List[str]:
     headers: List[str] = []
     seen: Set[str] = set()
     for value in value_list:
-        headers.extend((k for k in value if k not in seen))  # to preserve order
+        headers.extend(k for k in value if k not in seen)  # to preserve order
         seen.update(value.keys())
     return headers
 

@@ -100,19 +100,19 @@ def severity_to_level(severity):
         return 1
 
 
-class NitroESM(object):
+class NitroESM:
     def __init__(self, esmhost, user, passwd):
         """ Init instance attributes """
         self.esmhost = esmhost
         self.user = user
         self.passwd = passwd
-        self.url = 'https://{}/rs/esm/'.format(self.esmhost)
+        self.url = f'https://{self.esmhost}/rs/esm/'
         self.session_headers = {'Content-Type': 'application/json'}
         self.is_logged_in = False
         self._case_statuses = None
 
     def __repr__(self):
-        return 'NitroESM("{}", "{}")'.format(self.url, self.user)
+        return f'NitroESM("{self.url}", "{self.user}")'
 
     def login(self):
         b64_user = base64.b64encode(self.user.encode('utf-8')).decode()
@@ -158,7 +158,7 @@ class NitroESM(object):
     @logger
     def cmdquery(self, cmd, query=None, params=None, no_answer=False, no_validation=False):
         """ Send query to ESM, return JSON result """
-        LOG('querying endpoint: {}'.format(cmd))
+        LOG(f'querying endpoint: {cmd}')
         result = requests.post(self.url + cmd,
                                headers=self.session_headers,
                                params=params,
@@ -167,8 +167,7 @@ class NitroESM(object):
             if no_answer:
                 if result.status_code != 200:
                     raise ValueError(
-                        'Error - ESM replied with:\n - status code: {} \n - body: {}'.format(result.status_code,
-                                                                                             result.text))
+                        f'Error - ESM replied with:\n - status code: {result.status_code} \n - body: {result.text}')
             else:
                 try:
                     res = result.json()
@@ -178,8 +177,7 @@ class NitroESM(object):
                 except Exception as e:  # noqa: E722
                     LOG(str(e))
                     raise ValueError(
-                        'Error - ESM replied with:\n - status code: {} \n - body: {}'.format(result.status_code,
-                                                                                             result.text))
+                        f'Error - ESM replied with:\n - status code: {result.status_code} \n - body: {result.text}')
 
     @logger
     def execute_query(self, time_range, custom_start, custom_end, filters, fields, query_type):
@@ -230,7 +228,7 @@ class NitroESM(object):
             else:
                 time.sleep(60)  # pylint: disable=sleep-exists
 
-        raise ValueError('Waited more than {} min for query results : {}'.format(max_wait, result_id))
+        raise ValueError(f'Waited more than {max_wait} min for query results : {result_id}')
 
     @logger
     def fetch_results(self, result_id):
@@ -590,7 +588,6 @@ class NitroESM(object):
         query = json.dumps({'caseDetail': case})
         self.cmdquery(cmd, query, no_answer=True)
 
-        return
 
     def get_case_event_list(self, event_ids):
 
@@ -859,7 +856,7 @@ def main():
 
         if demisto.command() == 'fetch-incidents':
             last_run = demisto.getLastRun()
-            demisto.debug('\n\nlast run:\n{}\n'.format(last_run))
+            demisto.debug(f'\n\nlast run:\n{last_run}\n')
             # for backward compatibility uses
             if 'value' in last_run and 'alarms' not in last_run:
                 last_run['alarms'] = last_run['value']
@@ -881,7 +878,7 @@ def main():
             if mode in ('alarms', 'both'):
                 end = (datetime.now() + timedelta(hours=TIMEZONE)).isoformat()
 
-                demisto.debug("alarms: start - {} , end - {}".format(start_alarms, end))
+                demisto.debug(f"alarms: start - {start_alarms} , end - {end}")
 
                 alarms = esm.fetch_alarms(
                     'CUSTOM',
@@ -889,7 +886,7 @@ def main():
                     end,
                     ''
                 )
-                demisto.debug('alarms found:\n{}\n'.format(alarms))
+                demisto.debug(f'alarms found:\n{alarms}\n')
 
                 incidents = []
                 for alarm in alarms:

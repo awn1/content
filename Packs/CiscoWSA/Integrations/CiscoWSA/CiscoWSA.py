@@ -43,15 +43,15 @@ class Client(BaseClient):
                 if error_handler:
                     error_handler(res)
                 else:
-                    err_msg = 'Error in API call [{}] - {}' \
-                        .format(res.status_code, res.reason)
+                    err_msg = f'Error in API call [{res.status_code}] - {res.reason}' \
+                        
                     try:
                         # Try to parse json error response
                         error_entry = res.json()
-                        err_msg += '\n{}'.format(json.dumps(error_entry))
+                        err_msg += f'\n{json.dumps(error_entry)}'
                         raise DemistoException(err_msg, res=res)
                     except ValueError:
-                        err_msg += '\n{}'.format(res.text)
+                        err_msg += f'\n{res.text}'
                         raise DemistoException(err_msg, res=res)
 
             if not empty_valid_codes:
@@ -120,13 +120,13 @@ class Client(BaseClient):
         policy_order = args.get('policy_order')
         policy_status = args.get('policy_status')
         auth = args.get('auth')
-        accesspoliciesdata = {"access_policies": [{"policy_name": "{}".format(policy_name),
-                                                   "policy_status": "{}".format(policy_status),
+        accesspoliciesdata = {"access_policies": [{"policy_name": f"{policy_name}",
+                                                   "policy_status": f"{policy_status}",
                                                    "policy_order": int(policy_order),
                                                    "membership":
                                                        {"identification_profiles": [{
-                                                           "profile_name": "{}".format(profile_name),
-                                                           "auth": "{}".format(auth)}]}}]}
+                                                           "profile_name": f"{profile_name}",
+                                                           "auth": f"{auth}"}]}}]}
         response = self._httpp_request(method='PUT',
                                        url_suffix='/wsa/api/v3.0/web_security/access_policies?format=json',
                                        data=json.dumps(accesspoliciesdata))
@@ -186,7 +186,7 @@ def initiateheaderrequest(api_key):
                      "cache-control": "no-cache", "User-Agent":
                          "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 "
                          "(KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36",
-                     "Accept": "*/*", 'Authorization': 'Basic {}'.format(api_key), "accept-encoding": "gzip, deflate"}
+                     "Accept": "*/*", 'Authorization': f'Basic {api_key}', "accept-encoding": "gzip, deflate"}
 
     return headerrequest
 

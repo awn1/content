@@ -34,7 +34,7 @@ if not isinstance(WHITELISTS, (list)) or not isinstance(BLACKLISTS, (list)):
 
 
 # API class
-class APIClient(object):
+class APIClient:
 
     def __init__(self, url, username, password, capath):
         self.url = url
@@ -56,7 +56,7 @@ class APIClient(object):
             elif os.path.isdir(capath):
                 self.capath = capath
             else:
-                return_error('CA path should be a file or a directory: {}'.format(capath))
+                return_error(f'CA path should be a file or a directory: {capath}')
 
     def _call_api(self, uri, data=None, headers=None, method=None):
         if headers is None:
@@ -64,10 +64,10 @@ class APIClient(object):
 
         api_url = ''.join([self.url, uri])
         api_request = urllib2.Request(api_url, headers=headers)
-        basic_authorization = base64.b64encode('{}:{}'.format(self.username, self.password))
+        basic_authorization = base64.b64encode(f'{self.username}:{self.password}')
         api_request.add_header(
             'Authorization',
-            'Basic {}'.format(basic_authorization)
+            f'Basic {basic_authorization}'
         )
 
         if method is not None:
@@ -87,7 +87,7 @@ class APIClient(object):
         except urllib2.HTTPError as e:
             demisto.debug(e.reason)
             if e.code != 400:
-                return_error('{0}: {1} \nCheck you Minmeld instance.'.format(e.reason, e.code))
+                return_error(f'{e.reason}: {e.code} \nCheck you Minmeld instance.')
             content = '{ "result":[] }'
 
         return content
@@ -104,23 +104,23 @@ class APIClient(object):
 
         for node in minemeld_status:
             if node['name'] == miner:
-                if not node['class'] in SUPPORTED_MINER_CLASSES:
+                if node['class'] not in SUPPORTED_MINER_CLASSES:
                     return_error('Unsupported miner class of type: {}'.format(node['class']))
                 self.data_file_type = 'localdb' if node['class'] == LOCALDB_CLASS else 'yaml'
                 return True
 
-        return_error('Miner {} was not found in miners list'.format(miner))
+        return_error(f'Miner {miner} was not found in miners list')
         return False
 
     def retrieve_miner(self, miner):
-        content = self._call_api('/config/data/{}_indicators?t={}'.format(miner, self.data_file_type))
+        content = self._call_api(f'/config/data/{miner}_indicators?t={self.data_file_type}')
         return json.loads(content)['result']
 
     def upload(self, miner, data):
         if self.data_file_type == 'localdb':
             ts = time.time()
             self._call_api(
-                '/config/data/{}_indicators/append?_{}&h={}&t={}'.format(miner, ts, miner, self.data_file_type),
+                f'/config/data/{miner}_indicators/append?_{ts}&h={miner}&t={self.data_file_type}',
                 data=data,
                 headers={'Content-Type': 'application/json'},
                 method='POST'
@@ -128,7 +128,7 @@ class APIClient(object):
             return
 
         self._call_api(
-            '/config/data/{}_indicators?h={}'.format(miner, miner),
+            f'/config/data/{miner}_indicators?h={miner}',
             data=data,
             headers={'Content-Type': 'application/json'},
             method='PUT'
@@ -213,7 +213,7 @@ def remove_indicator_from_miner(MineMeldClient, miner, indicators, stateless=Non
         miner_list_indicators = [o['indicator'] for o in miner_list]
         contain_all_indicators = all(elem in miner_list_indicators for elem in indicators)
         if not contain_all_indicators:
-            return_error('Did not find all indicators on miner {}'.format(miner))
+            return_error(f'Did not find all indicators on miner {miner}')
 
         if behave_statefully(stateless):
             updated_miner_list = existing_miner_list
@@ -230,7 +230,7 @@ def remove_indicator_from_miner(MineMeldClient, miner, indicators, stateless=Non
         for indicator in indicators:
             indicator_from_list = existing_miner_list.pop(indicator, None)
             if not indicator_from_list:
-                return_error('Did not find indicator {} on miner {}'.format(indicator, miner))
+                return_error(f'Did not find indicator {indicator} on miner {miner}')
 
     MineMeldClient.upload(miner, '[{}]'.format(','.join(updated_miner_list.values())))
 
@@ -333,7 +333,7 @@ def domain():
                 },
                 'Malicious': {
                     'Vendor': 'Palo Alto MineMeld',
-                    'Description': 'Indicator was found in MineMeld\'s blacklist: {}'.format(miner_name)
+                    'Description': f'Indicator was found in MineMeld\'s blacklist: {miner_name}'
                 },
                 'Name': domain
             }
@@ -352,7 +352,7 @@ def domain():
             'MineMeld.Indicators(val.indicator == obj.indicator)': result_indicator,
             'MineMeld.Miner(val.name == obj.name)': {'name': miner_name},
         }
-        result_text = 'MineMeld Domain found at miner: {}'.format(miner_name)
+        result_text = f'MineMeld Domain found at miner: {miner_name}'
     else:
         result_text = 'MineMeld Domain severity - unknown'
         entry_context = {
@@ -411,7 +411,7 @@ def url():
                 },
                 'Malicious': {
                     'Vendor': 'Palo Alto MineMeld',
-                    'Description': 'Indicator was found in MineMeld\'s blacklist: {}'.format(miner_name)
+                    'Description': f'Indicator was found in MineMeld\'s blacklist: {miner_name}'
                 },
                 'Data': url
             }
@@ -430,7 +430,7 @@ def url():
             'MineMeld.Indicators(val.indicator == obj.indicator)': result_indicator,
             'MineMeld.Miner(val.name == obj.name)': {'name': miner_name},
         }
-        result_text = 'MineMeld URL found at miner: {}'.format(miner_name)
+        result_text = f'MineMeld URL found at miner: {miner_name}'
     else:
         result_text = 'MineMeld URL severity - unknown'
         entry_context = {
@@ -498,7 +498,7 @@ def file():
                 },
                 'Malicious': {
                     'Vendor': 'Palo Alto MineMeld',
-                    'Description': 'Indicator was found in MineMeld\'s blacklist: {}'.format(miner_name)
+                    'Description': f'Indicator was found in MineMeld\'s blacklist: {miner_name}'
                 },
                 hash_type: file,
                 hash_type_upper: file
@@ -519,7 +519,7 @@ def file():
             'MineMeld.Indicators(val.indicator == obj.indicator)': result_indicator,
             'MineMeld.Miner(val.name == obj.name)': {'name': miner_name},
         }
-        result_text = 'MineMeld File found at miner: {}'.format(miner_name)
+        result_text = f'MineMeld File found at miner: {miner_name}'
     else:
         result_text = 'MineMeld File severity - unknown'
         entry_context = {
@@ -578,7 +578,7 @@ def ip():
                 },
                 'Malicious': {
                     'Vendor': 'Palo Alto MineMeld',
-                    'Description': 'Indicator was found in MineMeld\'s blacklist: {}'.format(miner_name)
+                    'Description': f'Indicator was found in MineMeld\'s blacklist: {miner_name}'
                 },
                 'Address': ip
             }
@@ -597,7 +597,7 @@ def ip():
             'MineMeld.Indicators(val.indicator == obj.indicator)': result_indicator,
             'MineMeld.Miner(val.name == obj.name)': {'name': miner_name},
         }
-        result_text = 'MineMeld IP found at miner: {}'.format(miner_name)
+        result_text = f'MineMeld IP found at miner: {miner_name}'
     else:
         result_text = 'MineMeld IP severity - unknown'
         entry_context = {
@@ -653,7 +653,7 @@ def get_indicator_from_miner():
     supported_miners = get_indicators_from_miner(miner_name, indicator)
 
     if supported_miners:
-        result_text = 'Items found at miner: {}'.format(miner_name)
+        result_text = f'Items found at miner: {miner_name}'
     else:
         result_text = 'No items found at miner'
 
@@ -701,7 +701,7 @@ def retrieve_miner_indicators():
         'Contents': result_list,
         'ContentsFormat': formats['json'],
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': tableToMarkdown('Minemeld indicators {}'.format(miner_name), result_list, markdown_headers),
+        'HumanReadable': tableToMarkdown(f'Minemeld indicators {miner_name}', result_list, markdown_headers),
         'EntryContext': {
             'MineMeld.Miner(val.name == obj.name)': miners_context,
             'MineMeld.Indicators(val.miner == obj.miner && val.indicator == obj.indicator)': result_list

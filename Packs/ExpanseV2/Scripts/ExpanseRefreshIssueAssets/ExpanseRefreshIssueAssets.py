@@ -1,13 +1,13 @@
 import demistomock as demisto  # noqa # pylint: disable=unused-wildcard-import
 from CommonServerPython import *  # noqa # pylint: disable=unused-wildcard-import
 
-from typing import Dict, Any
+from typing import Any
 
 
 ''' COMMAND FUNCTION '''
 
 
-def refresh_issue_assets_command(args: Dict[str, Any]) -> CommandResults:
+def refresh_issue_assets_command(args: dict[str, Any]) -> CommandResults:
     incident = demisto.incident()
     custom_fields = incident.get('CustomFields', {})
     assets = custom_fields.get('expanseasset', [])

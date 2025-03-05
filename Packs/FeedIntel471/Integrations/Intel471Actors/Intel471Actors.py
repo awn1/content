@@ -1,6 +1,5 @@
 import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
-from typing import Dict, List
 
 from JSONFeedApiModule import *  # noqa: E402
 
@@ -40,7 +39,7 @@ def _create_url(**kwargs):
     return FEED_URL + url_suffix.strip('&')
 
 
-def custom_build_iterator(client: Client, feed: Dict, limit: int = 0, **kwargs) -> List:
+def custom_build_iterator(client: Client, feed: dict, limit: int = 0, **kwargs) -> list:
     """
     This function replace the build iterator function in JsonFeedApiModule in order to enable paging specific to api.
     Paginf is done using
@@ -54,7 +53,7 @@ def custom_build_iterator(client: Client, feed: Dict, limit: int = 0, **kwargs) 
 
     # sorting and count are used for paging purposes
     params = {'lastUpdatedFrom': last_fetch if last_fetch else start_date, 'sort': 'earliest', 'count': '100'}
-    result: List[Dict] = []
+    result: list[dict] = []
     should_continue = True
     total_count = 0
 
@@ -101,19 +100,19 @@ def custom_build_iterator(client: Client, feed: Dict, limit: int = 0, **kwargs) 
             err_type = '<' + error_class[error_class.find('\'') + 1: error_class.rfind('\'')] + '>'
             err_msg = 'Verify that the server URL parameter' \
                       ' is correct and that you have access to the server from your host.' \
-                      '\nError Type: {}\nError Number: [{}]\nMessage: {}\n' \
-                .format(err_type, exception.errno, exception.strerror)
+                      f'\nError Type: {err_type}\nError Number: [{exception.errno}]\nMessage: {exception.strerror}\n' \
+                
             raise DemistoException(err_msg, exception)
 
     set_integration_context({f"{feed.get('indicator_type')}_fetch_time": str(end_date)})
     return result
 
 
-def custom_handle_indicator(client: Client, item: Dict, feed_config: Dict, service_name: str,
+def custom_handle_indicator(client: Client, item: dict, feed_config: dict, service_name: str,
                             indicator_type: str, indicator_field: str, use_prefix_flat: bool,
                             feedTags: list, auto_detect: bool,
                             mapping_function: Callable, create_relationships: bool,  # noqa: F841
-                            relationships_func: Callable) -> List[dict]:  # noqa: F841
+                            relationships_func: Callable) -> list[dict]:  # noqa: F841
     """
     This function adds indicators to indicator lists after specific manipulation.
     :param client: Client (from JsonFeedApiModule

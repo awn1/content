@@ -218,7 +218,7 @@ def send_request(method, url, headers=AUTH_HEADERS, params=None, data=None):
             try:
                 err_json = unicode_to_str_recur(res.json())
             except ValueError:
-                raise Exception('Error code {err}\nContent: {cnt}'.format(err=res.status_code, cnt=res.content))
+                raise Exception(f'Error code {res.status_code}\nContent: {res.content}')
 
             err_msg = ''
             if 'message' in err_json:
@@ -235,7 +235,7 @@ def send_request(method, url, headers=AUTH_HEADERS, params=None, data=None):
     try:
         json_body = res.json()
     except ValueError:
-        LOG('Got unexpected response from QRadar. Raw response: {}'.format(res.text))
+        LOG(f'Got unexpected response from QRadar. Raw response: {res.text}')
         raise DemistoException('Got unexpected response from QRadar')
     return unicode_to_str_recur(json_body)
 
@@ -246,8 +246,8 @@ def send_request_no_error_handling(headers, method, params, url, data):
     """
     log_hdr = deepcopy(headers)
     log_hdr.pop('SEC', None)
-    LOG('qradar is attempting {method} request sent to {url} with headers:\n{headers}\nparams:\n{params}'
-        .format(method=method, url=url, headers=json.dumps(log_hdr, indent=4), params=json.dumps(params, indent=4)))
+    LOG(f'qradar is attempting {method} request sent to {url} with headers:\n{json.dumps(log_hdr, indent=4)}\nparams:\n{json.dumps(params, indent=4)}'
+        )
     if TOKEN:
         res = requests.request(method, url, headers=headers, params=params, verify=USE_SSL, data=data)
     else:
@@ -325,19 +325,19 @@ def convert_offense_type_id_to_name(offense_type_id, offense_types=None):
 
 # Returns the result of an offenses request
 def get_offenses(_range, _filter='', _fields=''):
-    full_url = '{0}/api/siem/offenses'.format(SERVER)
+    full_url = f'{SERVER}/api/siem/offenses'
     params = {'filter': _filter} if _filter else {}
     headers = dict(AUTH_HEADERS)
     if _fields:
         params['fields'] = _fields
     if _range:
-        headers['Range'] = 'items={0}'.format(_range)
+        headers['Range'] = f'items={_range}'
     return send_request('GET', full_url, headers, params)
 
 
 # Returns the result of a single offense request
 def get_offense_by_id(offense_id, _filter='', _fields=''):
-    full_url = '{0}/api/siem/offenses/{1}'.format(SERVER, offense_id)
+    full_url = f'{SERVER}/api/siem/offenses/{offense_id}'
     params = {"filter": _filter} if _filter else {}
     headers = dict(AUTH_HEADERS)
     if _fields:
@@ -347,46 +347,46 @@ def get_offense_by_id(offense_id, _filter='', _fields=''):
 
 # Updates a single offense and returns the updated offense
 def update_offense(offense_id):
-    url = '{0}/api/siem/offenses/{1}'.format(SERVER, offense_id)
+    url = f'{SERVER}/api/siem/offenses/{offense_id}'
     return send_request('POST', url, params=demisto.args())
 
 
 # Posts a search in QRadar and returns the search object
 def search(args):
-    url = '{0}/api/ariel/searches'.format(SERVER)
+    url = f'{SERVER}/api/ariel/searches'
     return send_request('POST', url, AUTH_HEADERS, params=args)
 
 
 # Returns a search object (doesn't contain reuslt)
 def get_search(search_id):
-    url = '{0}/api/ariel/searches/{1}'.format(SERVER, convert_to_str(search_id))
+    url = f'{SERVER}/api/ariel/searches/{convert_to_str(search_id)}'
     return send_request('GET', url, AUTH_HEADERS)
 
 
 # Returns a search result
 def get_search_results(search_id, _range=''):
-    url = '{0}/api/ariel/searches/{1}/results'.format(SERVER, convert_to_str(search_id))
+    url = f'{SERVER}/api/ariel/searches/{convert_to_str(search_id)}/results'
     headers = dict(AUTH_HEADERS)
     if _range:
-        headers['Range'] = 'items={0}'.format(_range)
+        headers['Range'] = f'items={_range}'
     return send_request('GET', url, headers)
 
 
 # Returns the result of an assets request
 def get_assets(_range='', _filter='', _fields=''):
-    url = '{0}/api/asset_model/assets'.format(SERVER)
+    url = f'{SERVER}/api/asset_model/assets'
     params = {"filter": _filter} if _filter else {}
     headers = dict(AUTH_HEADERS)
     if _fields:
         params['fields'] = _fields
     if _range:
-        headers['Range'] = 'items={0}'.format(_range)
+        headers['Range'] = f'items={_range}'
     return send_request('GET', url, headers, params)
 
 
 # Returns the result of a closing reasons request
 def get_closing_reasons(_range='', _filter='', _fields='', include_deleted=False, include_reserved=False):
-    url = '{0}/api/siem/offense_closing_reasons'.format(SERVER)
+    url = f'{SERVER}/api/siem/offense_closing_reasons'
     params = {}
     if _filter:
         params['filter'] = _filter
@@ -396,13 +396,13 @@ def get_closing_reasons(_range='', _filter='', _fields='', include_deleted=False
         params['include_reserved'] = include_reserved
     headers = AUTH_HEADERS
     if _range:
-        headers['Range'] = 'items={0}'.format(_range)
+        headers['Range'] = f'items={_range}'
     return send_request('GET', url, headers, params)
 
 
 # Returns the result of a offense types request
 def get_offense_types():
-    url = '{0}/api/siem/offense_types'.format(SERVER)
+    url = f'{SERVER}/api/siem/offense_types'
     # Due to a bug in QRadar, this functions does not work if username/password was not provided
     if USERNAME and PASSWORD:
         return send_request('GET', url)
@@ -412,16 +412,16 @@ def get_offense_types():
 # Returns the result of a get note request
 def get_note(offense_id, note_id, fields):
     if note_id:
-        url = '{0}/api/siem/offenses/{1}/notes/{2}'.format(SERVER, offense_id, note_id)
+        url = f'{SERVER}/api/siem/offenses/{offense_id}/notes/{note_id}'
     else:
-        url = '{0}/api/siem/offenses/{1}/notes'.format(SERVER, offense_id)
+        url = f'{SERVER}/api/siem/offenses/{offense_id}/notes'
     params = {'fields': fields} if fields else {}
     return send_request('GET', url, AUTH_HEADERS, params=params)
 
 
 # Creates a note and returns the note as a result
 def create_note(offense_id, note_text, fields):
-    url = '{0}/api/siem/offenses/{1}/notes'.format(SERVER, offense_id)
+    url = f'{SERVER}/api/siem/offenses/{offense_id}/notes'
     params = {'fields': fields} if fields else {}
     params['note_text'] = note_text
     return send_request('POST', url, AUTH_HEADERS, params=params)
@@ -435,12 +435,12 @@ def get_ref_set(ref_name, _range='', _filter='', _fields=''):
     if _fields:
         params['fields'] = _fields
     if _range:
-        headers['Range'] = 'items={0}'.format(_range)
+        headers['Range'] = f'items={_range}'
     return send_request('GET', url, headers, params=params)
 
 
 def create_reference_set(ref_name, element_type, timeout_type, time_to_live):
-    url = '{0}/api/reference_data/sets'.format(SERVER)
+    url = f'{SERVER}/api/reference_data/sets'
     params = {'name': ref_name, 'element_type': element_type}
     if timeout_type:
         params['timeout_type'] = timeout_type
@@ -470,18 +470,18 @@ def delete_reference_set_value(ref_name, value):
 
 
 def get_devices(_range='', _filter='', _fields=''):
-    url = '{0}/api/config/domain_management/domains'.format(SERVER)
+    url = f'{SERVER}/api/config/domain_management/domains'
     params = {'filter': _filter} if _filter else {}
     headers = dict(AUTH_HEADERS)
     if _fields:
         params['fields'] = _fields
     if _range:
-        headers['Range'] = 'items={0}'.format(_range)
+        headers['Range'] = f'items={_range}'
     return send_request('GET', url, headers, params=params)
 
 
 def get_domains_by_id(domain_id, _fields=''):
-    url = '{0}/api/config/domain_management/domains/{1}'.format(SERVER, domain_id)
+    url = f'{SERVER}/api/config/domain_management/domains/{domain_id}'
     headers = dict(AUTH_HEADERS)
     params = {'fields': _fields} if _fields else {}
     return send_request('GET', url, headers, params=params)
@@ -497,9 +497,9 @@ def test_module():
             enrich_offense_res_with_source_and_destination_address(raw_offenses)
 
     except Exception as err:
-        demisto.info("Failed to perform an API call to the 'api/siem/offenses' endpoint. Reason:\n {}.\n "
-                     "Trying to perform an API call to 'api/ariel/databases' endpoint.".format(str(err)))
-        full_url = '{0}/api/ariel/databases'.format(SERVER)
+        demisto.info(f"Failed to perform an API call to the 'api/siem/offenses' endpoint. Reason:\n {str(err)}.\n "
+                     "Trying to perform an API call to 'api/ariel/databases' endpoint.")
+        full_url = f'{SERVER}/api/ariel/databases'
         headers = dict(AUTH_HEADERS)
         send_request('GET', full_url, headers)
 
@@ -534,9 +534,9 @@ def fetch_incidents():
         end_offense_id = int(offense_id) + OFFENSES_PER_CALL + 1
         fetch_query = 'id>{0} AND id<{1} {2}'.format(start_offense_id,
                                                      end_offense_id,
-                                                     'AND ({})'.format(user_query) if user_query else '')
+                                                     f'AND ({user_query})' if user_query else '')
         demisto.debug("QRadar - Query sent to server: {}", fetch_query)
-        raw_offenses = get_offenses(_range='0-{0}'.format(OFFENSES_PER_CALL - 1), _filter=fetch_query)
+        raw_offenses = get_offenses(_range=f'0-{OFFENSES_PER_CALL - 1}', _filter=fetch_query)
         if raw_offenses:
             if isinstance(raw_offenses, list):
                 raw_offenses.reverse()
@@ -553,15 +553,15 @@ def fetch_incidents():
                 offense_id += OFFENSES_PER_CALL
             else:
                 latest_offense_fnd = True
-    demisto.debug('QRadarMsg - Fetched {} results for {}'.format(len(raw_offenses), fetch_query))
+    demisto.debug(f'QRadarMsg - Fetched {len(raw_offenses)} results for {fetch_query}')
 
     # set incident
     raw_offenses = unicode_to_str_recur(raw_offenses)
     incidents = []
     if full_enrich and raw_offenses:
-        demisto.debug('QRadarMsg - Enriching  {}'.format(fetch_query))
+        demisto.debug(f'QRadarMsg - Enriching  {fetch_query}')
         enrich_offense_res_with_source_and_destination_address(raw_offenses)
-        demisto.debug('QRadarMsg - Enriched  {} successfully'.format(fetch_query))
+        demisto.debug(f'QRadarMsg - Enriched  {fetch_query} successfully')
     for offense in raw_offenses:
         offense_id = max(offense_id, offense['id'])
 
@@ -674,7 +674,6 @@ def populate_src_and_dst_dicts_with_single_offense(offense, src_ids, dst_ids):
     if 'local_destination_address_ids' in offense and isinstance(offense['local_destination_address_ids'], list):
         for destination_id in offense['local_destination_address_ids']:
             dst_ids[destination_id] = destination_id
-    return None
 
 
 # Helper method: Enriches the source addresses ids dictionary with the source addresses values corresponding to the ids
@@ -682,8 +681,8 @@ def enrich_source_addresses_dict(src_adrs):
     batch_size = demisto.params().get('enrich_size') or 100
     for b in batch(list(src_adrs.values()), batch_size=int(batch_size)):
         src_ids_str = ','.join(map(str, b))
-        demisto.debug('QRadarMsg - Enriching source addresses: {}'.format(src_ids_str))
-        source_url = '{0}/api/siem/source_addresses?filter=id in ({1})'.format(SERVER, src_ids_str)
+        demisto.debug(f'QRadarMsg - Enriching source addresses: {src_ids_str}')
+        source_url = f'{SERVER}/api/siem/source_addresses?filter=id in ({src_ids_str})'
         src_res = send_request('GET', source_url, AUTH_HEADERS)
         for src_adr in src_res:
             src_adrs[src_adr['id']] = convert_to_str(src_adr['source_ip'])
@@ -696,8 +695,8 @@ def enrich_destination_addresses_dict(dst_adrs):
     batch_size = demisto.params().get('enrich_size') or 100
     for b in batch(list(dst_adrs.values()), batch_size=int(batch_size)):
         dst_ids_str = ','.join(map(str, b))
-        demisto.debug('QRadarMsg - Enriching destination addresses: {}'.format(dst_ids_str))
-        destination_url = '{0}/api/siem/local_destination_addresses?filter=id in ({1})'.format(SERVER, dst_ids_str)
+        demisto.debug(f'QRadarMsg - Enriching destination addresses: {dst_ids_str}')
+        destination_url = f'{SERVER}/api/siem/local_destination_addresses?filter=id in ({dst_ids_str})'
         dst_res = send_request('GET', destination_url, AUTH_HEADERS)
         for dst_adr in dst_res:
             dst_adrs[dst_adr['id']] = convert_to_str(dst_adr['local_destination_ip'])
@@ -713,7 +712,6 @@ def enrich_single_offense_res_with_source_and_destination_address(offense, src_a
         for i in range(len(offense['local_destination_address_ids'])):
             offense['local_destination_address_ids'][i] = dst_adrs[offense['local_destination_address_ids'][i]]
 
-    return None
 
 
 # Helper method: For a single offense replaces the epoch times with ISO string
@@ -725,7 +723,6 @@ def enrich_offense_times(offense):
     if offense.get('close_time'):
         offense['close_time'] = epoch_to_ISO(offense['close_time'])
 
-    return None
 
 
 def get_offense_by_id_command():
@@ -743,7 +740,7 @@ def update_offense_command():
     args = demisto.args()
     if 'closing_reason_name' in args:
         args['closing_reason_id'] = convert_closing_reason_name_to_id(args.get('closing_reason_name'))
-    elif 'CLOSED' == args.get('status') and not args.get('closing_reason_id'):
+    elif args.get('status') == 'CLOSED' and not args.get('closing_reason_id'):
         raise ValueError(
             'Invalid input - must provide closing reason name or id (may use "qradar-get-closing-reasons" command to '
             'get them) to close offense')
@@ -772,16 +769,16 @@ def get_search_command():
     search = deepcopy(raw_search)
     search = filter_dict_non_intersection_key_to_value(replace_keys(search, SEARCH_ID_NAMES_MAP), SEARCH_ID_NAMES_MAP)
     return get_entry_for_object('QRadar Search Info', search, raw_search, demisto.args().get('headers'),
-                                'QRadar.Search(val.ID === "{0}")'.format(search_id))
+                                f'QRadar.Search(val.ID === "{search_id}")')
 
 
 def get_search_results_command():
     search_id = demisto.args().get('search_id')
     raw_search_results = get_search_results(search_id, demisto.args().get('range'))
     result_key = raw_search_results.keys()[0]
-    title = 'QRadar Search Results from {}'.format(convert_to_str(result_key))
+    title = f'QRadar Search Results from {convert_to_str(result_key)}'
     context_key = demisto.args().get('output_path') if demisto.args().get(
-        'output_path') else 'QRadar.Search(val.ID === "{0}").Result.{1}'.format(search_id, result_key)
+        'output_path') else f'QRadar.Search(val.ID === "{search_id}").Result.{result_key}'
     context_obj = unicode_to_str_recur(raw_search_results[result_key])
     return get_entry_for_object(title, context_obj, raw_search_results, demisto.args().get('headers'), context_key)
 
@@ -819,7 +816,7 @@ def get_entry_for_assets(title, obj, contents, human_readable_obj, headers=None)
         'Contents': contents,
         'ContentsFormat': formats['json'],
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': "### {0}\n{1}".format(title, human_readable_md),
+        'HumanReadable': f"### {title}\n{human_readable_md}",
         'EntryContext': obj
     }
 
@@ -884,7 +881,6 @@ def enrich_dict_using_asset_properties(asset, asset_dict, endpoint_dict, full_va
                 asset_dict[FULL_ASSET_PROPERTIES_NAMES_MAP[prop.get('name')]] = {'Value': prop.get('value'),
                                                                                  'LastUser': prop.get(
                                                                                      'last_reported_by')}
-    return None
 
 
 # Creates an empty endpoint dictionary (for use in other methods)
@@ -900,14 +896,13 @@ def create_empty_endpoint_dict(full_values):
 def get_domain_name(domain_id):
     try:
         query_param = {
-            'query_expression': "SELECT DOMAINNAME({0}) AS 'Domain name' FROM events GROUP BY 'Domain name'".format(
-                domain_id)}
+            'query_expression': f"SELECT DOMAINNAME({domain_id}) AS 'Domain name' FROM events GROUP BY 'Domain name'"}
         search_id = search(query_param)['search_id']
         return get_search_results(search_id)['events'][0]['Domain name']
     except Exception as e:
         demisto.results({
             'Type': 11,
-            'Contents': 'No Domain name was found.{error}'.format(error=str(e)),
+            'Contents': f'No Domain name was found.{str(e)}',
             'ContentsFormat': formats['text']
         })
         return domain_id
@@ -1021,8 +1016,8 @@ def delete_reference_set_command():
         'Contents': raw_ref,
         'ContentsFormat': formats['json'],
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': "Reference Data Deletion Task for '{0}' was initiated. Reference set '{0}' should be deleted "
-                         "shortly.".format(ref_name)
+        'HumanReadable': f"Reference Data Deletion Task for '{ref_name}' was initiated. Reference set '{ref_name}' should be deleted "
+                         "shortly."
     }
 
 
@@ -1134,16 +1129,16 @@ def upload_indicators_command():
             if element_type:
                 create_reference_set(reference_name, element_type, timeout_type, time_to_live)
             else:
-                return_error("There isn't a reference set with the name {0}. To create one,"
-                             " please enter an element type".format(reference_name))
+                return_error(f"There isn't a reference set with the name {reference_name}. To create one,"
+                             " please enter an element type")
         else:
             if element_type or time_to_live or timeout_type:
-                return_error("The reference set {0} is already exist. Element type, time to live or timeout type "
-                             "cannot be modified".format(reference_name))
+                return_error(f"The reference set {reference_name} is already exist. Element type, time to live or timeout type "
+                             "cannot be modified")
         query = args.get('query')
         indicators_values_list, indicators_data_list = get_indicators_list(query, limit, page)
         if len(indicators_values_list) == 0:
-            return "No indicators found, Reference set {0} didn't change".format(reference_name), {}, {}
+            return f"No indicators found, Reference set {reference_name} didn't change", {}, {}
         else:
             raw_response = upload_indicators_list_request(reference_name, indicators_values_list)
             ref_set_data = unicode_to_str_recur(get_ref_set(reference_name))
@@ -1151,7 +1146,7 @@ def upload_indicators_command():
             enrich_reference_set_result(ref)
             indicator_headers = ['Value', 'Type']
             ref_set_headers = ['Name', 'ElementType', 'TimeoutType', 'CreationTime', 'NumberOfElements']
-            hr = tableToMarkdown("reference set {0} was updated".format(reference_name), ref,
+            hr = tableToMarkdown(f"reference set {reference_name} was updated", ref,
                                  headers=ref_set_headers) + tableToMarkdown("Indicators list", indicators_data_list,
                                                                             headers=indicator_headers)
             return hr, {}, raw_response
@@ -1210,7 +1205,7 @@ def get_indicators_list(indicator_query, limit, page):
 
 # Command selector
 try:
-    LOG('Command being called is {command}'.format(command=demisto.command()))
+    LOG(f'Command being called is {demisto.command()}')
     if demisto.command() == 'test-module':
         demisto.results(test_module())
     elif demisto.command() == 'fetch-incidents':
@@ -1255,7 +1250,7 @@ try:
         return_outputs(*upload_indicators_command())
 except Exception as e:
     message = e.message if hasattr(e, 'message') else convert_to_str(e)
-    error = 'Error has occurred in the QRadar Integration: {error}\n {message}'.format(error=type(e), message=message)
+    error = f'Error has occurred in the QRadar Integration: {type(e)}\n {message}'
     LOG(traceback.format_exc())
     if demisto.command() == 'fetch-incidents':
         LOG(error)

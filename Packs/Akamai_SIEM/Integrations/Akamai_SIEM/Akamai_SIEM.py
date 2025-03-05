@@ -859,34 +859,34 @@ def akamai_send_data_to_xsiam(data, vendor, product, data_format=None, url_key='
     if not items_count:
         items_count = len(data) if isinstance(data, list) else 1
     if data_type not in DATA_TYPES:
-        demisto.debug("data type must be one of these values: {types}".format(types=DATA_TYPES))
-        return
+        demisto.debug(f"data type must be one of these values: {DATA_TYPES}")
+        return None
 
     if not data:
-        demisto.debug('send_data_to_xsiam function received no {data_type}, '
-                      'skipping the API call to send {data} to XSIAM'.format(data_type=data_type, data=data_type))
-        demisto.updateModuleHealth({'{data_type}Pulled'.format(data_type=data_type): data_size})
-        return
+        demisto.debug(f'send_data_to_xsiam function received no {data_type}, '
+                      f'skipping the API call to send {data_type} to XSIAM')
+        demisto.updateModuleHealth({f'{data_type}Pulled': data_size})
+        return None
 
     # only in case we have data to send to XSIAM we continue with this flow.
     # Correspond to case 1: List of strings or dicts where each string or dict represents an one event or asset or snapshot.
     if isinstance(data, list):
         # In case we have list of dicts we set the data_format to json and parse each dict to a stringify each dict.
-        demisto.debug("Sending {size} {data_type} to XSIAM".format(size=len(data), data_type=data_type))
+        demisto.debug(f"Sending {len(data)} {data_type} to XSIAM")
         if isinstance(data[0], dict):
             data = [json.dumps(item) for item in data]
             data_format = 'json'
         # Separating each event with a new line
         data = '\n'.join(data)
     elif not isinstance(data, str):
-        raise DemistoException('Unsupported type: {data} for the {data_type} parameter.'
-                               ' Should be a string or list.'.format(data=type(data), data_type=data_type))
+        raise DemistoException(f'Unsupported type: {type(data)} for the {data_type} parameter.'
+                               ' Should be a string or list.')
     if not data_format:
         data_format = 'text'
 
     xsiam_api_token = demisto.getLicenseCustomField('Http_Connector.token')
     xsiam_domain = demisto.getLicenseCustomField('Http_Connector.url')
-    xsiam_url = 'https://api-{xsiam_domain}'.format(xsiam_domain=xsiam_domain)
+    xsiam_url = f'https://api-{xsiam_domain}'
     headers = remove_empty_elements({
         'authorization': xsiam_api_token,
         'format': data_format,
@@ -907,7 +907,7 @@ def akamai_send_data_to_xsiam(data, vendor, product, data_format=None, url_key='
         headers['snapshot-id'] = snapshot_id + instance_name
         headers['total-items-count'] = str(items_count)
 
-    header_msg = 'Error sending new {data_type} into XSIAM.\n'.format(data_type=data_type)
+    header_msg = f'Error sending new {data_type} into XSIAM.\n'
 
     def data_error_handler(res):
         """
@@ -922,17 +922,17 @@ def akamai_send_data_to_xsiam(data, vendor, product, data_format=None, url_key='
 
         except ValueError:
             if res.text:
-                error = '\n{}'.format(res.text)
+                error = f'\n{res.text}'
             else:
                 error = "Received empty response from the server"
 
         api_call_info = (
             'Parameters used:\n'
-            '\tURL: {xsiam_url}\n'
-            '\tHeaders: {headers}\n\n'
-            'Response status code: {status_code}\n'
-            'Error received:\n\t{error}'
-        ).format(xsiam_url=xsiam_url, headers=json.dumps(headers, indent=8), status_code=res.status_code, error=error)
+            f'\tURL: {xsiam_url}\n'
+            f'\tHeaders: {json.dumps(headers, indent=8)}\n\n'
+            f'Response status code: {res.status_code}\n'
+            f'Error received:\n\t{error}'
+        )
 
         demisto.error(header_msg + api_call_info)
         raise DemistoException(header_msg + error, DemistoException)
@@ -976,8 +976,8 @@ def akamai_send_data_to_xsiam(data, vendor, product, data_format=None, url_key='
             data_size += send_events(chunk)
 
         if should_update_health_module:
-            demisto.updateModuleHealth({'{data_type}Pulled'.format(data_type=data_type): data_size})
-    return
+            demisto.updateModuleHealth({f'{data_type}Pulled': data_size})
+    return None
 
 
 def split_data_by_slices(data, target_chunk_size):  # pragma: no cover
@@ -1030,8 +1030,7 @@ async def xsiam_api_call_async_with_retries(
     attempt_num = 1
     response = None
     while status_code != 200 and attempt_num < num_of_attempts + 1:
-        demisto.debug('Sending {data_type} into xsiam, attempt number {attempt_num}'.format(
-            data_type=data_type, attempt_num=attempt_num))
+        demisto.debug(f'Sending {data_type} into xsiam, attempt number {attempt_num}')
         # in the last try we should raise an exception if any error occurred, including 429
         ok_codes = (200, 429) if attempt_num < num_of_attempts else None
         async with aiohttp.ClientSession() as session:
@@ -1043,21 +1042,20 @@ async def xsiam_api_call_async_with_retries(
                     if ok_codes and e.status in ok_codes:
                         continue
                     else:
-                        header_msg = 'Error sending new {data_type} into XSIAM.\n'.format(data_type=data_type)
+                        header_msg = f'Error sending new {data_type} into XSIAM.\n'
                         api_call_info = (
                             'Parameters used:\n'
-                            '\tURL: {xsiam_url}\n'
-                            '\tHeaders: {headers}\n\n'
-                            'Response status code: {status_code}\n'
-                            'Error received:\n\t{error}\n'
-                            'additional request info: \n\t{additional_info}'
-                        ).format(xsiam_url=xsiam_url, headers=json.dumps(e.headers, indent=8), status_code=e.status,
-                                 error=e.message, additional_info=e.request_info)
+                            f'\tURL: {xsiam_url}\n'
+                            f'\tHeaders: {json.dumps(e.headers, indent=8)}\n\n'
+                            f'Response status code: {e.status}\n'
+                            f'Error received:\n\t{e.message}\n'
+                            f'additional request info: \n\t{e.request_info}'
+                        )
 
                         demisto.error(header_msg + api_call_info)
                         demisto.updateModuleHealth(header_msg + e.message, is_error=True)
 
-        demisto.debug('received status code: {status_code}'.format(status_code=status_code))
+        demisto.debug(f'received status code: {status_code}')
         if status_code == 429:
             await asyncio.sleep(1)
         attempt_num += 1

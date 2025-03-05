@@ -5,7 +5,7 @@ from CommonServerUserPython import *  # noqa
 
 """
 
-from typing import Dict, Any
+from typing import Any
 import ipaddress
 
 
@@ -15,7 +15,7 @@ import ipaddress
 ''' COMMAND FUNCTION '''
 
 
-def match_ip_in_cidr_indicators(args: Dict[str, Any]) -> CommandResults:
+def match_ip_in_cidr_indicators(args: dict[str, Any]) -> CommandResults:
     """
     match_ip_in_cidr_indicators
     Given ip address in the args dictionary returns the indicator of type CIDR with the
@@ -52,7 +52,7 @@ def match_ip_in_cidr_indicators(args: Dict[str, Any]) -> CommandResults:
         raise ValueError('No content')
 
     longest_match = 0
-    found_ind: Dict = {}
+    found_ind: dict = {}
     for i in indicators[0]['Contents']:
         if 'value' not in i:
             continue

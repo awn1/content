@@ -10,7 +10,7 @@ from urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 VERSION = "v1.0.1"
-USER_AGENT = "ReversingLabs XSOAR A1000 {version}".format(version=VERSION)
+USER_AGENT = f"ReversingLabs XSOAR A1000 {VERSION}"
 
 BASE_URL = demisto.getParam('base')
 if BASE_URL[-1] == '/':
@@ -88,7 +88,7 @@ def validate_hash(hash_value):
             'regex': r'([a-fA-F\d]{64})'
         }
     }
-    if len(hash_value) not in type_dict.keys():
+    if len(hash_value) not in type_dict:
         return_error('Provided input string length does not match any hash type')
     if not re.match(type_dict[len(hash_value)]['regex'], hash_value):
         return_error('Provided input string is not as hash due to containing invalid characters')
@@ -103,18 +103,15 @@ def validate_http(r):
         try:
             return True, r.json()
         except Exception as e:
-            return False, 'HTTP response is not JSON [{error}] - {body}'.format(error=e, body=r.text)
+            return False, f'HTTP response is not JSON [{e}] - {r.text}'
     elif r.status_code in (401, 403):
         return False, 'Credential error - The provided A1000 credentials/token are either incorrect or lack ' \
-                      'API roles [{code}] - {body}'.format(code=r.status_code, body=r.text)
+                      f'API roles [{r.status_code}] - {r.text}'
     elif r.status_code == 404:
         return False, 'No reference found - There were no results found for the provided input ' \
-                      '[{code}] - {body}'.format(code=r.status_code, body=r.text)
+                      f'[{r.status_code}] - {r.text}'
     else:
-        return False, 'An error has occurred [{code}] - {body}'.format(
-            code=r.status_code,
-            body=r.text
-        )
+        return False, f'An error has occurred [{r.status_code}] - {r.text}'
 
 
 def file(hash_type, hash_value):
@@ -148,7 +145,7 @@ def file(hash_type, hash_value):
         },
         'properties_to_append': prop
     }
-    md = '## ReversingLabs A1000 reputation for: {}\n'.format(hash_value)
+    md = f'## ReversingLabs A1000 reputation for: {hash_value}\n'
     ec = {'DBotScore': []}  # type: ignore
 
     md5 = res.get('md5')
@@ -183,7 +180,7 @@ def file(hash_type, hash_value):
     ec[outputPaths['file']] = file_data  # type: ignore
 
     md += 'ID: **{}**\n'.format(demisto.get(res, 'summary.id'))
-    md += 'Malware status: **{}**\n'.format(status)
+    md += f'Malware status: **{status}**\n'
     md += 'Local first seen: **{}**\n'.format(res.get('local_first_seen'))
     md += 'Local last seen: **{}**\n'.format(res.get('local_last_seen'))
     md += 'First seen: **{}**\n'.format(demisto.gets(res, 'ticloud.first_seen'))
@@ -197,8 +194,8 @@ def file(hash_type, hash_value):
     md += 'Classification reason: **{}**\n'.format(res.get('classification_reason'))
     md += 'Aliases: **{}**\n'.format(','.join(res.get('aliases')))
     md += 'Extracted file count: **{}**\n'.format(res.get('extracted_file_count'))
-    md += 'File type: **{}/{}**\n'.format(file_type, file_info)
-    md += 'File size: **{}**\n'.format(file_size)
+    md += f'File type: **{file_type}/{file_info}**\n'
+    md += f'File size: **{file_size}**\n'
     md += 'Identification name: **{}**\n'.format(res.get('identification_name'))
     md += 'Identification version: **{}**\n'.format(res.get('identification_version'))
     indicators = demisto.get(res, 'summary.indicators')
@@ -214,7 +211,7 @@ def extracted_files():
     Get the list of extracted files for a given sample
     """
     parent = demisto.getArg('hash')
-    endpoint = '/api/samples/{}/extracted-files/'.format(parent)
+    endpoint = f'/api/samples/{parent}/extracted-files/'
     ok, r = validate_http(
         requests.get(
             url=BASE_URL + endpoint,
@@ -265,7 +262,7 @@ def extracted_files():
         file_context_list.append(file_context)
         ec['DBotScore'].append({'Indicator': sha1, 'Type': 'hash', 'Vendor': 'ReversingLabs A1000', 'Score': score})
 
-    md = tableToMarkdown('ReversingLabs A1000 extracted files for: {}\n'.format(parent), file_data,
+    md = tableToMarkdown(f'ReversingLabs A1000 extracted files for: {parent}\n', file_data,
                          ['SHA1', 'Name', 'Path', 'Info', 'Size', 'Local First', 'Local Last', 'Malware Status',
                           'Trust', 'Threat Name', 'Threat Level'])
     ec[outputPaths['file']] = file_context_list
@@ -337,13 +334,13 @@ def download():
     """
     hash_value = demisto.getArg('hash')
     r = requests.get(
-        url=BASE_URL + '/api/samples/{}/download/'.format(hash_value),
+        url=BASE_URL + f'/api/samples/{hash_value}/download/',
         headers=HEADERS,
         stream=True,
         verify=VERIFY_CERT
     )
     if r.status_code < 200 or r.status_code > 299:
-        return_error('Bad HTTP response [{code}] - {body}'.format(code=r.status_code, body=r.text))
+        return_error(f'Bad HTTP response [{r.status_code}] - {r.text}')
     filename = hash_value + '.bin'
     with open(filename, 'wb') as f:
         r.raw.decode_content = True
@@ -377,13 +374,13 @@ def unpacked():
     """
     hash_value = demisto.getArg('hash')
     r = requests.get(
-        url=BASE_URL + '/api/samples/{}/unpacked/'.format(hash_value),
+        url=BASE_URL + f'/api/samples/{hash_value}/unpacked/',
         headers=HEADERS,
         stream=True,
         verify=VERIFY_CERT
     )
     if r.status_code < 200 or r.status_code > 299:
-        return_error('Bad HTTP response [{code}] - {body}'.format(code=r.status_code, body=r.text))
+        return_error(f'Bad HTTP response [{r.status_code}] - {r.text}')
     filename = hash_value + '.zip'
     with open(filename, 'wb') as f:
         r.raw.decode_content = True
@@ -419,4 +416,4 @@ if __name__ in ('__main__', '__builtin__', 'builtins'):
     elif demisto.command() == 'reversinglabs-download-unpacked':
         unpacked()
     else:
-        return_error('Command [{}] not implemented'.format(demisto.command()))
+        return_error(f'Command [{demisto.command()}] not implemented')

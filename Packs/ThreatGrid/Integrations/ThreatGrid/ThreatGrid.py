@@ -638,8 +638,8 @@ def handle_artifact_from_analysis_json(ec, hr, analysis_json, limit):
                 id = yara['id']
                 break
             if id:
-                artifact_key = 'ThreatGrid.Artifact(val.ID === obj.{0})'.format(id)
-                artifact_hr_key = 'Artifact(ID = {0})'.format(id)
+                artifact_key = f'ThreatGrid.Artifact(val.ID === obj.{id})'
+                artifact_hr_key = f'Artifact(ID = {id})'
                 tags = set()
                 for yara in filter(lambda yara: 'tags' in yara, yaras):
                     if yara['tags']:
@@ -661,7 +661,7 @@ def create_analysis_json_human_readable(hr):
     for k in hr['Sample'].copy():
         if isinstance(hr['Sample'][k], dict) or (isinstance(hr['Sample'][k], list) and len(hr['Sample'][k]) > 0
                                                  and k in SAMPLE_ANALYSIS_HEADERS_MAP):
-            tmp_hr_str = tmp_hr_str + tableToMarkdown('{0}:'.format(str(k)), hr['Sample'][k],
+            tmp_hr_str = tmp_hr_str + tableToMarkdown(f'{str(k)}:', hr['Sample'][k],
                                                       SAMPLE_ANALYSIS_HEADERS_MAP[k])
             del hr['Sample'][k]
     return_sting = hr_str + tableToMarkdown('Sample analysis:', hr['Sample'], SAMPLE_ANALYSIS_HEADERS_MAP['Sample'])
@@ -1088,7 +1088,7 @@ def get_analysis_artifact():
     if aid:
         url += '/' + aid
     r = req('GET', url)
-    ec = {'ThreatGrid.Sample(val.ID === {0})'.format(sample_id): r.json()}
+    ec = {f'ThreatGrid.Sample(val.ID === {sample_id})': r.json()}
     demisto.results([
         {
             'Type': entryTypes['note'],

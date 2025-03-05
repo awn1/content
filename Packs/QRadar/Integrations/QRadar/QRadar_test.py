@@ -75,8 +75,7 @@ def test_get_reference_by_name(mocker):
     qradar.get_ref_set(NON_URL_SAFE_MSG)
     # Then
     #     - The rest API endpoint will be called with URL safe chars
-    qradar.send_request.assert_called_with('GET', 'www.qradar.com/api/reference_data/sets/{}'.format(
-        NON_URL_SAFE_MSG_URL_ENCODED), REQUEST_HEADERS, params={})
+    qradar.send_request.assert_called_with('GET', f'www.qradar.com/api/reference_data/sets/{NON_URL_SAFE_MSG_URL_ENCODED}', REQUEST_HEADERS, params={})
 
 
 def test_delete_reference_set(mocker):
@@ -97,8 +96,7 @@ def test_delete_reference_set(mocker):
     qradar.delete_reference_set(NON_URL_SAFE_MSG)
     # Then
     #     - The rest API endpoint will be called with URL safe chars
-    qradar.send_request.assert_called_with('DELETE', 'www.qradar.com/api/reference_data/sets/{}'.format(
-        NON_URL_SAFE_MSG_URL_ENCODED))
+    qradar.send_request.assert_called_with('DELETE', f'www.qradar.com/api/reference_data/sets/{NON_URL_SAFE_MSG_URL_ENCODED}')
 
 
 def test_update_reference_set_value(mocker):
@@ -119,8 +117,7 @@ def test_update_reference_set_value(mocker):
     qradar.update_reference_set_value(NON_URL_SAFE_MSG, 'value')
     # Then
     #     - The rest API endpoint will be called with URL safe chars
-    qradar.send_request.assert_called_with('POST', 'www.qradar.com/api/reference_data/sets/{}'.format(
-        NON_URL_SAFE_MSG_URL_ENCODED), params={'name': NON_URL_SAFE_MSG, 'value': 'value'})
+    qradar.send_request.assert_called_with('POST', f'www.qradar.com/api/reference_data/sets/{NON_URL_SAFE_MSG_URL_ENCODED}', params={'name': NON_URL_SAFE_MSG, 'value': 'value'})
 
 
 def test_delete_reference_set_value(mocker):
@@ -141,8 +138,7 @@ def test_delete_reference_set_value(mocker):
     qradar.delete_reference_set_value(NON_URL_SAFE_MSG, 'value')
     # Then
     #     - The rest API endpoint will be called with URL safe chars
-    qradar.send_request.assert_called_with('DELETE', 'www.qradar.com/api/reference_data/sets/{}/value'.format(
-        NON_URL_SAFE_MSG_URL_ENCODED), params={'name': NON_URL_SAFE_MSG, 'value': 'value'})
+    qradar.send_request.assert_called_with('DELETE', f'www.qradar.com/api/reference_data/sets/{NON_URL_SAFE_MSG_URL_ENCODED}/value', params={'name': NON_URL_SAFE_MSG, 'value': 'value'})
 
 
 def test_create_incident_from_offense():
@@ -220,7 +216,7 @@ def test_get_entry_for_object():
     title = "Title"
     obj = {'id': 1, 'name': 'test', 'field_to_drop': 'sensitive data'}
     contents = {'test': 'test'}
-    headers = u'name'
+    headers = 'name'
     # single header
     entry = qradar.get_entry_for_object(title, obj, contents, headers)
     assert entry['HumanReadable'] == '### Title\n|name|\n|---|\n| test |\n'

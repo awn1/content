@@ -13,10 +13,10 @@ def get_yaml_obj(entry_id):
     data = {}  # type: dict
     try:
         yml_file_path = demisto.getFilePath(entry_id)['path']
-        with open(yml_file_path, 'r') as yml_file:
+        with open(yml_file_path) as yml_file:
             data = yaml.safe_load(yml_file)
         if not isinstance(data, dict):
-            raise ValueError()
+            raise ValueError
 
     except (ValueError, yaml.YAMLError):
         return_error('Failed to open integration file')
@@ -39,7 +39,7 @@ def get_command_examples(entry_id):
 
     if re.match(r'[\d]+@[\d\w-]+', entry_id) is not None:
         examples_path = demisto.getFilePath(entry_id)['path']
-        with open(examples_path, 'r') as examples_file:
+        with open(examples_path) as examples_file:
             commands = examples_file.read().split('\n')
     else:
         demisto.debug('failed to open command file, tried parsing as free text')
@@ -90,7 +90,7 @@ def run_command(command_example):
         for entry in res:
             if is_error(entry):
                 demisto.results(res)
-                raise RuntimeError('something went wrong with your command: {}'.format(command_example))
+                raise RuntimeError(f'something went wrong with your command: {command_example}')
 
             raw_context = entry.get('EntryContext', {})
             if raw_context is not None:
@@ -107,11 +107,11 @@ def run_command(command_example):
                 md_example += entry.get('HumanReadable')
 
     except RuntimeError:
-        errors.append('The provided example for cmd {} has failed...'.format(cmd))
+        errors.append(f'The provided example for cmd {cmd} has failed...')
 
     except Exception as e:
         errors.append(
-            'Error encountered in the processing of command {}, error was: {}. '.format(cmd, str(e))
+            f'Error encountered in the processing of command {cmd}, error was: {str(e)}. '
             + '. Please check your command inputs and outputs')
 
     return cmd, md_example, context_example, errors
@@ -166,7 +166,7 @@ def addErrorLines(scriptToScan, scriptType):
 
 def generate_section(title, data):
     section = [
-        '## {}'.format(title),
+        f'## {title}',
         '---',
         '',
     ]
@@ -295,20 +295,20 @@ def generate_command_example(cmd, cmd_example=None):
     example = [
         '',
         '##### Command Example',
-        '```{}```'.format(cmd_example),
+        f'```{cmd_example}```',
         '',
     ]
     if context_example:
         example.extend([
             '##### Context Example',
             '```',
-            '{}'.format(context_example),
+            f'{context_example}',
             '```',
             '',
         ])
     example.extend([
         '##### Human Readable Output',
-        '{}'.format(md_example),
+        f'{md_example}',
         '',
     ])
 
@@ -367,7 +367,7 @@ def main():
     if len(errors) != 0:
         errors.append('Visit the documentation page for more details: '
                       'https://github.com/demisto/content/tree/master/docs/integration_documentation')
-        return_error('\n'.join('* {}'.format(e) for e in errors))
+        return_error('\n'.join(f'* {e}' for e in errors))
 
 
 if __name__ == '__builtin__':

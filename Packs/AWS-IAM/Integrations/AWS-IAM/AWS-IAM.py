@@ -1457,8 +1457,7 @@ def main():     # pragma: no cover
             return_results(list_attached_role_policies_command(args, client))
     except Exception as e:
         LOG(str(e))
-        return_error('Error has occurred in the AWS IAM Integration: {code}\n {message}'.format(
-            code=type(e), message=str(e)))
+        return_error(f'Error has occurred in the AWS IAM Integration: {type(e)}\n {str(e)}')
 
 
 from AWSApiModule import *  # noqa: E402

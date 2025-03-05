@@ -9,7 +9,7 @@ from requests.auth import AuthBase, HTTPBasicAuth
 from zeep import helpers
 from zeep.cache import SqliteCache
 from datetime import datetime
-from typing import Dict, Tuple, Any
+from typing import Any
 from dateutil.parser import parse
 import urllib3
 import uuid
@@ -73,7 +73,7 @@ def get_data_owner(data_owner: Any) -> dict:
 
 
 def get_incident_binaries(client: Client, incident_id: str, include_original_message: bool = True,
-                          include_all_components: bool = True) -> Tuple[str, dict, list, dict]:
+                          include_all_components: bool = True) -> tuple[str, dict, list, dict]:
     """
     This function get's the binaries of a specific incident with the id incident_id
     It generates the human readable, entry context & raw response. It also generates the binary files.
@@ -452,7 +452,7 @@ def test_module(client: Client, saved_report_id: int):
     demisto.results('ok')
 
 
-def get_incident_details_command(client: Client, args: dict) -> Tuple[str, dict, dict]:
+def get_incident_details_command(client: Client, args: dict) -> tuple[str, dict, dict]:
     incident_id: str = args.get('incident_id', '')
 
     raw_incident: list = client.service.incidentDetail(
@@ -488,7 +488,7 @@ def get_incident_details_command(client: Client, args: dict) -> Tuple[str, dict,
     return human_readable, entry_context, raw_response
 
 
-def list_incidents_command(client: Client, args: dict, saved_report_id: str) -> Tuple[str, dict, dict]:
+def list_incidents_command(client: Client, args: dict, saved_report_id: str) -> tuple[str, dict, dict]:
     if not saved_report_id:
         raise ValueError('Missing saved report ID. Configure it in the integration instance settings.')
 
@@ -519,7 +519,7 @@ def list_incidents_command(client: Client, args: dict, saved_report_id: str) -> 
     return human_readable, entry_context, raw_response
 
 
-def update_incident_command(client: Client, args: dict) -> Tuple[str, dict, dict]:
+def update_incident_command(client: Client, args: dict) -> tuple[str, dict, dict]:
     incident_id: str = args.get('incident_id', '')
     incident_attributes: dict = get_incident_attributes(args)
 
@@ -555,7 +555,7 @@ def update_incident_command(client: Client, args: dict) -> Tuple[str, dict, dict
     return human_readable, entry_context, raw_response
 
 
-def incident_binaries_command(client: Client, args: dict) -> Tuple[str, dict, list, dict]:
+def incident_binaries_command(client: Client, args: dict) -> tuple[str, dict, list, dict]:
     incident_id: str = args.get('incident_id', '')
     include_original_message: bool = bool(args.get('include_original_message', 'True'))
     include_all_components: bool = bool(args.get('include_all_components', 'True'))
@@ -567,7 +567,7 @@ def incident_binaries_command(client: Client, args: dict) -> Tuple[str, dict, li
     return human_readable, entry_context, file_entries, raw_response
 
 
-def list_custom_attributes_command(client: Client) -> Tuple[str, dict, dict]:
+def list_custom_attributes_command(client: Client) -> tuple[str, dict, dict]:
     raw_custom_attributes_list = client.service.listCustomAttributes()
 
     human_readable: str
@@ -585,7 +585,7 @@ def list_custom_attributes_command(client: Client) -> Tuple[str, dict, dict]:
     return human_readable, entry_context, raw_response
 
 
-def list_incident_status_command(client: Client) -> Tuple[str, dict, dict]:
+def list_incident_status_command(client: Client) -> tuple[str, dict, dict]:
     raw_incident_status_list = client.service.listIncidentStatus()
 
     human_readable: str
@@ -603,7 +603,7 @@ def list_incident_status_command(client: Client) -> Tuple[str, dict, dict]:
     return human_readable, entry_context, raw_response
 
 
-def incident_violations_command(client: Client, args: dict) -> Tuple[str, dict, dict]:
+def incident_violations_command(client: Client, args: dict) -> tuple[str, dict, dict]:
     incident_id: str = args.get('incident_id', '')
     include_image_violations: bool = bool(args.get('include_image_violations', 'True'))
 
@@ -709,9 +709,9 @@ def fetch_incidents(client: Client, fetch_time: str, fetch_limit: int, last_run:
 
 def main():
     handle_proxy()
-    params: Dict = demisto.params()
+    params: dict = demisto.params()
     server: str = params.get('server', '').rstrip('/')
-    credentials: Dict = params.get('credentials', {})
+    credentials: dict = params.get('credentials', {})
     username: str = credentials.get('identifier', '')
     password: str = credentials.get('password', '')
     fetch_time: str = params.get('fetch_time', '3 days').strip()

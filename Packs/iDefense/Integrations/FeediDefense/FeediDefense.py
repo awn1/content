@@ -1,9 +1,8 @@
-from typing import Dict, Union
 from CommonServerPython import *
 from JSONFeedApiModule import *  # noqa: E402
 
 
-def custom_build_iterator(client: Client, feed: Dict, limit, **kwargs) -> List:
+def custom_build_iterator(client: Client, feed: dict, limit, **kwargs) -> List:
     """
     Implement the http_request with API that works with pagination and filtering. Uses the integration context to
     save last fetch time to each indicator type
@@ -71,15 +70,15 @@ def custom_build_iterator(client: Client, feed: Dict, limit, **kwargs) -> List:
             err_type = f"""<{error_class[error_class.find("'") + 1: error_class.rfind("'")]}>"""
             err_msg = 'Verify that the server URL parameter' \
                       ' is correct and that you have access to the server from your host.' \
-                      '\nError Type: {}\nError Number: [{}]\nMessage: {}\n' \
-                .format(err_type, exception.errno, exception.strerror)
+                      f'\nError Type: {err_type}\nError Number: [{exception.errno}]\nMessage: {exception.strerror}\n' \
+                
             raise DemistoException(err_msg, exception)
 
     demisto.debug(f"Received in total {len(result)} indicators from ACTI Feed")
     return result
 
 
-def create_fetch_configuration(indicators_type: list, filters: dict, params: dict) -> Dict[str, dict]:
+def create_fetch_configuration(indicators_type: list, filters: dict, params: dict) -> dict[str, dict]:
     mapping_by_indicator_type = {
         'IP': {
             'last_seen_as': 'malwaretypes',
@@ -119,7 +118,7 @@ def create_fetch_configuration(indicators_type: list, filters: dict, params: dic
     return indicators_configuration
 
 
-def build_feed_filters(params: dict) -> Dict[str, Optional[Union[str, list]]]:
+def build_feed_filters(params: dict) -> dict[str, Optional[str | list]]:
     filters = {'severity.from': params.get('severity'),
                'threat_types.values': params.get('threat_type'),
                'confidence.from': params.get('confidence_from'),
@@ -132,7 +131,7 @@ def build_feed_filters(params: dict) -> Dict[str, Optional[Union[str, list]]]:
 def main():
     params = {k: v for k, v in demisto.params().items() if v is not None}
     parameters = demisto.params()
-    filters: Dict[str, Optional[Union[str, list]]] = build_feed_filters(params)
+    filters: dict[str, Optional[str | list]] = build_feed_filters(params)
     indicators_type: list = argToList(params.get('indicator_type', []))
     params['feed_name_to_config'] = create_fetch_configuration(indicators_type, filters, params)
 

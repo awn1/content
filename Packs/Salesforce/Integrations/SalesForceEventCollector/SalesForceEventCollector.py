@@ -42,7 +42,7 @@ class SalesforceGetEvents(IntegrationGetEvents):
     def pull_log_files(self):
         query = f'{self.query}+and+CreatedDate+>+{self.after} limit {self.files_limit}'
 
-        demisto.info('Searching files last modified from {}'.format(self.after))
+        demisto.info(f'Searching files last modified from {self.after}')
 
         url = f'https://um6.salesforce.com/services/data/v44.0/query?q={query}'
 
@@ -68,7 +68,7 @@ class SalesforceGetEvents(IntegrationGetEvents):
             for file in query_res['records']:
                 files.append(file)
 
-        demisto.info('Total number of files is {}.'.format(len(files)))
+        demisto.info(f'Total number of files is {len(files)}.')
 
         # sort all files by date
         files.sort(key=lambda k: dateparser.parse(k.get('LogDate')))
@@ -134,7 +134,7 @@ class SalesforceGetEvents(IntegrationGetEvents):
         for line in log_files:
             events_list = []
             local_filename = line["LogFile"].replace('/', '_').replace(':', '_')
-            file_in_tmp_path = "{}/{}".format(temp_dir.name, local_filename)
+            file_in_tmp_path = f"{temp_dir.name}/{local_filename}"
             self.get_file_raw_lines(line["LogFile"], file_in_tmp_path)
 
             for chunk in self.gen_chunks_to_object(file_in_tmp_path=file_in_tmp_path, chunksize=2000):

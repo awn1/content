@@ -53,8 +53,7 @@ def docker_auth(image_name, verify_ssl=True, registry=DEFAULT_REGISTRY, gateway_
             else:
                 demisto.info(f'Failed parsing www-authenticate header: {www_auth}')
         else:
-            demisto.info('Failed extracting www-authenticate header from registry: {}, final url: {}'.format(
-                registry, res.url))
+            demisto.info(f'Failed extracting www-authenticate header from registry: {registry}, final url: {res.url}')
         headers = ACCEPT_HEADER.copy()
         if gateway_creds and registry != DEFAULT_REGISTRY:
             headers['Authorization'] = f"Basic {gateway_creds}"

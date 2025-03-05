@@ -1,6 +1,5 @@
 
 # IMPORTS
-from typing import List, Tuple, Optional
 import urllib3
 from CommonServerPython import *
 
@@ -63,7 +62,7 @@ class Client(BaseClient):
         else:
             return FeedIndicatorType.Domain
 
-    def create_indicators_from_response(self, response: list, feed_tags: list, tlp_color: Optional[str]) -> list:
+    def create_indicators_from_response(self, response: list, feed_tags: list, tlp_color: str | None) -> list:
         """
         Creates a list of indicators from a given response
         Args:
@@ -102,7 +101,7 @@ class Client(BaseClient):
 
         return parsed_indicators
 
-    def build_iterator(self, feed_tags: List, tlp_color: Optional[str], limit=None, offset=None):
+    def build_iterator(self, feed_tags: list, tlp_color: str | None, limit=None, offset=None):
         """Builds a list of indicators.
         Returns:
             list. A list of JSON objects representing indicators fetched from a feed.
@@ -117,7 +116,7 @@ class Client(BaseClient):
         return parsed_indicators
 
 
-def module_test_command(client: Client, args: dict, feed_tags: list, tlp_color: Optional[str]):
+def module_test_command(client: Client, args: dict, feed_tags: list, tlp_color: str | None):
     """
     Returning 'ok' indicates that the integration works like it is supposed to. Connection to the service is successful.
 
@@ -138,8 +137,8 @@ def module_test_command(client: Client, args: dict, feed_tags: list, tlp_color: 
     return 'ok', {}, {}
 
 
-def get_indicators_command(client: Client, args: dict, feed_tags: list, tlp_color: Optional[str]) \
-        -> Tuple[str, dict, list]:
+def get_indicators_command(client: Client, args: dict, feed_tags: list, tlp_color: str | None) \
+        -> tuple[str, dict, list]:
     """Initiate a single fetch-indicators
 
     Args:
@@ -176,7 +175,7 @@ def get_indicators_command(client: Client, args: dict, feed_tags: list, tlp_colo
     return human_readable, {}, indicators
 
 
-def fetch_indicators_command(client: Client, feed_tags: List, tlp_color: Optional[str], limit=None, offset=None) \
+def fetch_indicators_command(client: Client, feed_tags: list, tlp_color: str | None, limit=None, offset=None) \
         -> list:
     """Fetch-indicators command from AutoFocus Feeds
 

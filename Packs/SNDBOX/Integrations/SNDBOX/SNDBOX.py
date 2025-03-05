@@ -293,4 +293,4 @@ except Exception as e:
         LOG(str(e))
         if demisto.command() != 'test-module':
             LOG.print_log()
-    return_error('An error has occurred in the SNDBOX integration: {err}'.format(err=str(e)))
+    return_error(f'An error has occurred in the SNDBOX integration: {str(e)}')

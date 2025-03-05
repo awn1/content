@@ -7,7 +7,7 @@ import urllib3
 import dateparser
 from datetime import datetime
 import traceback
-from typing import Any, Dict, Tuple, List, Optional, cast
+from typing import Any, cast
 from copy import copy
 
 import hmac
@@ -272,7 +272,7 @@ class Client(BaseClient):
         return truncated_response, res
 
     def search_modelbreaches(self, min_score: float,
-                             start_time: Optional[int]) -> List[Dict[str, Any]]:
+                             start_time: int | None) -> list[dict[str, Any]]:
         """Searches for Darktrace alerts using the '/modelbreaches' API endpoint
         :type min_score: ``float``
         :param min_score: min score of the alert to search for. Range [0, 1].
@@ -297,7 +297,7 @@ class Client(BaseClient):
 """*****HELPER FUNCTIONS****"""
 
 
-def arg_to_timestamp(arg: Any, arg_name: str, required: bool = False) -> Optional[int]:
+def arg_to_timestamp(arg: Any, arg_name: str, required: bool = False) -> int | None:
     """Converts an XSOAR argument to a timestamp (seconds from epoch)
     This function is used to quickly validate an argument provided to XSOAR
     via ``demisto.args()`` into an ``int`` containing a timestamp (seconds
@@ -342,7 +342,7 @@ def arg_to_timestamp(arg: Any, arg_name: str, required: bool = False) -> Optiona
     raise ValueError(f'Invalid date: "{arg_name}"')
 
 
-def arg_to_int(arg: Any, arg_name: str, required: bool = False) -> Optional[int]:
+def arg_to_int(arg: Any, arg_name: str, required: bool = False) -> int | None:
     """Converts an XSOAR argument to a Python int
     This function is used to quickly validate an argument provided to XSOAR
     via ``demisto.args()`` into an ``int`` type. It will throw a ValueError
@@ -375,7 +375,7 @@ def arg_to_int(arg: Any, arg_name: str, required: bool = False) -> Optional[int]
     raise ValueError(f'Invalid number: "{arg_name}"')
 
 
-def get_headers(tokens: tuple, request: str) -> Dict[str, str]:
+def get_headers(tokens: tuple, request: str) -> dict[str, str]:
     """Returns the appropriate HTTP Header for token authentication.
     :type tokens: ``tuple``
     :param tokens: Tuple containing the PUBLIC and PRIVATE API tokens
@@ -396,7 +396,7 @@ def get_headers(tokens: tuple, request: str) -> Dict[str, str]:
     return headers
 
 
-def create_query_from_dict(param_dict: Dict[str, str]):
+def create_query_from_dict(param_dict: dict[str, str]):
     """Returns a query string based on a provided dict.
     :type param_dict: ``Dict[str, str]``
     :param param_dict: Dictionary of parameters
@@ -412,7 +412,7 @@ def create_query_from_dict(param_dict: Dict[str, str]):
     return query_string[:-1] if param_dict else ''
 
 
-def create_query_from_list(param_list: Dict[str, str]):
+def create_query_from_list(param_list: dict[str, str]):
     """Returns a query string based on a provided list.
     :type param_list: ``List``
     :param param_list: List of parameters
@@ -425,7 +425,7 @@ def create_query_from_list(param_list: Dict[str, str]):
     return query if param_list else ''
 
 
-def format_JSON_for_fetch_incidents(modelbreach: Dict[str, Any]) -> Dict[str, Any]:
+def format_JSON_for_fetch_incidents(modelbreach: dict[str, Any]) -> dict[str, Any]:
     """Formats JSON for fetch incidents.
     :type modelbreach: ``Dict[str, Any]``
     :param modelbreach: JSON model breach as returned by API for fetch incident
@@ -468,7 +468,7 @@ def format_JSON_for_fetch_incidents(modelbreach: Dict[str, Any]) -> Dict[str, An
     return relevant_info
 
 
-def format_JSON_for_modelbreach(modelbreach: Dict[str, Any]) -> Dict[str, Any]:
+def format_JSON_for_modelbreach(modelbreach: dict[str, Any]) -> dict[str, Any]:
     """Formats JSON for get-breach command
     :type modelbreach: ``Dict[str, Any]``
     :param modelbreach: JSON model breach as returned by API for fetch incident
@@ -512,7 +512,7 @@ def format_JSON_for_modelbreach(modelbreach: Dict[str, Any]) -> Dict[str, Any]:
 """*****COMMAND FUNCTIONS****"""
 
 
-def test_module(client: Client, first_fetch_time: Optional[int]) -> str:
+def test_module(client: Client, first_fetch_time: int | None) -> str:
     """
     Returning 'ok' indicates that the integration works like it is supposed to. Connection to the service is successful.
 
@@ -537,8 +537,8 @@ def test_module(client: Client, first_fetch_time: Optional[int]) -> str:
     return 'ok'
 
 
-def fetch_incidents(client: Client, max_alerts: int, last_run: Dict[str, int],
-                    first_fetch_time: Optional[int], min_score: int) -> Tuple[Dict[str, int], List[dict]]:
+def fetch_incidents(client: Client, max_alerts: int, last_run: dict[str, int],
+                    first_fetch_time: int | None, min_score: int) -> tuple[dict[str, int], list[dict]]:
     """This function retrieves new model breaches every minute. It will use last_run
     to save the timestamp of the last incident it processed. If last_run is not provided,
     it should use the integration parameter first_fetch to determine when to start fetching
@@ -579,7 +579,7 @@ def fetch_incidents(client: Client, max_alerts: int, last_run: Dict[str, int],
     latest_created_time = cast(int, last_fetch)
 
     # Each incident is a dict with a string as a key
-    incidents: List[Dict[str, Any]] = []
+    incidents: list[dict[str, Any]] = []
 
     alerts = client.search_modelbreaches(
         min_score=min_score / 100,    # Scale the min score from [0,100] to [0 to 1] for API calls
@@ -632,7 +632,7 @@ def fetch_incidents(client: Client, max_alerts: int, last_run: Dict[str, int],
     return next_run, incidents
 
 
-def get_breach_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+def get_breach_command(client: Client, args: dict[str, Any]) -> CommandResults:
     """darktrace-get-breach command: Returns a Darktrace model breach
 
     :type client: ``Client``
@@ -673,7 +673,7 @@ def get_breach_command(client: Client, args: Dict[str, Any]) -> CommandResults:
     )
 
 
-def get_breach_details_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+def get_breach_details_command(client: Client, args: dict[str, Any]) -> CommandResults:
 
     pbid = str(args.get('pbid', None))
     if not pbid:
@@ -708,7 +708,7 @@ def get_breach_details_command(client: Client, args: Dict[str, Any]) -> CommandR
     )
 
 
-def get_model_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+def get_model_command(client: Client, args: dict[str, Any]) -> CommandResults:
     uuid = str(args.get('uuid', None))
     if not uuid:
         raise ValueError('Darktrace Model UUID not specified')
@@ -724,7 +724,7 @@ def get_model_command(client: Client, args: Dict[str, Any]) -> CommandResults:
     )
 
 
-def get_component_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+def get_component_command(client: Client, args: dict[str, Any]) -> CommandResults:
     cid = str(args.get('cid', None))
     if not cid:
         raise ValueError('Darktrace Component CID not specified')
@@ -740,7 +740,7 @@ def get_component_command(client: Client, args: Dict[str, Any]) -> CommandResult
     )
 
 
-def get_comments_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+def get_comments_command(client: Client, args: dict[str, Any]) -> CommandResults:
     """darktrace-get-comments command: Returns the comments on the model breach
 
     :type client: ``Client``
@@ -784,7 +784,7 @@ def get_comments_command(client: Client, args: Dict[str, Any]) -> CommandResults
     )
 
 
-def acknowledge_breach_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+def acknowledge_breach_command(client: Client, args: dict[str, Any]) -> CommandResults:
     """acknowledge_breach_command: Acknowledges the model breach based on pbid
 
     :type client: ``Client``
@@ -810,7 +810,7 @@ def acknowledge_breach_command(client: Client, args: Dict[str, Any]) -> CommandR
         ack_response["response"] = "Model Breach already acknowledged."
     else:
         ack_response["response"] = "Successfully acknowledged."
-    ack_output: Dict[str, Any] = {}
+    ack_output: dict[str, Any] = {}
     ack_output['pbid'] = int(pbid)
     ack_output['acknowledged'] = "true"
     readable_output = tableToMarkdown(f'Model Breach {pbid} Acknowledged', ack_response)
@@ -823,7 +823,7 @@ def acknowledge_breach_command(client: Client, args: Dict[str, Any]) -> CommandR
     )
 
 
-def unacknowledge_breach_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+def unacknowledge_breach_command(client: Client, args: dict[str, Any]) -> CommandResults:
     """acknowledge_breach_command: Unacknowledges the model breach based on pbid
 
     :type client: ``Client``
@@ -849,7 +849,7 @@ def unacknowledge_breach_command(client: Client, args: Dict[str, Any]) -> Comman
         ack_response["response"] = "Model Breach already unacknowledged."
     else:
         ack_response["response"] = "Successfully unacknowledged."
-    ack_output: Dict[str, Any] = {}
+    ack_output: dict[str, Any] = {}
     ack_output['pbid'] = int(pbid)
     ack_output['acknowledged'] = "false"
     readable_output = tableToMarkdown(f'Model Breach {pbid} Acknowledged', ack_response)
@@ -862,7 +862,7 @@ def unacknowledge_breach_command(client: Client, args: Dict[str, Any]) -> Comman
     )
 
 
-def list_similar_devices_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+def list_similar_devices_command(client: Client, args: dict[str, Any]) -> CommandResults:
     """list_similar_devices_command: Returns a list of similar devices to a device specified
     by Darktrace DID
 
@@ -903,7 +903,7 @@ def list_similar_devices_command(client: Client, args: Dict[str, Any]) -> Comman
     )
 
 
-def get_external_endpoint_details_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+def get_external_endpoint_details_command(client: Client, args: dict[str, Any]) -> CommandResults:
     """get_external_endpoint_details_command: Returns information about a specified external endpoint
 
     :type client: ``Client``
@@ -944,7 +944,7 @@ def get_external_endpoint_details_command(client: Client, args: Dict[str, Any]) 
     )
 
 
-def get_device_connection_info_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+def get_device_connection_info_command(client: Client, args: dict[str, Any]) -> CommandResults:
     """get_device_connection_info_command: Returns graphing connection information about a specified device
 
     :type client: ``Client``
@@ -985,7 +985,7 @@ def get_device_connection_info_command(client: Client, args: Dict[str, Any]) -> 
     )
 
 
-def get_device_identity_info_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+def get_device_identity_info_command(client: Client, args: dict[str, Any]) -> CommandResults:
     """get_device_identity_info_command: Returns identifying information about a specified device
 
     :type client: ``Client``
@@ -1036,7 +1036,7 @@ def get_device_identity_info_command(client: Client, args: Dict[str, Any]) -> Co
     )
 
 
-def get_entity_details_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+def get_entity_details_command(client: Client, args: dict[str, Any]) -> CommandResults:
     """get_entity_details_command: Returns a time sorted list of connections and events for a device
     or an entity such as a user credential.
 

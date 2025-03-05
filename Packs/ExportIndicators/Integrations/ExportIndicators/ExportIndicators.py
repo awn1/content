@@ -7,7 +7,8 @@ import re
 from base64 import b64decode
 from flask import Flask, Response, request
 from netaddr import IPAddress, IPSet
-from typing import Callable, Any, cast, Dict, Tuple
+from typing import Any, cast
+from collections.abc import Callable
 from math import ceil
 import dateparser
 
@@ -98,7 +99,7 @@ class RequestArguments:
             if len(category_attribute_list) != 1 or '' not in category_attribute_list:
                 self.category_attribute = category_attribute_list
 
-    def is_request_change(self, last_update_data: Dict):
+    def is_request_change(self, last_update_data: dict):
         if self.limit != last_update_data.get('last_limit'):
             return True
 
@@ -453,7 +454,7 @@ def create_mwg_out_format(iocs: list, mwg_type: str) -> dict:
     return {CTX_VALUES_KEY: string_formatted_indicators}
 
 
-def create_values_for_returned_dict(iocs: list, request_args: RequestArguments) -> Tuple[dict, int]:
+def create_values_for_returned_dict(iocs: list, request_args: RequestArguments) -> tuple[dict, int]:
     """
     Create a dictionary for output values using the selected format (json, json-seq, text, csv, McAfee Web Gateway,
     Symantec ProxySG, panosurl)
@@ -706,7 +707,7 @@ def route_list_values() -> Response:
         username: str = credentials.get('identifier', '')
         password: str = credentials.get('password', '')
         if username and password:
-            headers: dict = cast(Dict[Any, Any], request.headers)
+            headers: dict = cast(dict[Any, Any], request.headers)
             if not validate_basic_authentication(headers, username, password):
                 err_msg: str = 'Basic authentication failed. Make sure you are using the right credentials.'
                 demisto.debug(err_msg)
@@ -754,7 +755,7 @@ def route_list_values() -> Response:
                       f'query time seconds: [{query_time}], max age: [{max_age}]')
         resp = Response(values, status=200, mimetype=mimetype, headers=[
             ('X-ExportIndicators-Created', created.isoformat()),
-            ('X-ExportIndicators-Query-Time-Secs', "{:.3f}".format(query_time)),
+            ('X-ExportIndicators-Query-Time-Secs', f"{query_time:.3f}"),
             ('X-ExportIndicators-Size', str(list_size))
         ])
         resp.cache_control.max_age = max_age
@@ -787,7 +788,7 @@ def test_module(args, params):
         if len(range_split) != 2:
             raise ValueError(CTX_MISSING_REFRESH_ERR_MSG)
         try_parse_integer(range_split[0], 'Invalid time value for the Refresh Rate. Must be a valid integer.')
-        if not range_split[1] in ['minute', 'minutes', 'hour', 'hours', 'day', 'days', 'month', 'months', 'year',
+        if range_split[1] not in ['minute', 'minutes', 'hour', 'hours', 'day', 'days', 'month', 'months', 'year',
                                   'years']:
             raise ValueError(
                 'Invalid time unit for the Refresh Rate. Must be minutes, hours, days, months, or years.')
@@ -853,7 +854,7 @@ def main():
         raise DemistoException(err_msg)
 
     command = demisto.command()
-    demisto.debug('Command being called is {}'.format(command))
+    demisto.debug(f'Command being called is {command}')
     commands = {
         'test-module': test_module,
         'eis-update': update_outbound_command

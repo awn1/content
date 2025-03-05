@@ -6,18 +6,18 @@ from CommonServerPython import *  # noqa: F401
 
 from CommonServerUserPython import *  # noqa
 
-from typing import Dict, Any, Tuple, Optional
+from typing import Any
 
 
 ''' STANDALONE FUNCTION '''
 
 
-def deconstruct_entry(ServiceNowCMDBContext: Dict[str, Any]) -> Tuple[str,
-                                                                      Optional[str],
-                                                                      Optional[str],
-                                                                      Optional[str],
-                                                                      Optional[str],
-                                                                      Optional[str]]:
+def deconstruct_entry(ServiceNowCMDBContext: dict[str, Any]) -> tuple[str,
+                                                                      str | None,
+                                                                      str | None,
+                                                                      str | None,
+                                                                      str | None,
+                                                                      str | None]:
     """
     deconstruct_entry
     Extracts device relevant fields from a log entry.
@@ -44,7 +44,7 @@ def deconstruct_entry(ServiceNowCMDBContext: Dict[str, Any]) -> Tuple[str,
 ''' COMMAND FUNCTION '''
 
 
-def aggregate_command(args: Dict[str, Any]) -> CommandResults:
+def aggregate_command(args: dict[str, Any]) -> CommandResults:
     input_list = argToList(args.get('input', []))
     current_list = argToList(args.get('current', []))
 

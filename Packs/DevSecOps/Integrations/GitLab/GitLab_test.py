@@ -1,6 +1,6 @@
-import io
 import json
-from typing import Dict, Callable, Union, List, Any
+from typing import Any
+from collections.abc import Callable
 
 import pytest
 
@@ -16,7 +16,7 @@ mock_client = Client(BASE_URL, verify=False, proxy=False, headers=dict(), trigge
 
 
 def util_load_json(path):
-    with io.open(path, mode='r', encoding='utf-8') as f:
+    with open(path, encoding='utf-8') as f:
         return json.loads(f.read())
 
 
@@ -37,7 +37,7 @@ TEST_GITLAB_COMMANDS_DATA = [(gitlab_pipelines_schedules_list_command, command_t
 
 
 @pytest.mark.parametrize('command_func, test_data', TEST_GITLAB_COMMANDS_DATA)
-def test_gitlab_commands(requests_mock, command_func: Callable[[Client, Dict], CommandResults], test_data: Dict):
+def test_gitlab_commands(requests_mock, command_func: Callable[[Client, dict], CommandResults], test_data: dict):
     """
     Given:
      - Command function.
@@ -49,12 +49,12 @@ def test_gitlab_commands(requests_mock, command_func: Callable[[Client, Dict], C
     Then:
      - Ensure that the expected CommandResults object is returned by the command function.
     """
-    mock_response: Union[Dict, List[Dict]] = test_data['mock_response']
-    expected_outputs: List[Dict] = test_data['expected_outputs']
+    mock_response: dict | list[dict] = test_data['mock_response']
+    expected_outputs: list[dict] = test_data['expected_outputs']
     expected_prefix: str = test_data['expected_prefix']
     expected_url_mock_suffix: str = test_data['expected_url_mock_suffix']
     expected_key_field: str = test_data['expected_key_field']
-    args: Dict[str, Any] = test_data['args']
+    args: dict[str, Any] = test_data['args']
     method: str = test_data.get('method', "GET")
     if method.upper() == "GET":
         requests_mock.get(f'{BASE_URL}/{expected_url_mock_suffix}', json=mock_response)

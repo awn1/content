@@ -74,7 +74,7 @@ DATA_TYPE_MAP = {
 }
 
 
-class DataModel(object):
+class DataModel:
 
     def __init__(self):
         self.data_type_name = None
@@ -159,7 +159,7 @@ class DataModel(object):
         if data_value:
             try:
                 if USER_ENCODING:
-                    demisto.debug('Using argument user_encoding: {} to decode parsed message.'.format(USER_ENCODING))
+                    demisto.debug(f'Using argument user_encoding: {USER_ENCODING} to decode parsed message.')
                     return data_value.decode(USER_ENCODING, errors="ignore")
                 res = chardet.detect(data_value)
                 enc = res['encoding'] or 'ascii'  # in rare cases chardet fails to detect and return None as encoding
@@ -167,8 +167,8 @@ class DataModel(object):
                     if enc.lower() == 'windows-1252' and res['confidence'] < 0.9:
 
                         enc = DEFAULT_ENCODING if DEFAULT_ENCODING else 'windows-1250'
-                        demisto.debug('Encoding detection confidence below threshold {}, '
-                                      'switching encoding to "{}"'.format(res, enc))
+                        demisto.debug(f'Encoding detection confidence below threshold {res}, '
+                                      f'switching encoding to "{enc}"')
 
                     temp = data_value
                     data_value = temp.decode(enc, errors='ignore')
@@ -322,7 +322,7 @@ def get_multi_value_offsets(data_value):
     return ul_count, rgul_data_offsets
 
 
-class EmailFormatter(object):
+class EmailFormatter:
     def __init__(self, msg_object):
         self.msg_obj = msg_object
         self.message = MIMEMultipart()
@@ -425,7 +425,7 @@ class EmailFormatter(object):
                 encoders.encode_base64(attach)
             # Set the filename parameter
             base_filename = os.path.basename(filename)
-            attach.add_header('Content-ID', '<{}>'.format(base_filename))
+            attach.add_header('Content-ID', f'<{base_filename}>')
             attach.add_header('Content-Disposition', 'attachment', filename=base_filename)
             self.message.attach(attach)
 
@@ -2669,7 +2669,7 @@ USER_ENCODING = demisto.args().get('forced_encoding', '')
 DEFAULT_ENCODING = demisto.args().get('default_encoding', '')
 
 
-class Message(object):
+class Message:
     """
      Class to store Message properties
     """
@@ -2932,16 +2932,16 @@ class Message(object):
         property_name = property_details.get("name")
         property_type = property_details.get("data_type")
         if not property_type:
-            demisto.info('could not parse property type, skipping property "{}"'.format(property_details))
+            demisto.info(f'could not parse property type, skipping property "{property_details}"')
             return None
 
         try:
             raw_content = ole_file.openstream(stream_name).read()
-        except IOError:
+        except OSError:
             raw_content = ''
         if not raw_content:
-            demisto.debug('Could not read raw content from stream "{}", '
-                          'skipping property "{}"'.format(stream_name, property_details))
+            demisto.debug(f'Could not read raw content from stream "{stream_name}", '
+                          f'skipping property "{property_details}"')
             return None
 
         property_value = self._data_model.get_value(raw_content, data_type=property_type)
@@ -3052,10 +3052,10 @@ class Message(object):
         self.attachments = [Attachment(attach) for attach in attachments.values()]
 
     def __repr__(self):
-        return u'Message [%s]' % self.properties.get('InternetMessageId', self.properties.get("Subject"))
+        return 'Message [%s]' % self.properties.get('InternetMessageId', self.properties.get("Subject"))
 
 
-class Recipient(object):
+class Recipient:
     """
      class to store recipient attributes
     """
@@ -3072,7 +3072,7 @@ class Recipient(object):
         return '%s (%s)' % (self.DisplayName, self.EmailAddress)
 
 
-class Attachment(object):
+class Attachment:
     """
      class to store attachment attributes
     """
@@ -3102,7 +3102,7 @@ class Attachment(object):
         return '%s (%s / %s)' % (self.Filename, self.AttachmentSize, len(self.data or []))
 
 
-class MsOxMessage(object):
+class MsOxMessage:
     """
      Base class for Microsoft Message Object
     """
@@ -3182,9 +3182,9 @@ def parse_email_headers(header, raw=False):
         "Reply-To": [],
     }
 
-    for addr in email_address_headers.keys():
+    for addr in email_address_headers:
         for (name, email_address) in email.utils.getaddresses(headers.get_all(addr, [])):
-            email_address_headers[addr].append("{} <{}>".format(name, email_address))
+            email_address_headers[addr].append(f"{name} <{email_address}>")
 
     parsed_headers = dict(headers)
     parsed_headers.update(email_address_headers)
@@ -3196,12 +3196,12 @@ def get_msg_mail_format(msg_dict):
     try:
         return msg_dict.get('Headers', 'Content-type:').split('Content-type:')[1].split(';')[0]
     except Exception as e:
-        demisto.debug('Got exception while trying to get msg mail format - {}'.format(str(e)))
+        demisto.debug(f'Got exception while trying to get msg mail format - {str(e)}')
         return ''
 
 
 def is_valid_header_to_parse(header):
-    return len(header) > 0 and not header == ' ' and 'From nobody' not in header
+    return len(header) > 0 and header != ' ' and 'From nobody' not in header
 
 
 def create_headers_map(msg_dict_headers):
@@ -3215,7 +3215,7 @@ def create_headers_map(msg_dict_headers):
     header_value = 'initial header'
     for header in msg_dict_headers.split('\n'):
         if is_valid_header_to_parse(header):
-            if not header[0] == ' ' and not header[0] == '\t':
+            if header[0] != ' ' and header[0] != '\t':
                 if header_value != 'initial header':
                     header_value = convert_to_unicode(header_value)
                     headers.append(
@@ -3241,7 +3241,7 @@ def create_headers_map(msg_dict_headers):
 
                 header_key = header_words[0][:-1]
                 header_value = ' '.join(header_words[1:])
-                if not header_value == '' and header_value[-1] == ' ':
+                if header_value != '' and header_value[-1] == ' ':
                     header_value = header_value[:-1]
 
             else:
@@ -3311,28 +3311,28 @@ def data_to_md(email_data, email_file_name=None, parent_email_file=None, print_o
     email_file_name = recursive_convert_to_unicode(email_file_name)
     parent_email_file = recursive_convert_to_unicode(parent_email_file)
 
-    md = u"### Results:\n"
+    md = "### Results:\n"
     if email_file_name:
-        md = u"### {}\n".format(email_file_name)
+        md = f"### {email_file_name}\n"
 
     if print_only_headers:
         return tableToMarkdown("Email Headers: " + email_file_name, email_data.get('HeadersMap'))
 
     if parent_email_file:
-        md += u"### Containing email: {}\n".format(parent_email_file)
+        md += f"### Containing email: {parent_email_file}\n"
 
-    md += u"* {0}:\t{1}\n".format('From', email_data.get('From') or "")
-    md += u"* {0}:\t{1}\n".format('To', email_data.get('To') or "")
-    md += u"* {0}:\t{1}\n".format('CC', email_data.get('CC') or "")
-    md += u"* {0}:\t{1}\n".format('Subject', email_data.get('Subject') or "")
+    md += "* {0}:\t{1}\n".format('From', email_data.get('From') or "")
+    md += "* {0}:\t{1}\n".format('To', email_data.get('To') or "")
+    md += "* {0}:\t{1}\n".format('CC', email_data.get('CC') or "")
+    md += "* {0}:\t{1}\n".format('Subject', email_data.get('Subject') or "")
     if email_data.get('Text'):
         text = email_data['Text'].replace('<', '[').replace('>', ']')
-        md += u"* {0}:\t{1}\n".format('Body/Text', text or "")
+        md += "* {0}:\t{1}\n".format('Body/Text', text or "")
     if email_data.get('HTML'):
-        md += u"* {0}:\t{1}\n".format('Body/HTML', email_data['HTML'] or "")
+        md += "* {0}:\t{1}\n".format('Body/HTML', email_data['HTML'] or "")
 
-    md += u"* {0}:\t{1}\n".format('Attachments', email_data.get('Attachments') or "")
-    md += u"\n\n" + tableToMarkdown('HeadersMap', email_data.get('HeadersMap'))
+    md += "* {0}:\t{1}\n".format('Attachments', email_data.get('Attachments') or "")
+    md += "\n\n" + tableToMarkdown('HeadersMap', email_data.get('HeadersMap'))
     return md
 
 
@@ -3413,7 +3413,7 @@ def convert_to_unicode(s, is_msg_header=True):
                         return word_mime_decoded
             except Exception as e:
                 # in case we failed to mine-decode, we continue and try to decode
-                demisto.debug('Failed decoding mime-encoded string: {}. Will try regular decoding.'.format(str(e)))
+                demisto.debug(f'Failed decoding mime-encoded string: {str(e)}. Will try regular decoding.')
         for decoded_s, encoding in decode_header(s):  # return a list of pairs(decoded, charset)
             if encoding:
                 try:
@@ -3421,7 +3421,7 @@ def convert_to_unicode(s, is_msg_header=True):
                 except UnicodeDecodeError:
                     demisto.debug('Failed to decode encoded_string')
                     replace_decoded = decoded_s.decode(encoding, errors='replace').encode('utf-8')
-                    demisto.debug('Decoded string with replace usage {}'.format(replace_decoded))
+                    demisto.debug(f'Decoded string with replace usage {replace_decoded}')
                     res += replace_decoded
                 ENCODINGS_TYPES.add(encoding)
             else:
@@ -3685,7 +3685,7 @@ def handle_eml(file_path, b64=False, file_name=None, parse_only_headers=False, m
                             attachment_content_id = individual_message.get('Content-ID')
                             attachment_content_disposition = individual_message.get('Content-Disposition')
                             if attachment_file_name is None:
-                                attachment_file_name = "unknown_file_name{}".format(i)
+                                attachment_file_name = f"unknown_file_name{i}"
 
                             attachment_internal_path.append(save_file(attachment_file_name, msg_info))
                             attachment_names.append(attachment_file_name)
@@ -3845,7 +3845,7 @@ def main():
             output = create_email_output(email_data, attached_emails)
 
         elif ('ascii text' in file_type_lower or 'unicode text' in file_type_lower
-              or ('data' == file_type_lower.strip() and file_name and file_name.lower().strip().endswith('.eml'))):
+              or (file_type_lower.strip() == 'data' and file_name and file_name.lower().strip().endswith('.eml'))):
             try:
                 # Try to open the email as-is
                 with open(file_path, 'rb') as f:
@@ -3874,16 +3874,16 @@ def main():
                                 raise DemistoException("No email_data found")
                             output = create_email_output(email_data, attached_emails)
                         except Exception as e:
-                            demisto.debug("ParseEmailFiles failed with {}".format(str(e)))
+                            demisto.debug(f"ParseEmailFiles failed with {str(e)}")
                             return_error("Could not extract email from file. Possible reasons for this error are:\n"
                                          "- Base64 decode did not include rfc 822 strings.\n"
                                          "- Email contained no Content-Type and no data.")
 
             except Exception as e:
-                return_error("Exception while trying to decode email from within base64: {}\n\nTrace:\n{}"
-                             .format(str(e), traceback.format_exc()))
+                return_error(f"Exception while trying to decode email from within base64: {str(e)}\n\nTrace:\n{traceback.format_exc()}"
+                             )
         else:
-            return_error("Unknown file format: [{}] for file: [{}]".format(file_type, file_name))
+            return_error(f"Unknown file format: [{file_type}] for file: [{file_name}]")
         output = recursive_convert_to_unicode(output)
         email = output  # output may be a single email
         if isinstance(output, list) and len(output) > 0:

@@ -2,7 +2,7 @@ from CommonServerPython import *
 
 '''IMPORTS'''
 import requests
-from typing import Any, List, Dict
+from typing import Any
 
 # disable insecure warnings
 requests.packages.urllib3.disable_warnings()
@@ -56,7 +56,7 @@ TERSE_FIELDS = [
 
 
 # HELPER FUNCTIONS #
-def snake_to_camel_keys(snake_list: List[Dict]) -> List[Dict]:
+def snake_to_camel_keys(snake_list: list[dict]) -> list[dict]:
     def snake_to_camel(snake_str) -> str:
         if snake_str == 'id':
             return 'ID'

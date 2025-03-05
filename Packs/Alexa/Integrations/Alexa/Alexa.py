@@ -17,7 +17,7 @@ def alexa_fallback_command(domain, use_ssl, proxies):
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, '
                       'like Gecko) Chrome/85.0.4183.121 Safari/537.36'
     }
-    resp = requests.request('GET', 'https://www.alexa.com/minisiteinfo/{}'.format(domain),
+    resp = requests.request('GET', f'https://www.alexa.com/minisiteinfo/{domain}',
                             headers=headers, verify=use_ssl, proxies=proxies)
     try:
         x = re.search(r"style=\"margin-bottom:-2px;\"\/>\s(\d{0,3},)?(\d{3},)?\d{0,3}<\/a>", resp.content)
@@ -33,7 +33,7 @@ def alexa_fallback_command(domain, use_ssl, proxies):
 def alexa_domain_command(domain, use_ssl, proxies, threshold, benign, reliability):
     try:
         resp = requests.request('GET',
-                                'https://data.alexa.com/data?cli=10&dat=s&url={}'.format(domain),
+                                f'https://data.alexa.com/data?cli=10&dat=s&url={domain}',
                                 verify=use_ssl, proxies=proxies)
         root = ET.fromstring(str(resp.content))
         rank = root.find(".//POPULARITY").attrib['TEXT']  # type: ignore
@@ -70,9 +70,9 @@ def alexa_domain_command(domain, use_ssl, proxies, threshold, benign, reliabilit
             'Rank': rank
         }
     }
-    hr_string = ('The Alexa rank of {} is {} and has been marked as {}. '
-                 'The benign threshold is {} while the suspicious '
-                 'threshold is {}.'.format(domain, rank, dbot_score_text, benign, threshold))
+    hr_string = (f'The Alexa rank of {domain} is {rank} and has been marked as {dbot_score_text}. '
+                 f'The benign threshold is {benign} while the suspicious '
+                 f'threshold is {threshold}.')
     demisto.results({
         'Type': entryTypes['note'],
         'ContentsFormat': formats['markdown'],
@@ -86,7 +86,7 @@ def test_module_command(use_ssl, proxies):
     domain = 'google.com'
     try:
         resp = requests.request('GET',
-                                'https://data.alexa.com/data?cli=10&dat=s&url={}'.format(domain),
+                                f'https://data.alexa.com/data?cli=10&dat=s&url={domain}',
                                 verify=use_ssl, proxies=proxies)
         root = ET.fromstring(str(resp.content))
         rank = root.find(".//POPULARITY").attrib['TEXT']  # type: ignore

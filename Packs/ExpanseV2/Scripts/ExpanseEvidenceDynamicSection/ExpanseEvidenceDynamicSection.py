@@ -2,13 +2,13 @@ import demistomock as demisto  # noqa
 from CommonServerPython import *  # noqa
 
 import json
-from typing import Dict, Any, Tuple, List, Optional
+from typing import Any
 
 
 ''' STANDALONE FUNCTION '''
 
 
-def value_to_markdown(v: Any) -> Optional[str]:
+def value_to_markdown(v: Any) -> str | None:
     if v is None:
         return "*empty*"
 
@@ -21,14 +21,14 @@ def value_to_markdown(v: Any) -> Optional[str]:
     return None
 
 
-def ds_to_field_list(name: str, d: Dict[str, Any], dict_stack: List[Tuple[str, Dict[str, Any]]]) -> List[str]:
+def ds_to_field_list(name: str, d: dict[str, Any], dict_stack: list[tuple[str, dict[str, Any]]]) -> list[str]:
     if isinstance(d, dict):
         fields = d.items()  # type: ignore
     elif isinstance(d, list):
         if len(d) == 0:
             fields = []  # type: ignore
         elif isinstance(d[0], dict) and 'name' in d[0] and len(d[0]) == 2:  # type: ignore
-            second_key = next((k for k in list(d[0].keys()) if k != 'name'))  # type: ignore
+            second_key = next(k for k in list(d[0].keys()) if k != 'name')  # type: ignore
             fields = [(e.pop('name'), e[second_key]) for e in d]  # type: ignore
         else:
             fields = [(idx, v) for idx, v in enumerate(d)]  # type: ignore
@@ -61,17 +61,14 @@ def ds_to_field_list(name: str, d: Dict[str, Any], dict_stack: List[Tuple[str, D
             ))
             formatted_value = f"See below, *{subsect_name}*"
 
-        md_result.append("|{}|{}|".format(
-            field_name,
-            formatted_value
-        ))
+        md_result.append(f"|{field_name}|{formatted_value}|")
 
     return md_result
 
 
-def convert_to_markdown(evidence: Dict[str, Any]) -> str:
+def convert_to_markdown(evidence: dict[str, Any]) -> str:
     md_result = []
-    dict_stack: List[Tuple[str, Dict[str, Any]]] = [("Evidence", evidence)]
+    dict_stack: list[tuple[str, dict[str, Any]]] = [("Evidence", evidence)]
 
     while len(dict_stack) > 0:
         next_dict = dict_stack.pop()
@@ -83,7 +80,7 @@ def convert_to_markdown(evidence: Dict[str, Any]) -> str:
 ''' COMMAND FUNCTION '''
 
 
-def evidence_dynamic_section(args: Dict[str, Any]) -> CommandResults:
+def evidence_dynamic_section(args: dict[str, Any]) -> CommandResults:
     incident = demisto.incident()
     custom_fields = incident.get('CustomFields', {})
 

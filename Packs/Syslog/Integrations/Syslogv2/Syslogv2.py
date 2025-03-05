@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from tempfile import NamedTemporaryFile
-from typing import Callable
+from collections.abc import Callable
 
 import urllib3
 

@@ -10,7 +10,6 @@ from pancloud import LoggingService, Credentials
 import base64
 from dateutil.parser import parse
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from typing import Dict
 
 # disable insecure warnings
 requests.packages.urllib3.disable_warnings()
@@ -162,7 +161,7 @@ ANALYTICS_ARGS_DICT = {
 # to the index in the list. For example VALUE_TRANSFORM_DICT['traps']['messageData']['block'][0] matches the string:
 # "File was not blocked".
 
-VALUE_TRANSFORM_DICT: Dict[object, Dict[object, Dict]] = {
+VALUE_TRANSFORM_DICT: dict[object, dict[object, dict]] = {
     'traps': {
         'messageData': {
             'block': ['File was not blocked', 'File was blocked'],
@@ -625,8 +624,8 @@ def build_where_clause(args: dict, table_args_dict: dict) -> str:
     :return: a string represents the where part of a SQL query
     """
     where_clause: str = ''
-    for key in args.keys():
-        if key in table_args_dict.keys():
+    for key in args:
+        if key in table_args_dict:
             if key == 'query':
                 # if query arg is supplied than we just need to parse it and only it
                 return args[key].strip()
@@ -933,8 +932,7 @@ def get_access_token():
     if dbot_response.status_code not in {200, 201}:
         msg = 'Error in authentication. Try checking the credentials you entered.'
         try:
-            demisto.info('Authentication failure from server: {} {} {}'.format(
-                dbot_response.status_code, dbot_response.reason, dbot_response.text))
+            demisto.info(f'Authentication failure from server: {dbot_response.status_code} {dbot_response.reason} {dbot_response.text}')
             err_response = dbot_response.json()
             server_msg = err_response.get('message')
             if not server_msg:
@@ -943,9 +941,9 @@ def get_access_token():
                 if title:
                     server_msg = f'{title}. {detail}'
             if server_msg:
-                msg += ' Server message: {}'.format(server_msg)
+                msg += f' Server message: {server_msg}'
         except Exception as ex:
-            demisto.error('Failed parsing error response: [{}]. Exception: {}'.format(err_response.content, ex))
+            demisto.error(f'Failed parsing error response: [{err_response.content}]. Exception: {ex}')
         raise Exception(msg)
     try:
         parsed_response = dbot_response.json()
@@ -1597,7 +1595,7 @@ def fetch_incidents():
             fetch_timestamp = last_fetched_event_timestamp.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
         query = prepare_fetch_query(fetch_timestamp)
-        demisto.debug('Query being fetched: {}'.format(query))
+        demisto.debug(f'Query being fetched: {query}')
 
         query_data = {
             'query': query,

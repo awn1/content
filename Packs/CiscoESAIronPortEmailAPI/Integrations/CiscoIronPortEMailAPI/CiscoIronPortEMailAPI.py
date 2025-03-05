@@ -75,7 +75,7 @@ def ironportSpamReleaseEmail(mid):
 
 
 def generateStartEndDates(x):
-    myend = datetime.utcnow() + timedelta(days=int(1))
+    myend = datetime.utcnow() + timedelta(days=1)
     end = myend.strftime("%Y-%m-%dT00:00:00.000Z")
     mystart = datetime.today() - timedelta(days=int(x))
     start = mystart.strftime("%Y-%m-%dT00:00:00.000Z")

@@ -11,8 +11,9 @@ import base64
 from datetime import datetime, timedelta
 from ipaddress import IPv4Address, AddressValueError, summarize_address_range
 from typing import (
-    Any, Dict, Optional, Iterable, List
+    Any
 )
+from collections.abc import Iterable
 
 
 # Disable insecure warnings
@@ -76,8 +77,8 @@ class Client(BaseClient):
                 {"token": r["token"], "expires": token_expiration}
             )
 
-    def _paginate(self, method: str, url_suffix: str, params: Optional[Dict[str, Any]]) -> Iterable[Any]:
-        next_url: Optional[str] = None
+    def _paginate(self, method: str, url_suffix: str, params: dict[str, Any] | None) -> Iterable[Any]:
+        next_url: str | None = None
 
         while True:
             result = self._http_request(
@@ -102,7 +103,7 @@ class Client(BaseClient):
 
             params = None
 
-    def get_iprange_by_id(self, iprange_id: str) -> Dict[str, Any]:
+    def get_iprange_by_id(self, iprange_id: str) -> dict[str, Any]:
         result = self._http_request(
             method="GET",
             url_suffix=f"/v2/ip-range/{iprange_id}",
@@ -113,7 +114,7 @@ class Client(BaseClient):
         )
         return result
 
-    def get_domain_by_domain(self, domain: str, last_observed_date: Optional[str]) -> Dict[str, Any]:
+    def get_domain_by_domain(self, domain: str, last_observed_date: str | None) -> dict[str, Any]:
         params = {}
         if last_observed_date is not None:
             params['minRecentIpLastObservedDate'] = last_observed_date
@@ -126,7 +127,7 @@ class Client(BaseClient):
         )
         return result
 
-    def get_certificate_by_pem_md5_hash(self, pem_md5_hash: str, last_observed_date: Optional[str]) -> Dict[str, Any]:
+    def get_certificate_by_pem_md5_hash(self, pem_md5_hash: str, last_observed_date: str | None) -> dict[str, Any]:
         params = {}
 
         if last_observed_date is not None:
@@ -140,28 +141,28 @@ class Client(BaseClient):
         )
         return result
 
-    def get_ipranges(self, params: Dict[str, Any]) -> Iterable[Any]:
+    def get_ipranges(self, params: dict[str, Any]) -> Iterable[Any]:
         return self._paginate(
             method="GET",
             url_suffix="/v2/ip-range",
             params=params
         )
 
-    def get_domains(self, params: Dict[str, Any]) -> Iterable[Any]:
+    def get_domains(self, params: dict[str, Any]) -> Iterable[Any]:
         return self._paginate(
             method="GET",
             url_suffix="/v2/assets/domains",
             params=params
         )
 
-    def get_certificates(self, params: Dict[str, Any]) -> Iterable[Any]:
+    def get_certificates(self, params: dict[str, Any]) -> Iterable[Any]:
         return self._paginate(
             method="GET",
             url_suffix="/v2/assets/certificates",
             params=params
         )
 
-    def get_ips(self, params: Dict[str, Any]) -> Iterable[Any]:
+    def get_ips(self, params: dict[str, Any]) -> Iterable[Any]:
         return self._paginate(
             method="GET",
             url_suffix="/v2/assets/ips",
@@ -172,7 +173,7 @@ class Client(BaseClient):
 """ HELPER FUNCTIONS """
 
 
-def check_int(arg: Any, arg_name: str, min_val: int = None, max_val: int = None, required: bool = False) -> Optional[int]:
+def check_int(arg: Any, arg_name: str, min_val: int = None, max_val: int = None, required: bool = False) -> int | None:
     """Converts a string argument to a Python int
     This function is used to quickly validate an argument provided and convert
     it into an ``int`` type. It will throw a ValueError if the input is invalid
@@ -186,7 +187,7 @@ def check_int(arg: Any, arg_name: str, min_val: int = None, max_val: int = None,
             raise ValueError(f'Missing argument "{arg_name}"')
         return None
 
-    i: Optional[int] = None
+    i: int | None = None
 
     if isinstance(arg, str):
         if not arg.isdigit():
@@ -209,7 +210,7 @@ def check_int(arg: Any, arg_name: str, min_val: int = None, max_val: int = None,
     return i
 
 
-def validate_max_indicators(max_indicators_param: Optional[str]) -> Optional[int]:
+def validate_max_indicators(max_indicators_param: str | None) -> int | None:
     try:
         max_indicators = check_int(
             max_indicators_param,
@@ -225,7 +226,7 @@ def validate_max_indicators(max_indicators_param: Optional[str]) -> Optional[int
     return max_indicators
 
 
-def validate_min_last_observed(min_last_observed_param: Optional[str]) -> Optional[str]:
+def validate_min_last_observed(min_last_observed_param: str | None) -> str | None:
     try:
         min_last_observed = check_int(
             min_last_observed_param,
@@ -243,7 +244,7 @@ def validate_min_last_observed(min_last_observed_param: Optional[str]) -> Option
     return start_time.strftime("%Y-%m-%d")
 
 
-def safe_b64_to_hex(i: str) -> Optional[str]:
+def safe_b64_to_hex(i: str) -> str | None:
     if not i:
         return None
 
@@ -256,7 +257,7 @@ def safe_b64_to_hex(i: str) -> Optional[str]:
 """ INDICATORS HANDLING FUNCTIONS """
 
 
-def ip_to_demisto_indicator(ip_indicator: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def ip_to_demisto_indicator(ip_indicator: dict[str, Any]) -> dict[str, Any] | None:
     value = ip_indicator.get('ip', None)
     if value is None:
         return None
@@ -290,7 +291,7 @@ def ip_to_demisto_indicator(ip_indicator: Dict[str, Any]) -> Optional[Dict[str, 
     }
 
 
-def certificate_to_demisto_indicator(certificate: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def certificate_to_demisto_indicator(certificate: dict[str, Any]) -> dict[str, Any] | None:
     certificate_details = certificate.get('certificate')
     if certificate_details is None:
         return None
@@ -374,7 +375,7 @@ def certificate_to_demisto_indicator(certificate: Dict[str, Any]) -> Optional[Di
     }
 
 
-def domain_to_demisto_indicator(domain_indicator: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def domain_to_demisto_indicator(domain_indicator: dict[str, Any]) -> dict[str, Any] | None:
     domain = domain_indicator.get('domain', None)
     if domain is None:
         return None
@@ -416,7 +417,7 @@ def domain_to_demisto_indicator(domain_indicator: Dict[str, Any]) -> Optional[Di
     }
 
 
-def iprange_to_demisto_indicator(iprange_indicator: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+def iprange_to_demisto_indicator(iprange_indicator: dict[str, Any]) -> Iterable[dict[str, Any]]:
     demisto.debug(f"{iprange_indicator!r}")
 
     ipVersion = iprange_indicator.get('ipVersion', "4")
@@ -448,7 +449,7 @@ def iprange_to_demisto_indicator(iprange_indicator: Dict[str, Any]) -> Iterable[
     business_units = iprange_indicator.get("businessUnits", [])
     business_unit_names = [bu['name'] for bu in business_units if bu.get('name')]
 
-    attribution_reasons: List[str] = [ar['reason'] for ar in iprange_indicator.get('attributionReason', []) if ar.get('reason')]
+    attribution_reasons: list[str] = [ar['reason'] for ar in iprange_indicator.get('attributionReason', []) if ar.get('reason')]
 
     # to faciliate classifiers
     iprange_indicator['expanseType'] = 'iprange'
@@ -474,9 +475,9 @@ def iprange_to_demisto_indicator(iprange_indicator: Dict[str, Any]) -> Iterable[
 
 def test_module(
         client: Client,
-        max_indicators_param: Optional[str],
-        min_last_observed_param: Optional[str],
-        tlp_color: Optional[str]) -> str:
+        max_indicators_param: str | None,
+        min_last_observed_param: str | None,
+        tlp_color: str | None) -> str:
     max_indicators = validate_max_indicators(max_indicators_param)
     if max_indicators is None:
         return "Invalid value for max indicators"
@@ -499,14 +500,14 @@ def test_module(
 
 
 def indicator_generator(client: Client,
-                        max_indicators: Optional[int] = None,
-                        min_last_observed: Optional[str] = None,
-                        retrieve_ip: Optional[bool] = True,
-                        retrieve_domain: Optional[bool] = True,
-                        retrieve_certificate: Optional[bool] = True,
-                        retrieve_iprange: Optional[bool] = True,
-                        tlp_color: Optional[str] = '',
-                        feed_tags: str = '') -> Iterable[Dict[str, Any]]:
+                        max_indicators: int | None = None,
+                        min_last_observed: str | None = None,
+                        retrieve_ip: bool | None = True,
+                        retrieve_domain: bool | None = True,
+                        retrieve_certificate: bool | None = True,
+                        retrieve_iprange: bool | None = True,
+                        tlp_color: str | None = '',
+                        feed_tags: str = '') -> Iterable[dict[str, Any]]:
     if retrieve_ip:
         get_ips_params = {}
         if min_last_observed is not None:
@@ -590,8 +591,8 @@ def indicator_generator(client: Client,
                 num_indicators += 1
 
 
-def get_indicators_command(client: Client, args: Dict[str, Any],
-                           tlp_color: Optional[str] = '',
+def get_indicators_command(client: Client, args: dict[str, Any],
+                           tlp_color: str | None = '',
                            feed_tags: str = '') -> CommandResults:
     retrieve_ip = argToBoolean(args.get('ip', 'yes'))
     retrieve_domain = argToBoolean(args.get('domain', 'yes'))
@@ -602,7 +603,7 @@ def get_indicators_command(client: Client, args: Dict[str, Any],
     if not max_indicators:
         max_indicators = DEFAULT_MAX_INDICATORS
 
-    indicators: List[Dict[str, Any]] = []
+    indicators: list[dict[str, Any]] = []
     for indicator in indicator_generator(
             client,
             max_indicators=max_indicators,

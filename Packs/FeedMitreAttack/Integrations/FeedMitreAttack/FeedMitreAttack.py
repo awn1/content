@@ -1,7 +1,6 @@
 import demistomock as demisto
 from CommonServerPython import *
 
-from typing import List, Dict, Set, Optional
 import json
 import requests
 from stix2 import TAXIICollectionSource, Filter
@@ -43,7 +42,7 @@ requests.packages.urllib3.disable_warnings()
 class Client:
 
     def __init__(self, url, proxies, verify, include_apt, reputation, tags: list = None,
-                 tlp_color: Optional[str] = None):
+                 tlp_color: str | None = None):
         self.base_url = url
         self.proxies = proxies
         self.verify = verify
@@ -59,8 +58,8 @@ class Client:
         elif reputation == 'Malicious':
             self.reputation = 3
         self.server: Server
-        self.api_root: List[ApiRoot]
-        self.collections: List[Collection]
+        self.api_root: list[ApiRoot]
+        self.collections: list[Collection]
 
     def get_server(self):
         server_url = urljoin(self.base_url, '/taxii/')
@@ -77,7 +76,7 @@ class Client:
         self.get_roots()
         self.get_collections()
 
-    def build_iterator(self, limit: int = -1) -> List:
+    def build_iterator(self, limit: int = -1) -> list:
 
         """Retrieves all entries from the feed.
 
@@ -85,10 +84,10 @@ class Client:
             A list of objects, containing the indicators.
         """
 
-        indicators: List[Dict] = list()
-        mitre_id_list: Set[str] = set()
-        indicator_values_list: Set[str] = set()
-        external_refs: Set[str] = set()
+        indicators: list[dict] = list()
+        mitre_id_list: set[str] = set()
+        indicator_values_list: set[str] = set()
+        external_refs: set[str] = set()
         counter = 0
 
         # For each collection
@@ -352,9 +351,9 @@ def search_command(client, args):
     demisto_urls = demisto.demistoUrls()
     indicator_url = demisto_urls.get('server') + "/#/indicator/"
     sensitive = True if args.get('casesensitive') == 'True' else False
-    return_list_md: List[Dict] = list()
+    return_list_md: list[dict] = list()
     entries = list()
-    all_indicators: List[Dict] = list()
+    all_indicators: list[dict] = list()
     size = 1000
     search_indicators = IndicatorsSearcher()
 
@@ -403,7 +402,7 @@ def reputation_command(client, args):
     input_indicator = args.get('indicator')
     demisto_urls = demisto.demistoUrls()
     indicator_url = demisto_urls.get('server') + "/#/indicator/"
-    all_indicators: List[Dict] = list()
+    all_indicators: list[dict] = list()
     size = 1000
     search_indicators = IndicatorsSearcher()
 

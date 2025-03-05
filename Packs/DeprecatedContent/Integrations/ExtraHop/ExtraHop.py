@@ -20,7 +20,7 @@ USE_SSL = not demisto.params().get('insecure', False)
 BASE_URL = SERVER + '/api/v1/'
 HEADERS = {
     'Accept': 'application/json',
-    'Authorization': 'ExtraHop apikey={key}'.format(key=APIKEY)
+    'Authorization': f'ExtraHop apikey={APIKEY}'
 }
 if not demisto.params().get('proxy'):
     del os.environ['HTTP_PROXY']
@@ -46,12 +46,12 @@ def http_request(method, url_suffix, data=None, payload=None):
             params=payload
         )
     except requests.exceptions.RequestException:  # This is the correct syntax
-        return_error('Failed to connect to - {url} - Please check the URL'.format(url=BASE_URL))
+        return_error(f'Failed to connect to - {BASE_URL} - Please check the URL')
     # Handle error responses gracefully
     if res.status_code == 204:
         return demisto.results('Successful Modification')
     elif res.status_code not in {200, 204, 201}:
-        return_error('Error in API call to ExtraHop {code} - {reason}'.format(code=res.status_code, reason=res.reason))
+        return_error(f'Error in API call to ExtraHop {res.status_code} - {res.reason}')
     return res
 
 
@@ -228,7 +228,7 @@ def add_alert(apply_all, disabled, name, notify_snmp, refire_interval, severity,
             data['param2'] = param2
     if alert_id:
         method = 'PATCH'
-        url_suffix = 'alerts/{alert_id}'.format(alert_id=alert_id)
+        url_suffix = f'alerts/{alert_id}'
     else:
         method = 'POST'
         url_suffix = 'alerts'
@@ -242,7 +242,7 @@ def add_alert(apply_all, disabled, name, notify_snmp, refire_interval, severity,
             headers=HEADERS
         )
     except requests.exceptions.RequestException:  # This is the correct syntax
-        return_error('Failed to connect to - {url} - Please check the URL'.format(url=BASE_URL))
+        return_error(f'Failed to connect to - {BASE_URL} - Please check the URL')
     # Handle error responses gracefully
     if res.status_code == 204:
         return demisto.results('Successful Modification')
@@ -252,7 +252,7 @@ def add_alert(apply_all, disabled, name, notify_snmp, refire_interval, severity,
     if res.status_code == 201:
         return demisto.results('Alert successfully added')
     elif res.status_code not in {200, 204, 201}:
-        return_error('Error in API call to ExtraHop {code} - {reason}'.format(code=res.status_code, reason=res.reason))
+        return_error(f'Error in API call to ExtraHop {res.status_code} - {res.reason}')
     return res
 
 
@@ -358,7 +358,7 @@ def devices_command():
 
 
 ''' COMMANDS MANAGER / SWITCH PANEL '''
-LOG('Command being called is {command}'.format(command=demisto.command()))
+LOG(f'Command being called is {demisto.command()}')
 try:
     if demisto.command() == 'test-module':
         test_module()

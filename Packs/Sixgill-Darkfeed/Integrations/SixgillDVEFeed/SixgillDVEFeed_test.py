@@ -844,7 +844,7 @@ NVD Vector - V3.1: None
 ]
 
 
-class MockedResponse(object):
+class MockedResponse:
     def __init__(
         self,
         status_code,

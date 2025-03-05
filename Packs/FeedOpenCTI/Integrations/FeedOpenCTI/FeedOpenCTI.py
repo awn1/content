@@ -1,6 +1,5 @@
 import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
-from typing import List, Optional, Tuple
 import urllib3
 from pycti import OpenCTIApiClient
 # Disable insecure warnings
@@ -24,7 +23,7 @@ XSOHR_TYPES = {
 }
 
 
-def build_indicator_list(indicator_list: List[str]) -> List[str]:
+def build_indicator_list(indicator_list: list[str]) -> list[str]:
     """Builds an indicator list for the query"""
     result = []
     if 'ALL' in indicator_list:
@@ -48,8 +47,8 @@ def reset_last_run():
     return CommandResults(readable_output='Fetch history deleted successfully')
 
 
-def get_indicators(client, indicator_type: List[str], limit: int, last_run_id: Optional[str] = None,
-                   tlp_color: Optional[str] = None, tags: List[str] = None) -> Tuple[str, list]:
+def get_indicators(client, indicator_type: list[str], limit: int, last_run_id: str | None = None,
+                   tlp_color: str | None = None, tags: list[str] = None) -> tuple[str, list]:
     """ Retrieving indicators from the API
 
     Args:
@@ -166,7 +165,7 @@ def main():
     try:
         client = OpenCTIApiClient(base_url, api_key, ssl_verify=params.get('insecure'), log_level='error')
         command = demisto.command()
-        demisto.info("Command being called is {}".format(command))
+        demisto.info(f"Command being called is {command}")
 
         # Switch case
         if command == "fetch-indicators":

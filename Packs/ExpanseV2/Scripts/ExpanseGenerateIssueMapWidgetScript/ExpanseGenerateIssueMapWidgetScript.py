@@ -2,7 +2,7 @@ import demistomock as demisto  # noqa: F401  # pylint: disable=unused-wildcard-i
 from CommonServerPython import *  # noqa: F401  # pylint: disable=unused-wildcard-import
 
 import json
-from typing import List, Dict, Tuple, Optional, Any
+from typing import Any
 from functools import reduce
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
@@ -20988,7 +20988,7 @@ def lon_to_x(lon: int, image_width: int = RESULT_IMAGE_X) -> int:
     return floor(((lon + 180.) / 360) * image_width)
 
 
-def lat_to_y(lat: int, image_height: int = RESULT_IMAGE_Y) -> Optional[int]:
+def lat_to_y(lat: int, image_height: int = RESULT_IMAGE_Y) -> int | None:
     if lat > 85 or lat < -85:
         return None
 
@@ -20998,7 +20998,7 @@ def lat_to_y(lat: int, image_height: int = RESULT_IMAGE_Y) -> Optional[int]:
     return floor((1 - log(tan(lat * pi / 180) + 1 / cos(lat * pi / 180)) / pi) / 2 * image_height)
 
 
-def calc_clusters(accumulator: List[List[Tuple[int, int]]], geolocation: Tuple[int, int]) -> List[List[Tuple[int, int]]]:
+def calc_clusters(accumulator: list[list[tuple[int, int]]], geolocation: tuple[int, int]) -> list[list[tuple[int, int]]]:
     x = lon_to_x(geolocation[1])
     y = lat_to_y(geolocation[0])
     if y is None:
@@ -21019,7 +21019,7 @@ def is_incident_contains_python_magic(inc: Any) -> bool:
     return PYTHON_MAGIC in json.dumps(inc)
 
 
-def get_incidents_by_page(args: Dict[str, Any], page: int) -> List[Tuple[int, int]]:
+def get_incidents_by_page(args: dict[str, Any], page: int) -> list[tuple[int, int]]:
     args['page'] = page
     res = demisto.executeCommand("getIncidents", args)
     if res[0]['Contents'].get('data') is None:
@@ -21054,7 +21054,7 @@ def get_incidents_by_page(args: Dict[str, Any], page: int) -> List[Tuple[int, in
     return result
 
 
-def extract_geolocation(from_: Optional[str], to: Optional[str]) -> List[Tuple[int, int]]:
+def extract_geolocation(from_: str | None, to: str | None) -> list[tuple[int, int]]:
     query = 'type:"Expanse Issue" and -status:Closed and expanseprovider:"on prem"'
     size = 5000
     query_size = min(500, size)
@@ -21077,15 +21077,15 @@ def extract_geolocation(from_: Optional[str], to: Optional[str]) -> List[Tuple[i
     return incident_list[:size]
 
 
-def generate_map_command(args: Dict[str, Any]) -> str:
-    md: List[str] = ["### Map of Open Incidents On Prem"]
+def generate_map_command(args: dict[str, Any]) -> str:
+    md: list[str] = ["### Map of Open Incidents On Prem"]
 
     geolocations = extract_geolocation(args.get('from'), args.get('to'))
 
     image = Image.open(BytesIO(BASE_LAYER), formats=["PNG"]).convert('RGBA')
     image = image.resize((RESULT_IMAGE_X, RESULT_IMAGE_Y), Image.Resampling.LANCZOS)
 
-    clusters: List[List[Tuple[int, int]]] = reduce(calc_clusters, geolocations, [])
+    clusters: list[list[tuple[int, int]]] = reduce(calc_clusters, geolocations, [])
     circles = []
     for cluster in clusters:
         circles.append((
@@ -21105,7 +21105,7 @@ def generate_map_command(args: Dict[str, Any]) -> str:
         ), fill=CIRCLE_COLOR, outline=OUTLINE_YELLOW if c[2] < 100 else OUTLINE_RED, width=OUTLINE_WIDTH * 2)
         draw.text(
             (c[0] * 2, c[1] * 2),
-            "{}".format(c[2]),
+            f"{c[2]}",
             fill=(0, 0, 0, 255),
             anchor="mm",
             font=font

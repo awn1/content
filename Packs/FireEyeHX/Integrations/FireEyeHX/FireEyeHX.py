@@ -55,7 +55,7 @@ POST_HEADERS = {
 PATCH_HEADERS = {
     'Content-Type': 'text/plain'
 }
-BASE_PATH = '{}/hx/api/{}'.format(SERVER_URL, VERSION)
+BASE_PATH = f'{SERVER_URL}/hx/api/{VERSION}'
 INDICATOR_MAIN_ATTRIBUTES = [
     'OS',
     'Name',
@@ -742,7 +742,7 @@ def get_token_request():
     returns a token on successful request
     """
 
-    url = '{}/token'.format(BASE_PATH)
+    url = f'{BASE_PATH}/token'
 
     # basic authentication
     try:
@@ -761,7 +761,7 @@ def get_token_request():
     # handle request failure
     if response.status_code not in range(200, 205):
         message = parse_error_response(response)
-        raise ValueError('Token request failed with status code {}\n{}'.format(response.status_code, message))
+        raise ValueError(f'Token request failed with status code {response.status_code}\n{message}')
     # successful request
     response_headers = response.headers
     token = response_headers.get('X-FeApi-Token')
@@ -792,7 +792,7 @@ def get_host_by_agent_request(agent_id):
         - http request failure
         - response status code different from 200
     """
-    url = '{}/hosts/{}'.format(BASE_PATH, agent_id)
+    url = f'{BASE_PATH}/hosts/{agent_id}'
 
     response = http_request(
         'GET',
@@ -950,7 +950,7 @@ def get_hosts_request(limit=None, offset=None, has_active_threats=None, has_aler
         - http request failure
         - response status code different from 200
     """
-    url = '{}/hosts'.format(BASE_PATH)
+    url = f'{BASE_PATH}/hosts'
     url_params = {
         'limit': limit,
         'offset': offset,
@@ -987,7 +987,7 @@ def get_host_by_name_request(host_name):
         return get_hosts_request(host_name=host_name, limit=1)[0]
     except Exception as e:
         LOG(e)
-        raise ValueError('Host {} not found.'.format(host_name))
+        raise ValueError(f'Host {host_name} not found.')
 
 
 def get_all_agents_ids():
@@ -1021,7 +1021,7 @@ def get_agent_id(host_name):
         return host['_id']
     except Exception as e:
         LOG(e)
-        raise ValueError('Failed to get agent id for host {}'.format(host_name))
+        raise ValueError(f'Failed to get agent id for host {host_name}')
 
 
 def collect_endpoint_contxt(host):
@@ -1050,7 +1050,7 @@ def containment_request(agent_id):
     no return value on successful request
 
     """
-    url = '{}/hosts/{}/containment'.format(BASE_PATH, agent_id)
+    url = f'{BASE_PATH}/hosts/{agent_id}/containment'
     body = {
         'state': 'contain'
     }
@@ -1058,7 +1058,7 @@ def containment_request(agent_id):
     try:
         api_version = int(VERSION[-1])
     except Exception as exc:
-        raise ValueError('Invalid version was set: {} - {}'.format(VERSION, str(exc)))
+        raise ValueError(f'Invalid version was set: {VERSION} - {str(exc)}')
     if api_version >= 3:
         http_request(
             'POST',
@@ -1114,7 +1114,7 @@ def containment_cancellation_request(agent_id):
     no return value on successful request
 
     """
-    url = '{}/hosts/{}/containment'.format(BASE_PATH, agent_id)
+    url = f'{BASE_PATH}/hosts/{agent_id}/containment'
 
     http_request(
         'DELETE',
@@ -1166,7 +1166,7 @@ ALERTS
 
 def get_alert_request(alert_id):
 
-    url = '{}/alerts/{}'.format(BASE_PATH, alert_id)
+    url = f'{BASE_PATH}/alerts/{alert_id}'
 
     response = http_request(
         'GET',
@@ -1182,7 +1182,7 @@ def get_alert():
     alert = get_alert_request(alert_id)
 
     alert_table = tableToMarkdown(
-        'FireEye HX Get Alert # {}'.format(alert_id),
+        f'FireEye HX Get Alert # {alert_id}',
         alert_entry(alert),
         headers=ALERT_MAIN_ATTRIBUTES
     )
@@ -1200,7 +1200,7 @@ def get_alert():
         'Contents': alert,
         'ContentsFormat': formats['json'],
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': u'{}\n{}'.format(alert_table, event_table),
+        'HumanReadable': f'{alert_table}\n{event_table}',
         'EntryContext': {
             "FireEyeHX.Alerts(obj._id==val._id)": alert
         }
@@ -1216,7 +1216,7 @@ def get_alerts_request(has_share_mode=None, resolution=None, agent_id=None, host
     returns the response body on successful request
 
     """
-    url = '{}/alerts'.format(BASE_PATH)
+    url = f'{BASE_PATH}/alerts'
 
     body = {
         'has_share_mode': has_share_mode,
@@ -1431,7 +1431,7 @@ def suppress_alert_request(alert_id):
 
     """
 
-    url = '{}/alerts/{}'.format(BASE_PATH, alert_id)
+    url = f'{BASE_PATH}/alerts/{alert_id}'
 
     http_request(
         'DELETE',
@@ -1453,7 +1453,7 @@ def suppress_alert():
 
     entry = {
         'Type': entryTypes['note'],
-        'Contents': 'Alert {} suppressed successfully.'.format(alert_id),
+        'Contents': f'Alert {alert_id} suppressed successfully.',
         'ContentsFormat': formats['text']
     }
     demisto.results(entry)
@@ -1470,7 +1470,7 @@ def new_indicator_request(category):
     """
     Create a new indicator
     """
-    url = '{}/indicators/{}'.format(BASE_PATH, category)
+    url = f'{BASE_PATH}/indicators/{category}'
 
     response = http_request(
         'POST',
@@ -1515,7 +1515,7 @@ def append_conditions_request(name, category, body):
     Append conditions to indicator request
     """
 
-    url = '{}/indicators/{}/{}/conditions'.format(BASE_PATH, category, name)
+    url = f'{BASE_PATH}/indicators/{category}/{name}/conditions'
 
     response = http_request(
         'PATCH',
@@ -1563,7 +1563,7 @@ def get_indicator_request(category, name):
 
     """
 
-    url = '{}/indicators/{}/{}'.format(BASE_PATH, category, name)
+    url = f'{BASE_PATH}/indicators/{category}/{name}'
 
     response = http_request(
         'GET',
@@ -1580,7 +1580,7 @@ def get_indicator_conditions_request(category, name, limit=None, offset=None, en
     if no results are found- returns None
 
     """
-    url = '{}/indicators/{}/{}/conditions'.format(BASE_PATH, category, name)
+    url = f'{BASE_PATH}/indicators/{category}/{name}/conditions'
     url_params = {
         'limit': limit,
         'offset': offset,
@@ -1688,7 +1688,7 @@ def get_indicator():
 def get_indicators_request(category=None, search=None, limit=None, offset=None,
                            share_mode=None, sort=None, created_by=None, alerted=None):
 
-    url = '{}/indicators'.format(BASE_PATH)
+    url = f'{BASE_PATH}/indicators'
     if category:
         url = url + '/' + category
 
@@ -1812,7 +1812,7 @@ SEARCH
 
 def search_request(query, host_set=None, hosts=None, exhaustive=False):
 
-    url = '{}/searches'.format(BASE_PATH)
+    url = f'{BASE_PATH}/searches'
 
     body = {'query': query}
 
@@ -1846,7 +1846,7 @@ def get_search_information_request(search_id):
 
     """
 
-    url = '{}/searches/{}'.format(BASE_PATH, search_id)
+    url = f'{BASE_PATH}/searches/{search_id}'
 
     response = http_request(
         'GET',
@@ -1863,7 +1863,7 @@ def get_search_results_request(search_id):
 
     """
 
-    url = '{}/searches/{}/results'.format(BASE_PATH, search_id)
+    url = f'{BASE_PATH}/searches/{search_id}/results'
 
     response = http_request(
         'GET',
@@ -1880,7 +1880,7 @@ def stop_search_request(search_id):
 
     """
 
-    url = '{}/searches/{}/actions/stop'.format(BASE_PATH, search_id)
+    url = f'{BASE_PATH}/searches/{search_id}/actions/stop'
 
     response = http_request(
         'POST',
@@ -1897,7 +1897,7 @@ def delete_search_request(search_id):
 
     """
 
-    url = '{}/searches/{}'.format(BASE_PATH, search_id)
+    url = f'{BASE_PATH}/searches/{search_id}'
     http_request(
         'DELETE',
         url
@@ -1943,7 +1943,6 @@ def start_search():
                 agents_ids.append(agent_id)
             except Exception as e:
                 LOG(e)
-                pass
         if not agents_ids:
             raise ValueError('None of the host names were matched with an agent')
 
@@ -1960,12 +1959,12 @@ def start_search():
     }
 
     query = []
-    for arg in arg_to_query_field_map.keys():
+    for arg in arg_to_query_field_map:
         if not args.get(arg):
             continue
         field_filter = {
             'field': arg_to_query_field_map[arg],
-            'operator': args['{}Operator'.format(arg)],
+            'operator': args[f'{arg}Operator'],
             'value': args[arg]
         }
         query.append(field_filter)
@@ -2019,8 +2018,7 @@ def start_search():
             delete_search_request(search_id)
         possible_error_message = None
     except Exception as e:
-        LOG('{}\n{}'.format(possible_error_message, e))
-        pass
+        LOG(f'{possible_error_message}\n{e}')
     # add warning entry if necessary
     if possible_error_message:
         warning_entry = {
@@ -2040,7 +2038,7 @@ ACQUISITIONS
 
 def file_acquisition_request(agent_id, file_name, file_path, comment=None, external_id=None, req_use_api=None):
 
-    url = '{}/hosts/{}/files'.format(BASE_PATH, agent_id)
+    url = f'{BASE_PATH}/hosts/{agent_id}/files'
 
     body = {
         'req_path': file_path,
@@ -2065,7 +2063,7 @@ def file_acquisition_request(agent_id, file_name, file_path, comment=None, exter
 
 def file_acquisition_package_request(acquisition_id):
 
-    url = '{}/acqs/files/{}.zip'.format(BASE_PATH, acquisition_id)
+    url = f'{BASE_PATH}/acqs/files/{acquisition_id}.zip'
 
     response = http_request(
         'GET',
@@ -2077,7 +2075,7 @@ def file_acquisition_package_request(acquisition_id):
 
 def file_acquisition_information_request(acquisition_id):
 
-    url = '{}/acqs/files/{}'.format(BASE_PATH, acquisition_id)
+    url = f'{BASE_PATH}/acqs/files/{acquisition_id}'
 
     response = http_request(
         'GET',
@@ -2095,7 +2093,7 @@ def delete_file_acquisition_request(acquisition_id):
 
     """
 
-    url = '{}/acqs/files/{}'.format(BASE_PATH, acquisition_id)
+    url = f'{BASE_PATH}/acqs/files/{acquisition_id}'
 
     http_request(
         'DELETE',
@@ -2115,7 +2113,7 @@ def delete_file_acquisition():
 
     return {
         'Type': entryTypes['note'],
-        'Contents': 'file acquisition {} deleted successfully'.format(acquisition_id),
+        'Contents': f'file acquisition {acquisition_id} deleted successfully',
         'ContentsFormat': formats['text'],
     }
 
@@ -2158,7 +2156,7 @@ def file_acquisition():
 
     entry = {
         'Type': entryTypes['note'],
-        'Contents': '{}\nacquisition ID: {}'.format(message, acquisition_id),
+        'Contents': f'{message}\nacquisition ID: {acquisition_id}',
         'ContentsFormat': formats['text'],
         'EntryContext': {
             "FireEyeHX.Acquisitions.Files(obj._id==val._id)": acquisition_info
@@ -2171,7 +2169,7 @@ def file_acquisition():
 
 def data_acquisition_request(agent_id, script_name, script):
 
-    url = '{}/hosts/{}/live'.format(BASE_PATH, agent_id)
+    url = f'{BASE_PATH}/hosts/{agent_id}/live'
 
     body = {
         'name': script_name,
@@ -2189,7 +2187,7 @@ def data_acquisition_request(agent_id, script_name, script):
 
 def data_acquisition_information_request(acquisition_id):
 
-    url = '{}/acqs/live/{}'.format(BASE_PATH, acquisition_id)
+    url = f'{BASE_PATH}/acqs/live/{acquisition_id}'
 
     response = http_request(
         'GET',
@@ -2202,7 +2200,7 @@ def data_acquisition_information_request(acquisition_id):
 
 def data_collection_request(acquisition_id):
 
-    url = '{}/acqs/live/{}.mans'.format(BASE_PATH, acquisition_id)
+    url = f'{BASE_PATH}/acqs/live/{acquisition_id}.mans'
 
     response = http_request(
         'GET',
@@ -2238,7 +2236,7 @@ def data_acquisition():
     sys = args.get('defaultSystemScript')
     if sys:
         args['script'] = json.dumps(SYS_SCRIPT_MAP[sys])
-        args['scriptName'] = '{}DefaultScript'.format(sys)
+        args['scriptName'] = f'{sys}DefaultScript'
 
     acquisition_info = data_acquisition_request(
         args['agentId'],
@@ -2266,7 +2264,7 @@ def data_acquisition():
     data = data_collection_request(acquisition_id)
     entry = {
         'Type': entryTypes['note'],
-        'Contents': '{}\nacquisition ID: {}'.format(message, acquisition_id),
+        'Contents': f'{message}\nacquisition ID: {acquisition_id}',
         'ContentsFormat': formats['text'],
         'EntryContext': {
             "FireEyeHX.Acquisitions.Data(obj._id==val._id)": acquisition_info
@@ -2300,7 +2298,7 @@ def initiate_data_acquisition():
     sys = args.get('defaultSystemScript')
     if sys:
         args['script'] = json.dumps(SYS_SCRIPT_MAP[sys])
-        args['scriptName'] = '{}DefaultScript'.format(sys)
+        args['scriptName'] = f'{sys}DefaultScript'
 
     acquisition_info = data_acquisition_request(
         args['agentId'],
@@ -2359,14 +2357,14 @@ def get_data_acquisition():
         data = data_collection_request(acquisition_id)
         entry = {
             'Type': EntryType.NOTE,
-            'Contents': '{}\nacquisition ID: {}'.format(message, acquisition_id),
+            'Contents': f'{message}\nacquisition ID: {acquisition_id}',
             'ContentsFormat': EntryFormat.TEXT,
             'EntryContext': {
                 'FireEyeHX.Acquisitions.Data(obj._id==val._id)': acquisition_info
             }
         }
         demisto.results(entry)
-        demisto.results(fileResult('{}_agent_{}_data.mans'.format(acquisition_id, agent_id), data))
+        demisto.results(fileResult(f'{acquisition_id}_agent_{agent_id}_data.mans', data))
         return
 
     # else return message for states in [ NEW, ERROR, QUEUED, RUNNING, FAILED ]
@@ -2378,7 +2376,7 @@ def get_data_acquisition():
 
     entry = {
         'Type': EntryType.NOTE,
-        'Contents': '{}\nacquisition ID: {}\nstate: {}'.format(message, acquisition_id, state),
+        'Contents': f'{message}\nacquisition ID: {acquisition_id}\nstate: {state}',
         'ContentsFormat': EntryFormat.TEXT,
         'EntryContext': {
             'FireEyeHX.Acquisitions.Data(obj._id==val._id && obj.instance==val.instance)': acquisition_info
@@ -2394,7 +2392,7 @@ def delete_data_acquisition_request(acquisition_id):
 
     """
 
-    url = '{}/acqs/live/{}'.format(BASE_PATH, acquisition_id)
+    url = f'{BASE_PATH}/acqs/live/{acquisition_id}'
 
     http_request(
         'DELETE',
@@ -2414,7 +2412,7 @@ def delete_data_acquisition():
 
     return {
         'Type': entryTypes['note'],
-        'Contents': 'data acquisition {} deleted successfully'.format(acquisition_id),
+        'Contents': f'data acquisition {acquisition_id} deleted successfully',
         'ContentsFormat': formats['text'],
     }
 
@@ -2475,7 +2473,7 @@ def parse_alert_to_incident(alert):
     if isinstance(event_values, dict):
         indicator = event_values.get(event_indicator, '')
 
-    incident_name = u'{event_type_parsed}: {indicator}'.format(
+    incident_name = '{event_type_parsed}: {indicator}'.format(
         event_type_parsed=re.sub("([a-z])([A-Z])", "\g<1> \g<2>", event_type).title(),
         indicator=indicator
     )
@@ -2566,7 +2564,7 @@ def host_results_md_entry(host_entry):
         data = result.get('data', {})
         entry = {
             'Item Type': result.get('type'),
-            'Summary': ' '.join(['**{}** {}'.format(k, v) for k, v in data.items()])
+            'Summary': ' '.join([f'**{k}** {v}' for k, v in data.items()])
         }
         entries.append(entry)
 
@@ -2609,7 +2607,7 @@ def http_request(method, url, body=None, headers={}, url_params=None, conditions
     if conditions_params:
         request_kwargs['data'] = conditions_params
 
-    LOG('attempting {} request sent to {} with arguments:\n{}'.format(method, url, json.dumps(request_kwargs, indent=4)))
+    LOG(f'attempting {method} request sent to {url} with arguments:\n{json.dumps(request_kwargs, indent=4)}')
     try:
         response = requests.request(
             method,
@@ -2624,14 +2622,14 @@ def http_request(method, url, body=None, headers={}, url_params=None, conditions
     # handle request failure
     if response.status_code not in range(200, 205):
         message = parse_error_response(response)
-        raise ValueError('Request failed with status code {}\n{}'.format(response.status_code, message))
+        raise ValueError(f'Request failed with status code {response.status_code}\n{message}')
 
     return response
 
 
 def logout():
 
-    url = '{}/token'.format(BASE_PATH)
+    url = f'{BASE_PATH}/token'
 
     try:
         http_request(
@@ -2680,7 +2678,7 @@ def main():
     set_proxies()
 
     command = demisto.command()
-    LOG('Running command "{}"'.format(command))
+    LOG(f'Running command "{command}"')
 
     # ask for a token using user credentials
     TOKEN = get_token()

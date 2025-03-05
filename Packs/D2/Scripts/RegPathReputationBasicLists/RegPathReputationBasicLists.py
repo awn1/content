@@ -131,7 +131,7 @@ def main():
         'ContentsFormat': formats['json'],
         'Contents': score,
         'ReadableContentsFormat': formats['text'],
-        'HumanReadable': "The Registry Path reputation for: {} is: {}".format(reg_path, score),
+        'HumanReadable': f"The Registry Path reputation for: {reg_path} is: {score}",
         'EntryContext': {
             'RegistryKey(val.Path == obj.Path)': outputs
         }

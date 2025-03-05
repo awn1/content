@@ -30,7 +30,7 @@ def main():
 
     humanReadable = 'Process "' + proc['Name'] + '" exists: ' + proc['Exists']
     if error is not None:
-        humanReadable = humanReadable + " Error: {}".format(error)
+        humanReadable = humanReadable + f" Error: {error}"
 
     demisto.results({
         'Type': entryTypes['note'],

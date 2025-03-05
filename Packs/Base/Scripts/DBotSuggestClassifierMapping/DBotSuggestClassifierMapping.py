@@ -335,7 +335,7 @@ class Validator:
         try:
             socket.inet_aton(value)
             return True
-        except socket.error:
+        except OSError:
             return False
 
     def validate_url(self, field_name, value, json_field_name=None):
@@ -537,7 +537,7 @@ def get_alias_index(field_name, alias):
 
 def get_most_relevant_json_field(field_name, json_field_to_alias):
     if len(json_field_to_alias) == 0:
-        return
+        return None
 
     # calculate jaccard score for each alias, and get the candidates with max score
     scores = {}

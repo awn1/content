@@ -3,7 +3,6 @@ from CommonServerPython import *  # noqa # pylint: disable=unused-wildcard-impor
 from CommonServerUserPython import *  # noqa
 
 import urllib3
-from typing import Dict
 
 # Disable insecure warnings
 urllib3.disable_warnings()  # pylint: disable=no-member
@@ -35,12 +34,12 @@ class Client(BaseClient):
         self.suspicious_domain_threshold = suspicious_domain_threshold
         self.api_key = api_key
 
-    def http_request(self, params: Dict):
+    def http_request(self, params: dict):
         return self._http_request(method='GET',
                                   headers={'x-api-key': self.api_key},
                                   params=params)
 
-    def alexa_rank(self, domain: str) -> Dict:
+    def alexa_rank(self, domain: str) -> dict:
         params = {'Action': 'UrlInfo',
                   'ResponseGroup': 'Rank',
                   'Url': domain,

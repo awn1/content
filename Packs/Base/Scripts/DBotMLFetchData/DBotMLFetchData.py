@@ -343,7 +343,7 @@ def get_avg_embedding_vector_for_text(tokenized_text, embedding_dict, size, pref
         mean_vector = np.zeros(size)
     else:
         mean_vector = np.mean(vectors, axis=0)  # type: ignore
-    res = {'{}_{}'.format(prefix, str(i)): mean_vector[i].item() for i in range(len(mean_vector))}
+    res = {f'{prefix}_{str(i)}': mean_vector[i].item() for i in range(len(mean_vector))}
     return res
 
 
@@ -417,8 +417,8 @@ def parse_single_received_value(received_headers, index, name):
         from_envelop_address, from_envelop_domain, from_envelop_suffix = extract_envelop_from_address(received_value)
     else:
         server_domain = server_suffix = from_envelop_domain = from_envelop_address = from_envelop_suffix = None
-    server_info = {'name': '{}-Server'.format(name), 'domain': server_domain, 'suffix': server_suffix}
-    envelop_info = {'name': '{}-Envelope'.format(name), 'address': from_envelop_address, 'domain': from_envelop_domain,
+    server_info = {'name': f'{name}-Server', 'domain': server_domain, 'suffix': server_suffix}
+    envelop_info = {'name': f'{name}-Envelope', 'address': from_envelop_address, 'domain': from_envelop_domain,
                     'suffix': from_envelop_suffix}
     return server_info, envelop_info
 
@@ -508,9 +508,9 @@ def get_headers_features(email_headers):
 
     res = {}
     for k, v in res_spf.items():
-        res['spf::{}'.format(k)] = v
+        res[f'spf::{k}'] = v
     for k, v in res_dkim.items():
-        res['dkim::{}'.format(k)] = v
+        res[f'dkim::{k}'] = v
     res['unsubscribe_headers'] = res_unsubscribe
     for k, v in addresses_res.items():
         res[k] = v  # type: ignore
@@ -598,11 +598,11 @@ def find_forwarded_features(email_subject, email_body):
     re_patterns = ['re']
 
     for pattern in forwarded_patterns:
-        if re.search(r'(?<!\w)({})(?!\w)'.format(pattern), email_subject, flags=re.IGNORECASE):
+        if re.search(rf'(?<!\w)({pattern})(?!\w)', email_subject, flags=re.IGNORECASE):
             forwarded = True
             break
     for pattern in re_patterns:
-        if re.search(r'(?<!\w)({})(?!\w)'.format(pattern), email_subject, flags=re.IGNORECASE):
+        if re.search(rf'(?<!\w)({pattern})(?!\w)', email_subject, flags=re.IGNORECASE):
             response = True
             break
     return {'forwarded': forwarded, 'response': response}
@@ -648,7 +648,7 @@ def extract_features_from_incident(row, label_fields):
     email_subject = clean_email_subject(email_subject)
     text = email_subject + ' ' + email_body
     if len(text) < MIN_TEXT_LENGTH:
-        raise ShortTextException('Text length is shorter than allowed minimum of: {}'.format(MIN_TEXT_LENGTH))
+        raise ShortTextException(f'Text length is shorter than allowed minimum of: {MIN_TEXT_LENGTH}')
     email_body_word_tokenized = word_tokenize(email_body)
     email_subject_word_tokenized = word_tokenize(email_subject)
     text_ngrams = transform_text_to_ngrams_counter(email_body_word_tokenized, email_subject_word_tokenized)
@@ -741,7 +741,7 @@ def extract_data_from_incidents(incidents, input_label_field=None):
     else:
         input_label_field = input_label_field.strip()
         if input_label_field not in incidents_df:
-            return_error('Could not find label field "{}" among the incidents'.format(input_label_field))
+            return_error(f'Could not find label field "{input_label_field}" among the incidents')
         label_fields = [input_label_field]
     for label in label_fields:
         incidents_df[label].replace('', float('nan'), regex=True, inplace=True)
@@ -751,7 +751,7 @@ def extract_data_from_incidents(incidents, input_label_field=None):
     y = []
     for i, label in enumerate(label_fields):
         y.append({'field_name': label,
-                  'rank': '#{}'.format(i + 1)})
+                  'rank': f'#{i + 1}'})
     custom_fields = [col for col in incidents_df.columns if col not in LABEL_FIELDS_BLACKLIST]
     custom_fields_dict = {}
     for col in custom_fields:
@@ -860,7 +860,7 @@ def return_file_entry(res, num_of_incidents):
     file_name = str(uuid.uuid4())
     entry = fileResult(file_name, json.dumps(res))
     entry['Contents'] = res
-    entry['HumanReadable'] = 'Fetched features from {} incidents'.format(num_of_incidents)
+    entry['HumanReadable'] = f'Fetched features from {num_of_incidents} incidents'
     entry["ContentsFormat"]: formats[json]  # type: ignore
     demisto.results(entry)
 

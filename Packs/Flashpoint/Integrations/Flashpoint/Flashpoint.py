@@ -4,7 +4,7 @@ import re
 import ipaddress
 import requests
 import urllib.parse
-from typing import Dict, Tuple, List, Any
+from typing import Any
 
 import urllib3
 urllib3.disable_warnings()
@@ -212,7 +212,7 @@ def prepare_args_for_fetch_alerts(max_fetch: int, start_time: str, last_run: dic
 
     :return: Dictionary of fetch arguments
     """
-    fetch_params: Dict[str, Any] = {}
+    fetch_params: dict[str, Any] = {}
 
     if max_fetch < 1 or max_fetch > 100:
         raise ValueError(MESSAGES['INVALID_MAX_FETCH'].format(max_fetch))
@@ -236,7 +236,7 @@ def prepare_args_for_fetch_compromised_credentials(max_fetch: int, start_time: s
 
     :return: Dictionary of fetch arguments
     """
-    fetch_params: Dict[str, Any] = {}
+    fetch_params: dict[str, Any] = {}
 
     if max_fetch < 1 or max_fetch > MAX_PAGE_SIZE:
         raise ValueError(MESSAGES['INVALID_MAX_FETCH'].format(max_fetch))
@@ -280,7 +280,7 @@ def prepare_args_for_fetch_compromised_credentials(max_fetch: int, start_time: s
     return fetch_params
 
 
-def validate_fetch_incidents_params(params: dict, last_run: dict) -> Dict:
+def validate_fetch_incidents_params(params: dict, last_run: dict) -> dict:
     """
     Validate the parameter list for fetch incidents.
 
@@ -494,7 +494,7 @@ def validate_alert_list_args(args: dict) -> dict:
     return params
 
 
-def prepare_hr_for_alerts(alerts: List) -> str:
+def prepare_hr_for_alerts(alerts: list) -> str:
     """
     Prepare human readable format for alerts.
 
@@ -700,7 +700,7 @@ def prepare_hr_for_compromised_credentials(hits: list) -> str:
                                                              'First Observed Date (UTC)'], removeNull=True)
 
 
-def remove_duplicate_records(records: List, fetch_type: str, next_run: dict) -> List:
+def remove_duplicate_records(records: list, fetch_type: str, next_run: dict) -> list:
     """
     Check for duplicate records and remove them from the list.
 
@@ -742,7 +742,7 @@ def update_alert_body(alert: dict) -> None:
                                                        flags=re.IGNORECASE)
 
 
-def prepare_context_from_next_href(links: str) -> Dict:
+def prepare_context_from_next_href(links: str) -> dict:
     """
     Prepare context from href.
 
@@ -755,7 +755,7 @@ def prepare_context_from_next_href(links: str) -> Dict:
     return context
 
 
-def prepare_incidents_from_alerts_data(response: dict, next_run: dict, start_time: str) -> Tuple[dict, list]:
+def prepare_incidents_from_alerts_data(response: dict, next_run: dict, start_time: str) -> tuple[dict, list]:
     """
     Prepare incidents from the alerts data.
 
@@ -824,7 +824,7 @@ def check_value_of_total_records(total: Any, next_run: dict) -> None:
         next_run['total'] = total
 
 
-def prepare_checkpoint_and_related_objects(hits: List, hit_ids: List, next_run: dict) -> None:
+def prepare_checkpoint_and_related_objects(hits: list, hit_ids: list, next_run: dict) -> None:
     """
     Prepare checkpoint and related objects for incidents of type compromised credentials.
 
@@ -863,7 +863,7 @@ def prepare_next_run_when_data_is_present(next_run: dict, start_time: str) -> No
     next_run['fetch_count'] = next_run['fetch_count'] + 1
 
 
-def prepare_next_run_when_data_is_empty(next_run: dict, hits: List) -> None:
+def prepare_next_run_when_data_is_empty(next_run: dict, hits: list) -> None:
     """
     Prepare next run when data is present.
 
@@ -880,7 +880,7 @@ def prepare_next_run_when_data_is_empty(next_run: dict, hits: List) -> None:
 
 
 def prepare_incidents_from_compromised_credentials_data(response: dict, next_run: dict,
-                                                        start_time: str) -> Tuple[dict, list]:
+                                                        start_time: str) -> tuple[dict, list]:
     """
     Prepare incidents from the compromised credentials data.
 
@@ -948,7 +948,7 @@ def create_relationships_list(client, events_details, ip):
 ''' FUNCTIONS '''
 
 
-def test_module(client: Client, params: Dict) -> None:
+def test_module(client: Client, params: dict) -> None:
     """
     Test the Flashpoint instance configuration.
 
@@ -1050,7 +1050,7 @@ def ip_lookup_command(client, ip):
 
             hr = HR_TITLE + ip + '\n'
             hr += 'Reputation: Suspicious\n\n'
-            hr += 'FP tools link to torrent search: [{}]({})\n'.format(torrent_search_link, torrent_search_link)
+            hr += f'FP tools link to torrent search: [{torrent_search_link}]({torrent_search_link})\n'
 
             ec = {
                 FLASHPOINT_PATHS['IP']: {
@@ -1081,7 +1081,7 @@ def ip_lookup_command(client, ip):
 
                 hr = HR_TITLE + ip + '\n'
                 hr += 'Reputation: Suspicious\n\n'
-                hr += 'FP tools link to Forum-visit search: [{}]({})\n'.format(forum_search_link, forum_search_link)
+                hr += f'FP tools link to Forum-visit search: [{forum_search_link}]({forum_search_link})\n'
 
                 ec = {
                     FLASHPOINT_PATHS['IP']: {
@@ -1686,7 +1686,7 @@ def get_reports_command(client, args):
     reports = resp.get("data", [])
 
     hr = '### Flashpoint Intelligence reports related to search: ' + report_search + '\n'
-    ec: Dict[Any, Any] = {}
+    ec: dict[Any, Any] = {}
 
     if reports:
         hr += 'Top 5 reports:\n\n'
@@ -1697,7 +1697,7 @@ def get_reports_command(client, args):
             platform_url = report.get('platform_url', '')
             summary = report.get('summary', 'N/A')
             index += 1
-            hr += '' + str(index) + ') [{}]({})'.format(title, platform_url) + '\n'
+            hr += '' + str(index) + f') [{title}]({platform_url})' + '\n'
             if report.get('summary'):
                 hr += '   Summary: ' + str(summary) + '\n\n\n'
             else:
@@ -1715,7 +1715,7 @@ def get_reports_command(client, args):
             report_details.append(report_detail)
 
         fp_url = client.url + '/home/search/reports?query=' + urllib.parse.quote(report_search)
-        hr += 'Link to Report-search on Flashpoint platform: [{}]({})\n'.format(fp_url, fp_url)
+        hr += f'Link to Report-search on Flashpoint platform: [{fp_url}]({fp_url})\n'
 
         ec[FLASHPOINT_PATHS['Report']] = report_details
 
@@ -1739,7 +1739,7 @@ def get_report_by_id_command(client, args):
     report = resp
 
     hr = '### Flashpoint Intelligence Report details\n'
-    ec: Dict[Any, Any] = {}
+    ec: dict[Any, Any] = {}
 
     if report:
 
@@ -1807,7 +1807,7 @@ def get_related_reports_command(client, args):
     reports = resp.get("data", [])
 
     hr = '### Flashpoint Intelligence related reports:\n'
-    ec: Dict[Any, Any] = {}
+    ec: dict[Any, Any] = {}
 
     if reports:
         hr += 'Top 5 related reports:\n\n'
@@ -1818,7 +1818,7 @@ def get_related_reports_command(client, args):
             platform_url = report.get('platform_url', '')
             summary = report.get('summary', 'N/A')
             index += 1
-            hr += '' + str(index) + ') [{}]({})'.format(title, platform_url) + '\n'
+            hr += '' + str(index) + f') [{title}]({platform_url})' + '\n'
             hr += '   Summary: ' + str(summary) + '\n\n\n'
             report_detail = {
                 'ReportId': report.get('id', 'N/A'),
@@ -1832,7 +1832,7 @@ def get_related_reports_command(client, args):
             report_details.append(report_detail)
 
         fp_url = client.url + '/home/intelligence/reports/report/' + report_id + '#detail'
-        hr += 'Link to the given Report on Flashpoint platform: [{}]({})\n'.format(fp_url, fp_url)
+        hr += f'Link to the given Report on Flashpoint platform: [{fp_url}]({fp_url})\n'
         ec[FLASHPOINT_PATHS['Report']] = report_details
 
     else:
@@ -1854,7 +1854,7 @@ def get_event_by_id_command(client, args):
     resp = client.http_request("GET", url_suffix=url_suffix)
 
     hr = '### Flashpoint Event details\n'
-    ec: Dict[Any, Any] = {}
+    ec: dict[Any, Any] = {}
 
     if len(resp) <= 0:
         hr += 'No event found for the given ID.'
@@ -1919,7 +1919,7 @@ def get_events_command(client, args):
     resp = client.http_request("GET", url_suffix=url_suffix)
     indicators = resp
     hr = ''
-    ec: Dict[Any, Any] = {}
+    ec: dict[Any, Any] = {}
     if len(indicators) > 0:
         hr += '### Flashpoint Events\n\n'
 
@@ -2106,7 +2106,7 @@ def get_post_details_by_id_command(client, args):
             AUTHOR_NAME: author_name,
             THREAD_TITLE: thread_title,
             'URL': url,
-            'Platform url': "[{}]({})".format(platform_url, platform_url)
+            'Platform url': f"[{platform_url}]({platform_url})"
         }
 
         hr += tableToMarkdown('Below are the detail found:', post_details,
@@ -2136,7 +2136,7 @@ def get_forum_sites_command(client, args):
     sites = resp.get("data", [])
 
     hr = '### Flashpoint Forum sites related to search: ' + site_search + '\n'
-    ec: Dict[Any, Any] = {}
+    ec: dict[Any, Any] = {}
 
     if sites:
         hr += 'Top 10 sites:\n\n'
@@ -2181,7 +2181,7 @@ def get_forum_posts_command(client, args):
     posts = resp.get("data", [])
 
     hr = '### Flashpoint Forum posts related to search: ' + post_search + '\n'
-    ec: Dict[Any, Any] = {}
+    ec: dict[Any, Any] = {}
 
     if posts:
         hr += 'Top 10 posts:\n\n'
@@ -2206,7 +2206,7 @@ def get_forum_posts_command(client, args):
         hr += '\n'
 
         fp_url = client.url + '/home/search/forums?query=' + urllib.parse.quote(post_search.encode('utf8'))
-        hr += 'Link to forum post-search on Flashpoint platform: [{}]({})\n'.format(fp_url, fp_url)
+        hr += f'Link to forum post-search on Flashpoint platform: [{fp_url}]({fp_url})\n'
 
         ec[FLASHPOINT_PATHS['Post']] = post_entry_context
 
@@ -2310,7 +2310,7 @@ def flashpoint_compromised_credentials_list_command(client: Client, args: dict) 
     )
 
 
-def fetch_incidents(client: Client, last_run: dict, params: dict) -> Tuple[dict, list]:
+def fetch_incidents(client: Client, last_run: dict, params: dict) -> tuple[dict, list]:
     """
     Fetch incidents from Flashpoint.
 
@@ -2331,7 +2331,7 @@ def fetch_incidents(client: Client, last_run: dict, params: dict) -> Tuple[dict,
 
     response = client.http_request("GET", url_suffix=url_suffix, params=fetch_params['fetch_params'])
 
-    incidents: List[Dict[str, Any]] = []
+    incidents: list[dict[str, Any]] = []
     next_run = last_run
     start_time = fetch_params['start_time']
 

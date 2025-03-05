@@ -4,20 +4,20 @@ from itertools import product
 
 def find_value_by_key(k, d):
     if not isinstance(d, dict):
-        raise Exception("{} d is not a dictionary".format(d))
+        raise Exception(f"{d} d is not a dictionary")
     if k.startswith('CustomFields.'):
         if 'CustomFields' not in d:
-            return
+            return None
         cf = d.get('CustomFields', None)
         if not cf:
-            return
+            return None
         rk = k.split('.')[1]
     else:
         cf = d
         rk = k
 
     if rk not in cf:
-        return
+        return None
     return cf[rk]
 
 

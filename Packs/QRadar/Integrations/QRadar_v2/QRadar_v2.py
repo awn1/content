@@ -5,7 +5,7 @@ import json
 import time
 import traceback
 from copy import deepcopy
-from typing import Callable, Dict, List, Optional
+from collections.abc import Callable
 from urllib import parse
 
 import requests
@@ -271,7 +271,7 @@ class QRadarClient:
         if _fields:
             params["fields"] = _fields
         if _range:
-            headers["Range"] = "items={0}".format(_range)
+            headers["Range"] = f"items={_range}"
         return self.send_request("GET", full_url, headers, params)
 
     def get_offense_by_id(self, offense_id, _filter="", _fields=""):
@@ -313,7 +313,7 @@ class QRadarClient:
         url = f"{self._server}/api/ariel/searches/{search_id}/results"
         headers = dict(self._auth_headers)
         if _range:
-            headers["Range"] = "items={0}".format(_range)
+            headers["Range"] = f"items={_range}"
         return self.send_request("GET", url, headers)
 
     def get_assets(self, _range=None, _filter=None, _fields=None):
@@ -326,7 +326,7 @@ class QRadarClient:
         if _fields:
             params["fields"] = _fields
         if _range:
-            headers["Range"] = "items={0}".format(_range)
+            headers["Range"] = f"items={_range}"
         return self.send_request("GET", url, headers, params)
 
     def get_closing_reasons(
@@ -350,7 +350,7 @@ class QRadarClient:
             params["include_reserved"] = include_reserved
         headers = self._auth_headers
         if _range:
-            headers["Range"] = "items={0}".format(_range)
+            headers["Range"] = f"items={_range}"
         return self.send_request("GET", url, headers, params)
 
     def get_offense_types(self):
@@ -393,7 +393,7 @@ class QRadarClient:
         if _fields:
             params["fields"] = _fields
         if _range:
-            headers["Range"] = "items={0}".format(_range)
+            headers["Range"] = f"items={_range}"
         return self.send_request("GET", url, headers, params=params)
 
     def create_reference_set(
@@ -445,7 +445,7 @@ class QRadarClient:
         if _fields:
             params["fields"] = _fields
         if _range:
-            headers["Range"] = "items={0}".format(_range)
+            headers["Range"] = f"items={_range}"
         return self.send_request("GET", url, headers, params=params)
 
     def get_devices(self, _range=None, _filter=None, _fields=None):
@@ -458,7 +458,7 @@ class QRadarClient:
         if _fields:
             params["fields"] = _fields
         if _range:
-            headers["Range"] = "items={0}".format(_range)
+            headers["Range"] = f"items={_range}"
         return self.send_request("GET", url, headers, params=params)
 
     def get_domains_by_id(self, domain_id, _fields=None):
@@ -533,9 +533,9 @@ class QRadarClient:
         )
 
     def get_custom_fields(
-            self, limit: Optional[int] = None, field_name: Optional[List[str]] = None,
-            likes: Optional[List[str]] = None, filter_: Optional[str] = None, fields: Optional[List[str]] = None
-    ) -> List[dict]:
+            self, limit: int | None = None, field_name: list[str] | None = None,
+            likes: list[str] | None = None, filter_: str | None = None, fields: list[str] | None = None
+    ) -> list[dict]:
         """Get regex event properties from the API.
 
         Args:
@@ -800,7 +800,7 @@ def perform_offense_events_enrichment(
             )
             if not len(offense["events"]) < min(offense['event_count'], client.offenses_per_fetch):
                 break
-            elif i == MAX_FETCH_EVENT_RETIRES:
+            if i == MAX_FETCH_EVENT_RETIRES:
                 break
             time.sleep(SLEEP_FETCH_EVENT_RETIRES)
     except Exception as e:
@@ -884,7 +884,7 @@ def try_create_search_with_retry(client, events_query, offense, max_retries=None
     return query_status, search_id
 
 
-def get_minimum_id_to_fetch(highest_offense_id: int, user_query: Optional[str]) -> int:
+def get_minimum_id_to_fetch(highest_offense_id: int, user_query: str | None) -> int:
     """
     Receives the highest offense ID saved from last run, and user query.
     Checks if user query has a limitation for a minimum ID.
@@ -941,7 +941,7 @@ def seek_fetchable_offenses(client: QRadarClient, start_offense_id, user_query):
         fetch_query = "id>{0} AND id<{1} {2}".format(
             start_offense_id,
             end_offense_id,
-            "AND ({})".format(user_query) if user_query else "",
+            f"AND ({user_query})" if user_query else "",
         )
         print_debug_msg(f"Fetching {fetch_query}.")
         raw_offenses = client.get_offenses(_filter=fetch_query)
@@ -1386,7 +1386,6 @@ def populate_src_and_dst_dicts_with_single_offense(offense, src_ids, dst_ids):
     ):
         for destination_id in offense["local_destination_address_ids"]:
             dst_ids[destination_id] = destination_id
-    return None
 
 
 def get_asset_ips_and_enrich_offense_addresses(
@@ -1425,7 +1424,6 @@ def enrich_offense_times(offense):
     if offense.get("close_time"):
         offense["close_time"] = epoch_to_iso(offense["close_time"])
 
-    return None
 
 
 def get_offense_by_id_command(
@@ -1471,7 +1469,7 @@ def update_offense_command(
         args["closing_reason_id"] = client.convert_closing_reason_name_to_id(
             closing_reason_name
         )
-    elif "CLOSED" == args.get("status") and not args.get("closing_reason_id"):
+    elif args.get("status") == "CLOSED" and not args.get("closing_reason_id"):
         raise ValueError(
             'Invalid input - must provide closing reason name or id (may use "qradar-get-closing-reasons" command to '
             "get them) to close offense"
@@ -1518,7 +1516,7 @@ def get_search_command(client: QRadarClient, search_id=None, headers=None):
         search,
         raw_search,
         headers,
-        'QRadar.Search(val.ID === "{0}")'.format(search_id),
+        f'QRadar.Search(val.ID === "{search_id}")',
     )
 
 
@@ -1527,11 +1525,11 @@ def get_search_results_command(
 ):
     raw_search_results = client.get_search_results(search_id, range)
     result_key = list(raw_search_results.keys())[0]
-    title = "QRadar Search Results from {}".format(str(result_key))
+    title = f"QRadar Search Results from {str(result_key)}"
     context_key = (
         output_path
         if output_path
-        else 'QRadar.Search(val.ID === "{0}").Result.{1}'.format(search_id, result_key)
+        else f'QRadar.Search(val.ID === "{search_id}").Result.{result_key}'
     )
     context_obj = raw_search_results[result_key]
     return get_entry_for_object(
@@ -1582,7 +1580,7 @@ def get_entry_for_assets(title, obj, contents, human_readable_obj, headers=None)
         "Contents": contents,
         "ContentsFormat": formats["json"],
         "ReadableContentsFormat": formats["markdown"],
-        "HumanReadable": "### {0}\n{1}".format(title, human_readable_md),
+        "HumanReadable": f"### {title}\n{human_readable_md}",
         "EntryContext": obj,
     }
 
@@ -1660,7 +1658,6 @@ def enrich_dict_using_asset_properties(asset, asset_dict, endpoint_dict, full_va
                     "Value": prop.get("value"),
                     "LastUser": prop.get("last_reported_by"),
                 }
-    return None
 
 
 def create_empty_endpoint_dict(full_values):
@@ -1724,11 +1721,11 @@ def get_note_command(
         if "CreateTime" in note:
             note["CreateTime"] = epoch_to_iso(note["CreateTime"])
     return get_entry_for_object(
-        "QRadar note for offense: {0}".format(str(offense_id)),
+        f"QRadar note for offense: {str(offense_id)}",
         notes,
         raw_note,
         headers,
-        'QRadar.Note(val.ID === "{0}")'.format(note_id),
+        f'QRadar.Note(val.ID === "{note_id}")',
     )
 
 
@@ -1811,8 +1808,8 @@ def delete_reference_set_command(client: QRadarClient, ref_name=None):
         "Contents": raw_ref,
         "ContentsFormat": formats["json"],
         "ReadableContentsFormat": formats["markdown"],
-        "HumanReadable": "Reference Data Deletion Task for '{0}' was initiated. Reference set '{0}' should be deleted "
-        "shortly.".format(ref_name),
+        "HumanReadable": f"Reference Data Deletion Task for '{ref_name}' was initiated. Reference set '{ref_name}' should be deleted "
+        "shortly.",
     }
 
 
@@ -1923,21 +1920,21 @@ def upload_indicators_command(
                 )
             else:
                 return_error(
-                    "There isn't a reference set with the name {0}. To create one,"
-                    " please enter an element type".format(ref_name)
+                    f"There isn't a reference set with the name {ref_name}. To create one,"
+                    " please enter an element type"
                 )
         else:
             if element_type or time_to_live or timeout_type:
                 return_error(
-                    "The reference set {0} is already exist. Element type, time to live or timeout type "
-                    "cannot be modified".format(ref_name)
+                    f"The reference set {ref_name} is already exist. Element type, time to live or timeout type "
+                    "cannot be modified"
                 )
         indicators_values_list, indicators_data_list = get_indicators_list(
             query, limit, page
         )
         if len(indicators_values_list) == 0:
             return (
-                "No indicators found, Reference set {0} didn't change".format(ref_name),
+                f"No indicators found, Reference set {ref_name} didn't change",
                 {},
                 {},
             )
@@ -1957,7 +1954,7 @@ def upload_indicators_command(
                 "NumberOfElements",
             ]
             hr = tableToMarkdown(
-                "reference set {0} was updated".format(ref_name),
+                f"reference set {ref_name} was updated",
                 ref,
                 headers=ref_set_headers,
             ) + tableToMarkdown(
@@ -2227,8 +2224,8 @@ def get_mapping_fields(client: QRadarClient) -> dict:
 
 
 def get_custom_properties_command(
-        client: QRadarClient, limit: Optional[str] = None, field_name: Optional[str] = None,
-        like_name: Optional[str] = None, filter: Optional[str] = None, fields: Optional[str] = None) -> dict:
+        client: QRadarClient, limit: str | None = None, field_name: str | None = None,
+        like_name: str | None = None, filter: str | None = None, fields: str | None = None) -> dict:
     """Gives the user the regex event properties
 
     Args:
@@ -2319,7 +2316,7 @@ def main():
     command = demisto.command()
     try:
         demisto.debug(f"Command being called is {command}")
-        normal_commands: Dict[str, Callable] = {
+        normal_commands: dict[str, Callable] = {
             "test-module": test_module,
             "qradar-offenses": get_offenses_command,
             "qradar-offense-by-id": get_offense_by_id_command,

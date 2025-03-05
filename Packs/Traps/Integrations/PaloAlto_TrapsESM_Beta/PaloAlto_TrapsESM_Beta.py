@@ -208,7 +208,7 @@ def traps_esm_hash_detail():
         'Type': entryTypes['note'],
         'ContentsFormat': formats['markdown'],
         'Contents': 'The verdict of hash {} is {}'.format(file_hash, hash_results['LocalAnalysis'][0]['Result']),
-        'HumanReadable': tableToMarkdown('Hash Verdict for {}'.format(file_hash), hr_table),
+        'HumanReadable': tableToMarkdown(f'Hash Verdict for {file_hash}', hr_table),
         'EntryContext': ec
     })
 

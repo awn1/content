@@ -150,8 +150,7 @@ def test_get_timestamp(mocker):
     expected = "2019-08-13 09:56:02"
     for timestamp in stamps_to_check:
         result = str(get_timestamp(timestamp))
-        assert expected in result, "\n\tExpected: {}\n\tResult: {}\n\tInput timestamp: {}" \
-                                   "".format(expected, result, timestamp)
+        assert expected in result, f"\n\tExpected: {expected}\n\tResult: {result}\n\tInput timestamp: {timestamp}"
 
 
 def test_fetch_incidents_fetch_oldest_first(mocker):

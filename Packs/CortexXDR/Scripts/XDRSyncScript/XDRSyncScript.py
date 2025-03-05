@@ -5,7 +5,6 @@ import dateparser
 from CommonServerUserPython import *
 from dateutil import parser
 import copy
-from typing import Optional, Dict
 import traceback
 
 
@@ -68,7 +67,7 @@ def compare_incident_in_demisto_vs_xdr_context(incident_in_demisto, xdr_incident
 
     incident_in_demisto_was_modified = False
 
-    xdr_update_args: Dict[str, Optional[str]] = {}
+    xdr_update_args: dict[str, str | None] = {}
     if modified_in_demisto > modified_in_xdr_in_context:
         if ASSIGNED_USER_MAIL_XDR_FIELD in fields_mapping:
             field_name_in_demisto = fields_mapping[ASSIGNED_USER_MAIL_XDR_FIELD]
@@ -204,7 +203,7 @@ def args_to_str(demisto_args, latest_incident_in_xdr):
 
     for arg_key in args_copy:
         arg_value = args_copy[arg_key]
-        args_to_str += '{}=`{}` '.format(arg_key, arg_value)
+        args_to_str += f'{arg_key}=`{arg_value}` '
 
     return args_to_str
 
@@ -218,8 +217,7 @@ def get_latest_incident_from_xdr(incident_id, return_only_updated=False):
     if "The incident was not modified in XDR" in latest_incident_in_xdr_result[0]["Contents"]:
         return {}, {}, {}
     elif is_error(latest_incident_in_xdr_result):
-        raise ValueError("Failed to execute xdr-get-incident-extra-data command. Error: {}".format(
-            get_error(latest_incident_in_xdr_result)))
+        raise ValueError(f"Failed to execute xdr-get-incident-extra-data command. Error: {get_error(latest_incident_in_xdr_result)}")
 
     latest_incident_in_xdr = latest_incident_in_xdr_result[0]["Contents"].get("incident")
     # no need to pass the whole incident with extra data - it will be too big json to pass
@@ -287,7 +285,7 @@ def xdr_incident_sync(incident_id, fields_mapping, xdr_incident_from_previous_ru
         else:
             raise ValueError("xdr_incident_from_previous_run expected to contain incident JSON, but passed None")
 
-    demisto.debug("Check if incident id '{}' was modified in demisto".format(incident_id))
+    demisto.debug(f"Check if incident id '{incident_id}' was modified in demisto")
     incident_in_demisto_was_modified, xdr_update_args = compare_incident_in_demisto_vs_xdr_context(
         incident_in_demisto,
         xdr_incident_from_previous_run,
@@ -296,7 +294,7 @@ def xdr_incident_sync(incident_id, fields_mapping, xdr_incident_from_previous_ru
     if incident_in_demisto_was_modified:
         # update xdr and finish the script
         demisto.debug("the incident in demisto was modified, updating the incident in xdr accordingly. ")
-        demisto.debug("xdr_update_args: {}".format(json.dumps(xdr_update_args, indent=4)))
+        demisto.debug(f"xdr_update_args: {json.dumps(xdr_update_args, indent=4)}")
         res = demisto.executeCommand("xdr-update-incident", xdr_update_args)
         if is_error(res):
             raise ValueError(get_error(res))
@@ -326,12 +324,12 @@ def xdr_incident_sync(incident_id, fields_mapping, xdr_incident_from_previous_ru
 
         if verbose:
             return_outputs(
-                "Incident in Demisto was modified, updating incident in XDR accordingly.\n\n{}".format(xdr_update_args),
+                f"Incident in Demisto was modified, updating incident in XDR accordingly.\n\n{xdr_update_args}",
                 None)
 
         return latest_incident_in_xdr
 
-    demisto.debug("Check if incident id '{}' was modified in XDR".format(incident_id))
+    demisto.debug(f"Check if incident id '{incident_id}' was modified in XDR")
     latest_incident_in_xdr_result, latest_incident_in_xdr, _ = get_latest_incident_from_xdr(incident_id,
                                                                                             return_only_updated=True)
 
@@ -342,7 +340,7 @@ def xdr_incident_sync(incident_id, fields_mapping, xdr_incident_from_previous_ru
 
     if incident_in_xdr_was_modified:
         demisto.debug("the incident in xdr was modified, updating the incident in demisto")
-        demisto.debug("demisto_update_args: {}".format(json.dumps(demisto_update_args, indent=4)))
+        demisto.debug(f"demisto_update_args: {json.dumps(demisto_update_args, indent=4)}")
         xdr_incident = latest_incident_in_xdr_result[0]['Contents']
 
         demisto_update_args[xdr_alerts_field] = replace_in_keys(xdr_incident.get('alerts').get('data', []), '_', '')
@@ -362,8 +360,7 @@ def xdr_incident_sync(incident_id, fields_mapping, xdr_incident_from_previous_ru
         demisto.results(latest_incident_in_xdr_result)
         if verbose:
             return_outputs(
-                "Incident in XDR was modified, updating incident in Demisto accordingly.\n\n{}".format(
-                    demisto_update_args), None)
+                f"Incident in XDR was modified, updating incident in Demisto accordingly.\n\n{demisto_update_args}", None)
 
         if playbook_to_run:
             demisto.executeCommand("setPlaybook", {"name": playbook_to_run})
@@ -434,7 +431,7 @@ def main(args):
     if first_run and previous_scheduled_task_id:
         # it means someone rerun the playbook, so we stop the previous scheduled task and set the task ID to be empty.
         if verbose:
-            demisto.debug('Stopping previous scheduled task with ID: {}'.format(previous_scheduled_task_id))
+            demisto.debug(f'Stopping previous scheduled task with ID: {previous_scheduled_task_id}')
 
         demisto.executeCommand('StopScheduledTask', {'taskID': previous_scheduled_task_id})
         demisto.setContext('XDRSyncScriptTaskID', '')
@@ -458,8 +455,8 @@ def main(args):
             args = args_to_str(args, latest_incident_in_xdr)
 
         res = demisto.executeCommand("ScheduleCommand", {
-            'command': '''!XDRSyncScript {}'''.format(args),
-            'cron': '*/{} * * * *'.format(interval),
+            'command': f'''!XDRSyncScript {args}''',
+            'cron': f'*/{interval} * * * *',
             'times': 1
         })
 
@@ -472,7 +469,7 @@ def main(args):
         demisto.setContext("XDRSyncScriptTaskID", scheduled_task_id)
 
         if verbose:
-            demisto.results("XDRSyncScriptTaskID: {}".format(scheduled_task_id))
+            demisto.results(f"XDRSyncScriptTaskID: {scheduled_task_id}")
 
 
 if __name__ == 'builtins':

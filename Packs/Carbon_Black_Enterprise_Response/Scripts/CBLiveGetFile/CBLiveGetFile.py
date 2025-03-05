@@ -67,7 +67,7 @@ else:
         else:
             session = resSessionInfo[0]['Contents']
         time.sleep(3)
-    if not session['status'] == 'active':
+    if session['status'] != 'active':
         demisto.results(resSessionInfo + [{'Type': entryTypes['error'], 'ContentsFormat': formats['text'],
                                            'Contents': 'Finished polling but session is not in active state.'}])
         sys.exit()
@@ -98,10 +98,10 @@ while secRemaining:
         if len(resInfo) == 1:
             status = demisto.get(resInfo[0], 'Contents.status')
             # If still working
-            if 'pending' == status:
+            if status == 'pending':
                 secRemaining -= 1
                 time.sleep(1)
-            elif 'error' == status:
+            elif status == 'error':
                 content = 'Command "get file" returned error: [Type:' + \
                           str(demisto.get(resInfo[0], 'Contents.result_type')) + \
                           ' , Code:' + \
@@ -112,7 +112,7 @@ while secRemaining:
                 demisto.results({'Type': entryTypes['error'], 'ContentsFormat': formats['text'],
                                  'Contents': content})
                 sys.exit(0)
-            elif 'complete' == status:
+            elif status == 'complete':
                 # Get FileID from command info response
                 fileID = demisto.get(resInfo[0], 'Contents.file_id')
                 resFileGet = demisto.executeCommand('cb-file-get', {'session': sessionId, 'file-id': str(fileID)})
@@ -139,7 +139,6 @@ while secRemaining:
         demisto.results(resInfo)
         sys.exit(0)
 
-else:
-    demisto.results({'Type': entryTypes['error'], 'ContentsFormat': formats['text'],
-                     'Contents': 'Command timed out after %d seconds' % secTimeout})
-    sys.exit(0)
+demisto.results({'Type': entryTypes['error'], 'ContentsFormat': formats['text'],
+                 'Contents': 'Command timed out after %d seconds' % secTimeout})
+sys.exit(0)

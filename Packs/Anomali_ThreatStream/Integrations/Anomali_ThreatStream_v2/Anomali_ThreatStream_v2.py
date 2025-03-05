@@ -380,7 +380,7 @@ def parse_indicators_list(iocs_list):
             indicator['type'] = indicator.get('subtype', '')
 
     iocs_context = list(map(lambda i: {INDICATOR_EXTENDED_MAPPING[k]: v for (k, v) in i.items() if
-                                       k in INDICATOR_EXTENDED_MAPPING.keys()}, iocs_list))
+                                       k in INDICATOR_EXTENDED_MAPPING}, iocs_list))
 
     for indicator in iocs_context:
         meta = indicator.pop('Meta', None)
@@ -774,7 +774,7 @@ def get_model_list(client: Client, model, limit="50"):
         sys.exit()
 
     threat_list_context = list(map(lambda m: {THREAT_MODEL_MAPPING[k]: v for (k, v) in m.items() if
-                                              k in THREAT_MODEL_MAPPING.keys()}, model_list))
+                                              k in THREAT_MODEL_MAPPING}, model_list))
     for m in threat_list_context:
         m['Type'] = model.title()
     # in case that no limit was passed, the stage of set to context is skipped

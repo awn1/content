@@ -3,7 +3,8 @@ from CommonServerPython import *  # noqa: F401
 import json
 import re
 import traceback
-from typing import Any, Dict, List, Mapping, Tuple
+from typing import Any
+from collections.abc import Mapping
 import urllib3
 
 """EclecticIQ Integration for Cortex XSOAR."""
@@ -20,7 +21,7 @@ DATE_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
 class Client(BaseClient):
     def sighting(self, value: str, description: str,
-                 title: str, tags: str, type_eiq: str, confidence_level: str) -> Dict[str, Any]:
+                 title: str, tags: str, type_eiq: str, confidence_level: str) -> dict[str, Any]:
         """Create the sighting using the '/entities' API endpoint
         :param value: sighting value
         :type value: str
@@ -75,7 +76,7 @@ class Client(BaseClient):
             data=json.dumps(sighting_schema)
         )
 
-    def lookup_obs(self, type_eiq: str, value: str) -> Dict[str, Any]:
+    def lookup_obs(self, type_eiq: str, value: str) -> dict[str, Any]:
         """Get observables using the '/observables' API endpoint.
         :param type_eiq: observable type
         :type type_eiq: str
@@ -90,7 +91,7 @@ class Client(BaseClient):
             params={"filter[type]": type_eiq, "filter[value]": value}
         )
 
-    def fetch_entity(self, id: str) -> Dict[str, Any]:
+    def fetch_entity(self, id: str) -> dict[str, Any]:
         """Get entity details by id.
         :param id: entity id
         :type: str
@@ -99,11 +100,11 @@ class Client(BaseClient):
         """
         return self._http_request(
             method='GET',
-            url_suffix='/entities/{}'.format(id),
+            url_suffix=f'/entities/{id}',
             params={}
         )
 
-    def get_observable_by_id(self, id: str) -> Dict[str, Any]:
+    def get_observable_by_id(self, id: str) -> dict[str, Any]:
         """Get observables by id.
         :param id: observable id
         :type id: str
@@ -116,7 +117,7 @@ class Client(BaseClient):
             params={}
         )
 
-    def observable(self, type_eiq: str, value: str, maliciousness: str) -> Dict[str, Any]:
+    def observable(self, type_eiq: str, value: str, maliciousness: str) -> dict[str, Any]:
         """Create the observable using the '/observables' API endpoint
         :param type_eiq: observable type
         :type type_eiq: str
@@ -178,7 +179,7 @@ class Client(BaseClient):
         return data or {}
 
 
-def get_platform_permission_ids(permissions_data: Any) -> List[Any]:
+def get_platform_permission_ids(permissions_data: Any) -> list[Any]:
     """Get permission ids required for user to authenticate.
     :param feeds: permissions_data
     :type response: list
@@ -201,7 +202,7 @@ def get_platform_permission_ids(permissions_data: Any) -> List[Any]:
     return ids_required_for_user
 
 
-def authenticate_user(ids_of_user: list, ids_required_for_user: list) -> Tuple[bool, List[int]]:
+def authenticate_user(ids_of_user: list, ids_required_for_user: list) -> tuple[bool, list[int]]:
     """Get user authentication and missing permission ids .
     :param ids_of_user: permission ids user have
     :type ids_of_user: list
@@ -218,7 +219,7 @@ def authenticate_user(ids_of_user: list, ids_required_for_user: list) -> Tuple[b
     return user_authenticated, value
 
 
-def get_permission_name_from_id(permission_data: Dict, permission_ids: list) -> Any:
+def get_permission_name_from_id(permission_data: dict, permission_ids: list) -> Any:
     """Get permission name from permission ids.
     :param permission_data: permission data
     :type permission_data: Dict
@@ -276,7 +277,7 @@ def data_ingestion(client: Client) -> Any:
         missing_permissions = "Read Permissions"
 
     if missing_permissions:
-        return "API Key is missing permissions {}".format(missing_permissions)
+        return f"API Key is missing permissions {missing_permissions}"
 
     return 'ok'
 
@@ -304,7 +305,7 @@ def maliciousness_to_dbotscore(maliciousness) -> int:
     return maliciousness_Dictionary[maliciousness]
 
 
-def prepare_observable_data(data: Any) -> Dict:
+def prepare_observable_data(data: Any) -> dict:
     """Prepare Observable data to show on UI.
     :param data: Observable data
     :type data: Dict
@@ -318,7 +319,7 @@ def prepare_observable_data(data: Any) -> Dict:
     return new_data
 
 
-def get_entity_data(client, data_item: Any) -> List[Any]:
+def get_entity_data(client, data_item: Any) -> list[Any]:
     """Get entity data to show on UI.
     :param data_item: Data from lookup obsrvables Dict
     :type data_item: Any
@@ -350,7 +351,7 @@ def get_entity_data(client, data_item: Any) -> List[Any]:
     return entity_data_Dict_list
 
 
-def prepare_entity_data(data: Any, obs_data: Any) -> Dict[Any, Any]:
+def prepare_entity_data(data: Any, obs_data: Any) -> dict[Any, Any]:
     """Prepare entity data to show on UI.
     :param data: Entity data
     :type data: Any
@@ -501,8 +502,7 @@ def EclecticIQ_lookup_observables(client: Client, args: Any) -> CommandResults:
         if observable.get("entities"):
             entity_data = get_entity_data(client, observable)
             final_data = entity_data
-    human_readable_title = 'EclecticIQ observable reputation - {}'.format(
-        value_eiq)
+    human_readable_title = f'EclecticIQ observable reputation - {value_eiq}'
     human_readable = tableToMarkdown(human_readable_title, final_data)
     context['Entity'] = createContext(
         data=final_data, removeNull=True)

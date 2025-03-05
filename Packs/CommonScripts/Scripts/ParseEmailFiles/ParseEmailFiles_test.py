@@ -1,5 +1,3 @@
-# coding=utf-8
-from __future__ import print_function
 
 import pytest
 
@@ -53,7 +51,7 @@ def exec_command_for_file(
                 }
             ]
         else:
-            raise ValueError('Unimplemented command called: {}'.format(name))
+            raise ValueError(f'Unimplemented command called: {name}')
 
     return executeCommand
 
@@ -103,7 +101,7 @@ def test_eml_smtp_type(mocker):
                 }
             ]
         else:
-            raise ValueError('Unimplemented command called: {}'.format(name))
+            raise ValueError(f'Unimplemented command called: {name}')
 
     mocker.patch.object(demisto, 'args', return_value={'entryid': 'test'})
     mocker.patch.object(demisto, 'executeCommand', side_effect=executeCommand)
@@ -179,7 +177,7 @@ def test_eml_contains_eml(mocker):
                 }
             ]
         else:
-            raise ValueError('Unimplemented command called: {}'.format(name))
+            raise ValueError(f'Unimplemented command called: {name}')
 
     mocker.patch.object(demisto, 'args', return_value={'entryid': 'test'})
     mocker.patch.object(demisto, 'executeCommand', side_effect=executeCommand)
@@ -227,7 +225,7 @@ def test_eml_contains_msg(mocker):
                 }
             ]
         else:
-            raise ValueError('Unimplemented command called: {}'.format(name))
+            raise ValueError(f'Unimplemented command called: {name}')
 
     mocker.patch.object(demisto, 'args', return_value={'entryid': 'test'})
     mocker.patch.object(demisto, 'executeCommand', side_effect=executeCommand)
@@ -272,7 +270,7 @@ def test_eml_contains_eml_depth(mocker):
                 }
             ]
         else:
-            raise ValueError('Unimplemented command called: {}'.format(name))
+            raise ValueError(f'Unimplemented command called: {name}')
 
     mocker.patch.object(demisto, 'args', return_value={'entryid': 'test', 'max_depth': '1'})
     mocker.patch.object(demisto, 'executeCommand', side_effect=executeCommand)
@@ -317,7 +315,7 @@ def test_eml_utf_text(mocker):
                 }
             ]
         else:
-            raise ValueError('Unimplemented command called: {}'.format(name))
+            raise ValueError(f'Unimplemented command called: {name}')
 
     mocker.patch.object(demisto, 'args', return_value={'entryid': 'test'})
     mocker.patch.object(demisto, 'executeCommand', side_effect=executeCommand)
@@ -368,7 +366,7 @@ def test_eml_utf_text_with_bom(mocker):
                 }
             ]
         else:
-            raise ValueError('Unimplemented command called: {}'.format(name))
+            raise ValueError(f'Unimplemented command called: {name}')
 
     mocker.patch.object(demisto, 'args', return_value={'entryid': 'test'})
     mocker.patch.object(demisto, 'executeCommand', side_effect=executeCommand)
@@ -406,7 +404,7 @@ def test_email_with_special_character(mocker):
                 }
             ]
         else:
-            raise ValueError('Unimplemented command called: {}'.format(name))
+            raise ValueError(f'Unimplemented command called: {name}')
 
     mocker.patch.object(demisto, 'args', return_value={'entryid': 'test', 'max_depth': '1'})
     mocker.patch.object(demisto, 'executeCommand', side_effect=executeCommand)
@@ -523,9 +521,9 @@ def test_email_raw_headers_from_is_cyrillic_characters(mocker):
     assert results[0]['EntryContext']['Email']['From'] == 'no-reply@google.com'
     assert results[0]['EntryContext']['Email']['To'] == 'test@test.com, example1@example.com'
     assert results[0]['EntryContext']['Email']['CC'] == 'test@test.com, example1@example.com'
-    assert results[0]['EntryContext']['Email']['HeadersMap']['From'] == u'"✅✅✅ ВА ! ' \
-                                                                        u'https://example.com  ." ' \
-                                                                        u'<no-reply@google.com>'
+    assert results[0]['EntryContext']['Email']['HeadersMap']['From'] == '"✅✅✅ ВА ! ' \
+                                                                        'https://example.com  ." ' \
+                                                                        '<no-reply@google.com>'
     assert results[0]['EntryContext']['Email']['HeadersMap']['To'] == 'Guy Test <test@test.com>' \
                                                                       ', Guy Test1 <example1@example.com>'
     assert results[0]['EntryContext']['Email']['HeadersMap']['CC'] == 'Guy Test <test@test.com>, ' \
@@ -771,9 +769,9 @@ def test_msg_headers_map():
     assert 'TESTING' in email_data['Subject']
     assert 'This is a test email.' in email_data['Text']
     assert 'mobi777@gmail.com' in email_data['From']
-    assert 47 == len(email_data['HeadersMap'])
+    assert len(email_data['HeadersMap']) == 47
     assert isinstance(email_data['HeadersMap']['Received'], list)
-    assert 8 == len(email_data['HeadersMap']['Received'])
+    assert len(email_data['HeadersMap']['Received']) == 8
     assert '1; DM6PR11MB2810; 31:tCNnPn/K8BROQtLwu3Qs1Fz2TjDW+b7RiyfdRvmvCG+dGRQ08+3CN4i8QpLn2o4' \
            in email_data['HeadersMap']['X-Microsoft-Exchange-Diagnostics'][2]
     assert '2eWTrUmQCI=; 20:7yMOvCHfrNUNaJIus4SbwkpcSids8EscckQZzX/oGEwux6FJcH42uCQd9tNH8gmDkvPw' \
@@ -872,8 +870,8 @@ def test_eml_contains_htm_attachment(mocker):
     results = demisto.results.call_args[0]
     assert len(results) == 1
     assert results[0]['Type'] == entryTypes['note']
-    assert results[0]['EntryContext']['Email'][u'Attachments'] == '1.htm'
-    assert results[0]['EntryContext']['Email'][u'AttachmentsData'][0]['Name'] == '1.htm'
+    assert results[0]['EntryContext']['Email']['Attachments'] == '1.htm'
+    assert results[0]['EntryContext']['Email']['AttachmentsData'][0]['Name'] == '1.htm'
 
 
 def test_signed_attachment(mocker):
@@ -962,7 +960,7 @@ def test_eml_base64_header_comment_although_string(mocker):
                 }
             ]
         else:
-            raise ValueError('Unimplemented command called: {}'.format(name))
+            raise ValueError(f'Unimplemented command called: {name}')
 
     mocker.patch.object(demisto, 'args', return_value={'entryid': 'test'})
     mocker.patch.object(demisto, 'executeCommand', side_effect=executeCommand)
@@ -1029,14 +1027,14 @@ def test_md_output_empty_body_text():
         'From': 'email2@paloaltonetworks.com',
         'Text': None
     }
-    expected = u'### Results:\n' \
-               u'* From:\temail2@paloaltonetworks.com\n' \
-               u'* To:\temail1@paloaltonetworks.com\n' \
-               u'* CC:\t\n' \
-               u'* Subject:\t\n' \
-               u'* Attachments:\t\n\n\n' \
-               u'### HeadersMap\n' \
-               u'**No entries.**\n'
+    expected = '### Results:\n' \
+               '* From:\temail2@paloaltonetworks.com\n' \
+               '* To:\temail1@paloaltonetworks.com\n' \
+               '* CC:\t\n' \
+               '* Subject:\t\n' \
+               '* Attachments:\t\n\n\n' \
+               '### HeadersMap\n' \
+               '**No entries.**\n'
 
     md = data_to_md(email_data)
     assert expected == md
@@ -1045,14 +1043,14 @@ def test_md_output_empty_body_text():
         'To': 'email1@paloaltonetworks.com',
         'From': 'email2@paloaltonetworks.com',
     }
-    expected = u'### Results:\n' \
-               u'* From:\temail2@paloaltonetworks.com\n' \
-               u'* To:\temail1@paloaltonetworks.com\n' \
-               u'* CC:\t\n' \
-               u'* Subject:\t\n' \
-               u'* Attachments:\t\n\n\n' \
-               u'### HeadersMap\n' \
-               u'**No entries.**\n'
+    expected = '### Results:\n' \
+               '* From:\temail2@paloaltonetworks.com\n' \
+               '* To:\temail1@paloaltonetworks.com\n' \
+               '* CC:\t\n' \
+               '* Subject:\t\n' \
+               '* Attachments:\t\n\n\n' \
+               '### HeadersMap\n' \
+               '**No entries.**\n'
 
     md = data_to_md(email_data)
     assert expected == md
@@ -1074,15 +1072,15 @@ def test_md_output_with_body_text():
         'From': 'email2@paloaltonetworks.com',
         'Text': '<email text>'
     }
-    expected = u'### Results:\n' \
-               u'* From:\temail2@paloaltonetworks.com\n' \
-               u'* To:\temail1@paloaltonetworks.com\n' \
-               u'* CC:\t\n' \
-               u'* Subject:\t\n' \
-               u'* Body/Text:\t[email text]\n' \
-               u'* Attachments:\t\n\n\n' \
-               u'### HeadersMap\n' \
-               u'**No entries.**\n'
+    expected = '### Results:\n' \
+               '* From:\temail2@paloaltonetworks.com\n' \
+               '* To:\temail1@paloaltonetworks.com\n' \
+               '* CC:\t\n' \
+               '* Subject:\t\n' \
+               '* Body/Text:\t[email text]\n' \
+               '* Attachments:\t\n\n\n' \
+               '### HeadersMap\n' \
+               '**No entries.**\n'
 
     md = data_to_md(email_data)
     assert expected == md
@@ -1100,9 +1098,9 @@ def test_create_headers_map_empty_headers():
      - Validate that the function does not fail
     """
     msg_dict = {
-        'From': None, 'CC': None, 'BCC': None, 'To': u'test@demisto.com', 'Depth': 0, 'HeadersMap': {},
-        'Attachments': u'image002.png,image003.png,image004.png,image001.png', 'Headers': None, 'Text': u'Hi',
-        'Subject': u'test'
+        'From': None, 'CC': None, 'BCC': None, 'To': 'test@demisto.com', 'Depth': 0, 'HeadersMap': {},
+        'Attachments': 'image002.png,image003.png,image004.png,image001.png', 'Headers': None, 'Text': 'Hi',
+        'Subject': 'test'
     }
     headers, headers_map = create_headers_map(msg_dict.get('Headers'))
     assert headers == []
@@ -1231,8 +1229,8 @@ def test_long_subject_and_special_characters(mocker):
 
     assert len(results) == 1
     assert results[0]['Type'] == entryTypes['note']
-    assert results[0]['EntryContext']['Email']['Subject'] == u'Those characters : üàéüö will mess with the ' \
-                                                             u'parsing automation'
+    assert results[0]['EntryContext']['Email']['Subject'] == 'Those characters : üàéüö will mess with the ' \
+                                                             'parsing automation'
 
 
 def test_pkcs7_mime(mocker):
@@ -1262,18 +1260,18 @@ def test_pkcs7_mime(mocker):
 
 def test_PtypString():
     data_value = DataModel.PtypString('IPM.Note')
-    assert data_value == u'IPM.Note'
+    assert data_value == 'IPM.Note'
 
     data_value = DataModel.PtypString('I\x00P\x00M\x00.\x00N\x00o\x00t\x00e\x00')
-    assert data_value == u'IPM.Note'
+    assert data_value == 'IPM.Note'
 
     data_value = DataModel.PtypString(b'e\x9c\xe6\xb9pe')
-    assert data_value == u'eśćąpe'
+    assert data_value == 'eśćąpe'
 
 
 @pytest.mark.parametrize('payload, answer', [
     ('escape', 'escape'),
-    (u'eśćąpe', u'eśćąpe')
+    ('eśćąpe', 'eśćąpe')
 ])
 def test_decode_attachment_payload_non_base64(payload, answer):
     class MockedMessage:

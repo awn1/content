@@ -26,16 +26,14 @@ class Client:
         return url
 
     def create_headers(self, bearer_token):
-        headers = {"Authorization": "Bearer {}".format(bearer_token)}
+        headers = {"Authorization": f"Bearer {bearer_token}"}
         return headers
 
     def connect_to_endpoint(self, url, headers):
         response = requests.request("GET", url, headers=headers)
         if response.status_code != 200:
             raise Exception(
-                "Request returned an error: {} {}".format(
-                    response.status_code, response.text
-                )
+                f"Request returned an error: {response.status_code} {response.text}"
             )
         return response.json()
 
@@ -133,8 +131,8 @@ class Client:
             int(demisto.args().get('page'))
         except ValueError:
             return_error("Page must be an integer.")
-        for user in ((Client.auth(self).search_users(q=name, page=int(demisto.args().get('page')),
-                                                     count=int(demisto.args().get('count')), include_entities=True))):
+        for user in (Client.auth(self).search_users(q=name, page=int(demisto.args().get('page')),
+                                                     count=int(demisto.args().get('count')), include_entities=True)):
             if 'url' in user.entities.keys():
                 user_url = user.entities.get('url').get('urls')[0].get('expanded_url')
             else:
@@ -206,7 +204,7 @@ def test_module(client):
     """
 
     result = client.say_hello('DBot')
-    if 'Hello DBot' == result:
+    if result == 'Hello DBot':
         return 'ok'
     else:
         return 'Test failed because ......'

@@ -5,7 +5,8 @@ from CommonServerUserPython import *
 ''' IMPORTS '''
 import requests
 import traceback
-from typing import Dict, Optional, List, Any, Callable, Collection
+from typing import Any
+from collections.abc import Callable, Collection
 
 # Disable insecure warnings
 requests.packages.urllib3.disable_warnings()
@@ -14,7 +15,7 @@ requests.packages.urllib3.disable_warnings()
 # Integration information
 INTEGRATION_NAME = 'illuminate'
 INTEGRATION_CONTEXT_BRAND = 'Illuminate'
-MALICIOUS_DATA: Dict[str, str] = {
+MALICIOUS_DATA: dict[str, str] = {
     'Vendor': 'illuminate',
     'Description': 'illuminate has determined that this indicator is malicious via internal analysis.'
 }
@@ -22,7 +23,7 @@ MALICIOUS_DATA: Dict[str, str] = {
 ''' HELPER FUNCTIONS '''
 
 
-class IdNamePair(object):
+class IdNamePair:
     def __init__(self, unique_id: int, name: str):
         self.id = unique_id
         self.name = name
@@ -31,7 +32,7 @@ class IdNamePair(object):
         return f'id = {self.id}, name = {self.name}'
 
 
-class EnrichmentOutput(object):
+class EnrichmentOutput:
     def __init__(self, illuminate_context_data: dict, raw_data: dict, indicator_type: str) -> None:
         self.illuminate_context_data = illuminate_context_data
         self.raw_data = raw_data
@@ -61,10 +62,10 @@ class EnrichmentOutput(object):
             indicator_value: str,
             indicator_type: str,
             reputation_key: str,
-            extra_context: Optional[dict] = None
+            extra_context: dict | None = None
     ):
         if self.has_context_data():
-            reputation_context: Dict[str, Any] = {primary_key: indicator_value}
+            reputation_context: dict[str, Any] = {primary_key: indicator_value}
 
             if extra_context is not None:
                 reputation_context.update(extra_context)
@@ -146,26 +147,26 @@ class Client(BaseClient):
         return EnrichmentOutput(context_data, raw_data, indicator_type)
 
     @staticmethod
-    def get_data_key(data: dict, key: str) -> Optional[Any]:
+    def get_data_key(data: dict, key: str) -> Any | None:
         return None if key not in data else data[key]
 
     @staticmethod
-    def get_nested_data_key(data: dict, key: str, nested_key: str) -> Optional[Any]:
+    def get_nested_data_key(data: dict, key: str, nested_key: str) -> Any | None:
         top_level = Client.get_data_key(data, key)
         return None if top_level is None or nested_key not in top_level else top_level[nested_key]
 
     @staticmethod
-    def get_data_key_as_date(data: dict, key: str, fmt: str) -> Optional[str]:
+    def get_data_key_as_date(data: dict, key: str, fmt: str) -> str | None:
         value = Client.get_data_key(data, key)
         return None if value is None else datetime.fromtimestamp(value / 1000.0).strftime(fmt)
 
     @staticmethod
-    def get_data_key_as_list(data: dict, key: str) -> List[Any]:
+    def get_data_key_as_list(data: dict, key: str) -> list[Any]:
         data_list = Client.get_data_key(data, key)
         return [] if data_list is None or not isinstance(data[key], (list,)) else data_list
 
     @staticmethod
-    def get_data_key_as_list_of_values(data: dict, key: str, value_key: str) -> List[Any]:
+    def get_data_key_as_list_of_values(data: dict, key: str, value_key: str) -> list[Any]:
         data_list = Client.get_data_key_as_list(data, key)
         return [value_data[value_key] for value_data in data_list]
 
@@ -226,9 +227,9 @@ def perform_test_module(client: Client):
     client.perform_test_request()
 
 
-def domain_command(client: Client, args: dict) -> List[EnrichmentOutput]:
-    domains: List[str] = argToList(args.get('domain'))
-    enrichment_data_list: List[EnrichmentOutput] = []
+def domain_command(client: Client, args: dict) -> list[EnrichmentOutput]:
+    domains: list[str] = argToList(args.get('domain'))
+    enrichment_data_list: list[EnrichmentOutput] = []
 
     for domain in domains:
         enrichment_data: EnrichmentOutput = client.enrich_indicator(domain, 'domain')
@@ -247,9 +248,9 @@ def domain_command(client: Client, args: dict) -> List[EnrichmentOutput]:
     return enrichment_data_list
 
 
-def email_command(client: Client, args: dict) -> List[EnrichmentOutput]:
-    emails: List[str] = argToList(args.get('email'))
-    enrichment_data_list: List[EnrichmentOutput] = []
+def email_command(client: Client, args: dict) -> list[EnrichmentOutput]:
+    emails: list[str] = argToList(args.get('email'))
+    enrichment_data_list: list[EnrichmentOutput] = []
 
     for email in emails:
         enrichment_data: EnrichmentOutput = client.enrich_indicator(email, 'email')
@@ -262,9 +263,9 @@ def email_command(client: Client, args: dict) -> List[EnrichmentOutput]:
     return enrichment_data_list
 
 
-def ip_command(client: Client, args: dict) -> List[EnrichmentOutput]:
-    ips: List[str] = argToList(args.get('ip'))
-    enrichment_data_list: List[EnrichmentOutput] = []
+def ip_command(client: Client, args: dict) -> list[EnrichmentOutput]:
+    ips: list[str] = argToList(args.get('ip'))
+    enrichment_data_list: list[EnrichmentOutput] = []
 
     for ip in ips:
         enrichment_data: EnrichmentOutput = client.enrich_indicator(ip, 'ip')
@@ -277,9 +278,9 @@ def ip_command(client: Client, args: dict) -> List[EnrichmentOutput]:
     return enrichment_data_list
 
 
-def file_command(client: Client, args: dict) -> List[EnrichmentOutput]:
-    files: List[str] = argToList(args.get('file'))
-    enrichment_data_list: List[EnrichmentOutput] = []
+def file_command(client: Client, args: dict) -> list[EnrichmentOutput]:
+    files: list[str] = argToList(args.get('file'))
+    enrichment_data_list: list[EnrichmentOutput] = []
 
     for file in files:
         enrichment_data: EnrichmentOutput = client.enrich_indicator(file, 'file')
@@ -294,9 +295,9 @@ def file_command(client: Client, args: dict) -> List[EnrichmentOutput]:
     return enrichment_data_list
 
 
-def illuminate_enrich_string_command(client: Client, args: dict) -> List[EnrichmentOutput]:
-    strings: List[str] = argToList(args.get('string'))
-    enrichment_data_list: List[EnrichmentOutput] = []
+def illuminate_enrich_string_command(client: Client, args: dict) -> list[EnrichmentOutput]:
+    strings: list[str] = argToList(args.get('string'))
+    enrichment_data_list: list[EnrichmentOutput] = []
 
     for string in strings:
         enrichment_data_list.append(client.enrich_indicator(string, 'string'))
@@ -304,9 +305,9 @@ def illuminate_enrich_string_command(client: Client, args: dict) -> List[Enrichm
     return enrichment_data_list
 
 
-def illuminate_enrich_ipv6_command(client: Client, args: dict) -> List[EnrichmentOutput]:
-    ips: List[str] = argToList(args.get('ip'))
-    enrichment_data_list: List[EnrichmentOutput] = []
+def illuminate_enrich_ipv6_command(client: Client, args: dict) -> list[EnrichmentOutput]:
+    ips: list[str] = argToList(args.get('ip'))
+    enrichment_data_list: list[EnrichmentOutput] = []
 
     for ip in ips:
         enrichment_data_list.append(client.enrich_indicator(ip, 'ipv6'))
@@ -314,9 +315,9 @@ def illuminate_enrich_ipv6_command(client: Client, args: dict) -> List[Enrichmen
     return enrichment_data_list
 
 
-def illuminate_enrich_mutex_command(client: Client, args: dict) -> List[EnrichmentOutput]:
-    mutexes: List[str] = argToList(args.get('mutex'))
-    enrichment_data_list: List[EnrichmentOutput] = []
+def illuminate_enrich_mutex_command(client: Client, args: dict) -> list[EnrichmentOutput]:
+    mutexes: list[str] = argToList(args.get('mutex'))
+    enrichment_data_list: list[EnrichmentOutput] = []
 
     for mutex in mutexes:
         enrichment_data_list.append(client.enrich_indicator(mutex, 'mutex'))
@@ -324,9 +325,9 @@ def illuminate_enrich_mutex_command(client: Client, args: dict) -> List[Enrichme
     return enrichment_data_list
 
 
-def illuminate_enrich_http_request_command(client: Client, args: dict) -> List[EnrichmentOutput]:
-    http_requests: List[str] = argToList(args.get('http-request'))
-    enrichment_data_list: List[EnrichmentOutput] = []
+def illuminate_enrich_http_request_command(client: Client, args: dict) -> list[EnrichmentOutput]:
+    http_requests: list[str] = argToList(args.get('http-request'))
+    enrichment_data_list: list[EnrichmentOutput] = []
 
     for http_request in http_requests:
         enrichment_data_list.append(client.enrich_indicator(http_request, 'httpRequest'))
@@ -334,9 +335,9 @@ def illuminate_enrich_http_request_command(client: Client, args: dict) -> List[E
     return enrichment_data_list
 
 
-def url_command(client: Client, args: dict) -> List[EnrichmentOutput]:
-    urls: List[str] = argToList(args.get('url'))
-    enrichment_data_list: List[EnrichmentOutput] = []
+def url_command(client: Client, args: dict) -> list[EnrichmentOutput]:
+    urls: list[str] = argToList(args.get('url'))
+    enrichment_data_list: list[EnrichmentOutput] = []
 
     for url in urls:
         enrichment_data: EnrichmentOutput = client.enrich_indicator(url, 'url')
@@ -375,7 +376,7 @@ def main():
             perform_test_module(client)
             demisto.results('ok')
         elif command in commands:
-            enrichment_outputs: List[EnrichmentOutput] = commands[command](client, demisto.args())
+            enrichment_outputs: list[EnrichmentOutput] = commands[command](client, demisto.args())
             [e.return_outputs() for e in enrichment_outputs]
     except Exception as e:
         err_msg = f'Error in {INTEGRATION_NAME} Integration [{e}]\nTrace:\n{traceback.format_exc()}'

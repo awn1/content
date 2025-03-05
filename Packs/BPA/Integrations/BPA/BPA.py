@@ -1,4 +1,3 @@
-from typing import Dict, Tuple, List
 import urllib3
 from CommonServerPython import *
 
@@ -99,7 +98,7 @@ class Client(BaseClient):
         return response
 
     def submit_task_request(self, running_config, system_info, license_info, system_time, generate_zip_bundle,
-                            timeout) -> Dict:
+                            timeout) -> dict:
         data = {
             'xml': running_config,
             'system_info': system_info,
@@ -122,12 +121,12 @@ class Client(BaseClient):
 
 def create_output(doc: dict):
     doc_output = {}
-    for key in doc.keys():
+    for key in doc:
         doc_output[string_to_context_key(key)] = doc.get(key)
     return doc_output
 
 
-def get_documentation_command(client: Client, args: Dict) -> Tuple[str, Dict, Dict]:
+def get_documentation_command(client: Client, args: dict) -> tuple[str, dict, dict]:
     raw = client.get_documentation_request()
     if not raw:
         raise Exception('Failed getting documentation from BPA')
@@ -152,7 +151,7 @@ def get_documentation_command(client: Client, args: Dict) -> Tuple[str, Dict, Di
     return human_readable, entry_context, raw
 
 
-def submit_task_command(client: Client, panorama: LightPanoramaClient, args: Dict) -> Tuple[str, Dict, Dict]:
+def submit_task_command(client: Client, panorama: LightPanoramaClient, args: dict) -> tuple[str, dict, dict]:
     try:
         running_config = panorama.get_running_config()
         system_info = panorama.get_system_info()
@@ -187,11 +186,11 @@ def get_checks_from_feature(feature, feature_name, category):
     return [transform_check(c, feature_name, category) for c in notes_checks + warnings_checks]
 
 
-def get_results_command(client: Client, args: Dict):
+def get_results_command(client: Client, args: dict):
     task_id = args.get('task_id', '')
     filter_by_check_id = args.get('check_id', '').split(',') if args.get('check_id') else []
     filter_by_check_name = args.get('check_name', '').split(',') if args.get('check_name') else []
-    raw: Dict = client.get_results_request(task_id)
+    raw: dict = client.get_results_request(task_id)
     status = raw.get('status')
     results = raw.get('results', {})
     exclude_passed_checks = args.get('exclude_passed_checks') == "true"
@@ -199,7 +198,7 @@ def get_results_command(client: Client, args: Dict):
     if not status:
         raise Exception("Invalid response from BPA")
 
-    job_checks: List[Dict] = []
+    job_checks: list[dict] = []
 
     if status == 'invalid':
         raise Exception("Job ID not valid or doesn't exist")

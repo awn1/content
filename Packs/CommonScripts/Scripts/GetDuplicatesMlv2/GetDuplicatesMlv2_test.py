@@ -19,7 +19,7 @@ def test_main(mocker):
         elif name == 'getIncidents':
             return demisto.exampleIncidents  # use original mock
         else:
-            raise ValueError('Unimplemented command called: {}'.format(name))
+            raise ValueError(f'Unimplemented command called: {name}')
 
     mocker.patch.object(demisto, 'args', return_value={
         "compareIndicators": "Email, IP, Domain, File SHA256, File MD5, URL",

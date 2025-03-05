@@ -159,7 +159,7 @@ def send_request(path, method='get', body=None, params=None, headers=None, file=
     body = body if body is not None else {}
     params = params if params is not None else {}
 
-    url = '{}{}'.format(SERVER_URL, path)
+    url = f'{SERVER_URL}{path}'
     if not headers:
         headers = {
             'Accept': 'application/json',
@@ -188,7 +188,7 @@ def send_request(path, method='get', body=None, params=None, headers=None, file=
     except Exception as e:
         if not res.content:
             return ''
-        raise Exception('Error parsing reply - {} - {}'.format(res.content, str(e)))
+        raise Exception(f'Error parsing reply - {res.content} - {str(e)}')
 
     if 'error' in obj:
         message = obj.get('error', {}).get('message')
@@ -198,11 +198,11 @@ def send_request(path, method='get', body=None, params=None, headers=None, file=
                 # Return an empty results array
                 'result': []
             }
-        raise Exception('ServiceNow Error: {}, details: {}'.format(message, details))
+        raise Exception(f'ServiceNow Error: {message}, details: {details}')
 
     if res.status_code < 200 or res.status_code >= 300:
-        raise Exception('Got status code {} with url {} with body {} with headers {}'
-                        .format(str(res.status_code), url, str(res.content), str(res.headers)))
+        raise Exception(f'Got status code {str(res.status_code)} with url {url} with body {str(res.content)} with headers {str(res.headers)}'
+                        )
 
     return obj
 
@@ -1394,7 +1394,7 @@ def fetch_incidents():
     query = ''
     if SYSPARM_QUERY:
         query += SYSPARM_QUERY + '^'
-    query += 'ORDERBY{0}^{0}>{1}'.format(TIMESTAMP_FIELD, snow_time)
+    query += f'ORDERBY{TIMESTAMP_FIELD}^{TIMESTAMP_FIELD}>{snow_time}'
 
     if query:
         query_params['sysparm_query'] = query
@@ -1411,8 +1411,8 @@ def fetch_incidents():
         labels = []
 
         if TIMESTAMP_FIELD not in result:
-            raise ValueError("The timestamp field [{}]"
-                             " does not exist in the ticket".format(TIMESTAMP_FIELD))
+            raise ValueError(f"The timestamp field [{TIMESTAMP_FIELD}]"
+                             " does not exist in the ticket")
 
         if count > SYSPARM_LIMIT:
             break
@@ -1477,8 +1477,8 @@ def test_module():
         if isinstance(ticket, list):
             ticket = ticket[0]
         if TIMESTAMP_FIELD not in ticket:
-            raise ValueError("The timestamp field [{}]"
-                             " does not exist in the ticket".format(TIMESTAMP_FIELD))
+            raise ValueError(f"The timestamp field [{TIMESTAMP_FIELD}]"
+                             " does not exist in the ticket")
 
 
 LOG('Executing command ' + demisto.command())

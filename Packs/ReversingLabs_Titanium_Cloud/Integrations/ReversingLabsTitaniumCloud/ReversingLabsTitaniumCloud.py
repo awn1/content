@@ -7,7 +7,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 VERSION = "v1.0.1"
-USER_AGENT = "ReversingLabs XSOAR TitaniumCloud {version}".format(version=VERSION)
+USER_AGENT = f"ReversingLabs XSOAR TitaniumCloud {VERSION}"
 HEADERS = {
     "User-Agent": USER_AGENT
 }
@@ -80,7 +80,7 @@ def validate_hash(hash_value):
             'regex': r'([a-fA-F\d]{64})'
         }
     }
-    if len(hash_value) not in type_dict.keys():
+    if len(hash_value) not in type_dict:
         return_error('Provided input string length does not match any hash type')
     if not re.match(type_dict[len(hash_value)]['regex'], hash_value):
         return_error('Provided input string is not as hash due to containing invalid characters')
@@ -95,28 +95,22 @@ def validate_http(r):
         try:
             return True, r.json()
         except Exception as e:
-            return False, 'HTTP response is not JSON [{error}] - {body}'.format(error=e, body=r.text)
+            return False, f'HTTP response is not JSON [{e}] - {r.text}'
     elif r.status_code in (401, 403):
         return False, 'Credential error - The provided TitaniumCloud credentials are either incorrect or lack ' \
-                      'API roles [{code}] - {body}'.format(code=r.status_code, body=r.text)
+                      f'API roles [{r.status_code}] - {r.text}'
     elif r.status_code == 404:
         return False, 'No reference found - There were no results found for the provided sample ' \
-                      '[{code}] - {body}'.format(code=r.status_code, body=r.text)
+                      f'[{r.status_code}] - {r.text}'
     else:
-        return False, 'An error has occurred [{code}] - {body}'.format(
-            code=r.status_code,
-            body=r.text
-        )
+        return False, f'An error has occurred [{r.status_code}] - {r.text}'
 
 
 def rldata(hash_type, hash_value):
     """
     Get the extended RL data
     """
-    endpoint = '/api/databrowser/rldata/query/{hash_type}/{hash_value}?format=json'.format(
-        hash_value=hash_value,
-        hash_type=hash_type
-    )
+    endpoint = f'/api/databrowser/rldata/query/{hash_type}/{hash_value}?format=json'
     ok, r = validate_http(requests.get(
         BASE_RL + endpoint,
         auth=AUTH,
@@ -172,10 +166,7 @@ def mwp(hash_type, hash_value):
     """
     Get the malware presence for the given hash
     """
-    endpoint = '/api/databrowser/malware_presence/query/{hash_type}/{hash_value}?extended=true&format=json'.format(
-        hash_value=hash_value,
-        hash_type=hash_type
-    )
+    endpoint = f'/api/databrowser/malware_presence/query/{hash_type}/{hash_value}?extended=true&format=json'
     ok, r = validate_http(requests.get(
         BASE_URL + endpoint,
         auth=AUTH,
@@ -187,7 +178,7 @@ def mwp(hash_type, hash_value):
     if not contents:
         return False, 'Unexpected JSON reply:\n' + str(r)
     classification = contents["status"]
-    md = '## ReversingLabs Malware Presence for {hash_value}\n'.format(hash_value=hash_value)
+    md = f'## ReversingLabs Malware Presence for {hash_value}\n'
     md += 'Malware status: **{mwp_status}**\n'.format(mwp_status=contents['status'])
     md += 'First seen: **' + demisto.gets(contents, 'first_seen') + '**\n'
     md += 'Last seen: **' + demisto.gets(contents, 'last_seen') + '**\n'

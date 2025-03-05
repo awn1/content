@@ -49,7 +49,7 @@ def format_bulk_result(result, context_path):
     for status, idps in result.iteritems():
         for k, v in idps.iteritems():
             lines = [{"User": x} for x in v]
-            md = tableToMarkdown("{} {}".format(k.title(), status.title()), lines, ["User"])
+            md = tableToMarkdown(f"{k.title()} {status.title()}", lines, ["User"])
             res.append({
                 'Type': entryTypes['note'],
                 'Contents': result,
@@ -189,7 +189,7 @@ def fetch_incidents():
 
 
 ''' EXECUTION CODE '''
-LOG('command is {}'.format(demisto.command()))
+LOG(f'command is {demisto.command()}')
 
 try:
     luminate_client = LuminateV2Client(demisto.params()['luminate_api_url'],
@@ -217,7 +217,7 @@ try:
         demisto.results(get_ssh_access_logs_command())
 
 except Exception as e:
-    LOG('{}: {}'.format(type(e), e.message))
+    LOG(f'{type(e)}: {e.message}')
     if demisto.command() != 'test-module':
         LOG.print_log()
 

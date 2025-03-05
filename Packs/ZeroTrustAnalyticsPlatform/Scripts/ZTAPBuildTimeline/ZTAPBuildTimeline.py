@@ -1,6 +1,6 @@
 from CommonServerPython import *
 
-from typing import Dict, Any
+from typing import Any
 import traceback
 
 """ STANDALONE FUNCTION """
@@ -106,7 +106,7 @@ def build_timeline(entries):
 """ COMMAND FUNCTION """
 
 
-def build_timeline_command(args: Dict[str, Any]) -> CommandResults:
+def build_timeline_command(args: dict[str, Any]) -> CommandResults:
     incident = demisto.incident()
     input_tag = incident.get("CustomFields").get("ztapinputtag")
     entries = demisto.executeCommand(

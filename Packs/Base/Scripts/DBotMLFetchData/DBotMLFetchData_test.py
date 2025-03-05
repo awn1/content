@@ -101,7 +101,7 @@ def test_get_url_features(mocker):
     email_body = 'https://www.a.com https://www.b.com http://www.c.com/vcvc/vcvc/vc/b'  # disable-secrets-detection
     embedded_url = 'https://www.a.com'  # disable-secrets-detection
     all_urls = email_body.split() + [embedded_url]
-    email_html = '<a href="{}">Link</a>'.format(embedded_url)
+    email_html = f'<a href="{embedded_url}">Link</a>'
     soup = BeautifulSoup(email_html, "html.parser")
     url_features = get_url_features(email_body, email_html, soup)
 

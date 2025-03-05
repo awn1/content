@@ -422,8 +422,7 @@ def main():
 
     except Exception as e:
         return_error(
-            "Failed to execute {} command. Error: {}".format(
-                demisto.command(), str(e)))
+            f"Failed to execute {demisto.command()} command. Error: {str(e)}")
 
 
 if __name__ in ['__main__', 'builtin', 'builtins']:

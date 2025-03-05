@@ -6,7 +6,7 @@ from CommonServerUserPython import *  # noqa
 
 """
 
-from typing import Dict, Any
+from typing import Any
 
 
 EXPANSE_LOGO = (
@@ -111,7 +111,7 @@ EXPANSE_LOGO = (
 """ COMMAND FUNCTION """
 
 
-def expanse_print_suggestions(args: Dict[str, Any]) -> CommandResults:
+def expanse_print_suggestions(args: dict[str, Any]) -> CommandResults:
     ip = args.get("ip")
     port = args.get("port")
     fqdn = args.get("fqdn")

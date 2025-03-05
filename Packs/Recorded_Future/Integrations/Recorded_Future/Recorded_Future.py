@@ -801,7 +801,7 @@ def hashlist_lookup(limit, risk_lower, risk_higher, orderby, direction):
     if direction:
         params['direction'] = direction
     if risk_lower and risk_higher:
-        params['riskScore'] = '[{},{}]'.format(risk_lower, risk_higher)
+        params['riskScore'] = f'[{risk_lower},{risk_higher}]'
 
     response = http_request('get', cmd_url, params=params)
     return response
@@ -912,7 +912,7 @@ def iplist_lookup(limit, risk_lower, risk_higher, orderby, direction):
     if direction:
         params['direction'] = direction
     if risk_lower and risk_higher:
-        params['riskScore'] = '[{},{}]'.format(risk_lower, risk_higher)
+        params['riskScore'] = f'[{risk_lower},{risk_higher}]'
 
     response = http_request('get', cmd_url, params=params)
     return response
@@ -1021,7 +1021,7 @@ def domainlist_lookup(limit, risk_lower, risk_higher, orderby, direction):
     if direction:
         params['direction'] = direction
     if risk_lower and risk_higher:
-        params['riskScore'] = '[{},{}]'.format(risk_lower, risk_higher)
+        params['riskScore'] = f'[{risk_lower},{risk_higher}]'
 
     response = http_request('get', cmd_url, params=params)
     return response
@@ -1131,7 +1131,7 @@ def urllist_lookup(limit, risk_lower, risk_higher, orderby, direction):
     if direction:
         params['direction'] = direction
     if risk_lower and risk_higher:
-        params['riskScore'] = '[{},{}]'.format(risk_lower, risk_higher)
+        params['riskScore'] = f'[{risk_lower},{risk_higher}]'
 
     response = http_request('get', cmd_url, params=params)
     return response
@@ -1229,7 +1229,7 @@ def vulnlist_lookup(limit, risk_lower, risk_higher, orderby, direction):
     if direction:
         params['direction'] = direction
     if risk_lower and risk_higher:
-        params['riskScore'] = '[{},{}]'.format(risk_lower, risk_higher)
+        params['riskScore'] = f'[{risk_lower},{risk_higher}]'
 
     response = http_request('get', cmd_url, params=params)
     return response
@@ -1602,7 +1602,7 @@ def get_alerts_command():
     triggered_time = None
     if triggered:
         date, _ = parse_date_range(triggered, date_format='%Y-%m-%d %H:%M:%S')
-        triggered_time = '[{},)'.format(date)
+        triggered_time = f'[{date},)'
 
     response = json.loads(
         get_alerts(rule_id, triggered_time, limit, assignee, status, freetext, offset, orderby, direction))

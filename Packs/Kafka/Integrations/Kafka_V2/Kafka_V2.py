@@ -92,7 +92,7 @@ def create_incident(message, topic):
         'Message': message.value
     }
     incident = {
-        'name': 'Kafka {} partition:{} offset:{}'.format(topic, message.partition_id, message.offset),
+        'name': f'Kafka {topic} partition:{message.partition_id} offset:{message.offset}',
         'details': message.value,
         'rawJSON': json.dumps(raw)
     }
@@ -184,8 +184,7 @@ def print_topics(client):
                         partition_output['EarliestOffset'] = partition.earliest_available_offset()
                         partition_output['OldestOffset'] = partition.latest_available_offset()
                     except Exception as e:
-                        demisto.error('Failed fetching available offset for topic {} partition {} - {}'.format(
-                            topic.name, partition.id, str(e))
+                        demisto.error(f'Failed fetching available offset for topic {topic.name} partition {partition.id} - {str(e)}'
                         )
                 partitions.append(partition_output)
 
@@ -233,9 +232,9 @@ def produce_message(client):
                 message=str(value),
                 partition_key=partitioning_key
             )
-        demisto.results('Message was successfully produced to topic \'{}\''.format(topic))
+        demisto.results(f'Message was successfully produced to topic \'{topic}\'')
     else:
-        return_error('Topic {} was not found in Kafka'.format(topic))
+        return_error(f'Topic {topic} was not found in Kafka')
 
 
 def consume_message(client):
@@ -255,7 +254,7 @@ def consume_message(client):
         )
         message = consumer.consume()
         md = tableToMarkdown(
-            name='Message consumed from topic \'{}\''.format(topic),
+            name=f'Message consumed from topic \'{topic}\'',
             t={
                 'Offset': message.offset,
                 'Message': message.value
@@ -286,7 +285,7 @@ def consume_message(client):
             'EntryContext': ec
         })
     else:
-        return_error('Topic {} was not found in Kafka'.format(topic))
+        return_error(f'Topic {topic} was not found in Kafka')
 
 
 def fetch_partitions(client):
@@ -299,7 +298,7 @@ def fetch_partitions(client):
         partitions = kafka_topic.partitions.keys()
 
         md = tableToMarkdown(
-            name='Available partitions for topic \'{}\''.format(topic),
+            name=f'Available partitions for topic \'{topic}\'',
             t=partitions,
             headers='Partitions'
         )
@@ -321,7 +320,7 @@ def fetch_partitions(client):
             'EntryContext': ec
         })
     else:
-        return_error('Topic {} was not found in Kafka'.format(topic))
+        return_error(f'Topic {topic} was not found in Kafka')
 
 
 def fetch_incidents(client):
@@ -336,7 +335,7 @@ def fetch_incidents(client):
     try:
         offset_to_fetch_from = int(offset_to_fetch_from)
     except ValueError as e:
-        demisto.error('Received invalid offset: {}. Using default of -2. Err: {}'.format(offset_to_fetch_from, e))
+        demisto.error(f'Received invalid offset: {offset_to_fetch_from}. Using default of -2. Err: {e}')
         offset_to_fetch_from = -2
     max_messages = demisto.params().get('max_messages', 50)
     try:
@@ -382,7 +381,7 @@ def fetch_incidents(client):
                 break
         consumer.stop()
     else:
-        return_error('No such topic \'{}\' to fetch incidents from.'.format(topic))
+        return_error(f'No such topic \'{topic}\' to fetch incidents from.')
 
     demisto.setLastRun({'last_fetched_partitions_offset': json.dumps(last_fetched_partitions_offset)})
     demisto.incidents(incidents)
@@ -392,7 +391,7 @@ def fetch_incidents(client):
 
 
 def main():
-    LOG('Command being called is {0}'.format(demisto.command()))
+    LOG(f'Command being called is {demisto.command()}')
     global log_stream
     BROKERS = demisto.params().get('brokers')
 
@@ -434,8 +433,8 @@ def main():
         if demisto.command() != 'test-module':
             stacktrace = traceback.format_exc()
             if stacktrace:
-                debug_log += '\nFull stacktrace:\n\n{0}'.format(stacktrace)
-        return_error('{0}\n\n{1}'.format(error_message, debug_log))
+                debug_log += f'\nFull stacktrace:\n\n{stacktrace}'
+        return_error(f'{error_message}\n\n{debug_log}')
 
     finally:
         if os.path.isfile('ca.cert'):
@@ -450,7 +449,7 @@ def main():
                 log_stream.close()
                 log_stream = None
             except Exception as e:
-                demisto.error('Kafka v2: unexpected exception when trying to remove log handler: {}'.format(e))
+                demisto.error(f'Kafka v2: unexpected exception when trying to remove log handler: {e}')
 
 
 if __name__ == "__builtin__" or __name__ == "builtins":

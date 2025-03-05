@@ -1149,7 +1149,7 @@ def test_get_issue_fields_issue_json_param():
     """
     from JiraV2 import get_issue_fields
     res = get_issue_fields(issue_json='{"description": "test"}')
-    assert {'description': 'test', 'fields': {}} == res
+    assert res == {'description': 'test', 'fields': {}}
 
 
 def test_get_issue_fields_issuejson_param():
@@ -1163,7 +1163,7 @@ def test_get_issue_fields_issuejson_param():
     """
     from JiraV2 import get_issue_fields
     res = get_issue_fields(issueJson='{"description": "test"}')
-    assert {'description': 'test', 'fields': {}} == res
+    assert res == {'description': 'test', 'fields': {}}
 
 
 def test_get_issue_fields():

@@ -115,7 +115,7 @@ def tokenize_text_other(unicode_text):
             tokens_list += [chr for chr in _unicode_chr_splitter(t) if chr]
             original_words_to_tokens = {c: t for c in tokens_list}
     else:
-        return_error('Unsupported tokenization method: when language is "Other" ({})'.format(tokenization_method))
+        return_error(f'Unsupported tokenization method: when language is "Other" ({tokenization_method})')
     return original_words_to_tokens, tokens_list
 
 
@@ -174,7 +174,7 @@ def map_indices_to_words(unicode_text):
 
 def handle_long_text(t, input_length):
     if input_length == 1:
-        return_error("Input text length ({}) exceeds the legal maximum length for preprocessing".format(len(t)))
+        return_error(f"Input text length ({len(t)}) exceeds the legal maximum length for preprocessing")
     else:
         return '', '', {}, {}
 

@@ -793,7 +793,7 @@ def main() -> None:
     # LOG('command is %s' % (demisto.command(), ))
     demisto.debug(f'Command being called is {demisto.command()}')
     try:
-        LOG('Command being called is {command}'.format(command=demisto.command()))
+        LOG(f'Command being called is {demisto.command()}')
         if demisto.command() == 'picus-get-access-token':
             getAccessToken()
         # Makes a comparison of the given vector's results

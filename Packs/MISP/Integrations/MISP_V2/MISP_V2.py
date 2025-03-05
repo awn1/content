@@ -1,6 +1,6 @@
 import logging
 import warnings
-from typing import Union, List, Any, Tuple, Dict
+from typing import Any
 from urllib.parse import urlparse
 
 import requests
@@ -17,7 +17,6 @@ def warn(*args):
     """
     Do nothing with warnings
     """
-    pass
 
 
 # Disable requests warnings
@@ -139,7 +138,7 @@ DISTRIBUTION_NUMBERS = {
 ''' HELPER FUNCTIONS '''
 
 
-def extract_error(error: list) -> List[dict]:
+def extract_error(error: list) -> list[dict]:
     """Extracting errors
 
     Args:
@@ -177,7 +176,7 @@ def extract_error(error: list) -> List[dict]:
     } for err in error]
 
 
-def build_list_from_dict(args: dict) -> List[dict]:
+def build_list_from_dict(args: dict) -> list[dict]:
     """
 
     Args:
@@ -193,7 +192,7 @@ def build_list_from_dict(args: dict) -> List[dict]:
     return [{k: v} for k, v in args.items()]
 
 
-def build_generic_object(template_name: str, args: List[dict]) -> GenericObjectGenerator:
+def build_generic_object(template_name: str, args: list[dict]) -> GenericObjectGenerator:
     """
 
     Args:
@@ -216,14 +215,14 @@ def build_generic_object(template_name: str, args: List[dict]) -> GenericObjectG
     return misp_object
 
 
-def convert_timestamp(timestamp: Union[str, int]) -> str:
+def convert_timestamp(timestamp: str | int) -> str:
     """
         Gets a timestamp from MISP response (1546713469) and converts it to human readable format
     """
     return datetime.utcfromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H:%M:%S')
 
 
-def replace_keys(obj_to_build: Union[dict, list, str]) -> Union[dict, list, str]:
+def replace_keys(obj_to_build: dict | list | str) -> dict | list | str:
     """
     Replacing keys from MISP's format to Demisto's (as appear in ENTITIESDICT)
 
@@ -288,7 +287,7 @@ def arrange_context_according_to_user_selection(context_data):
             remove_unselected_context_keys(obj)
 
 
-def build_context(response: Union[dict, requests.Response]) -> dict:  # type: ignore
+def build_context(response: dict | requests.Response) -> dict:  # type: ignore
     """
     Gets a MISP's response and building it to be in context. If missing key, will return the one written.
 
@@ -369,7 +368,7 @@ def build_context(response: Union[dict, requests.Response]) -> dict:  # type: ig
     return events  # type: ignore
 
 
-def build_attribute_context(response: Union[dict, requests.Response]) -> dict:
+def build_attribute_context(response: dict | requests.Response) -> dict:
     """
     Convert the response of attribute search returned from MIPS to the context output format.
     """
@@ -673,7 +672,7 @@ def get_time_now():
     return f'{time_now.tm_year}--{time_now.tm_mon}--{time_now.tm_mday}'
 
 
-def create_event(ret_only_event_id: bool = False) -> Union[int, None]:
+def create_event(ret_only_event_id: bool = False) -> int | None:
     """Creating event in MISP with the given attribute
 
     Args:
@@ -938,7 +937,7 @@ def build_misp_complex_filter(demisto_query: str) -> str:
     return demisto_query
 
 
-def search(post_to_warroom: bool = True) -> Tuple[dict, Any]:
+def search(post_to_warroom: bool = True) -> tuple[dict, Any]:
     """
     will search in MISP
     Returns
@@ -1019,7 +1018,7 @@ def search(post_to_warroom: bool = True) -> Tuple[dict, Any]:
         return {}, {}
 
 
-def search_attributes() -> Tuple[dict, Any]:
+def search_attributes() -> tuple[dict, Any]:
     """
     Execute a MIPS search using the 'attributes' controller.
     """
@@ -1210,7 +1209,7 @@ def add_object(event_id: str, obj: MISPObject):
     response = MISP.add_object(event_id, misp_object=obj)
     if 'errors' in response:
         errors = extract_error(response["errors"])
-        error_string = str()
+        error_string = ""
         for err in errors:
             error_string += f'\n\tError code: {err["code"]} ' \
                             f'\n\tMessage: {err["message"]}' \

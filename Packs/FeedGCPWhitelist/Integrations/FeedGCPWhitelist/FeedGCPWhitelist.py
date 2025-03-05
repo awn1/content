@@ -3,7 +3,8 @@ from CommonServerPython import *
 # IMPORTS
 import dns.resolver
 import re
-from typing import List, Dict, Callable, Tuple, Any
+from typing import Any
+from collections.abc import Callable
 
 # Disable insecure warnings
 requests.packages.urllib3.disable_warnings()
@@ -12,7 +13,7 @@ requests.packages.urllib3.disable_warnings()
 GOOGLE_BASE_DNS = "_cloud-netblocks.googleusercontent.com"
 
 
-def fetch_cidr(dns_address: str) -> List[Dict]:
+def fetch_cidr(dns_address: str) -> list[dict]:
     """Recursively builds a CIDR dictionary with the relevant ip and type
 
     Args:
@@ -58,7 +59,7 @@ class Client(BaseClient):
         return fetch_cidr(self._base_url)
 
 
-def test_module(client: Client, *_) -> Tuple[str, Dict[Any, Any], Dict[Any, Any]]:
+def test_module(client: Client, *_) -> tuple[str, dict[Any, Any], dict[Any, Any]]:
     """Builds the iterator to check that the feed is accessible.
     Args:
         client: Client object.
@@ -70,7 +71,7 @@ def test_module(client: Client, *_) -> Tuple[str, Dict[Any, Any], Dict[Any, Any]
     return 'ok', {}, {}
 
 
-def get_indicators(client: Client, params: Dict[str, str], args: Dict[str, str]) -> Tuple[str, Dict[Any, Any], Dict[Any, Any]]:
+def get_indicators(client: Client, params: dict[str, str], args: dict[str, str]) -> tuple[str, dict[Any, Any], dict[Any, Any]]:
     """Wrapper for retrieving indicators from the feed to the war-room.
 
     Args:
@@ -89,7 +90,7 @@ def get_indicators(client: Client, params: Dict[str, str], args: Dict[str, str])
     return human_readable, {}, {'raw_response': indicators}
 
 
-def fetch_indicators(client: Client, params: Dict[str, str]) -> List[Dict]:
+def fetch_indicators(client: Client, params: dict[str, str]) -> list[dict]:
     """Retrieves indicators from the feed
 
     Args:
@@ -137,8 +138,8 @@ def main():
             verify=verify_certificate,
             proxy=proxy)
 
-        commands: Dict[
-            str, Callable[[Client, Dict[str, str], Dict[str, str]], Tuple[str, Dict[Any, Any], Dict[Any, Any]]]
+        commands: dict[
+            str, Callable[[Client, dict[str, str], dict[str, str]], tuple[str, dict[Any, Any], dict[Any, Any]]]
         ] = {
             'test-module': test_module,
             'gcp-whitelist-get-indicators': get_indicators

@@ -9,7 +9,7 @@ import sys
 import threading
 import traceback
 from distutils.util import strtobool
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import requests
 import slack
@@ -35,7 +35,7 @@ USER_TAG_EXPRESSION = '<@(.*?)>'
 CHANNEL_TAG_EXPRESSION = '<#(.*?)>'
 URL_EXPRESSION = r'<(https?://.+?)(?:\|.+)?>'
 GUID_REGEX = r'(\{){0,1}[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}(\}){0,1}'
-ENTITLEMENT_REGEX = r'{}@(({})|(?:[\d_]+))_*(\|\S+)?\b'.format(GUID_REGEX, GUID_REGEX)
+ENTITLEMENT_REGEX = rf'{GUID_REGEX}@(({GUID_REGEX})|(?:[\d_]+))_*(\|\S+)?\b'
 MESSAGE_FOOTER = '\n**From Slack**'
 MIRROR_TYPE = 'mirrorEntry'
 INCIDENT_OPENED = 'incidentOpened'
@@ -43,7 +43,7 @@ INCIDENT_NOTIFICATION_CHANNEL = 'incidentNotificationChannel'
 PLAYGROUND_INVESTIGATION_TYPE = 9
 WARNING_ENTRY_TYPE = 11
 ENDPOINT_URL = 'https://oproxy.demisto.ninja/slack-poll'
-POLL_INTERVAL_MINUTES: Dict[Tuple, float] = {
+POLL_INTERVAL_MINUTES: dict[tuple, float] = {
     (0, 15): 1,
     (15, 60): 2,
     (60,): 5
@@ -60,7 +60,7 @@ SYNC_CONTEXT = True
 
 BOT_TOKEN: str
 ACCESS_TOKEN: str
-PROXY_URL: Optional[str]
+PROXY_URL: str | None
 PROXIES: dict
 DEDICATED_CHANNEL: str
 CLIENT: slack.WebClient
@@ -70,7 +70,7 @@ NOTIFY_INCIDENTS: bool
 INCIDENT_TYPE: str
 SEVERITY_THRESHOLD: int
 VERIFY_CERT: bool
-SSL_CONTEXT: Optional[ssl.SSLContext]
+SSL_CONTEXT: ssl.SSLContext | None
 QUESTION_LIFETIME: int
 BOT_NAME: str
 BOT_ICON_URL: str
@@ -175,7 +175,7 @@ def get_user_by_name(user_to_search: str, add_to_context: bool = True) -> dict:
     return user
 
 
-def search_slack_users(users: Union[list, str]) -> list:
+def search_slack_users(users: list | str) -> list:
     """
     Search given users in Slack
 
@@ -704,7 +704,7 @@ def check_for_answers():
         set_to_integration_context_with_retries({'users': users, 'questions': questions}, OBJECTS_TO_KEYS, SYNC_CONTEXT)
 
 
-def get_poll_minutes(current_time: datetime, sent: Optional[str]) -> float:
+def get_poll_minutes(current_time: datetime, sent: str | None) -> float:
     """
     Get the interval to wait before polling again in minutes.
 
@@ -775,7 +775,7 @@ def check_for_mirrors():
                     channel_id = mirror['channel_id']
                     if isinstance(auto_close, str):
                         auto_close = bool(strtobool(auto_close))
-                    users: List[Dict] = demisto.mirrorInvestigation(investigation_id,
+                    users: list[dict] = demisto.mirrorInvestigation(investigation_id,
                                                                     f'{mirror_type}:{direction}', auto_close)
                     if mirror_type != 'none':
                         try:
@@ -797,7 +797,7 @@ def check_for_mirrors():
             set_to_integration_context_with_retries(context, OBJECTS_TO_KEYS, SYNC_CONTEXT)
 
 
-def invite_to_mirrored_channel(channel_id: str, users: List[Dict]) -> list:
+def invite_to_mirrored_channel(channel_id: str, users: list[dict]) -> list:
     """
     Invite the relevant users to a mirrored channel
     Args:
@@ -834,7 +834,7 @@ def invite_to_mirrored_channel(channel_id: str, users: List[Dict]) -> list:
     return slack_users
 
 
-def extract_entitlement(entitlement: str, text: str) -> Tuple[str, str, str, str]:
+def extract_entitlement(entitlement: str, text: str) -> tuple[str, str, str, str]:
     """
     Extracts entitlement components from an entitlement string
     Args:
@@ -1309,9 +1309,9 @@ def get_conversation_by_name(conversation_name: str) -> dict:
 def filter_conversations(
     name: str = '',
     creator: str = '',
-    is_archived: Union[bool, None] = None,
-    is_general: Union[bool, None] = None,
-    is_private: Union[bool, None] = None
+    is_archived: bool | None = None,
+    is_general: bool | None = None,
+    is_private: bool | None = None
 ) -> list:
     """
     Get a filtered list of slack conversations
@@ -1337,7 +1337,7 @@ def filter_conversations(
         for c in conversations:
             if name and not re.search(name, c.get('name'), re.IGNORECASE):
                 continue
-            if creator and not creator.upper() == c.get('creator'):
+            if creator and creator.upper() != c.get('creator'):
                 continue
             if is_archived is not None and is_archived != c.get('is_archived'):
                 continue
@@ -1351,7 +1351,7 @@ def filter_conversations(
         if conversation_filter:
             return conversation_filter
 
-    filters: Dict[str, Union[str, bool]] = {}
+    filters: dict[str, str | bool] = {}
     if name:
         filters.update({'name': name})
     if creator:
@@ -1381,7 +1381,7 @@ def filter_conversations(
         for c in conversations:
             if name and not re.search(name, c.get('name'), re.IGNORECASE):
                 continue
-            if creator and not creator.upper() == c.get('creator'):
+            if creator and creator.upper() != c.get('creator'):
                 continue
             if is_archived is not None and is_archived != c.get('is_archived'):
                 continue
@@ -1458,7 +1458,6 @@ def slack_send():
             severity = int(severity)
         except Exception:
             severity = None
-            pass
 
     channel = original_channel
     if original_channel == INCIDENT_NOTIFICATION_CHANNEL or (not original_channel and message_type == INCIDENT_OPENED):
@@ -1640,7 +1639,7 @@ def send_message(destinations: list, entry: str, ignore_add_url: bool, integrati
 
 
 def send_message_to_destinations(destinations: list, message: str, thread_id: str, blocks: str = '') \
-        -> Optional[SlackResponse]:
+        -> SlackResponse | None:
     """
     Sends a message to provided destinations Slack.
 
@@ -1653,7 +1652,7 @@ def send_message_to_destinations(destinations: list, message: str, thread_id: st
     Returns:
         The Slack send response.
     """
-    response: Optional[SlackResponse] = None
+    response: SlackResponse | None = None
     body: dict = {}
 
     if message:
@@ -1672,7 +1671,7 @@ def send_message_to_destinations(destinations: list, message: str, thread_id: st
 
 
 def send_file(destinations: list, file_dict: dict, integration_context: dict, thread_id: str) -> \
-        Optional[SlackResponse]:
+        SlackResponse | None:
     """
     Sends a file to Slack.
 
@@ -1701,7 +1700,7 @@ def send_file(destinations: list, file_dict: dict, integration_context: dict, th
     return response
 
 
-def send_file_to_destinations(destinations: list, file_dict: dict, thread_id: str) -> Optional[SlackResponse]:
+def send_file_to_destinations(destinations: list, file_dict: dict, thread_id: str) -> SlackResponse | None:
     """
     Sends a file to provided destinations in Slack.
 
@@ -1713,7 +1712,7 @@ def send_file_to_destinations(destinations: list, file_dict: dict, thread_id: st
     Returns:
         The Slack send response.
     """
-    response: Optional[SlackResponse] = None
+    response: SlackResponse | None = None
     body = {
         'filename': file_dict['name']
     }
@@ -1733,7 +1732,7 @@ def send_file_to_destinations(destinations: list, file_dict: dict, thread_id: st
 
 def slack_send_request(to: str, channel: str, group: str, entry: str = '', ignore_add_url: bool = False,
                        thread_id: str = '', message: str = '', blocks: str = '', file_dict: dict = None) \
-        -> Optional[SlackResponse]:
+        -> SlackResponse | None:
     """
     Requests to send a message or a file to Slack.
 
@@ -2122,7 +2121,7 @@ def filter_channels_command():
     is_general = bool(strtobool(is_general)) if is_general else None
     is_private = bool(strtobool(is_private)) if is_private else None
 
-    command_results_list: List[Dict[str, Union[bool, str]]] = []
+    command_results_list: list[dict[str, bool | str]] = []
     filtered_conversations = filter_conversations(
         name=name,
         creator=creator,

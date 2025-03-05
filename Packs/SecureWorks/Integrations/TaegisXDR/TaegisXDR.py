@@ -1,6 +1,6 @@
 import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
-from typing import Any, Dict
+from typing import Any
 
 
 """ CONSTANTS """
@@ -75,7 +75,6 @@ class Client(BaseClient):
         self._client_id = client_id
         self._client_secret = client_secret
         self.verify = verify
-        return
 
     def auth(self) -> None:
         """Authenticate to the Taegis API using client_id and client_secret
@@ -93,9 +92,8 @@ class Client(BaseClient):
         token = response.get("access_token", None)
         self._auth_header = {"Authorization": f"Bearer {token}"}
 
-        return
 
-    def graphql_run(self, query: str, variables: Dict[str, Any] = None):
+    def graphql_run(self, query: str, variables: dict[str, Any] = None):
         """Perform a GraphQL query
 
         :type query: ``str``
@@ -104,7 +102,7 @@ class Client(BaseClient):
         :type variables: ``Dict[str, Any]``
         :param variables: The variables to utilize with the query
         """
-        json_data: Dict[str, Any] = {"query": query}
+        json_data: dict[str, Any] = {"query": query}
 
         if variables:
             json_data["variables"] = variables
@@ -117,7 +115,7 @@ class Client(BaseClient):
         )
         return response
 
-    def test(self) -> Dict[str, Any]:
+    def test(self) -> dict[str, Any]:
         """
         Get the current API/asset version for testing auth and connectivity
         """
@@ -400,7 +398,7 @@ def fetch_assets_command(client: Client, env: str, args=None):
     page = arg_to_number(args.get("page")) or 0
     page_size = arg_to_number(args.get("page_size")) or 10
 
-    variables: Dict[str, Any] = {
+    variables: dict[str, Any] = {
         "input": {},
         "pagination_input": {
             "limit": page_size,
@@ -528,10 +526,10 @@ def fetch_comments_command(client: Client, env: str, args=None):
 
     parent_type = args.get("parent_type", "investigation")
     if parent_type not in COMMENT_TYPES:
-        raise ValueError((
+        raise ValueError(
             f"The provided comment parent type, {parent_type}, is not valid. "
             f"Supported Parent Types Values: {parent_type}"
-        ))
+        )
 
     query = """
     query commentsByParent ($parent_type: String!, $parent_id: String!) {
@@ -584,7 +582,7 @@ def fetch_endpoint_command(client: Client, env: str, args=None):
     if not args.get("id"):
         raise ValueError("Cannot fetch endpoint information, missing id")
 
-    variables: Dict[str, Any] = {
+    variables: dict[str, Any] = {
         "id": args.get("id")
     }
 
@@ -970,7 +968,7 @@ def fetch_users_command(client: Client, env: str, args=None):
     page = int(args.get("page", 0))
     page_size = int(args.get("page_size", 10))
 
-    variables: Dict[str, Any] = {
+    variables: dict[str, Any] = {
         "filters": {
             "status": args.get("status", ""),
             "perPage": page_size,
@@ -1035,7 +1033,7 @@ def isolate_asset_command(client: Client, env: str, args=None):
     if not args.get("reason"):
         raise ValueError("Cannot isolate asset, missing reason")
 
-    variables: Dict[str, Any] = {
+    variables: dict[str, Any] = {
         "id": args.get("id"),
         "reason": args.get("reason")
     }
@@ -1077,9 +1075,9 @@ def update_alert_status_command(client: Client, env: str, args=None):
         raise ValueError("Alert status must be defined")
 
     if args.get("status").upper() not in ALERT_STATUSES:
-        raise ValueError((
+        raise ValueError(
             f"The provided status, {args['status']}, is not valid for updating an alert. "
-            f"Supported Status Values: {ALERT_STATUSES}"))
+            f"Supported Status Values: {ALERT_STATUSES}")
 
     variables = {
         "alert_ids": argToList(args.get("ids")),
@@ -1189,9 +1187,9 @@ def update_investigation_command(client: Client, env: str, args=None):
             continue
 
         if field == "status" and args.get("status") not in INVESTIGATION_STATUSES:
-            raise ValueError((
+            raise ValueError(
                 f"The provided status, {args['status']}, is not valid for updating an investigation. "
-                f"Supported Status Values: {INVESTIGATION_STATUSES}"))
+                f"Supported Status Values: {INVESTIGATION_STATUSES}")
 
         variables["investigation"][field] = args.get(field)
 
@@ -1340,7 +1338,7 @@ def main():
     command = demisto.command()
     demisto.info(f'Command being called is {command}')
 
-    commands: Dict[str, Any] = {
+    commands: dict[str, Any] = {
         "fetch-incidents": fetch_incidents,
         "taegis-create-comment": create_comment_command,
         "taegis-create-investigation": create_investigation_command,

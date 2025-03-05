@@ -45,8 +45,7 @@ def get_incidents_by_time(incident_time, incident_type, incident_id, hours_time_
     incident_time = parse_datetime(incident_time)
     max_date = incident_time + timedelta(hours=hours_time_frame)
     min_date = incident_time - timedelta(hours=hours_time_frame)
-    query = '{0}:>="{1}" and {0}:<="{2}" and type:"{3}"'.format(time_field, min_date.isoformat(), max_date.isoformat(),
-                                                                incident_type)
+    query = f'{time_field}:>="{min_date.isoformat()}" and {time_field}:<="{max_date.isoformat()}" and type:"{incident_type}"'
 
     if ignore_closed:
         query += " and -status: closed"

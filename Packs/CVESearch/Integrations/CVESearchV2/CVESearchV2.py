@@ -1,5 +1,5 @@
 import urllib3
-from typing import Dict, Any, List, Union
+from typing import Any
 
 from CommonServerPython import *
 
@@ -20,16 +20,16 @@ class Client(BaseClient):
         }
         super().__init__(base_url=base_url, headers=headers, verify=verify, proxy=proxy)
 
-    def cve_latest(self, limit) -> List[Dict[str, Any]]:
+    def cve_latest(self, limit) -> list[dict[str, Any]]:
         res = self._http_request(method='GET', url_suffix=f'/last/{limit}', timeout=60)
         return res
 
-    def cve(self, cve_id) -> Dict[str, Any]:
-        res: Dict[str, Any] = self._http_request(method='GET', url_suffix=f'cve/{cve_id}', timeout=60)
+    def cve(self, cve_id) -> dict[str, Any]:
+        res: dict[str, Any] = self._http_request(method='GET', url_suffix=f'cve/{cve_id}', timeout=60)
         return res or {}
 
 
-def cve_to_context(cve) -> Dict[str, str]:
+def cve_to_context(cve) -> dict[str, str]:
     """Returning a cve structure with the following fields:
     * ID: The cve ID.
     * CVSS: The cve score scale/
@@ -66,7 +66,7 @@ def test_module(client: Client):
     return 'ok', None, None
 
 
-def cve_latest_command(client: Client, limit) -> List[CommandResults]:
+def cve_latest_command(client: Client, limit) -> list[CommandResults]:
     """Returns the 30 latest updated CVEs.
     Args:
          limit int: The amount of CVEs to display
@@ -74,7 +74,7 @@ def cve_latest_command(client: Client, limit) -> List[CommandResults]:
          Latest 30 CVE details containing ID, CVSS, modified date, published date and description.
     """
     res = client.cve_latest(limit)
-    command_results: List[CommandResults] = []
+    command_results: list[CommandResults] = []
     for cve_details in res:
         data = cve_to_context(cve_details)
         indicator = generate_indicator(data)
@@ -99,7 +99,7 @@ def cve_latest_command(client: Client, limit) -> List[CommandResults]:
     return command_results
 
 
-def cve_command(client: Client, args: dict) -> Union[List[CommandResults], CommandResults]:
+def cve_command(client: Client, args: dict) -> list[CommandResults] | CommandResults:
     """Search for cve with the given ID and returns the cve data if found.
     Args:
            client: Integration client
@@ -109,7 +109,7 @@ def cve_command(client: Client, args: dict) -> Union[List[CommandResults], Comma
     """
     cve_id = args.get('cve_id', '')
     cve_ids = argToList(cve_id)
-    command_results: List[CommandResults] = []
+    command_results: list[CommandResults] = []
 
     for _id in cve_ids:
         if not valid_cve_id_format(_id):

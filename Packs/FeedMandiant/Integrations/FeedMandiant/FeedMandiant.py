@@ -2,7 +2,6 @@ import demistomock as demisto
 from CommonServerPython import *  # noqa # pylint: disable=unused-wildcard-import
 
 import urllib3
-from typing import Dict
 
 urllib3.disable_warnings()  # pylint: disable=no-member
 
@@ -102,7 +101,7 @@ class MandiantClient(BaseClient):
         return self._token
 
     def get_indicator_additional_info(self, identifier: str, indicator_type: str, info_type: str = "") \
-            -> Union[Dict, List]:
+            -> Union[dict, List]:
         """
         Get additional information for given indicator.
 
@@ -140,7 +139,7 @@ class MandiantClient(BaseClient):
                 res = call_result.get(info_type, [])
         return res
 
-    def get_indicators(self, indicator_type: str, params: Dict = None) -> List:
+    def get_indicators(self, indicator_type: str, params: dict = None) -> List:
         """
         Get additional information for given indicator.
 
@@ -201,7 +200,7 @@ def get_new_indicators(client: MandiantClient, last_run: str, indicator_type: st
 
 
 def get_indicator_list(client: MandiantClient, limit: int, first_fetch: str, indicator_type: str,
-                       update_context: bool = True) -> List[Dict]:
+                       update_context: bool = True) -> List[dict]:
     """
     Get list of indicators from given type.
     Args:
@@ -257,7 +256,7 @@ def get_verdict(mscore: Optional[str]) -> int:
         return Common.DBotScore.NONE
 
 
-def get_indicator_relationships(raw_indicator: Dict, indicator_field: str, entity_a_field: str, entity_a_type: str,
+def get_indicator_relationships(raw_indicator: dict, indicator_field: str, entity_a_field: str, entity_a_type: str,
                                 entity_b_field: str, entity_b_type: str, name: str, reverse_name: str):
     """
     Creates relationships for the given indicator
@@ -289,7 +288,7 @@ def get_indicator_relationships(raw_indicator: Dict, indicator_field: str, entit
     return relationships
 
 
-def create_malware_indicator(client: MandiantClient, raw_indicator: Dict) -> Dict:
+def create_malware_indicator(client: MandiantClient, raw_indicator: dict) -> dict:
     """
       Creates a malware indicator
       Args:
@@ -339,7 +338,7 @@ def create_malware_indicator(client: MandiantClient, raw_indicator: Dict) -> Dic
     return indicator_obj
 
 
-def create_actor_indicator(client: MandiantClient, raw_indicator: Dict) -> Dict:
+def create_actor_indicator(client: MandiantClient, raw_indicator: dict) -> dict:
     """
     Create indicator
     Args:
@@ -389,7 +388,7 @@ def create_actor_indicator(client: MandiantClient, raw_indicator: Dict) -> Dict:
     return indicator_obj
 
 
-def create_indicator(client: MandiantClient, raw_indicator: Dict) -> Dict:
+def create_indicator(client: MandiantClient, raw_indicator: dict) -> dict:
     """
     Create indicator
     Args:
@@ -426,7 +425,7 @@ MAP_INDICATORS_FUNCTIONS = {
 ''' COMMAND FUNCTIONS '''
 
 
-def test_module(client: MandiantClient, args: Dict) -> str:
+def test_module(client: MandiantClient, args: dict) -> str:
     """Tests API connectivity and authentication'
 
     Returning 'ok' indicates that the integration works like it is supposed to.
@@ -509,7 +508,7 @@ def enrich_indicators(client: MandiantClient, indicators_list: List, indicator_t
         indicator['relationships'] += reports_relationships + general_relationships + attack_pattern_relationships
 
 
-def fetch_indicators(client: MandiantClient, args: Dict = None, update_context: bool = True):
+def fetch_indicators(client: MandiantClient, args: dict = None, update_context: bool = True):
     """
     For each type the fetch indicator command will:
         1. Fetch a list of indicators, this is done in a single API call and retrieve minimal data for each indicator.
@@ -554,7 +553,7 @@ def fetch_indicators(client: MandiantClient, args: Dict = None, update_context: 
     return result
 
 
-def get_indicators_command(client: MandiantClient, args: Dict, update_context: bool = True):
+def get_indicators_command(client: MandiantClient, args: dict, update_context: bool = True):
     """
     Get indicators command
     Args:

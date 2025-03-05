@@ -30,7 +30,7 @@ def get_file_path(file_id):  # pragma: no cover
     filepath_result = demisto.getFilePath(file_id)
     if 'path' not in filepath_result:
         demisto.results(f'Error: entry {file_id} is not a file.')
-        return
+        return None
 
     return filepath_result['path']
 

@@ -118,7 +118,7 @@ def handle_int_field(key, value):
 
 def handle_list_field(key, value):
     if not value:  # empty list
-        return '{}={}'.format(key, str(value))
+        return f'{key}={str(value)}'
     queries_list = []
     for item in value:
         queries_list.append(handle_field[type(item)](key, item))
@@ -308,7 +308,7 @@ def main():
     MAX_CANDIDATES_IN_LIST = int(demisto.args()['maxResults'])
     EXTRA_QUERY = demisto.args().get('filterQuery')
     INCIDENT_FIELDS_APPLIED_CONDITION = demisto.args()['incidentFieldsAppliedCondition']
-    RAISE_ERROR_MISSING_VALUES = not (demisto.args()['skipMissingValues'] == 'yes')
+    RAISE_ERROR_MISSING_VALUES = demisto.args()['skipMissingValues'] != 'yes'
 
     # set the incident
     incident = merge_incident_fields(demisto.incidents()[0])  # type: ignore  # pylint: disable=no-value-for-parameter
@@ -396,7 +396,7 @@ def main():
     if len(duplicate_incidents or []) > 0:
         duplicate_incidents_rows = [incident_to_record(x, TIME_FIELD) for x in duplicate_incidents]
 
-        duplicate_incidents_rows = list(sorted(duplicate_incidents_rows, key=lambda x: (x['time'], x['id'])))
+        duplicate_incidents_rows = sorted(duplicate_incidents_rows, key=lambda x: (x['time'], x['id']))
 
         context = {
             'similarIncidentList': duplicate_incidents_rows[:MAX_CANDIDATES_IN_LIST],

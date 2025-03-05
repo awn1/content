@@ -196,7 +196,7 @@ def validate_provisioning_state(args):
         # being raised, then raise the below exception with a more general error message
         err_msg = 'Cannot execute this command because the ProvisioningState of the VM is \'Failed\'.'
         raise Exception(err_msg)
-    elif provisioning_state.lower() in PROVISIONING_STATE_TO_ERRORS.keys():
+    elif provisioning_state.lower() in PROVISIONING_STATE_TO_ERRORS:
         err_msg = PROVISIONING_STATE_TO_ERRORS.get(provisioning_state.lower())
         raise Exception(err_msg)
 
@@ -433,7 +433,7 @@ def http_request(method, url_suffix=None, data=None, headers=HEADERS,
         )
         green_codes = codes if codes else {200, 201, 202, 204}
         if r.status_code not in green_codes:
-            err_msg = 'Error in API call to Azure Compute Integration [{}] - {}'.format(r.status_code, r.reason)
+            err_msg = f'Error in API call to Azure Compute Integration [{r.status_code}] - {r.reason}'
             err = r.json().get('error')
             if err:
                 err_msg1 = '\nError code: {}\nError message: {}'.format(err.get('code'), err.get('message'))
@@ -545,7 +545,7 @@ def list_vms_command():
         }
         vms.append(vm)
 
-    title = 'Microsoft Azure - List of Virtual Machines in Resource Group "{}"'.format(resource_group)
+    title = f'Microsoft Azure - List of Virtual Machines in Resource Group "{resource_group}"'
     table_headers = ['Name', 'ID', 'Size', 'OS', 'Location', 'ProvisioningState', 'ResourceGroup']
     human_readable = tableToMarkdown(title, vms, headers=table_headers, removeNull=True)
     entry_context = {'Azure.Compute(val.Name && val.Name === obj.Name)': vms}
@@ -618,7 +618,7 @@ def get_vm_command():
         'ResourceGroup': args.get('resource_group')
     }
 
-    title = 'Properties of VM "{}"'.format(vm_name)
+    title = f'Properties of VM "{vm_name}"'
     table_headers = ['Name', 'ID', 'Size', 'OS', 'ProvisioningState', 'Location', 'PowerState']
     human_readable = tableToMarkdown(title, vm, headers=table_headers, removeNull=True)
     entry_context = {'Azure.Compute(val.Name && val.Name === obj.Name)': vm}
@@ -717,7 +717,7 @@ def create_vm_command():
         'ResourceGroup': args.get('resource_group')
     }
 
-    title = 'Created Virtual Machine "{}"'.format(vm_name)
+    title = f'Created Virtual Machine "{vm_name}"'
     human_readable = tableToMarkdown(title, vm, removeNull=True)
     entry_context = {'Azure.Compute(val.Name && val.Name === obj.Name)': vm}
     demisto.results({
@@ -813,7 +813,7 @@ def start_vm_command():
         'PowerState': 'VM starting'
     }
 
-    title = 'Power-on of Virtual Machine "{}" Successfully Initiated'.format(vm_name)
+    title = f'Power-on of Virtual Machine "{vm_name}" Successfully Initiated'
     human_readable = tableToMarkdown(title, vm, removeNull=True)
     entry_context = {'Azure.Compute(val.Name && val.Name === obj.Name)': vm}
     demisto.results({
@@ -868,7 +868,7 @@ def poweroff_vm_command():
         'PowerState': 'VM stopping'
     }
 
-    title = 'Power-off of Virtual Machine "{}" Successfully Initiated'.format(vm_name)
+    title = f'Power-off of Virtual Machine "{vm_name}" Successfully Initiated'
     human_readable = tableToMarkdown(title, vm, removeNull=True)
     entry_context = {'Azure.Compute(val.Name && val.Name === obj.Name)': vm}
     demisto.results({
@@ -902,7 +902,7 @@ try:
 
     if demisto.command() == 'test-module':
         test_module()
-    elif demisto.command() in commands.keys():
+    elif demisto.command() in commands:
         commands[demisto.command()]()
 
 except Exception as e:

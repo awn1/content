@@ -132,8 +132,7 @@ def apply_equals_cuts(query, cuts):
                 if use_and:
                     query = ("%s AND" % query)
                 if "time" in key:
-                    query = ("{} {}=CAST('{}' AS TIMESTAMP)".format(query, key,
-                                                                    cuts.get(key)))
+                    query = (f"{query} {key}=CAST('{cuts.get(key)}' AS TIMESTAMP)")
                     use_and = True
                 else:
                     if type(cuts.get(key)) is str:
@@ -174,14 +173,12 @@ def apply_datetime_cuts(query, name, start, finish):
         query = ("%s AND" % query)
 
     if finish is None:
-        query = ("{} {} AFTER CAST('{}' AS TIMESTAMP)".format(query, name,
-                                                              start))
+        query = (f"{query} {name} AFTER CAST('{start}' AS TIMESTAMP)")
     if start is None:
-        query = ("{} {} BEFORE CAST('{}' AS TIMESTAMP)".format(query, name,
-                                                               finish))
+        query = (f"{query} {name} BEFORE CAST('{finish}' AS TIMESTAMP)")
     if start is not None and finish is not None:
-        query = ("{} {} BETWEEN CAST('{}' AS TIMESTAMP) AND \
-CAST('{}' AS TIMESTAMP)".format(query, name, start, finish))
+        query = (f"{query} {name} BETWEEN CAST('{start}' AS TIMESTAMP) AND \
+CAST('{finish}' AS TIMESTAMP)")
 
     return query
 
@@ -441,8 +438,7 @@ def uptycs_get_alerts_command():
                 if metadata.get(key):
                     context[index]['pid'] = metadata.get(key)
                     break
-                else:
-                    context[index]['pid'] = 'Not applicable or unknown'
+                context[index]['pid'] = 'Not applicable or unknown'
             if bool(json.loads(
                     context[index].get('metadata')).get('indicatorId')):
                 context[index]['threat_indicator_id'] =\
@@ -1344,8 +1340,8 @@ def uptycs_get_parent_event_information():
 AND upt_rid = '{}'".format(uptday, ancestors[0].get("upt_rid", None))
 
     if query == "":
-        query = "SELECT * FROM process_events WHERE upt_day <= {} AND pid={} \
-AND upt_time<=CAST('{}' AS TIMESTAMP)".format(uptday, parent, child_add_time)
+        query = f"SELECT * FROM process_events WHERE upt_day <= {uptday} AND pid={parent} \
+AND upt_time<=CAST('{child_add_time}' AS TIMESTAMP)"
 
     equal_cuts = {
         "upt_asset_id": demisto.args().get('asset_id'),
@@ -1412,9 +1408,9 @@ def uptycs_get_process_child_processes():
         uptday = int(f"{str(day_list[0])}{str(day_list[1])}{str(day_list[2])}")
 
     if parent_end is None:
-        query = ("SELECT upt_time FROM process_events WHERE pid = {} AND \
-upt_asset_id = '{}' AND upt_time > CAST('{}' AS TIMESTAMP) \
-ORDER BY upt_time ASC limit 1".format(parent, asset_id, parent_start))
+        query = (f"SELECT upt_time FROM process_events WHERE pid = {parent} AND \
+upt_asset_id = '{asset_id}' AND upt_time > CAST('{parent_start}' AS TIMESTAMP) \
+ORDER BY upt_time ASC limit 1")
         query_type = 'global'
 
         post_data = {
@@ -1427,7 +1423,7 @@ ORDER BY upt_time ASC limit 1".format(parent, asset_id, parent_start))
         else:
             parent_end = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
-    query = ("WITH add_times AS (SELECT * FROM processes WHERE upt_added=True), \
+    query = (f"WITH add_times AS (SELECT * FROM processes WHERE upt_added=True), \
 remove_times AS (SELECT upt_time, upt_hash FROM processes WHERE \
 upt_added=False), temp_proc AS (SELECT aa.upt_asset_id, aa.pid, \
 aa.name, aa.path, aa.cmdline, aa.cwd, aa.parent, aa.pgroup, \
@@ -1437,10 +1433,10 @@ remove_times rr on aa.upt_hash=rr.upt_hash), new_proc AS \
 (SELECT upt_asset_id, pid, name, path, cmdline, cwd, parent, \
 pgroup, upt_hostname, upt_day, upt_add_time, \
 coalesce(temp_remove_time, current_timestamp) AS upt_remove_time \
-FROM temp_proc) SELECT * FROM new_proc WHERE upt_day>={} AND \
-parent = {} AND upt_asset_id = '{}' AND upt_add_time BETWEEN \
-CAST('{}' AS TIMESTAMP) AND CAST('{}' AS TIMESTAMP) ORDER BY \
-upt_add_time DESC".format(uptday, parent, asset_id, parent_start, parent_end))
+FROM temp_proc) SELECT * FROM new_proc WHERE upt_day>={uptday} AND \
+parent = {parent} AND upt_asset_id = '{asset_id}' AND upt_add_time BETWEEN \
+CAST('{parent_start}' AS TIMESTAMP) AND CAST('{parent_end}' AS TIMESTAMP) ORDER BY \
+upt_add_time DESC")
 
     if limit != -1 and limit is not None:
         query = (f"{query} LIMIT {limit}")

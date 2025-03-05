@@ -3,7 +3,7 @@ from CommonServerPython import *
 from CommonServerUserPython import *
 
 ''' IMPORTS '''
-from typing import Tuple, Dict, List, Any
+from typing import Any
 from _collections import defaultdict
 import ast
 
@@ -56,8 +56,8 @@ class Client(BaseClient):
                 try:
                     return res.json()
                 except ValueError as exception:
-                    raise DemistoException('Failed to parse json object from response: {}'
-                                           .format(res.content), exception)
+                    raise DemistoException(f'Failed to parse json object from response: {res.content}'
+                                           , exception)
 
             if res.status_code in [401]:
                 try:
@@ -90,7 +90,7 @@ def create_output(request: dict) -> dict:
         A dictionary containing all valid fields in the request
     """
     output = {}
-    for field in request.keys():
+    for field in request:
         value = request.get(field, None)
         if value not in [None, {}, []] and field not in FIELDS_TO_IGNORE:
             output[string_to_context_key(field)] = value
@@ -114,7 +114,7 @@ def args_to_query(args: dict) -> dict:
         A dictionary containing all valid valid query field that were passed in the args, converted into the format
         required for the http_request.
     """
-    request_fields: Dict[str, Any] = {}
+    request_fields: dict[str, Any] = {}
     for field in REQUEST_FIELDS:
         value = args.get(field, None)
         if value:
@@ -177,7 +177,7 @@ def create_modify_linked_input_data(linked_requests_id: list, comment: str) -> d
     """
     all_linked_requests = []
     for request_id in linked_requests_id:
-        linked_request: Dict[str, Any] = {
+        linked_request: dict[str, Any] = {
             'linked_request': {
                 'id': request_id
             }
@@ -220,7 +220,7 @@ def resolution_human_readable(output: dict) -> dict:
         A dictionary containing all the valid fields in the resolution output
     """
     hr = {}
-    for key in output.keys():
+    for key in output:
         if key == 'SubmittedBy':
             hr['SubmittedBy'] = output.get('SubmittedBy', {}).get('name', '')
         else:
@@ -288,7 +288,7 @@ def create_fetch_list_info(time_from: str, time_to: str, status: list, fetch_fil
         if fetch_filter:
             filters = ast.literal_eval(fetch_filter)
             if isinstance(filters, dict):
-                query: Dict[str, Any] = {
+                query: dict[str, Any] = {
                     'field': filters.get('field'),
                     'condition': filters.get('condition'),
                     'values': filters.get('values', '').split(','),
@@ -374,7 +374,7 @@ def list_requests_command(client: Client, args: dict):
     return markdown, context, result
 
 
-def delete_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
+def delete_request_command(client: Client, args: dict) -> tuple[str, dict, Any]:
     """
     Delete the request(s) with the given request_id
 
@@ -394,7 +394,7 @@ def delete_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
     return hr, {}, result
 
 
-def create_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
+def create_request_command(client: Client, args: dict) -> tuple[str, dict, Any]:
     """
     Create a new request with the given args
 
@@ -424,7 +424,7 @@ def create_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
     return markdown, context, result
 
 
-def update_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
+def update_request_command(client: Client, args: dict) -> tuple[str, dict, Any]:
     """
     Updates an existing request with the given args
 
@@ -455,7 +455,7 @@ def update_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
     return markdown, context, result
 
 
-def assign_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
+def assign_request_command(client: Client, args: dict) -> tuple[str, dict, Any]:
     """
     Assigns the given request to the given technician/group
 
@@ -476,7 +476,7 @@ def assign_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
     return markdown, {}, result
 
 
-def pickup_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
+def pickup_request_command(client: Client, args: dict) -> tuple[str, dict, Any]:
     """
     Picks up the given request to the current technician
 
@@ -493,7 +493,7 @@ def pickup_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
     return markdown, {}, result
 
 
-def linked_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
+def linked_request_command(client: Client, args: dict) -> tuple[str, dict, Any]:
     """
     Lists all the requests that are linked to the given request.
 
@@ -522,7 +522,7 @@ def linked_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
     return markdown, context, result
 
 
-def modify_linked_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
+def modify_linked_request_command(client: Client, args: dict) -> tuple[str, dict, Any]:
     """
     Links/Un-links the given request with all the other requests that where passed as arguments.
 
@@ -549,7 +549,7 @@ def modify_linked_request_command(client: Client, args: dict) -> Tuple[str, dict
     return markdown, {}, result
 
 
-def add_resolution_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
+def add_resolution_command(client: Client, args: dict) -> tuple[str, dict, Any]:
     """
     Adds the resolution to the given request
 
@@ -582,7 +582,7 @@ def add_resolution_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
     return markdown, {}, result
 
 
-def get_resolutions_list_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
+def get_resolutions_list_command(client: Client, args: dict) -> tuple[str, dict, Any]:
     """
     Gets the resolution of the given request
 
@@ -608,7 +608,7 @@ def get_resolutions_list_command(client: Client, args: dict) -> Tuple[str, dict,
     return markdown, context, result
 
 
-def close_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
+def close_request_command(client: Client, args: dict) -> tuple[str, dict, Any]:
     """
     Close the request with the given request_id with comments and resolution defined by the user.
 
@@ -620,7 +620,7 @@ def close_request_command(client: Client, args: dict) -> Tuple[str, dict, Any]:
         Demisto Outputs.
     """
     request_id = args.get('request_id')
-    closure_info: Dict[str, Any] = {
+    closure_info: dict[str, Any] = {
         "requester_ack_resolution": args.get('requester_ack_resolution', 'false'),
         "requester_ack_comments": args.get('requester_ack_comments', ''),
         "closure_comments": args.get('closure_comments', ''),
@@ -655,7 +655,7 @@ def fetch_incidents(client: Client, test_command: bool = False) -> list:
             return_error(f'Invalid fetch time range.\n{e.args[0]}')
     else:
         new_last_run = last_run
-    demisto_incidents: List = list()
+    demisto_incidents: list = list()
     time_from = new_last_run.get('time')
     time_to = date_to_timestamp(datetime.now(), date_format=date_format)
     list_info = create_fetch_list_info(str(time_from), str(time_to), client.fetch_status, client.fetch_filter,

@@ -6,14 +6,14 @@ from CommonServerPython import *  # noqa: F401
 
 from CommonServerUserPython import *  # noqa
 
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Any
 from ipaddress import IPv4Address, IPv4Network
 
 
 ''' STANDALONE FUNCTION '''
 
 
-def is_internal(net_list: Optional[List[IPv4Network]], ip: IPv4Address) -> bool:
+def is_internal(net_list: list[IPv4Network] | None, ip: IPv4Address) -> bool:
     """
     is_internal
     Checks if an IP address is a "internal".
@@ -35,14 +35,14 @@ def is_internal(net_list: Optional[List[IPv4Network]], ip: IPv4Address) -> bool:
     return result is not None
 
 
-def deconstruct_entry(entry: Dict[str, str],
-                      serial_fields: List[str],
-                      vsys_fields: List[str],
-                      sightings_fields: List[str],
-                      source_ip_fields: List[str]) -> Tuple[Optional[str],
-                                                            Optional[str],
-                                                            Optional[str],
-                                                            Optional[int]]:
+def deconstruct_entry(entry: dict[str, str],
+                      serial_fields: list[str],
+                      vsys_fields: list[str],
+                      sightings_fields: list[str],
+                      source_ip_fields: list[str]) -> tuple[str | None,
+                                                            str | None,
+                                                            str | None,
+                                                            int | None]:
     """
     deconstruct_entry
     Extracts device relevant fields from a log entry.
@@ -78,7 +78,7 @@ def deconstruct_entry(entry: Dict[str, str],
 ''' COMMAND FUNCTION '''
 
 
-def aggregate_command(args: Dict[str, Any]) -> CommandResults:
+def aggregate_command(args: dict[str, Any]) -> CommandResults:
     input_list = argToList(args.get('input', []))
     current_list = argToList(args.get('current', []))
 

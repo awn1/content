@@ -82,7 +82,7 @@ def test_get_taxii_failure(mocker):
     mocker.patch.object(client, 'fetch', return_value=[])
     val, time = Client.get_taxii(client, args)
     assert isinstance(val, list)
-    assert [] == val
+    assert val == []
 
 
 def test_get_taxii_error(mocker, capfd):

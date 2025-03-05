@@ -2,7 +2,7 @@ import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
 import json
 import traceback
-from typing import Dict, cast
+from typing import cast
 
 import ansible_runner
 import ssh_agent_setup
@@ -74,7 +74,7 @@ def rec_ansible_key_strip(obj):
 # COMMAND FUNCTIONS
 
 
-def generic_ansible(integration_name, command, args: Dict[str, Any]) -> CommandResults:
+def generic_ansible(integration_name, command, args: dict[str, Any]) -> CommandResults:
 
     readable_output = ""
     sshkey = ""
@@ -83,7 +83,7 @@ def generic_ansible(integration_name, command, args: Dict[str, Any]) -> CommandR
     if args.get('concurrency'):
         fork_count = cast(int, args.get('concurrency'))
 
-    inventory: Dict[str, dict] = {}
+    inventory: dict[str, dict] = {}
     inventory['all'] = {}
     inventory['all']['hosts'] = {}
 

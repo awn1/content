@@ -144,7 +144,7 @@ def http_request(method, endpoint, params=None, token=False):
         return_error("No authorization token provided")
     head = make_headers(endpoint, token)
     url = make_url(endpoint)
-    demisto.debug("Making request to {} with params: {}".format(url, params))
+    demisto.debug(f"Making request to {url} with params: {params}")
     r = requests.request(
         method,
         url,
@@ -160,8 +160,8 @@ def http_request(method, endpoint, params=None, token=False):
         res_json = r.json()
         return res_json
     except json.decoder.JSONDecodeError as err:
-        raise ValueError('Failed to parse response as JSON. Original response:\n{rtext}.\nError: {error}'
-                         .format(rtext=r.text, error=str(err)))
+        raise ValueError(f'Failed to parse response as JSON. Original response:\n{r.text}.\nError: {str(err)}'
+                         )
 
 
 def parse_events(events):
@@ -372,7 +372,7 @@ def get_expanse_domain_context(data):
     c = {
         "Name": data['domain'],
         "DNS": ((data.get('details') or {}).get('recentIps')
-                if is_not_empty_value(((data.get('details') or {}).get('recentIps')))
+                if is_not_empty_value((data.get('details') or {}).get('recentIps'))
                 else None),
         "CreationDate": data['whois'][0].get('creationDate'),
         "DomainStatus": data.get('dnsResolutionStatus'),
@@ -468,10 +468,10 @@ def get_expanse_domain_context(data):
         "BusinessUnits": [],
         "DNSSEC": data['whois'][0].get('dnssec') if is_not_empty_value(data['whois'][0].get('dnssec')) else None,
         "RecentIPs": ((data.get('details') or {}).get('recentIps')
-                      if is_not_empty_value(((data.get('details') or {}).get('recentIps')))
+                      if is_not_empty_value((data.get('details') or {}).get('recentIps'))
                       else None),
         "CloudResources": ((data['details'] or {}).get('cloudResources')
-                           if is_not_empty_value(((data['details'] or {}).get('cloudResources')))
+                           if is_not_empty_value((data['details'] or {}).get('cloudResources'))
                            else None),
         "LastSubdomainMetadata": (data.get('lastSubdomainMetadata')
                                   if is_not_empty_value(data.get('lastSubdomainMetadata'))
@@ -764,7 +764,7 @@ def fetch_incidents_command():
 
         # Add remaining incidents to cache
         if len(incidents) > 0:
-            demisto.debug("Updating cache to store {} incidents".format(len(incidents)))
+            demisto.debug(f"Updating cache to store {len(incidents)} incidents")
             cache["incidents"] = incidents
             demisto.setIntegrationContext(cache)
             demisto.setLastRun({
@@ -779,12 +779,12 @@ def fetch_incidents_command():
                 "start_time": yesterday
             })
     else:
-        demisto.debug("Found {} stored incidents".format(len(stored_incidents)))
+        demisto.debug(f"Found {len(stored_incidents)} stored incidents")
         # Send next PAGE_LIMIT number of incidents to demisto
         if len(stored_incidents) > PAGE_LIMIT:
             incidents_to_send = stored_incidents[:PAGE_LIMIT]
             del stored_incidents[:PAGE_LIMIT]
-            demisto.debug("Updating cache to store {} incidents".format(len(stored_incidents)))
+            demisto.debug(f"Updating cache to store {len(stored_incidents)} incidents")
             demisto.setLastRun({
                 "complete_for_today": False,
                 "start_time": yesterday
@@ -837,7 +837,7 @@ def ip_command():
         'IP(val.Address == obj.Address)': ip_context,
         'Expanse.IP(val.Address == obj.Address)': expanse_ip_context
     }
-    human_readable = tableToMarkdown("IP information for: {search}".format(search=search), expanse_ip_context)
+    human_readable = tableToMarkdown(f"IP information for: {search}", expanse_ip_context)
 
     return_outputs(human_readable, ec, ip)
 
@@ -874,7 +874,7 @@ def domain_command():
         'Expanse.Domain(val.Name == obj.Name)': expanse_domain_context
     }
 
-    human_readable = tableToMarkdown("Domain information for: {search}".format(search=search), expanse_domain_context)
+    human_readable = tableToMarkdown(f"Domain information for: {search}", expanse_domain_context)
 
     return_outputs(human_readable, ec, domain)
 
@@ -902,7 +902,7 @@ def certificate_command():
     ec = {
         'Expanse.Certificate(val.SearchTerm == obj.SearchTerm)': expanse_cert_context
     }
-    human_readable = tableToMarkdown("Certificate information for: {search}".format(search=common_name), expanse_cert_context)
+    human_readable = tableToMarkdown(f"Certificate information for: {common_name}", expanse_cert_context)
 
     return_outputs(human_readable, ec, cert)
 
@@ -946,7 +946,7 @@ def behavior_command():
 
     raw_flows = expanse_behavior_context['Flows']
     del expanse_behavior_context['Flows']  # Remove flow objects from human readable response
-    human_readable = tableToMarkdown("Expanse Behavior information for: {search}".format(search=search), expanse_behavior_context)
+    human_readable = tableToMarkdown(f"Expanse Behavior information for: {search}", expanse_behavior_context)
     expanse_behavior_context['Flows'] = raw_flows
     return_outputs(human_readable, ec, behaviors)
 
@@ -980,7 +980,7 @@ def exposures_command():
 
     raw_exposures = expanse_exposure_context['Exposures']
     del expanse_exposure_context['Exposures']  # Remove exposure objects from human readable response
-    human_readable = tableToMarkdown("Expanse Exposure information for: {search}".format(search=search), expanse_exposure_context)
+    human_readable = tableToMarkdown(f"Expanse Exposure information for: {search}", expanse_exposure_context)
     expanse_exposure_context['Exposures'] = raw_exposures
     return_outputs(human_readable, ec, exposures)
 
@@ -1021,7 +1021,7 @@ def domains_for_certificate_command():
 
     hr_context = context.copy()
     del hr_context['DomainList']  # Remove full objects from human readable response
-    human_readable = tableToMarkdown("Expanse Domains matching Certificate Common Name: {search}".format(search=search),
+    human_readable = tableToMarkdown(f"Expanse Domains matching Certificate Common Name: {search}",
                                      hr_context)
     return_outputs(human_readable, ec, matching_domains)
 
@@ -1047,7 +1047,7 @@ def fetch_certificates(params, token):
                 next_page = results.get('pagination', {}).get('next', None)
         return certificates
     except Exception as err:
-        demisto.error("Error fetching certificates: {}".format(err))
+        demisto.error(f"Error fetching certificates: {err}")
         return []
 
 
@@ -1060,9 +1060,9 @@ def fetch_certificate(md5_hash, token):
     :return: Certificate details objects
     """
     try:
-        return http_request('GET', 'assets/certificates/{}'.format(md5_hash), {}, token=token)
+        return http_request('GET', f'assets/certificates/{md5_hash}', {}, token=token)
     except Exception as err:
-        demisto.error("Error fetching certificate: {}".format(err))
+        demisto.error(f"Error fetching certificate: {err}")
         return {}
 
 
@@ -1087,7 +1087,7 @@ def fetch_ips(params, token):
                 next_page = results.get('pagination', {}).get('next', None)
         return ips
     except Exception as err:
-        demisto.error("Error fetching ips: {}".format(err))
+        demisto.error(f"Error fetching ips: {err}")
         return []
 
 

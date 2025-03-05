@@ -3,7 +3,6 @@ from CommonServerPython import *  # noqa: F401
 """
 AutoFocus Tags Feed integration
 """
-from typing import Dict, List, Optional
 
 import urllib3
 
@@ -85,7 +84,7 @@ class Client(BaseClient):
 
         add_sensitive_log_strs(api_key)
 
-    def get_tags(self, data: Dict[str, Any]):
+    def get_tags(self, data: dict[str, Any]):
         res = self._http_request('POST',
                                  url_suffix='tags',
                                  headers=self.headers,
@@ -252,7 +251,7 @@ def get_all_updated_tags_since_last_fetch(client: Client,
     return list_of_all_updated_tags
 
 
-def get_tag_class(tag_class: Optional[str], source: Optional[str]) -> Optional[str]:
+def get_tag_class(tag_class: str | None, source: str | None) -> str | None:
     """
     Returns the tag class as demisto indicator type.
     Args:
@@ -309,7 +308,7 @@ def create_publications(refs: list) -> list:
     return publications
 
 
-def create_indicators_fields(tag_details: Dict[str, Any]) -> Dict[str, Any]:
+def create_indicators_fields(tag_details: dict[str, Any]) -> dict[str, Any]:
     """
     Returns the indicator fields
     Args:
@@ -318,7 +317,7 @@ def create_indicators_fields(tag_details: Dict[str, Any]) -> Dict[str, Any]:
         A dictionary represents the indicator fields.
     """
 
-    fields: Dict[str, Any] = {}
+    fields: dict[str, Any] = {}
     tag = tag_details.get('tag', {})
     refs = json.loads(tag.get('refs', '[]'))
     fields['publications'] = create_publications(refs)
@@ -351,7 +350,7 @@ def update_integration_context_with_indicator_data(public_tag_name: str, tag_nam
     set_integration_context(integration_context)
 
 
-def create_relationships_for_tag(client: Client, name: str, tag_type: str, related_tags: List[str]):
+def create_relationships_for_tag(client: Client, name: str, tag_type: str, related_tags: list[str]):
     """
     Creates all the relationships of an indicator.
     Args:
@@ -433,11 +432,11 @@ def test_module(client: Client) -> str:
 
 def fetch_indicators(client: Client,
                      is_get_command: bool,
-                     tlp_color: Optional[str] = None,
-                     feed_tags: List = None,
+                     tlp_color: str | None = None,
+                     feed_tags: list = None,
                      limit: int = -1,
                      create_relationships: bool = True,
-                     ) -> List[Dict]:
+                     ) -> list[dict]:
     """
     Retrieves indicators from the feed
     Args:
@@ -456,7 +455,7 @@ def fetch_indicators(client: Client,
     for tag_details in iterator:
         tag_dict = tag_details.get('tag', {})
         public_tag_name = tag_dict.get('public_tag_name', '')
-        tag_name = tag_dict.get('tag_name' '')
+        tag_name = tag_dict.get('tag_name')
         tag_class = tag_dict.get('tag_class', '')
         source = tag_dict.get('source', '')
         tag_type = get_tag_class(tag_class, source)
@@ -494,8 +493,8 @@ def fetch_indicators(client: Client,
 
 
 def get_indicators_command(client: Client,
-                           params: Dict[str, str],
-                           args: Dict[str, str]
+                           params: dict[str, str],
+                           args: dict[str, str]
                            ) -> CommandResults:
     """
     Wrapper for retrieving indicators from the feed to the war-room.
@@ -531,7 +530,7 @@ def get_indicators_command(client: Client,
     )
 
 
-def fetch_indicators_command(client: Client, params: Dict[str, Any]) -> List[Dict]:
+def fetch_indicators_command(client: Client, params: dict[str, Any]) -> list[dict]:
     """
     Wrapper for fetching indicators from the feed to the Indicators tab.
     Args:

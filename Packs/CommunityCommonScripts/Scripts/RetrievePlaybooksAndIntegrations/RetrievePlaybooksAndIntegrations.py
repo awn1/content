@@ -1,7 +1,7 @@
 import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
 import traceback
-from typing import Any, Dict
+from typing import Any
 
 
 ''' STANDALONE FUNCTION '''
@@ -62,7 +62,7 @@ def get_subplaybook_tasks(playbooks, integrations, task):
 ''' COMMAND FUNCTION '''
 
 
-def retrieve_playbooks_and_integrations(args: Dict[str, Any]) -> CommandResults:
+def retrieve_playbooks_and_integrations(args: dict[str, Any]) -> CommandResults:
     playbooks: List[str] = []
     integrations: List[str] = []
     query = f'''name:"{args['playbook_name']}"'''

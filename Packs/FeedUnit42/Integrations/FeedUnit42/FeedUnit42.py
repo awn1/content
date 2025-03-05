@@ -1,4 +1,3 @@
-from typing import List, Dict, Tuple
 
 from taxii2client.common import TokenAuth
 from taxii2client.v20 import Server, as_pages
@@ -81,7 +80,7 @@ def parse_indicators(indicator_objects: list, feed_tags: list = [], tlp_color: O
     if indicator_objects:
         for indicator_object in indicator_objects:
             pattern = indicator_object.get('pattern')
-            for key in UNIT42_TYPES_TO_DEMISTO_TYPES.keys():
+            for key in UNIT42_TYPES_TO_DEMISTO_TYPES:
                 if pattern.startswith(f'[{key}'):  # retrieve only Demisto indicator types
                     indicator_obj = {
                         "value": indicator_object.get('name'),
@@ -104,7 +103,7 @@ def parse_indicators(indicator_objects: list, feed_tags: list = [], tlp_color: O
     return indicators
 
 
-def parse_indicators_relationships(indicators: List, matched_relationships: Dict, id_to_object: Dict):
+def parse_indicators_relationships(indicators: list, matched_relationships: dict, id_to_object: dict):
     """Parse the relationships between indicators to attack-patterns, malware and campaigns.
 
     Args:
@@ -236,8 +235,8 @@ def parse_reports(report_objects: list, feed_tags: list = [], tlp_color: Optiona
     return reports
 
 
-def parse_reports_relationships(reports: List, sub_reports: List, matched_relationships: Dict,
-                                id_to_object: Dict, courses_of_action_products: Dict) -> Tuple[list, list]:
+def parse_reports_relationships(reports: list, sub_reports: list, matched_relationships: dict,
+                                id_to_object: dict, courses_of_action_products: dict) -> tuple[list, list]:
     """Parse the relationships between reports' malware to attack-patterns and indicators.
 
     Args:
@@ -293,8 +292,8 @@ def parse_reports_relationships(reports: List, sub_reports: List, matched_relati
     return reports, indicators
 
 
-def parse_related_indicators(report: Dict, related_ids: List, id_to_object: Dict, matched_relationships: Dict,
-                             courses_of_action_products: Dict) -> List[Dict]:
+def parse_related_indicators(report: dict, related_ids: list, id_to_object: dict, matched_relationships: dict,
+                             courses_of_action_products: dict) -> list[dict]:
     """ Creates feed related indicators to Stix report object.
 
     Args:
@@ -363,8 +362,8 @@ def parse_related_indicators(report: Dict, related_ids: List, id_to_object: Dict
     return indicators
 
 
-def create_mitre_indicator(indicator_val: str, relation_object: Dict, matched_relationships: Dict, id_to_object: Dict,
-                           courses_of_action_products: Dict) -> Dict:
+def create_mitre_indicator(indicator_val: str, relation_object: dict, matched_relationships: dict, id_to_object: dict,
+                           courses_of_action_products: dict) -> dict:
     """Creates MITRE ATT&CK indicator with the related mitre course of action.
 
     Args:
@@ -379,7 +378,7 @@ def create_mitre_indicator(indicator_val: str, relation_object: Dict, matched_re
     """
 
     relationship = relation_object.get('id')
-    courses_of_action: Dict[str, List] = {}
+    courses_of_action: dict[str, list] = {}
 
     if relationship in matched_relationships:
         for source in matched_relationships[relationship]:
@@ -445,7 +444,7 @@ def create_course_of_action_field(courses_of_action: dict) -> str:
     return markdown
 
 
-def match_relationships(relationships: List):
+def match_relationships(relationships: list):
     """Creates a dict that connects object_id to all objects_ids it has a relationship with.
 
     Args:
@@ -455,7 +454,7 @@ def match_relationships(relationships: List):
         Dict. Connects object_id to all objects_ids it has a relationship with. In the form of `id: [related_ids]`
         Dict. Connects courses of action id with the relationship product.
     """
-    matches: Dict[str, set] = {}
+    matches: dict[str, set] = {}
     courses_of_action_products = {}
 
     for relationship in relationships:
@@ -496,7 +495,7 @@ def test_module(client: Client) -> str:
     return 'ok'
 
 
-def fetch_indicators(client: Client, feed_tags: list = [], tlp_color: Optional[str] = None) -> List[Dict]:
+def fetch_indicators(client: Client, feed_tags: list = [], tlp_color: Optional[str] = None) -> list[dict]:
     """Retrieves indicators and reports from the feed
 
     Args:
@@ -536,7 +535,7 @@ def fetch_indicators(client: Client, feed_tags: list = [], tlp_color: Optional[s
     return indicators + reports + mitre_indicators
 
 
-def get_indicators_command(client: Client, args: Dict[str, str], feed_tags: list = [],
+def get_indicators_command(client: Client, args: dict[str, str], feed_tags: list = [],
                            tlp_color: Optional[str] = None) -> CommandResults:
     """Wrapper for retrieving indicators from the feed to the war-room.
 

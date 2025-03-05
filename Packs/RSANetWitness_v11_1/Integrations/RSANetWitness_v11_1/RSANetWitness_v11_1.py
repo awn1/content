@@ -33,7 +33,7 @@ def dict_list_to_str(dict_list):
         return ''
     string_list = []
     for dict in dict_list:
-        key_values = ["{}: {}".format(k, v) for k, v in dict.items()]
+        key_values = [f"{k}: {v}" for k, v in dict.items()]
         string_list.append(', '.join(key_values))
     return '\n'.join(string_list)
 
@@ -57,8 +57,8 @@ def get_token_request(username, password):
         - response body does not contain valid json (ValueError)
 
     """
-    username_password = "username={}&password={}".format(username, password)
-    url = '{}/auth/userpass'.format(BASE_PATH)
+    username_password = f"username={username}&password={password}"
+    url = f'{BASE_PATH}/auth/userpass'
     get_token_headers = {
         'Content-Type': 'application/x-www-form-urlencoded;charset=ISO-8859-1',
         'Accept': 'application/json; charset=UTF-8',
@@ -72,7 +72,7 @@ def get_token_request(username, password):
         return response.json()
     # bad request - NetWitness returns a common json structure for errors
     error_lst = response.json().get('errors')
-    raise ValueError('get_token failed with status: {}\n{}'.format(response.status_code, dict_list_to_str(error_lst)))
+    raise ValueError(f'get_token failed with status: {response.status_code}\n{dict_list_to_str(error_lst)}')
 
 
 def get_token():
@@ -103,7 +103,7 @@ GLOBAL VARS
 
 """
 SERVER_URL = demisto.params()['server']
-BASE_PATH = '{}/rest/api'.format(SERVER_URL)
+BASE_PATH = f'{SERVER_URL}/rest/api'
 USERNAME = demisto.params()['credentials']['identifier']
 PASSWORD = demisto.params()['credentials']['password']
 USE_SSL = not demisto.params()['insecure']
@@ -154,9 +154,7 @@ def http_request(method, url, body=None, headers=None, url_params=None):
     if url_params is not None:
         request_kwargs['params'] = url_params
 
-    LOG('Attempting {} request to {}\nWith params:{}\nWith body:\n{}'.format(method, url,
-                                                                             json.dumps(url_params, indent=4),
-                                                                             json.dumps(body, indent=4)))
+    LOG(f'Attempting {method} request to {url}\nWith params:{json.dumps(url_params, indent=4)}\nWith body:\n{json.dumps(body, indent=4)}')
     response = requests.request(
         method,
         url,
@@ -177,12 +175,12 @@ def http_request(method, url, body=None, headers=None, url_params=None):
         try:
             return response.json()
         except Exception as e:
-            demisto.debug('Could not parse response as a JSON.\nResponse is: {}.'
-                          '\nError is: {}'.format(response.content, e.message))
+            demisto.debug(f'Could not parse response as a JSON.\nResponse is: {response.content}.'
+                          f'\nError is: {e.message}')
             return None
     # bad request - NetWitness returns a common json structure for errors; a list of error objects
     error_lst = response.json().get('errors')
-    raise ValueError('Request failed with status: {}\n{}'.format(response.status_code, dict_list_to_str(error_lst)))
+    raise ValueError(f'Request failed with status: {response.status_code}\n{dict_list_to_str(error_lst)}')
 
 
 def get_incident_request(incident_id):
@@ -197,7 +195,7 @@ def get_incident_request(incident_id):
         - response body does not contain valid json (ValueError)
 
     """
-    url = '{}/incidents/{}'.format(BASE_PATH, incident_id)
+    url = f'{BASE_PATH}/incidents/{incident_id}'
 
     response = http_request(
         'GET',
@@ -226,7 +224,7 @@ def get_incident():
     )
 
     md_content = create_incident_md_table(incident)
-    md_title = "## NetWitness Get Incident {}".format(incident_id)
+    md_title = f"## NetWitness Get Incident {incident_id}"
 
     entry = {
         'Type': entryTypes['note'],
@@ -263,7 +261,7 @@ def get_incidents_request(since=None, until=None, page_number=None, page_size=10
         'pageNumber': page_number,
         'pageSize': page_size
     }
-    url = '{}/incidents'.format(BASE_PATH)
+    url = f'{BASE_PATH}/incidents'
 
     response = http_request(
         'GET',
@@ -296,7 +294,7 @@ def get_all_incidents(since=None, until=None, limit=None, page_number=0):
         # call get_incidents_request(), given user arguments
         # returns the response body on success
         # raises an exception on failed request
-        LOG('Requesting for page {}'.format(page_number))
+        LOG(f'Requesting for page {page_number}')
         response_body = get_incidents_request(
             since=since,
             until=until,
@@ -335,7 +333,7 @@ def get_all_incidents_from_beginning(since=None, until=None, limit=None, page_nu
         # call get_incidents_request(), given user arguments
         # returns the response body on success
         # raises an exception on failed request
-        LOG('Requesting for page {}'.format(page_number))
+        LOG(f'Requesting for page {page_number}')
         response_body = get_incidents_request(
             since=since,
             until=until,
@@ -415,7 +413,7 @@ def get_incidents():
         }
     }
     if has_next:
-        entry['HumanReadable'] += '\n### Not all incidents were fetched. Next page: {}'.format(next_page)
+        entry['HumanReadable'] += f'\n### Not all incidents were fetched. Next page: {next_page}'
     demisto.results(entry)
 
 
@@ -439,7 +437,7 @@ def update_incident_request(incident_id, assignee=None, status=None):
         'assignee': assignee,
         'status': status
     }
-    url = '{}/incidents/{}'.format(BASE_PATH, incident_id)
+    url = f'{BASE_PATH}/incidents/{incident_id}'
     response = http_request(
         'PATCH',
         url,
@@ -502,7 +500,7 @@ def delete_incident_request(incident_id):
 
     """
     LOG('Requesting to delete incident ' + incident_id)
-    url = '{}/incidents/{}'.format(BASE_PATH, incident_id)
+    url = f'{BASE_PATH}/incidents/{incident_id}'
     response = http_request(
         'DELETE',
         url,
@@ -530,7 +528,7 @@ def delete_incident():
 
     entry = {
         'Type': entryTypes['note'],
-        'Contents': 'Incident {} deleted successfully'.format(incident_id),
+        'Contents': f'Incident {incident_id} deleted successfully',
         'ContentsFormat': formats['text']
     }
     demisto.results(entry)
@@ -550,7 +548,7 @@ def get_alerts_request(incident_id, page_number=None, page_size=None):
 
     """
 
-    url = '{}/incidents/{}/alerts'.format(BASE_PATH, incident_id)
+    url = f'{BASE_PATH}/incidents/{incident_id}/alerts'
     url_params = {
         'pageNumber': page_number,
         'pageSize': page_size
@@ -579,7 +577,7 @@ def get_all_alerts(incident_id):
         # call get_alerts_request(), given user arguments
         # returns the response body on success
         # raises an exception on failed request
-        LOG('Requesting for page {}'.format(page_number))
+        LOG(f'Requesting for page {page_number}')
         response_body = get_alerts_request(
             incident_id,
             page_number=page_number
@@ -612,7 +610,7 @@ def get_alerts():
         alerts_parsed.append(parsed_alert)
 
     md_content = '\n'.join(alerts_parsed)
-    title = '## Incident {} Alerts'.format(incident_id)
+    title = f'## Incident {incident_id} Alerts'
 
     entry = {
         'Type': entryTypes['note'],
@@ -652,7 +650,7 @@ def get_timestamp(timestamp):
     try:
         return datetime.strptime(new_timestamp, iso_format)
     except ValueError:
-        raise ValueError("Could not parse timestamp [{}]".format(timestamp))
+        raise ValueError(f"Could not parse timestamp [{timestamp}]")
 
 
 def fetch_incidents():
@@ -671,7 +669,7 @@ def fetch_incidents():
         timestamp = last_fetch.isoformat() + 'Z'
         last_fetched_id = None
 
-    LOG('Fetching incidents since {}'.format(timestamp))
+    LOG(f'Fetching incidents since {timestamp}')
     netwitness_incidents = get_all_incidents_from_beginning(
         since=timestamp,
         limit=FETCH_LIMIT,
@@ -1014,7 +1012,7 @@ def test_module():
     if IS_FETCH:
         parse_date_range(FETCH_TIME)
 
-    since = datetime.now() - timedelta(days=int(10))
+    since = datetime.now() - timedelta(days=10)
     timestamp = since.isoformat() + 'Z'
 
     incidents, _, __ = get_all_incidents(

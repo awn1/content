@@ -134,20 +134,20 @@ def get_all_objects_with_entry(handler, objtype):
 
 
 def get_all_sensors(handler):
-    response = get_all_objects(handler, u'sensor')
+    response = get_all_objects(handler, 'sensor')
     parsed = response.get('sensor')
     return create_entry('Tanium Sensors', parsed, {'Tanium.Sensors': parsed})
 
 
 def get_all_saved_actions(handler):
-    response = get_all_objects(handler, u'saved_action')
+    response = get_all_objects(handler, 'saved_action')
     parsed = response.get('saved_action')
     return create_entry('Tanium Saved Actions', parsed, {'Tanium.SavedActions': parsed},
                         ['id', 'name', 'creation_time', 'action_group_id', 'approved_flag'])
 
 
 def getAllPendingActions(handler):
-    response = get_all_objects(handler, u'saved_action')
+    response = get_all_objects(handler, 'saved_action')
     parsed = response.get('saved_action')
     filterNonPending = filter(lambda x: x['approved_flag'] == 0, parsed)
     return create_entry('Tanium Pending Actions', filterNonPending, {'Tanium.PendingActions': filterNonPending},
@@ -155,14 +155,14 @@ def getAllPendingActions(handler):
 
 
 def getAllPackages(handler):
-    response = get_all_objects(handler, u'package')
+    response = get_all_objects(handler, 'package')
     parsed = response.get('package_spec')
     return create_entry('Tanium Packages', parsed, {'Tanium.Packages': parsed},
                         ['id', 'name', 'creation_time', 'command', 'last_modified_by'])
 
 
 def get_all_saved_questions(handler):
-    response = get_all_objects(handler, u'saved_question')
+    response = get_all_objects(handler, 'saved_question')
     parsed = response.get('saved_question')
     return create_entry('Tanium Saved Questions', parsed, {'Tanium.SavedQuestions': parsed},
                         ['query_text', 'name', 'id'])
@@ -212,7 +212,7 @@ def get_sensor_variable(parsed):
 
 
 def get_package(handler):
-    response = get_object(handler, u'package', demisto.args().get('name'), demisto.args().get('id'))
+    response = get_object(handler, 'package', demisto.args().get('name'), demisto.args().get('id'))
     parsed = response.get('package_spec')
     sensor_var = get_sensor_variable(parsed)
     res = parsed[0]
@@ -233,7 +233,7 @@ def get_package(handler):
 
 
 def get_saved_question(handler):
-    response = get_object(handler, u'saved_question', demisto.args().get('name'), demisto.args().get('id'))
+    response = get_object(handler, 'saved_question', demisto.args().get('name'), demisto.args().get('id'))
     parsed = response.get('saved_question')
     return create_entry(
         'Tanium Saved Question',
@@ -246,7 +246,7 @@ def get_saved_question(handler):
 
 
 def get_sensor(handler):
-    response = get_object(handler, u'sensor', demisto.args().get('name'), demisto.args().get('id'))
+    response = get_object(handler, 'sensor', demisto.args().get('name'), demisto.args().get('id'))
     parsed = response.get('sensor', None)
     parameters = parameter_table_builder(parsed[0], 'Sensor Parameters Details', 'sensor')
     final_result = create_entry(
@@ -261,7 +261,7 @@ def get_sensor(handler):
 
 
 def get_action(handler):
-    response = get_object(handler, u'action', demisto.args().get('name'), demisto.args().get('id'))
+    response = get_object(handler, 'action', demisto.args().get('name'), demisto.args().get('id'))
     parsed = response.get('action', None)
     if 'saved_action' in parsed[0]:
         parsed[0]['saved_action_id'] = parsed[0]['saved_action']['id']
@@ -342,7 +342,7 @@ def deploy_action(handler):
             formatted_args = formatted_args + '$' + str(i + 1) + '=' + package_args[i] + ','
         formatted_args = formatted_args[:-1]
 
-    replace_str = get_sensor_variable(get_object(handler, u'package', package).get('package_spec'))
+    replace_str = get_sensor_variable(get_object(handler, 'package', package).get('package_spec'))
     sensor_var = demisto.args().get('sensor_variables')
 
     if replace_str is None and sensor_var:
@@ -408,7 +408,7 @@ def approveSavedAction(handler, action_id, saved_action_id):
     if not saved_action_id and not action_id:
         raise Exception('Missing action ID')
     if not saved_action_id:
-        action = get_object(handler, u'action', id=action_id)
+        action = get_object(handler, 'action', id=action_id)
         parsed = action.get('action', None)
         saved_action_id = parsed[0]['saved_action']['id']
     kwargs['id'] = saved_action_id
@@ -535,7 +535,7 @@ def ask_manual_question(handler, args):
         return get_ask_manual_help()
 
     kwargs = {}
-    kwargs["qtype"] = u'manual'
+    kwargs["qtype"] = 'manual'
     kwargs["sensors_help"] = True if args.get('sensors_help') == 'True' else False  # type: ignore
     kwargs["filters_help"] = True if args.get('filters_help') == 'True' else False  # type: ignore
     kwargs["options_help"] = True if args.get('options_help') == 'True' else False  # type: ignore
@@ -564,7 +564,7 @@ def ask_parsed_question(handler, question, index):
     kwargs = {
         'picker': int(index),
         'question_text': question,
-        'qtype': u'parsed',
+        'qtype': 'parsed',
         'get_results': True
     }
 

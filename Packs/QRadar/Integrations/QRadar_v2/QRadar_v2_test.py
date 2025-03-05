@@ -26,9 +26,9 @@ from QRadar_v2 import (
     get_asset_ips_and_enrich_offense_addresses
 )
 
-with open("TestData/commands_outputs.json", "r") as f:
+with open("TestData/commands_outputs.json") as f:
     COMMAND_OUTPUTS = json.load(f)
-with open("TestData/raw_responses.json", "r") as f:
+with open("TestData/raw_responses.json") as f:
     RAW_RESPONSES = json.load(f)
 
 QRadar_v2.FAILURE_SLEEP = 0
@@ -414,7 +414,7 @@ class TestQRadarv2:
         """
         from QRadar_v2 import get_assets_for_offense
         client = QRadarClient("", {}, {"identifier": "*", "password": "*"})
-        assert [] == get_assets_for_offense(client, [])
+        assert get_assets_for_offense(client, []) == []
 
     def test_get_assets_for_offense__happy(self, requests_mock, mocker):
         """Check get assets for offense returns the expected assets

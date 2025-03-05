@@ -1,6 +1,5 @@
 import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
-from typing import Dict
 import tempfile
 from dxlclient.client_config import DxlClientConfig
 from dxlclient.client import DxlClient
@@ -31,7 +30,7 @@ class EventSender:
     cert_file = tempfile.NamedTemporaryFile().name
     private_key = tempfile.NamedTemporaryFile().name
 
-    def __init__(self, params: Dict):
+    def __init__(self, params: dict):
         with open(self.broker_ca_bundle, "w") as text_file:
             text_file.write(params['broker_ca_bundle'])
         with open(self.cert_file, "w") as text_file:

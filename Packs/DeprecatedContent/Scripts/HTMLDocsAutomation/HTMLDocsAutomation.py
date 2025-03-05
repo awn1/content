@@ -168,13 +168,13 @@ def get_yaml_obj(entry_id):
     data = {}  # type: dict
     try:
         yml_file_path = demisto.getFilePath(entry_id)['path']
-        with open(yml_file_path, 'r') as yml_file:
+        with open(yml_file_path) as yml_file:
             data = yaml.safe_load(yml_file)
         if not isinstance(data, dict):
             raise ValueError('not a yml file')
 
     except (ValueError, yaml.YAMLError) as exception:
-        return_error('Failed to open integration file: {}'.format(exception))
+        return_error(f'Failed to open integration file: {exception}')
 
     return data
 
@@ -194,7 +194,7 @@ def get_command_examples(entry_id):
 
     if re.match(r'[\d]+@[\d\w-]+', entry_id) is not None:
         examples_path = demisto.getFilePath(entry_id)['path']
-        with open(examples_path, 'r') as examples_file:
+        with open(examples_path) as examples_file:
             commands = examples_file.read().split('\n')
     else:
         demisto.debug('failed to open command file, tried parsing as free text')
@@ -242,12 +242,11 @@ def run_command(command_example):
         res = demisto.executeCommand(cmd, kwargs)
         if is_error(res):
             demisto.results(res)
-            raise RuntimeError()
+            raise RuntimeError
 
     except (ValueError, RuntimeError) as exception:
         errors.append(
-            'Error encountered in the processing of command `{}`, error was: {}. '.format(command_example,
-                                                                                          str(exception))
+            f'Error encountered in the processing of command `{command_example}`, error was: {str(exception)}. '
             + 'Please check your command inputs and outputs.')
         # errors.append('The provided example for cmd {} has failed: {}'.format(cmd, str(exception)))
 
@@ -275,7 +274,7 @@ def run_command(command_example):
 def to_html_table(headers: list, data: list):
     records: list = []
     for data_record in data:
-        records.append(GENERIC_RECORD.format(data_fields='\n'.join('      <td>{}</td>'.format(field)
+        records.append(GENERIC_RECORD.format(data_fields='\n'.join(f'      <td>{field}</td>'
                                                                    for field in data_record)))
 
     return HTML_GENERIC_TABLE.format(headers='\n'.join(GENERIC_HEADER.format(h) for h in headers),
@@ -293,7 +292,7 @@ def human_readable_example_to_html(hr_sample):
             else:
                 hr_sample = ''
             heading_size = len(title) - len(title.lstrip('#'))
-            hr_html.append('<h{0}>{1}</h{0}>'.format(heading_size, title[heading_size + 1:]))
+            hr_html.append(f'<h{heading_size}>{title[heading_size + 1:]}</h{heading_size}>')
             continue
 
         table = table_regex.match(hr_sample)
@@ -323,7 +322,7 @@ def human_readable_example_to_html(hr_sample):
 
 def generate_use_case_section(title, data):
     html_section = [
-        '<h2>{}</h2>'.format(title),
+        f'<h2>{title}</h2>',
     ]
 
     if not data:
@@ -331,26 +330,26 @@ def generate_use_case_section(title, data):
 
     if os.linesep in data:
         html_section.append('<ul>')
-        html_section.extend('<li>{}</li>'.format(s) for s in data.split(os.linesep))
+        html_section.extend(f'<li>{s}</li>' for s in data.split(os.linesep))
         html_section.append('</ul>')
     else:
-        html_section.append('<p>{}</p>'.format(data))
+        html_section.append(f'<p>{data}</p>')
 
     return html_section
 
 
 def generate_section(title, data):
     html_section = [
-        '<h2>{}</h2>'.format(title),
+        f'<h2>{title}</h2>',
     ]
 
     if data:
         if '\n' in data:
             html_section.append('<ul>')
-            html_section.extend('<li>{}</li>'.format(s) for s in data.split('\n'))
+            html_section.extend(f'<li>{s}</li>' for s in data.split('\n'))
             html_section.append('</ul>')
         else:
-            html_section.append('<p>{}</p>\n'.format(data))
+            html_section.append(f'<p>{data}</p>\n')
 
     return '\n'.join(html_section)
 
@@ -523,7 +522,7 @@ def main():
     if errors:
         errors.append('Visit the documentation page for more details: '
                       'https://github.com/demisto/content/tree/master/docs/integration_documentation')
-        return_error('\n'.join('* {}'.format(e) for e in errors))
+        return_error('\n'.join(f'* {e}' for e in errors))
 
 
 if __name__ == 'builtins':

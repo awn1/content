@@ -134,7 +134,7 @@ def test_parse_custom_attribute():
     ]
     assert custom_attribute_all_list_output == parse_custom_attribute(custom_attribute_group_list, args_all)
     args_none = {'custom_attributes': 'none'}
-    assert [] == parse_custom_attribute(custom_attribute_group_list, args_none)
+    assert parse_custom_attribute(custom_attribute_group_list, args_none) == []
     args_custom = {'custom_attributes': 'specific attributes'}
     with raises(DemistoException, match='When choosing the custom value for custom_attributes argument -'
                                         ' the custom_data list must be filled with custom attribute names.'
@@ -147,7 +147,7 @@ def test_parse_custom_attribute():
     ]
     assert custom_attribute_custom_list_output == parse_custom_attribute(custom_attribute_group_list, args_custom)
     args_custom['custom_data'] = 'aaa'
-    assert [] == parse_custom_attribute(custom_attribute_group_list, args_custom)
+    assert parse_custom_attribute(custom_attribute_group_list, args_custom) == []
     args_group = {'custom_attributes': 'custom attributes group name'}
     with raises(DemistoException, match='When choosing the group value for custom_attributes argument -'
                                         ' the custom_data list must be filled with group names.'

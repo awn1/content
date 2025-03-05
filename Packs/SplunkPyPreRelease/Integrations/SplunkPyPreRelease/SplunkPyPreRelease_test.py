@@ -177,14 +177,14 @@ def test_raw_to_dict():
     url_test = splunk.rawToDict(URL_TESTING_IN)
     character_check = splunk.rawToDict(RESPONSE)
 
-    assert EXPECTED == response
-    assert {} == list_response
+    assert response == EXPECTED
+    assert list_response == {}
     assert raw_message.get('SCOPE[29]') == 'autopay\/events\/payroll\/v1\/earning-configuration.configuration-tags' \
                                            '.modify'
     assert isinstance(raw_message, dict)
     assert empty == {}
-    assert URL_TESTING_OUT == url_test
-    assert POSITIVE == character_check
+    assert url_test == URL_TESTING_OUT
+    assert character_check == POSITIVE
     assert splunk.rawToDict(RAW_JSON) == RAW_JSON_AND_STANDARD_OUTPUT
     assert splunk.rawToDict(RAW_STANDARD) == RAW_JSON_AND_STANDARD_OUTPUT
 
@@ -253,7 +253,7 @@ data_test_replace_keys = [
 @pytest.mark.parametrize('dict_in, dict_out', data_test_replace_keys)
 def test_replace_keys(dict_in, dict_out):
     out = splunk.replace_keys(deepcopy(dict_in))
-    assert out == dict_out, 'replace_keys({}) got: {} instead: {}'.format(dict_in, out, dict_out)
+    assert out == dict_out, f'replace_keys({dict_in}) got: {out} instead: {dict_out}'
 
 
 def test_parse_time_to_minutes_no_error():
@@ -359,8 +359,7 @@ def test_check_error(args, out_error):
         raise splunk.DemistoException('empty')
     except splunk.DemistoException as error:
         output = str(error)
-    assert output == out_error, 'check_error(service, {})\n\treturns: {}\n\tinstead: {}'.format(args,
-                                                                                                output, out_error)
+    assert output == out_error, f'check_error(service, {args})\n\treturns: {output}\n\tinstead: {out_error}'
 
 
 EMPTY_CASE = {}
@@ -387,8 +386,7 @@ data_test_build_kv_store_query = [
 def test_build_kv_store_query(args, expected_query, mocker):
     mocker.patch('SplunkPyPreRelease.get_key_type', return_value=None)
     output = splunk.build_kv_store_query(None, args)
-    assert output == expected_query, 'build_kv_store_query({})\n\treturns: {}\n\tinstead: {}'.format(args, output,
-                                                                                                     expected_query)
+    assert output == expected_query, f'build_kv_store_query({args})\n\treturns: {output}\n\tinstead: {expected_query}'
 
 
 data_test_build_kv_store_query_with_key_val = [
@@ -402,8 +400,7 @@ data_test_build_kv_store_query_with_key_val = [
 def test_build_kv_store_query_with_key_val(args, _type, expected_query, mocker):
     mocker.patch('SplunkPyPreRelease.get_key_type', return_value=_type)
     output = splunk.build_kv_store_query(None, args)
-    assert output == expected_query, 'build_kv_store_query({})\n\treturns: {}\n\tinstead: {}'.format(args, output,
-                                                                                                     expected_query)
+    assert output == expected_query, f'build_kv_store_query({args})\n\treturns: {output}\n\tinstead: {expected_query}'
 
     test_test_get_key_type = [
         ({'field.key': 'number'}, float),
@@ -419,8 +416,7 @@ def test_build_kv_store_query_with_key_val(args, _type, expected_query, mocker):
         mocker.patch('SplunkPyPreRelease.get_keys_and_types', return_value=keys_and_types)
 
         output = splunk.get_key_type(None, 'key')
-        assert output == expected_type, 'get_key_type(kv_store, key)\n\treturns: {}\n\tinstead: {}'.format(output,
-                                                                                                           expected_type)
+        assert output == expected_type, f'get_key_type(kv_store, key)\n\treturns: {output}\n\tinstead: {expected_type}'
 
 
 EMPTY_CASE = {}
@@ -449,8 +445,7 @@ def test_get_keys_and_types(raw_keys, expected_keys):
             return raw_keys
 
     output = splunk.get_keys_and_types(KVMock())
-    assert output == expected_keys, 'get_keys_and_types(kv_store)\n\treturns: {}\n\tinstead: {}'.format(output,
-                                                                                                        expected_keys)
+    assert output == expected_keys, f'get_keys_and_types(kv_store)\n\treturns: {output}\n\tinstead: {expected_keys}'
 
 
 START_OUTPUT = '#### configuration for {} store\n| field name | type |\n| --- | --- |'.format('name')
@@ -471,7 +466,7 @@ def test_get_kv_store_config(fields, expected_output, mocker):
 
     mocker.patch('SplunkPyPreRelease.get_keys_and_types', return_value=fields)
     output = splunk.get_kv_store_config(Name())
-    expected_output = '{}{}'.format(START_OUTPUT, expected_output)
+    expected_output = f'{START_OUTPUT}{expected_output}'
     assert output == expected_output
 
 
@@ -631,8 +626,8 @@ def test_store_incidents_for_mapping(integration_context, incidents, output):
 
 @pytest.mark.parametrize('notable_data, raw, status, earliest, latest', [
     ({}, {}, False, "", ""),
-    ({"drilldown_earliest": "${}$".format(splunk.INFO_MIN_TIME),
-      "drilldown_latest": "${}$".format(splunk.INFO_MAX_TIME)},
+    ({"drilldown_earliest": f"${splunk.INFO_MIN_TIME}$",
+      "drilldown_latest": f"${splunk.INFO_MAX_TIME}$"},
      {splunk.INFO_MIN_TIME: '1', splunk.INFO_MAX_TIME: '2'}, True, '1', '2'),
     ({"drilldown_earliest": '1', "drilldown_latest": '2', }, {}, True, '1', '2')
 ])

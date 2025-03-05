@@ -1,7 +1,8 @@
 """Main file for GoogleChronicleBackstory Integration."""
 from CommonServerPython import *
 
-from typing import Any, Mapping, Tuple, Iterator
+from typing import Any
+from collections.abc import Mapping, Iterator
 
 from google.oauth2 import service_account
 from google.auth.transport import requests as auth_requests
@@ -192,7 +193,7 @@ def validate_response(client: Client, url, method='GET', body=None):
         raise ValueError(MESSAGES['INVALID_JSON_RESPONSE'])
 
 
-def validate_configuration_parameters(param: dict[str, Any], command: str) -> Tuple[Optional[datetime]]:
+def validate_configuration_parameters(param: dict[str, Any], command: str) -> tuple[Optional[datetime]]:
     """
     Check whether entered configuration parameters are valid or not.
 
@@ -747,7 +748,7 @@ def stream_detection_alerts(
         req_data: dict[str, Any],
         integration_context: dict[str, Any],
         test_mode: bool = False
-) -> Tuple[int, str, str]:
+) -> tuple[int, str, str]:
     """Makes one call to stream_detection_alerts, and runs until disconnection.
 
     Each call to stream_detection_alerts streams all detection alerts found after

@@ -2,14 +2,14 @@ import demistomock as demisto
 from CommonServerPython import *  # noqa # pylint: disable=unused-wildcard-import
 from CommonServerUserPython import *  # noqa
 
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 
 ''' COMMAND FUNCTION '''
 
 
-def enrich(current_list: List[Dict[str, Any]], enrich_list: List[Dict[str, Any]], enrich_key: str,
-           enrich_fields: List[str], key_field: str, outputs_prefix: str) -> CommandResults:
+def enrich(current_list: list[dict[str, Any]], enrich_list: list[dict[str, Any]], enrich_key: str,
+           enrich_fields: list[str], key_field: str, outputs_prefix: str) -> CommandResults:
     for enrich_entry in enrich_list:
         key = enrich_entry.get(enrich_key, None)
         if key is None:
@@ -46,8 +46,8 @@ def enrich(current_list: List[Dict[str, Any]], enrich_list: List[Dict[str, Any]]
     )
 
 
-def enrich_command(args: Dict[str, Any]) -> CommandResults:
-    type_: Optional[str]
+def enrich_command(args: dict[str, Any]) -> CommandResults:
+    type_: str | None
     if (type_ := args.get("type")) is not None:
         type_ = type_.lower()
 

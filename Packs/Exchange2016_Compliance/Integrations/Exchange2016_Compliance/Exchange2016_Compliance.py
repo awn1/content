@@ -259,7 +259,7 @@ def get_cs_status(search_name, status):
     return {
         'Type': entryTypes['note'],
         'ContentsFormat': formats['text'],
-        'Contents': 'Search {} status: {}'.format(search_name, status),
+        'Contents': f'Search {search_name} status: {status}',
         'EntryContext': {
             'EWS.ComplianceSearch(val.Name === obj.Name)': {'Name': search_name, 'Status': status}
         }
@@ -303,7 +303,7 @@ def start_compliance_search(query):
     return {
         'Type': entryTypes['note'],
         'ContentsFormat': formats['text'],
-        'Contents': 'Search started: {}'.format(search_name),
+        'Contents': f'Search started: {search_name}',
         'EntryContext': {
             'EWS.ComplianceSearch': {'Name': search_name, 'Status': 'Starting'}
         }

@@ -3,10 +3,10 @@ import json
 
 import demistomock as demisto
 
-queued_response = {u'response_code': -2,
-                   u'resource': u'YES_THIS_IS_A_UID',
-                   u'scan_id': u'YES_THIS_IS_A_UID',
-                   u'verbose_msg': u'Your resource is queued for analysis'}
+queued_response = {'response_code': -2,
+                   'resource': 'YES_THIS_IS_A_UID',
+                   'scan_id': 'YES_THIS_IS_A_UID',
+                   'verbose_msg': 'Your resource is queued for analysis'}
 
 
 def load_test_data(json_path):
@@ -294,7 +294,7 @@ Response content SHA-256: 0e1a3027e45f3971d9611b88be2b556a166b8e7dcbdbfd4b2de257
         }
     }
 
-    expected_ec_dbot = {'Vendor': 'VirusTotal - Private API', 'Indicator': u'https://github.com/topics/spacevim',
+    expected_ec_dbot = {'Vendor': 'VirusTotal - Private API', 'Indicator': 'https://github.com/topics/spacevim',
                         'Score': 1, 'Type': 'url'}
 
     md, ec_url, ec_dbot = vt.create_url_report_output(url, response, threshold, max_len, short_format)

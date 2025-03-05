@@ -2,7 +2,6 @@ import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
 import urllib3
 from CommonServerUserPython import *
-from typing import Dict
 
 # Disable insecure warnings
 urllib3.disable_warnings()

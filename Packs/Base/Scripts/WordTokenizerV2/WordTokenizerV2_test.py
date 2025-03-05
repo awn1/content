@@ -1,4 +1,3 @@
-# coding=utf-8
 from collections import defaultdict
 
 import demistomock
@@ -34,15 +33,15 @@ def test_clean_html():
 
 def test_tokenize_text():
     text = "test@demisto.com is 100 going to http://google.com bla bla"
-    assert "EMAIL_PATTERN NUMBER_PATTERN go URL_PATTERN bla bla" == tokenize_text(text)[0]
+    assert tokenize_text(text)[0] == "EMAIL_PATTERN NUMBER_PATTERN go URL_PATTERN bla bla"
 
 
 def test_word_tokenize():
     text = "test@demisto.com is 100 going to http://google.com bla bla"
     entry = word_tokenize(text)
-    assert "EMAIL_PATTERN NUMBER_PATTERN go URL_PATTERN bla bla" == entry['Contents']['tokenizedText']
-    assert "2074773130 1320446219 5863419 1810208405 193487380 193487380" == entry['Contents'][
-        'hashedTokenizedText']
+    assert entry['Contents']['tokenizedText'] == "EMAIL_PATTERN NUMBER_PATTERN go URL_PATTERN bla bla"
+    assert entry['Contents'][
+        'hashedTokenizedText'] == "2074773130 1320446219 5863419 1810208405 193487380 193487380"
 
 
 def test_word_tokenize_words_to_tokens():
@@ -77,7 +76,7 @@ def test_multi_lang_tokenization_spacy(mocker):
         mocker.patch.object(demisto, 'args', return_value={'language': language})
         try:
             res = word_tokenize(input)
-        except IOError:
+        except OSError:
             continue
         tokenized_res = res['Contents']['tokenizedText']
         assert len(tokenized_res) > 0

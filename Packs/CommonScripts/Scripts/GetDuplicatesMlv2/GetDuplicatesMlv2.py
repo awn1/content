@@ -533,7 +533,7 @@ def get_incidents_by_time_diff(incident_id, incident_time, ignore_closed, max_nu
     incident_datetime = dateutil.parser.parse(incident_time)
     max_date = incident_datetime + timedelta(hours=time_frame_range_hours)
     min_date = incident_datetime - timedelta(hours=time_frame_range_hours)
-    query = '{0}:>="{1}" and {0}:<="{2}"'.format(TIME_FIELD, min_date.isoformat(), max_date.isoformat())
+    query = f'{TIME_FIELD}:>="{min_date.isoformat()}" and {TIME_FIELD}:<="{max_date.isoformat()}"'
     if ignore_closed:
         query += " and -closed:*"
     if incident_id:

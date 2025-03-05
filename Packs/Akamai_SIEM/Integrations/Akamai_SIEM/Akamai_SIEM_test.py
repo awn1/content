@@ -508,7 +508,7 @@ def test_is_interval_doesnt_have_enough_time_to_run(mocker, freeze_mock,
     """
     import demistomock as demisto
     mocker.patch.object(demisto, 'callingContext', {'context': {'TimeoutDuration': 300000000000}})
-    setattr(Akamai_SIEM, 'EXECUTION_START_TIME', datetime(2024, 4, 10, 10, 0, 0))
+    Akamai_SIEM.EXECUTION_START_TIME = datetime(2024, 4, 10, 10, 0, 0)
     with freeze_time(freeze_mock):
         should_break, worst_case_time = Akamai_SIEM.is_interval_doesnt_have_enough_time_to_run(min_allowed_delta, worst_case_time)
         assert expected_time == worst_case_time

@@ -94,7 +94,7 @@ try:
         base_url=SERVER,
         token=TOKEN
     )
-    LOG('Command being called is {}'.format(demisto.command()))
+    LOG(f'Command being called is {demisto.command()}')
     command_func = COMMANDS.get(demisto.command())
     if command_func is not None:
         command_func()

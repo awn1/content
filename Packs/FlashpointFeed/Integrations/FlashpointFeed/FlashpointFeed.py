@@ -3,7 +3,7 @@ from CommonServerUserPython import *  # noqa
 
 import urllib3
 import traceback
-from typing import Dict, Any
+from typing import Any
 
 # Disable insecure warnings
 urllib3.disable_warnings()  # pylint: disable=no-member
@@ -433,7 +433,7 @@ def main():
 
     command = demisto.command()
     demisto.debug(f'[Flashpoint] Command being called is {command}')
-    headers: Dict = {
+    headers: dict = {
         'Authorization': f'Bearer {api_key}',
         'X-FP-IntegrationPlatform': INTEGRATION_PLATFORM,
         'X-FP-IntegrationPlatformVersion': get_demisto_version_as_str(),

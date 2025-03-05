@@ -921,7 +921,7 @@ def test_radar_anomaly_csv_analysis_success(client, requests_mock, empty_respons
     args = {"object_id": "dummy", "cluster_id": "dummy", "snapshot_id": "dummy", "download_file": download_file}
 
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                           "test_data/radar_anomaly_csv_analysis_file.csv"), 'r') as f:
+                           "test_data/radar_anomaly_csv_analysis_file.csv")) as f:
         file_data = f.read()
     requests_mock.get('https://dummy_link/snapshot_000-000-000.csv', text=file_data, status_code=200)
 

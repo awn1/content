@@ -70,17 +70,17 @@ def translate_indicators(ts_indicators, context_path=''):
     # Build Entry Context
     ec = {}
     if file_context:
-        ec['{}File(val.Name && val.Name === obj.Name)'.format(context_path)] = file_context
+        ec[f'{context_path}File(val.Name && val.Name === obj.Name)'] = file_context
     if url_context:
-        ec['{}URL(val.Address && val.Address === obj.Address)'.format(context_path)] = url_context
+        ec[f'{context_path}URL(val.Address && val.Address === obj.Address)'] = url_context
     if ip_context:
-        ec['{}IP(val.Address && val.Address === obj.Address)'.format(context_path)] = ip_context
+        ec[f'{context_path}IP(val.Address && val.Address === obj.Address)'] = ip_context
     if email_context:
-        ec['{}Account.Email(val.Address && val.Address === obj.Address)'.format(context_path)] = email_context
+        ec[f'{context_path}Account.Email(val.Address && val.Address === obj.Address)'] = email_context
     if key_context:
-        ec['{}RegistryKey(val.Path && val.Path === obj.Path)'.format(context_path)] = key_context
+        ec[f'{context_path}RegistryKey(val.Path && val.Path === obj.Path)'] = key_context
     if cve_context:
-        ec['{}CVE(val.ID && val.ID === obj.ID)'.format(context_path)] = cve_context
+        ec[f'{context_path}CVE(val.ID && val.ID === obj.ID)'] = cve_context
     return indicators, ec
 
 
@@ -321,7 +321,7 @@ def create_domain_ec(indicators, url, threshold):
 
 
 def encode_cursor(page_size, page_number):
-    cursor = '{' + '"pageSize":{},"pageNumber":{}'.format(page_size, page_number) + '}'
+    cursor = '{' + f'"pageSize":{page_size},"pageNumber":{page_number}' + '}'
     return base64.b64encode(cursor.encode()).decode()
 
 
@@ -399,7 +399,7 @@ def generic_search_indicator(search_term, threshold, search_type, ec_function):
     response = ts.search_indicators_page(search_term=search_term)
     indicators = translate_specific_indicators(response, search_type)
     threshold = priority_level_to_score(threshold)
-    title = 'TruSTAR results for {0} indicator: {1}'.format(search_type[0], search_term)
+    title = f'TruSTAR results for {search_type[0]} indicator: {search_term}'
     ec = ec_function(indicators, search_term, threshold)
     entry = {
         'Type': entryTypes['note'],
@@ -424,11 +424,11 @@ def submit_report(title, report_body, enclave_ids, external_url, time_began, dis
         external_url=external_url
     )
     response = ts.submit_report(ts_report)
-    deep_link = '{server_url}/constellation/reports/{report_id}'.format(server_url=SERVER, report_id=response.id)
+    deep_link = f'{SERVER}/constellation/reports/{response.id}'
     report = collections.OrderedDict()  # type: OrderedDict
     report['id'] = response.id
     report['reportTitle'] = title
-    report['reportDeepLink'] = '[{}]({})'.format(deep_link, deep_link)
+    report['reportDeepLink'] = f'[{deep_link}]({deep_link})'
     report['reportBody'] = report_body
     ec = {
         'TruSTAR.Report(val.id && val.id === obj.id)': report
@@ -456,11 +456,11 @@ def update_report(report_id, title, report_body, enclave_ids, external_url, time
         external_url=external_url
     )
     ts.update_report(ts_report)
-    deep_link = '{server_url}/constellation/reports/{report_id}'.format(server_url=SERVER, report_id=report_id)
+    deep_link = f'{SERVER}/constellation/reports/{report_id}'
     report = collections.OrderedDict()  # type: OrderedDict
     report['id'] = report_id
     report['reportTitle'] = title
-    report['reportDeepLink'] = '[{}]({})'.format(deep_link, deep_link)
+    report['reportDeepLink'] = f'[{deep_link}]({deep_link})'
     report['reportBody'] = report_body
     ec = {
         'TruSTAR.Report(val.id && val.id === obj.id)': report
@@ -485,7 +485,7 @@ def get_report_details(report_id, id_type):
     report_details['title'] = current_report_dict['title']
     deep_link = '{server_url}/constellation/reports/{report_id}'.format(server_url=SERVER,
                                                                         report_id=current_report_dict['id'])
-    report_details['reportDeepLink'] = '[{}]({})'.format(deep_link, deep_link)
+    report_details['reportDeepLink'] = f'[{deep_link}]({deep_link})'
     if current_report_dict['enclaveIds']:
         report_details['enclaveIds'] = ', '.join(current_report_dict['enclaveIds'])  # Prettify list of enclave IDs
     report_details['updated'] = normalize_time(current_report_dict['updated'])
@@ -534,7 +534,7 @@ def get_reports(from_time, to_time, enclave_ids, distribution_type, tags, exclud
         current_report['title'] = current_report_dict['title']
         deep_link = '{server_url}/constellation/reports/{report_id}'.format(
             server_url=SERVER, report_id=current_report_dict['id'])
-        current_report['reportDeepLink'] = '[{}]({})'.format(deep_link, deep_link)
+        current_report['reportDeepLink'] = f'[{deep_link}]({deep_link})'
         if current_report_dict['enclaveIds']:
             current_report['enclaveIds'] = ', '.join(current_report_dict['enclaveIds'])  # Prettify list of enclave IDs
         current_report['updated'] = normalize_time(current_report_dict['updated'])
@@ -716,7 +716,7 @@ def set_triage_status(submission_id, status):
     try:
         response = ts.mark_triage_status(submission_id, status)
         response.raise_for_status()
-        return "Submission ID {} is {}".format(submission_id, status)
+        return f"Submission ID {submission_id} is {status}"
     except requests.exceptions.HTTPError as err:
         return str(err)
 

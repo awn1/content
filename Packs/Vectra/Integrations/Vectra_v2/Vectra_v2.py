@@ -4,7 +4,6 @@ from CommonServerPython import *
 import json
 import requests
 import urllib3
-from typing import Dict, List, Union
 
 # Disable insecure warnings
 urllib3.disable_warnings()
@@ -85,7 +84,7 @@ class Client:
         self.proxies = proxy
         self.first_fetch = first_fetch
 
-    def http_request(self, method='GET', url_suffix='', params=None, data=None) -> Dict:
+    def http_request(self, method='GET', url_suffix='', params=None, data=None) -> dict:
         """
         Generic HTTP request to Vectra API.
 
@@ -125,7 +124,7 @@ class Client:
         except Exception:
             raise ValueError(f"Failed to parse http response to JSON format. Original response body: \n{res.text}")
 
-    def fetch_incidents(self, last_run: Dict):
+    def fetch_incidents(self, last_run: dict):
         """
         Fetches Detections from Vectra into Demisto Incidents
 
@@ -148,8 +147,8 @@ class Client:
         # Detections -> Incidents, if exists
         incidents = []
         if 'results' in raw_response:
-            res: Union[List[Dict], Dict] = raw_response.get('results')  # type: ignore
-            detections: List[Dict] = [res] if not isinstance(res, List) \
+            res: list[dict] | dict = raw_response.get('results')  # type: ignore
+            detections: list[dict] = [res] if not isinstance(res, list) \
                 else sorted(res, key=lambda h: h.get('id'))  # type: ignore
 
             try:
@@ -214,7 +213,7 @@ def get_detections_command(client: Client, **kwargs):
         return "Couldn't find any results", {}, raw_response
 
     res = raw_response.get('results')  # type: ignore
-    dets: List[Dict] = [res] if not isinstance(res, List) else sorted(res, key=lambda h: h.get('id'))  # type: ignore
+    dets: list[dict] = [res] if not isinstance(res, list) else sorted(res, key=lambda h: h.get('id'))  # type: ignore
 
     headers = ['id', 'category', 'src_ip', 'threat', 'certainty', 'state', 'detection', 'detection_category',
                'detection_type', 'first_timestamp', 'tags', 'targets_key_asset', 'type_vname']
@@ -232,7 +231,7 @@ def get_detections_command(client: Client, **kwargs):
                 readable_output += '\n' + tableToMarkdown(name='Summary', t=summary[0], headers=summary[0].keys())
 
         if 'relayed_comm_set' in dets[0]:  # type: ignore
-            relayed_comm_set: List = dets[0].get('relayed_comm_set')  # type: ignore
+            relayed_comm_set: list = dets[0].get('relayed_comm_set')  # type: ignore
             if not isinstance(relayed_comm_set, list):
                 relayed_comm_set = [relayed_comm_set]
                 if len(relayed_comm_set) > 0 and relayed_comm_set[0]:
@@ -300,8 +299,8 @@ def get_hosts_command(client: Client, **kwargs):
     if count == 0:
         return "Couldn't find any results", {}, raw_response
 
-    res: List[Dict] = raw_response.get('results')  # type: ignore
-    hosts: List[Dict] = [res] if not isinstance(res, List) else sorted(res, key=lambda h: h.get('id'))  # type: ignore
+    res: list[dict] = raw_response.get('results')  # type: ignore
+    hosts: list[dict] = [res] if not isinstance(res, list) else sorted(res, key=lambda h: h.get('id'))  # type: ignore
 
     for host in hosts:
         if 'detection_set' in host:
@@ -362,8 +361,8 @@ def get_users_command(client: Client, **kwargs):
     if count == 0:
         return "Couldn't find any results", {}, raw_response
 
-    res: List[Dict] = raw_response.get('results')  # type: ignore
-    users: List[Dict] = [res] if not isinstance(res, List) else sorted(res, key=lambda h: h.get('id'))  # type: ignore
+    res: list[dict] = raw_response.get('results')  # type: ignore
+    users: list[dict] = [res] if not isinstance(res, list) else sorted(res, key=lambda h: h.get('id'))  # type: ignore
 
     headers = ['id', 'last_login', 'username', 'email', 'account_type', 'authentication_profile', 'role']
     pages = calc_pages(this_count=len(res), total_count=count)  # type: ignore
@@ -407,8 +406,8 @@ def search_command(client: Client, search_type: str, **kwargs):
     if count == 0:
         return "Couldn't find any results", {}, raw_response
 
-    res: List[Dict] = raw_response.get('results')  # type: ignore
-    res: List[Dict] = [res] if not isinstance(res, List) else sorted(res, key=lambda h: h.get('id'))  # type: ignore
+    res: list[dict] = raw_response.get('results')  # type: ignore
+    res: list[dict] = [res] if not isinstance(res, list) else sorted(res, key=lambda h: h.get('id'))  # type: ignore
 
     headers = ['id', 'threat', 'certainty', 'state', 'first_timestamp']
 
@@ -453,8 +452,8 @@ def get_triage_command(client: Client):
     if count == 0:
         return "Couldn't find any results", {}, raw_response
 
-    res: List[Dict] = raw_response.get('results')  # type: ignore
-    rules: List[Dict] = [res] if not isinstance(res, List) else sorted(res, key=lambda h: h.get('name'))  # type: ignore
+    res: list[dict] = raw_response.get('results')  # type: ignore
+    rules: list[dict] = [res] if not isinstance(res, list) else sorted(res, key=lambda h: h.get('name'))  # type: ignore
 
     headers = ['id', 'enabled', 'created_timestamp', 'is_whitelist', 'priority', 'active_detections',
                'total_detections', 'template', 'detection_category', 'triage_category', 'detection']
@@ -517,7 +516,7 @@ def get_proxies_command(client: Client, proxy_id: int = None):
         return "Couldn't find any results", {}, raw_response
 
     res = raw_response.get('proxies')  # type: ignore
-    proxies: List[Dict] = [res] if not isinstance(res, List) else sorted(res, key=lambda h: h.get('id'))  # type: ignore
+    proxies: list[dict] = [res] if not isinstance(res, list) else sorted(res, key=lambda h: h.get('id'))  # type: ignore
 
     headers = ['id', 'source', 'considersProxy', 'address']
     readable_output = tableToMarkdown(name='Rules table', t=proxies, headers=headers)
@@ -550,7 +549,7 @@ def get_threatfeed_command(client: Client, threatfeed_id: int = None):
         return "Couldn't find any results", {}, raw_response
 
     res = raw_response.get('threatFeeds')  # type: ignore
-    feeds: List[Dict] = [res] if not isinstance(res, List) else sorted(res, key=lambda h: h.get('id'))  # type: ignore
+    feeds: list[dict] = [res] if not isinstance(res, list) else sorted(res, key=lambda h: h.get('id'))  # type: ignore
 
     for feed in feeds:
         feed.update(feed.get('defaults'))  # type: ignore

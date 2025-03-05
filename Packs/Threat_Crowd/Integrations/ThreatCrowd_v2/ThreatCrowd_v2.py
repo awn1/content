@@ -1,7 +1,7 @@
 import demistomock as demisto
 from CommonServerPython import *
 from CommonServerUserPython import *
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
 
 ''' CONSTANTS '''
 
@@ -34,7 +34,7 @@ def _get_list_without_empty(list_to_change: list) -> list:
     return list_to_change
 
 
-def handle_resolutions(resolutions: List[dict], limit: Optional[int]) -> List[dict]:
+def handle_resolutions(resolutions: list[dict], limit: int | None) -> list[dict]:
     """ Gets a resolution section from response with following struct: [{"last_resolved": "2014-12-14", "domain": "example.com"}]
         return a sorted list truncated to limit, desc by time."""
 
@@ -43,7 +43,7 @@ def handle_resolutions(resolutions: List[dict], limit: Optional[int]) -> List[di
     return resolutions
 
 
-def _get_dbot_score(json_res: dict) -> Tuple[int, str]:
+def _get_dbot_score(json_res: dict) -> tuple[int, str]:
     """
     Calculates DBot score according to https://github.com/AlienVault-OTX/ApiV2/blob/master/README.md#votes
     """
@@ -63,8 +63,8 @@ def _get_dbot_score(json_res: dict) -> Tuple[int, str]:
 ''' COMMAND FUNCTIONS '''
 
 
-def ip_command(client: Client, args: Dict[str, Any]) -> List[CommandResults]:
-    command_results: List[CommandResults] = []
+def ip_command(client: Client, args: dict[str, Any]) -> list[CommandResults]:
+    command_results: list[CommandResults] = []
     api_url = 'ip/report/'
     entries_limit = client._get_limit_for_command(arg_to_number(args.get('limit'), 'limit', False))
     ips = argToList(args.get('ip'))
@@ -111,8 +111,8 @@ def ip_command(client: Client, args: Dict[str, Any]) -> List[CommandResults]:
     return command_results
 
 
-def email_command(client: Client, args: Dict[str, Any]) -> List[CommandResults]:
-    command_results: List[CommandResults] = []
+def email_command(client: Client, args: dict[str, Any]) -> list[CommandResults]:
+    command_results: list[CommandResults] = []
     api_url = 'email/report/'
     emails = argToList(args.get('email'))
     for email in emails:
@@ -142,8 +142,8 @@ def email_command(client: Client, args: Dict[str, Any]) -> List[CommandResults]:
     return command_results
 
 
-def domain_command(client: Client, args: Dict[str, Any]) -> List[CommandResults]:
-    command_results: List[CommandResults] = []
+def domain_command(client: Client, args: dict[str, Any]) -> list[CommandResults]:
+    command_results: list[CommandResults] = []
     api_url = 'domain/report/'
     entries_limit = client._get_limit_for_command(arg_to_number(args.get('limit'), 'limit', False))
     domains = argToList(args.get('domain'))
@@ -194,8 +194,8 @@ def domain_command(client: Client, args: Dict[str, Any]) -> List[CommandResults]
     return command_results
 
 
-def antivirus_command(client: Client, args: Dict[str, Any]) -> List[CommandResults]:
-    command_results: List[CommandResults] = []
+def antivirus_command(client: Client, args: dict[str, Any]) -> list[CommandResults]:
+    command_results: list[CommandResults] = []
     api_url = 'antivirus/report/'
     antivirus_list = argToList(args.get('antivirus'))
     entries_limit = client._get_limit_for_command(arg_to_number(args.get('limit'), 'limit', False))
@@ -221,8 +221,8 @@ def antivirus_command(client: Client, args: Dict[str, Any]) -> List[CommandResul
     return command_results
 
 
-def file_command(client: Client, args: Dict[str, Any]) -> List[CommandResults]:
-    command_results: List[CommandResults] = []
+def file_command(client: Client, args: dict[str, Any]) -> list[CommandResults]:
+    command_results: list[CommandResults] = []
     api_url = 'file/report/'
     files = argToList(args.get('file'))
     entries_limit = client._get_limit_for_command(arg_to_number(args.get('limit'), 'limit', False))

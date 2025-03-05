@@ -101,7 +101,7 @@ def smb_upload():
             file_obj.write(content)
             file_obj.seek(0)
             file_bytes_transfered = connection.storeFile(share, path, file_obj)
-            demisto.results("Transfered {} bytes of data.".format(file_bytes_transfered))
+            demisto.results(f"Transfered {file_bytes_transfered} bytes of data.")
     finally:
         connection.close()
 

@@ -20,7 +20,7 @@ CONTEXT = demisto.getIntegrationContext()
 USE_SSL = not demisto.params().get("unsecure", False)
 DEMISTOBOT = "https://demistobot.demisto.com/azuresc-token"
 SUBSCRIPTION_ID = CONTEXT.get("subscription_id")
-SUBSCRIPTION_URL = "/subscriptions/{}".format(SUBSCRIPTION_ID)
+SUBSCRIPTION_URL = f"/subscriptions/{SUBSCRIPTION_ID}"
 TOKEN = demisto.params().get("token")
 TENANT_ID = demisto.params().get("tenant_id")
 BASE_URL = demisto.params().get("server_url")
@@ -50,9 +50,7 @@ def set_subscription_id():
         data = r.json()
         if r.status_code != requests.codes.ok:
             return_error(
-                "Error in API call to Azure Security Center [{}] - {}".format(
-                    r.status_code, r.text
-                )
+                f"Error in API call to Azure Security Center [{r.status_code}] - {r.text}"
             )
         sub_id = data.get("subscription_id")
         demisto.setIntegrationContext(
@@ -64,7 +62,7 @@ def set_subscription_id():
         )
         return sub_id
     except ValueError:
-        return_error("There was problem with your request: {}".format(r.content))
+        return_error(f"There was problem with your request: {r.content}")
 
 
 def epoch_seconds(d=None):
@@ -95,9 +93,7 @@ def get_token():
     data = r.json()
     if r.status_code != requests.codes.ok:
         return_error(
-            "Error in API call to Azure Security Center [{}] - {}".format(
-                r.status_code, r.text
-            )
+            f"Error in API call to Azure Security Center [{r.status_code}] - {r.text}"
         )
     demisto.setIntegrationContext(
         {
@@ -128,9 +124,7 @@ def http_request(method, url_suffix, body=None, params=None, add_subscription=Tr
     r = requests.request(method, url, json=body, params=params, headers=headers)
     if r.status_code not in {200, 201, 202, 204}:
         return_error(
-            "Error in API call to Azure Security Center [{}] - {}".format(
-                r.status_code, r.text
-            )
+            f"Error in API call to Azure Security Center [{r.status_code}] - {r.text}"
         )
     try:
         r = r.json()
@@ -333,10 +327,8 @@ def get_alert(resource_group_name, asc_location, alert_id):
     """
     cmd_url = ""
     if resource_group_name:
-        cmd_url += "/resourceGroups/{}".format(resource_group_name)
-    cmd_url += "/providers/Microsoft.Security/locations/{}/alerts/{}?api-version={}".format(
-        asc_location, alert_id, ALERT_API_VERSION
-    )
+        cmd_url += f"/resourceGroups/{resource_group_name}"
+    cmd_url += f"/providers/Microsoft.Security/locations/{asc_location}/alerts/{alert_id}?api-version={ALERT_API_VERSION}"
     response = http_request("GET", cmd_url)
     return response
 
@@ -417,22 +409,20 @@ def get_alerts(
     """
     cmd_url = ""
     if resource_group_name:
-        cmd_url += "/resourceGroups/{}/providers/Microsoft.Security".format(
-            resource_group_name
-        )
+        cmd_url += f"/resourceGroups/{resource_group_name}/providers/Microsoft.Security"
         # ascLocation muse be using with specifying resourceGroupName
         if asc_location:
-            cmd_url += "/locations/{}".format(asc_location)
+            cmd_url += f"/locations/{asc_location}"
     else:
         cmd_url += "/providers/Microsoft.Security"
-    cmd_url += "/alerts?api-version={}".format(ALERT_API_VERSION)
+    cmd_url += f"/alerts?api-version={ALERT_API_VERSION}"
 
     if filter_query:
-        cmd_url += "&$filter={}".format(filter_query)
+        cmd_url += f"&$filter={filter_query}"
     if select_query:
-        cmd_url += "&$select={}".format(select_query)
+        cmd_url += f"&$select={select_query}"
     if expand_query:
-        cmd_url += "&$expand={}".format(expand_query)
+        cmd_url += f"&$expand={expand_query}"
 
     response = http_request("GET", cmd_url)
     return response
@@ -455,22 +445,20 @@ def list_alerts(
     """
     cmd_url = ""
     if resource_group_name:
-        cmd_url += "/resourceGroups/{}/providers/Microsoft.Security".format(
-            resource_group_name
-        )
+        cmd_url += f"/resourceGroups/{resource_group_name}/providers/Microsoft.Security"
         # ascLocation must be using with specifying resourceGroupName
         if asc_location:
-            cmd_url += "/locations/{}".format(asc_location)
+            cmd_url += f"/locations/{asc_location}"
     else:
         cmd_url += "/providers/Microsoft.Security"
-    cmd_url += "/alerts?api-version={}".format(ALERT_API_VERSION)
+    cmd_url += f"/alerts?api-version={ALERT_API_VERSION}"
 
     if filter_query:
-        cmd_url += "&$filter={}".format(filter_query)
+        cmd_url += f"&$filter={filter_query}"
     if select_query:
-        cmd_url += "&$select={}".format(select_query)
+        cmd_url += f"&$select={select_query}"
     if expand_query:
-        cmd_url += "&$expand={}".format(expand_query)
+        cmd_url += f"&$expand={expand_query}"
 
     response = http_request("GET", cmd_url)
     return response
@@ -496,9 +484,7 @@ def update_alert_command(args):
     demisto.results(
         {
             "Type": entryTypes["note"],
-            "Contents": "Alert - {} has been set to {}.".format(
-                alert_id, alert_update_action_type
-            ),
+            "Contents": f"Alert - {alert_id} has been set to {alert_update_action_type}.",
             "ContentsFormat": formats["text"],
             "EntryContext": ec,
         }
@@ -519,10 +505,8 @@ def update_alert(resource_group_name, asc_location, alert_id, alert_update_actio
     """
     cmd_url = ""
     if resource_group_name:
-        cmd_url += "/resourceGroups/{}".format(resource_group_name)
-    cmd_url += "/providers/Microsoft.Security/locations/{}/alerts/{}/{}?api-version={}".format(
-        asc_location, alert_id, alert_update_action_type, ALERT_API_VERSION
-    )
+        cmd_url += f"/resourceGroups/{resource_group_name}"
+    cmd_url += f"/providers/Microsoft.Security/locations/{asc_location}/alerts/{alert_id}/{alert_update_action_type}?api-version={ALERT_API_VERSION}"
     return http_request("POST", cmd_url)
 
 
@@ -577,9 +561,7 @@ def list_locations():
     Returns:
         dict: response body
     """
-    cmd_url = "/providers/Microsoft.Security/locations?api-version={}".format(
-        LOCATION_API_VERSION
-    )
+    cmd_url = f"/providers/Microsoft.Security/locations?api-version={LOCATION_API_VERSION}"
     response = http_request("GET", cmd_url)
     return response
 
@@ -642,16 +624,12 @@ def update_atp(resource_group_name, storage_account, setting_name, is_enabled):
         dict: respones body
     """
     cmd_url = (
-        "/resourceGroups/{}/providers/Microsoft.Storage/storageAccounts/{}"
-        "/providers/Microsoft.Security/advancedThreatProtectionSettings/{}?api-version={}".format(
-            resource_group_name, storage_account, setting_name, ATP_API_VERSION
-        )
+        f"/resourceGroups/{resource_group_name}/providers/Microsoft.Storage/storageAccounts/{storage_account}"
+        f"/providers/Microsoft.Security/advancedThreatProtectionSettings/{setting_name}?api-version={ATP_API_VERSION}"
     )
     data = {
-        "id": "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.Storage"
-        "/storageAccounts/{}/providers/Microsoft.Security/advancedThreatProtectionSettings/{}".format(
-            SUBSCRIPTION_ID, resource_group_name, storage_account, setting_name
-        ),
+        "id": f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{resource_group_name}/providers/Microsoft.Storage"
+        f"/storageAccounts/{storage_account}/providers/Microsoft.Security/advancedThreatProtectionSettings/{setting_name}",
         "name": setting_name,
         "type": "Microsoft.Security/advancedThreatProtectionSettings",
         "properties": {"is_enabled": is_enabled},
@@ -710,10 +688,8 @@ def get_atp(resource_group_name, storage_account, setting_name):
 
     """
     cmd_url = (
-        "/resourceGroups/{}/providers/Microsoft.Storage/storageAccounts"
-        "/{}/providers/Microsoft.Security/advancedThreatProtectionSettings/{}?api-version={}".format(
-            resource_group_name, storage_account, setting_name, ATP_API_VERSION
-        )
+        f"/resourceGroups/{resource_group_name}/providers/Microsoft.Storage/storageAccounts"
+        f"/{storage_account}/providers/Microsoft.Security/advancedThreatProtectionSettings/{setting_name}?api-version={ATP_API_VERSION}"
     )
     response = http_request("GET", cmd_url)
     return response
@@ -774,9 +750,7 @@ def update_aps(setting_name, auto_provision):
     Returns:
         dict: response body
     """
-    cmd_url = "/providers/Microsoft.Security/autoProvisioningSettings/{}?api-version={}".format(
-        setting_name, APS_API_VERSION
-    )
+    cmd_url = f"/providers/Microsoft.Security/autoProvisioningSettings/{setting_name}?api-version={APS_API_VERSION}"
     data = {"properties": {"autoProvision": auto_provision}}
     response = http_request("PUT", cmd_url, body=data)
     return response
@@ -828,9 +802,7 @@ def list_aps():
     Returns:
         dict: response body
     """
-    cmd_url = "/providers/Microsoft.Security/autoProvisioningSettings?api-version={}".format(
-        APS_API_VERSION
-    )
+    cmd_url = f"/providers/Microsoft.Security/autoProvisioningSettings?api-version={APS_API_VERSION}"
     response = http_request("GET", cmd_url)
     return response
 
@@ -883,9 +855,7 @@ def get_aps(setting_name):
     Returns:
         dict: response body
     """
-    cmd_url = "/providers/Microsoft.Security/autoProvisioningSettings/{}?api-version={}".format(
-        setting_name, APS_API_VERSION
-    )
+    cmd_url = f"/providers/Microsoft.Security/autoProvisioningSettings/{setting_name}?api-version={APS_API_VERSION}"
     response = http_request("GET", cmd_url)
     return response
 
@@ -967,16 +937,12 @@ def list_ipp(management_group=None):
         dict: response body
 
     """
-    cmd_url = str()
+    cmd_url = ""
     scope_is_subscription = True
     if management_group:
-        cmd_url += "/providers/Microsoft.Management/managementGroups/{}".format(
-            management_group
-        )
+        cmd_url += f"/providers/Microsoft.Management/managementGroups/{management_group}"
         scope_is_subscription = False
-    cmd_url += "/providers/Microsoft.Security/informationProtectionPolicies?api-version={}".format(
-        IPP_API_VERSION
-    )
+    cmd_url += f"/providers/Microsoft.Security/informationProtectionPolicies?api-version={IPP_API_VERSION}"
     response = http_request("GET", cmd_url, add_subscription=scope_is_subscription)
     return response
 
@@ -1059,7 +1025,7 @@ def get_ipp_command(args):
         }
         demisto.results([basic_table_entry, info_type_table_entry])
     else:
-        demisto.results("No properties found in {}".format(management_group))
+        demisto.results(f"No properties found in {management_group}")
 
 
 def get_ipp(policy_name, management_group):
@@ -1075,13 +1041,9 @@ def get_ipp(policy_name, management_group):
     cmd_url = ""
     score_is_subscription = True
     if management_group:
-        cmd_url += "/providers/Microsoft.Management/managementGroups/{}".format(
-            management_group
-        )
+        cmd_url += f"/providers/Microsoft.Management/managementGroups/{management_group}"
         score_is_subscription = False
-    cmd_url += "/providers/Microsoft.Security/informationProtectionPolicies/{}?api-version={}".format(
-        policy_name, IPP_API_VERSION
-    )
+    cmd_url += f"/providers/Microsoft.Security/informationProtectionPolicies/{policy_name}?api-version={IPP_API_VERSION}"
     response = http_request("GET", cmd_url, add_subscription=score_is_subscription)
     return response
 
@@ -1157,12 +1119,10 @@ def list_jit(asc_location, resource_group_name):
     """
     cmd_url = ""
     if resource_group_name:
-        cmd_url += "/resourceGroups/{}".format(resource_group_name)
+        cmd_url += f"/resourceGroups/{resource_group_name}"
     if asc_location:
-        cmd_url += "/providers/Microsoft.Security/locations/{}".format(asc_location)
-    cmd_url += "/providers/Microsoft.Security/jitNetworkAccessPolicies?api-version={}".format(
-        JIT_API_VERSION
-    )
+        cmd_url += f"/providers/Microsoft.Security/locations/{asc_location}"
+    cmd_url += f"/providers/Microsoft.Security/jitNetworkAccessPolicies?api-version={JIT_API_VERSION}"
     response = http_request("GET", cmd_url)
     return response
 
@@ -1252,7 +1212,7 @@ def get_jit_command(args):
             for vm in requestData.get("virtualMachines"):
                 vm_name = vm["id"].split("/")[-1]
                 vm_ports = format_jit_port_request(vm.get("ports"))
-                vms.append("[{}: {}]".format(vm_name, vm_ports))
+                vms.append(f"[{vm_name}: {vm_ports}]")
             requests_table_output.append(
                 {
                     "VirtualMachines": ", ".join(vms),
@@ -1291,10 +1251,8 @@ def get_jit(policy_name, asc_location, resource_group_name):
         dict: response body
     """
     cmd_url = (
-        "/resourceGroups/{}/providers/Microsoft.Security/locations/{}/jitNetworkAccessPolicies/"
-        "{}?api-version={}".format(
-            resource_group_name, asc_location, policy_name, JIT_API_VERSION
-        )
+        f"/resourceGroups/{resource_group_name}/providers/Microsoft.Security/locations/{asc_location}/jitNetworkAccessPolicies/"
+        f"{policy_name}?api-version={JIT_API_VERSION}"
     )
     response = http_request("GET", cmd_url)
     return response
@@ -1318,10 +1276,8 @@ def initiate_jit_command(args):
         duration,
     )
     policy_id = (
-        "/subscriptions/{}/resourceGroups/{}/providers/"
-        "Microsoft.Security/locations/{}/jitNetworkAccessPolicies/{}".format(
-            SUBSCRIPTION_ID, resource_group_name, asc_location, policy_name
-        )
+        f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{resource_group_name}/providers/"
+        f"Microsoft.Security/locations/{asc_location}/jitNetworkAccessPolicies/{policy_name}"
     )
     virtual_machines = response.get("virtualMachines")
     if virtual_machines and len(virtual_machines) > 0:
@@ -1354,9 +1310,7 @@ def initiate_jit_command(args):
 
         ec = {
             "AzureSecurityCenter.JITPolicy(val.ID && val.ID ="
-            "== obj.{}).Initiate(val.endTimeUtc === obj.EndTimeUtc)".format(
-                policy_id
-            ): outputs
+            f"== obj.{policy_id}).Initiate(val.endTimeUtc === obj.EndTimeUtc)": outputs
         }
 
         demisto.results(
@@ -1395,10 +1349,8 @@ def initiate_jit(
         dict: response body
     """
     cmd_url = (
-        "/resourceGroups/{}/providers/Microsoft.Security/"
-        "locations/{}/jitNetworkAccessPolicies/{}/initiate?api-version={}".format(
-            resource_group_name, asc_location, policy_name, JIT_API_VERSION
-        )
+        f"/resourceGroups/{resource_group_name}/providers/Microsoft.Security/"
+        f"locations/{asc_location}/jitNetworkAccessPolicies/{policy_name}/initiate?api-version={JIT_API_VERSION}"
     )
     # only supports init access for one vm and one port now
     data = {
@@ -1431,10 +1383,8 @@ def delete_jit_command(args):
     delete_jit(asc_location, resource_group_name, policy_name)
 
     policy_id = (
-        "/subscriptions/{}/resourceGroups/"
-        "{}/providers/Microsoft.Security/locations/{}/jitNetworkAccessPolicies/{}".format(
-            SUBSCRIPTION_ID, resource_group_name, asc_location, policy_name
-        )
+        f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/"
+        f"{resource_group_name}/providers/Microsoft.Security/locations/{asc_location}/jitNetworkAccessPolicies/{policy_name}"
     )
 
     outputs = {"ID": policy_id, "Action": "deleted"}
@@ -1443,7 +1393,7 @@ def delete_jit_command(args):
     demisto.results(
         {
             "Type": entryTypes["note"],
-            "Contents": "Policy - {} has been deleted sucessfully.".format(policy_name),
+            "Contents": f"Policy - {policy_name} has been deleted sucessfully.",
             "ContentsFormat": formats["text"],
             "EntryContext": ec,
         }
@@ -1459,9 +1409,8 @@ def delete_jit(asc_location, resource_group_name, policy_name):
         policy_name: Policy name
     """
     cmd_url = (
-        "/resourceGroups/{}/providers/Microsoft.Security/"
-        "locations/{}/jitNetworkAccessPolicies/{}?api-version={}"
-        "".format(resource_group_name, asc_location, policy_name, JIT_API_VERSION)
+        f"/resourceGroups/{resource_group_name}/providers/Microsoft.Security/"
+        f"locations/{asc_location}/jitNetworkAccessPolicies/{policy_name}?api-version={JIT_API_VERSION}"
     )
     http_request("DELETE", cmd_url)
 
@@ -1479,7 +1428,7 @@ def list_sc_storage_command():
     accounts = list_sc_storage().get("value")
     outputs = list()
     for account in accounts:
-        account_id_array = account.get("id", str()).split("/")
+        account_id_array = account.get("id", "").split("/")
         resource_group_name = account_id_array[
             account_id_array.index("resourceGroups") + 1
         ]
@@ -1517,9 +1466,7 @@ def list_sc_storage():
         dict: response body
 
     """
-    cmd_url = "/providers/Microsoft.Storage/storageAccounts?api-version={}".format(
-        STORAGE_API_VERSION
-    )
+    cmd_url = f"/providers/Microsoft.Storage/storageAccounts?api-version={STORAGE_API_VERSION}"
     response = http_request("GET", cmd_url)
     return response
 
@@ -1529,7 +1476,7 @@ def list_sc_storage():
 """ Functions start """
 if not SUBSCRIPTION_ID:
     SUBSCRIPTION_ID = set_subscription_id()
-    SUBSCRIPTION_URL = "/subscriptions/{}".format(SUBSCRIPTION_ID)
+    SUBSCRIPTION_URL = f"/subscriptions/{SUBSCRIPTION_ID}"
 
 try:
     if demisto.command() == "test-module":

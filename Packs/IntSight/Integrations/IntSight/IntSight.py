@@ -23,7 +23,7 @@ else:
     id_and_api_key = USER_ID + ':' + PASSWORD
     authorization_header = base64.b64encode(id_and_api_key.encode("utf-8")).decode()
 
-HEADERS = {'Authorization': 'Basic {}'.format(authorization_header), 'Content-Type': 'application/json',
+HEADERS = {'Authorization': f'Basic {authorization_header}', 'Content-Type': 'application/json',
            'Account-Id': demisto.getParam('credentials')['identifier']}
 
 # Change the Account-Id to the sub account id, so all actions will be on the sub account.
@@ -170,7 +170,7 @@ def handle_filters(found_date_from=None):
 
 
 def get_alerts_helper(params):
-    demisto.info("Executing get_alerts with params: {}".format(params))
+    demisto.info(f"Executing get_alerts with params: {params}")
     response = http_request('GET', 'public/v1/data/alerts/alerts-list', params=params, json_response=True)
     alerts_human_readable = []
     alerts_context = []
@@ -347,7 +347,7 @@ def get_alert_activity():
             'Type': entryTypes['note'],
             'EntryContext': {'IntSights.Alerts(val.ID === obj.ID)': alert},
             'Contents': response,
-            'HumanReadable': 'Alert {} does not have activities.'.format(alert_id),
+            'HumanReadable': f'Alert {alert_id} does not have activities.',
             'ContentsFormat': formats['json']
         })
     else:
@@ -382,7 +382,7 @@ def get_alert_activity():
 
         headers = ['ID', 'Type', 'Initiator', 'CreatedDate', 'UpdateDate',
                    'RemediationBlocklistUpdate', 'AskTheAnalyst', 'Mail', 'ReadBy']
-        human_readable = tableToMarkdown('IntSights Alert {} Activity Log'.format(alert_id),
+        human_readable = tableToMarkdown(f'IntSights Alert {alert_id} Activity Log',
                                          t=human_readable_arr, headers=headers),
 
         demisto.results({
@@ -713,7 +713,7 @@ def results_for_no_content(cmd_name, additional_information):
             'Type': entryTypes['note'],
             'EntryContext': {'IntSights': {}},
             'Contents': {},
-            'HumanReadable': '### {} \n\n {}'.format(cmd_name, additional_information),
+            'HumanReadable': f'### {cmd_name} \n\n {additional_information}',
             'ContentsFormat': formats['json']
         }
     )
@@ -838,7 +838,7 @@ def request_for_ioc_enrichment():
     Request for IOC enrichment
     """
     ioc_value = demisto.getArg('value')
-    request_url = 'public/v1/iocs/enrich/{}'.format(ioc_value)
+    request_url = f'public/v1/iocs/enrich/{ioc_value}'
 
     response = http_request('GET', request_url, json_response=True)
     status = response.get('Status')
@@ -880,7 +880,7 @@ def request_for_ioc_enrichment():
         raise Exception('Could not get any results. Reason: Quota exceded.')
     else:
         reason = response.get('FailedReason', '')
-        raise Exception('Could not get any results. Reason: {}.'.format(reason))
+        raise Exception(f'Could not get any results. Reason: {reason}.')
 
 
 def translate_severity(sev):
@@ -899,7 +899,7 @@ def fetch_incidents():
     Fetch incidents for Demisto
     """
     last_run = demisto.getLastRun()
-    demisto.info("IntSight fetch last run time is: {}".format(str(last_run)))
+    demisto.info(f"IntSight fetch last run time is: {str(last_run)}")
     if not last_run or 'time' not in last_run:
         first_fetch_param = demisto.params().get('first_fetch', DEFAULT_TIME_RANGE)
         first_fetch_date = arg_to_datetime(first_fetch_param, 'first_fetch')
@@ -994,7 +994,7 @@ def takedown_request():
         'ID': alert_id,
     }
     human_readable = '### IntSights Alert Takedown\n' \
-                     'The Alert Takedown request has been sent successfully for {}'.format(str(alert_id))
+                     f'The Alert Takedown request has been sent successfully for {str(alert_id)}'
     demisto.results({
         'Type': entryTypes['note'],
         'EntryContext': {'IntSights.Alerts(val.ID === obj.ID)': context},
@@ -1079,7 +1079,7 @@ def get_mssp_sub_accounts():
     account_ids = [i["ID"] for i in accounts]
     if MSSP_ACCOUNT_ID not in account_ids:
         demisto.debug("[DEBUG] - MSSP sub accounts:" + str(accounts))
-        return_error('Entered sub account id ({}) is not part of this mssp account'.format(MSSP_ACCOUNT_ID))
+        return_error(f'Entered sub account id ({MSSP_ACCOUNT_ID}) is not part of this mssp account')
 
     for i, account in enumerate(account_ids):
         # Call account

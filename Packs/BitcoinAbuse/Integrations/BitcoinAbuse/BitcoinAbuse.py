@@ -213,7 +213,7 @@ class BitcoinAbuseClient(BaseClient):
         Returns:
             - Throws DemistoException in case an incorrect api key was given.
         """
-        if indicators and '<html lang="en">' == indicators[0].get('value'):
+        if indicators and indicators[0].get('value') == '<html lang="en">':
             raise DemistoException('api token inserted is not valid')
 
 

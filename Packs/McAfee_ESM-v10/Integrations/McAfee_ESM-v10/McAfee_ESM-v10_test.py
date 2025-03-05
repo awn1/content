@@ -16,33 +16,33 @@ integration_params = {
 }
 
 Cases = [
-    {u'openTime': u'07/27/2020 08:07:26',
-     u'severity': 1,
-     u'deviceList': None,
-     u'eventList': [],
-     u'notes': u'------- Open: 2020/07/27 08:07:26(GMT)   test -------\n\n------- Closed: 08/02/2020 14:34:31(GMT)'
-               u'   test -------\n',
-     u'dataSourceList': None,
-     u'closeTime': u'08/02/2020 14:34:31',
-     u'id': {u'value': 108598},
-     u'summary': u'VPN - Multiple Failed Login',
-     u'statusId': 2,
-     u'history': u'\n------- Viewed: 07/27/2020 08:08:05(GMT) -------\n\n------- Viewed: 07/27/2020 08:09:50(GMT)'
-                 u'  ------\n\n------- Viewed: 08/04/2020 09:47:27(GMT)   -------'
+    {'openTime': '07/27/2020 08:07:26',
+     'severity': 1,
+     'deviceList': None,
+     'eventList': [],
+     'notes': '------- Open: 2020/07/27 08:07:26(GMT)   test -------\n\n------- Closed: 08/02/2020 14:34:31(GMT)'
+               '   test -------\n',
+     'dataSourceList': None,
+     'closeTime': '08/02/2020 14:34:31',
+     'id': {'value': 108598},
+     'summary': 'VPN - Multiple Failed Login',
+     'statusId': 2,
+     'history': '\n------- Viewed: 07/27/2020 08:08:05(GMT) -------\n\n------- Viewed: 07/27/2020 08:09:50(GMT)'
+                 '  ------\n\n------- Viewed: 08/04/2020 09:47:27(GMT)   -------'
      },
-    {u'openTime': u'07/27/2020 08:07:26',
-     u'severity': 1,
-     u'deviceList': None,
-     u'eventList': [],
-     u'notes': u'------- Open: 2020/07/27 08:07:26(GMT)   test -------\n\n------- Closed: 08/02/2020 14:34:31(GMT)'
-               u'   test -------\n',
-     u'dataSourceList': None,
-     u'closeTime': u'08/02/2020 14:34:31',
-     u'id': {u'value': 108598},
-     u'summary': u'VPN - Multiple Failed Login',
-     u'statusId': {'value': 1},
-     u'history': u'\n------- Viewed: 07/27/2020 08:08:05(GMT) -------\n\n------- Viewed: 07/27/2020 08:09:50(GMT)'
-                 u'  ------\n\n------- Viewed: 08/04/2020 09:47:27(GMT)   -------'
+    {'openTime': '07/27/2020 08:07:26',
+     'severity': 1,
+     'deviceList': None,
+     'eventList': [],
+     'notes': '------- Open: 2020/07/27 08:07:26(GMT)   test -------\n\n------- Closed: 08/02/2020 14:34:31(GMT)'
+               '   test -------\n',
+     'dataSourceList': None,
+     'closeTime': '08/02/2020 14:34:31',
+     'id': {'value': 108598},
+     'summary': 'VPN - Multiple Failed Login',
+     'statusId': {'value': 1},
+     'history': '\n------- Viewed: 07/27/2020 08:08:05(GMT) -------\n\n------- Viewed: 07/27/2020 08:09:50(GMT)'
+                 '  ------\n\n------- Viewed: 08/04/2020 09:47:27(GMT)   -------'
      }
 ]
 

@@ -97,7 +97,7 @@ def generate_report_malicious_site_human_readable(response_lines_array):
     if response_status_code == MALICIOUS_REPORT_ALREADY_EXISTS:
         human_readable = "### Takedown not submitted.\n " \
                          "A takedown for this URL already exists.\n" \
-                         "ID number of the existing takedown: {}.".format(response_lines_array[1])
+                         f"ID number of the existing takedown: {response_lines_array[1]}."
     elif response_status_code == MALICIOUS_REPORT_URL_IS_WILDCARD:
         human_readable = "### Takedown not submitted\n " \
                          "This URL is a wildcard sub-domain variation of an existing takedown.\n"

@@ -1,6 +1,6 @@
 import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any
 
 import urllib3
 from dateparser import parse
@@ -19,13 +19,13 @@ SEVERITY_TRANSLATION = {
 
 
 class Client(BaseClient):
-    def get_suspicious_activity_request(self, suspicious_activity_id: str = '') -> Dict[str, Any]:
+    def get_suspicious_activity_request(self, suspicious_activity_id: str = '') -> dict[str, Any]:
         return self._http_request(
             method='GET',
             url_suffix=f'/suspiciousActivities/{suspicious_activity_id}'
         )
 
-    def get_suspicious_activity_details_request(self, suspicious_activity_id: str) -> Dict[str, Any]:
+    def get_suspicious_activity_details_request(self, suspicious_activity_id: str) -> dict[str, Any]:
         return self._http_request(
             method='GET',
             url_suffix=f'/suspiciousActivities/{suspicious_activity_id}/details'
@@ -34,7 +34,7 @@ class Client(BaseClient):
     def update_suspicious_activity_status_request(self,
                                                   suspicious_activity_id: str,
                                                   suspicious_activity_status: str
-                                                  ) -> Dict[str, Any]:
+                                                  ) -> dict[str, Any]:
         body = {
             'Status': suspicious_activity_status
         }
@@ -47,7 +47,7 @@ class Client(BaseClient):
             resp_type='text'
         )
 
-    def delete_suspicious_activity_request(self, suspicious_activity_id: str) -> Dict[str, Any]:
+    def delete_suspicious_activity_request(self, suspicious_activity_id: str) -> dict[str, Any]:
         body = {
             'shouldDeleteSametype': False
         }
@@ -65,19 +65,19 @@ class Client(BaseClient):
             resp_type='text'
         )
 
-    def get_monitoring_alert_request(self) -> Dict[str, Any]:
+    def get_monitoring_alert_request(self) -> dict[str, Any]:
         return self._http_request(
             method='GET',
             url_suffix='/monitoringAlerts'
         )
 
-    def get_entity_request(self, entity_id: str) -> Dict[str, Any]:
+    def get_entity_request(self, entity_id: str) -> dict[str, Any]:
         return self._http_request(
             method='GET',
             url_suffix=f'/uniqueEntities/{entity_id}'
         )
 
-    def get_entity_profile_request(self, entity_id: str) -> Dict[str, Any]:
+    def get_entity_profile_request(self, entity_id: str) -> dict[str, Any]:
         return self._http_request(
             method='GET',
             url_suffix=f'/uniqueEntities/{entity_id}/profile'
@@ -89,7 +89,7 @@ def test_module(client: Client) -> str:
     return 'ok'
 
 
-def get_suspicious_activity(client: Client, args: Dict[str, str]) -> Union[CommandResults, str]:
+def get_suspicious_activity(client: Client, args: dict[str, str]) -> CommandResults | str:
     suspicious_activity_id = args.get('id', '')
     suspicious_activity_status = argToList(args.get('status', ''))
     suspicious_activity_severity = argToList(args.get('severity', ''))
@@ -155,7 +155,7 @@ def get_suspicious_activity(client: Client, args: Dict[str, str]) -> Union[Comma
         return 'No results found.'
 
 
-def update_suspicious_activity_status(client: Client, args: Dict[str, str]) -> str:
+def update_suspicious_activity_status(client: Client, args: dict[str, str]) -> str:
     suspicious_activity_id = args.get('id', '')
     suspicious_activity_status = args.get('status', '')
 
@@ -168,7 +168,7 @@ def update_suspicious_activity_status(client: Client, args: Dict[str, str]) -> s
                f'{suspicious_activity_status} successfully.'
 
 
-def get_monitoring_alert(client: Client, args: Dict[str, str]) -> Union[CommandResults, str]:
+def get_monitoring_alert(client: Client, args: dict[str, str]) -> CommandResults | str:
     monitoring_alert_status = argToList(args.get('status', ''))
     monitoring_alert_severity = argToList(args.get('severity', ''))
     monitoring_alert_type = argToList(args.get('type', ''))
@@ -220,7 +220,7 @@ def get_monitoring_alert(client: Client, args: Dict[str, str]) -> Union[CommandR
         return 'No results found.'
 
 
-def get_entity(client: Client, args: Dict[str, str]) -> Union[CommandResults, str]:
+def get_entity(client: Client, args: dict[str, str]) -> CommandResults | str:
     entity_id = args.get('id', '')
 
     entity = client.get_entity_request(entity_id)
@@ -255,19 +255,19 @@ def get_entity(client: Client, args: Dict[str, str]) -> Union[CommandResults, st
 
 def fetch_incidents(
         client: Client,
-        last_run: Dict[str, str],
+        last_run: dict[str, str],
         first_fetch_time: str,
         max_results: int,
-        activity_status_to_fetch: List,
+        activity_status_to_fetch: list,
         min_severity: int,
-        activity_type_to_fetch: List
-) -> Tuple[Dict[str, str], List[Dict[str, str]]]:
+        activity_type_to_fetch: list
+) -> tuple[dict[str, str], list[dict[str, str]]]:
     last_fetch = last_run.get('last_fetch', '') if last_run.get('last_fetch') else first_fetch_time
     last_fetch_dt = parse(last_fetch).replace(tzinfo=utc)  # type: ignore
     latest_start_time = parse(last_fetch).replace(tzinfo=utc)  # type: ignore
 
     incidents_fetched = 0
-    incidents: List[Dict[str, Any]] = []
+    incidents: list[dict[str, Any]] = []
 
     suspicious_activities = client.get_suspicious_activity_request()
     suspicious_activities_list = suspicious_activities if isinstance(suspicious_activities, list) \

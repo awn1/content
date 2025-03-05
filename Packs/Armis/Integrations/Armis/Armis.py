@@ -1,6 +1,5 @@
 ''' IMPORTS '''
 
-from typing import List
 
 import pytz
 import urllib3
@@ -93,9 +92,9 @@ class Client(BaseClient):
         return response['data']
 
     def search_alerts(self,
-                      severity: List[str] = None,
-                      status: List[str] = None,
-                      alert_type: List[str] = None,
+                      severity: list[str] = None,
+                      status: list[str] = None,
+                      alert_type: list[str] = None,
                       alert_id: str = None,
                       time_frame: str = None,
                       order_by: str = None,
@@ -118,7 +117,7 @@ class Client(BaseClient):
         time_frame = '3 Days' if time_frame is None else time_frame
         aql_string = ['in:alerts', f'timeFrame:"{time_frame}"']
         if severity:
-            severity_string = ','.join([severity_option for severity_option in severity])
+            severity_string = ','.join(list(severity))
             aql_string.append(f'riskLevel:{severity_string}')
         if status:
             status_string = ','.join([status_option for status_option in status])
@@ -169,7 +168,7 @@ class Client(BaseClient):
                                   },
                                   data={'status': status})
 
-    def tag_device(self, device_id: str, tags: List[str]):
+    def tag_device(self, device_id: str, tags: list[str]):
         """
         Add tags to a Device
         Args:
@@ -180,7 +179,7 @@ class Client(BaseClient):
         return self._http_request('POST', f'/devices/{device_id}/tags/', json_data={'tags': tags},
                                   headers={'accept': 'application/json', 'Authorization': str(token)})
 
-    def untag_device(self, device_id: str, tags: List[str]):
+    def untag_device(self, device_id: str, tags: list[str]):
         """
         Remove tags from a Device
         Args:
@@ -195,9 +194,9 @@ class Client(BaseClient):
                        name: str = None,
                        device_id: str = None,
                        mac_address: str = None,
-                       risk_level: List[str] = None,
+                       risk_level: list[str] = None,
                        ip_address: str = None,
-                       device_type: List[str] = None,
+                       device_type: list[str] = None,
                        time_frame: str = None,
                        order_by: str = None,
                        max_results: int = None):
@@ -301,8 +300,8 @@ def fetch_incidents(client: Client,
                     last_run: dict,
                     first_fetch_time: str,
                     minimum_severity: str,
-                    alert_type: List[str],
-                    alert_status: List[str],
+                    alert_type: list[str],
+                    alert_status: list[str],
                     free_search_string: str,
                     max_results: int):
     """

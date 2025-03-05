@@ -237,10 +237,10 @@ def test_compare_incident_in_demisto_vs_xdr_context___status_was_modified():
                                                                                      fields_mapping)
 
     assert is_modified
-    assert {
+    assert update_args == {
         "incident_id": "100",
         "status": "closed"
-    } == update_args
+    }
 
 
 def test_compare_incident_in_demisto_vs_xdr_context___severity_was_modified():
@@ -275,10 +275,10 @@ def test_compare_incident_in_demisto_vs_xdr_context___severity_was_modified():
                                                                                      fields_mapping)
 
     assert is_modified
-    assert {
+    assert update_args == {
         "incident_id": "100",
         "manual_severity": "high"
-    } == update_args
+    }
 
 
 def test_compare_incident_in_demisto_vs_xdr_context___status_and_severity_was_modified():
@@ -315,11 +315,11 @@ def test_compare_incident_in_demisto_vs_xdr_context___status_and_severity_was_mo
                                                                                      fields_mapping)
 
     assert is_modified
-    assert {
+    assert update_args == {
         "incident_id": "100",
         "manual_severity": "high",
         "status": "closed"
-    } == update_args
+    }
 
 
 def test_compare_incident_latest_xdr_incident_with_older_xdr_in_context____when_nothing_changed():
@@ -392,9 +392,9 @@ def test_compare_incident_latest_xdr_incident_with_older_xdr_in_context____when_
         fields_mapping)
 
     assert is_modified
-    assert {
+    assert update_args == {
         "xdrstatus": "under_investigation",
-    } == update_args
+    }
 
 
 def test_compare_incident_latest_xdr_incident_with_older_xdr_in_context____when_manual_severity_changed():
@@ -433,9 +433,9 @@ def test_compare_incident_latest_xdr_incident_with_older_xdr_in_context____when_
         fields_mapping)
 
     assert is_modified
-    assert {
+    assert update_args == {
         "severity": "medium",
-    } == update_args
+    }
 
 
 def test_compare_incident_latest_xdr_incident_with_older_xdr_in_context____when_status_and_severity_changed():
@@ -478,10 +478,10 @@ def test_compare_incident_latest_xdr_incident_with_older_xdr_in_context____when_
         fields_mapping)
 
     assert is_modified
-    assert {
+    assert update_args == {
         "severity": "medium",
         "xdrstatus": "under_investigation"
-    } == update_args
+    }
 
 
 def test_args_to_str_1():
@@ -498,8 +498,8 @@ def test_args_to_str_1():
     actual = xdr_script.args_to_str(args, xdr_incident)
 
     expected = 'incident_id=`11` assigned_user_mail=`xdrassigneduser` status=`xdrstatus` severity=`xdrseverity` ' \
-               'playbook_to_run=`XDR Demo` first=`false` xdr_incident_from_previous_run=`{}` '\
-        .format(json.dumps(xdr_incident))
+               f'playbook_to_run=`XDR Demo` first=`false` xdr_incident_from_previous_run=`{json.dumps(xdr_incident)}` '\
+        
 
     assert expected == actual
 
@@ -519,8 +519,8 @@ def test_args_to_str_2():
     actual = xdr_script.args_to_str(args, xdr_incident)
 
     expected = 'incident_id=`11` assigned_user_mail=`xdrassigneduser` status=`xdrstatus` severity=`xdrseverity` ' \
-               'playbook_to_run=`XDR Demo` first=`false` xdr_incident_from_previous_run=`{}` '\
-        .format(json.dumps(xdr_incident))
+               f'playbook_to_run=`XDR Demo` first=`false` xdr_incident_from_previous_run=`{json.dumps(xdr_incident)}` '\
+        
 
     assert expected == actual
 
@@ -556,7 +556,7 @@ def test_compare_incident_in_demisto_when_the_severity_is_unknown():
                                                                                      fields_mapping)
 
     assert is_modified is False
-    assert {} == update_args
+    assert update_args == {}
 
 
 def test_fix_bug_19669(mocker, capfd):

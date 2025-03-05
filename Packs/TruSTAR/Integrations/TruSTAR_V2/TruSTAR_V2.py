@@ -1,6 +1,5 @@
 import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
-from typing import Tuple
 
 
 ''' IMPORTS '''
@@ -18,7 +17,7 @@ urllib3.disable_warnings()
 handle_proxy()
 
 
-class Utils(object):
+class Utils:
     """
     Class with some utility methods.
     """
@@ -36,7 +35,7 @@ class Utils(object):
         return int(d.strftime("%s")) * 1000
 
 
-class ContextManager(object):
+class ContextManager:
     """
     Manages where to put the data depending if the data to output is an indicator or not.
 
@@ -94,7 +93,7 @@ class ContextManager(object):
         xsoar_file_indicator = Common.File(**{k: v for k, v in args.items() if k})
         return xsoar_file_indicator
 
-    def _get_xsoar_indicator_and_readable_output(self, ts_indicator) -> Tuple[Common.Indicator, str]:
+    def _get_xsoar_indicator_and_readable_output(self, ts_indicator) -> tuple[Common.Indicator, str]:
         """
         Returns a XSoar Indicator with DBotScore embedded and their human readable. Indicators can be:
         - Common.File

@@ -6,17 +6,17 @@ from CommonServerPython import *  # noqa: F401
 
 from CommonServerUserPython import *  # noqa
 
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Any
 
 
 ''' STANDALONE FUNCTION '''
 
 
-def deconstruct_entry(entry: Dict[str, str],
-                      username_fields: List[str],
-                      sightings_fields: List[str]) -> Tuple[Optional[str],
-                                                            Optional[str],
-                                                            Optional[int]]:
+def deconstruct_entry(entry: dict[str, str],
+                      username_fields: list[str],
+                      sightings_fields: list[str]) -> tuple[str | None,
+                                                            str | None,
+                                                            int | None]:
     """
     deconstruct_entry
     Extracts device relevant fields from a log entry.
@@ -47,7 +47,7 @@ def deconstruct_entry(entry: Dict[str, str],
 ''' COMMAND FUNCTION '''
 
 
-def aggregate_command(args: Dict[str, Any]) -> CommandResults:
+def aggregate_command(args: dict[str, Any]) -> CommandResults:
     input_list = argToList(args.get('input', []))
     current_list = argToList(args.get('current', []))
 

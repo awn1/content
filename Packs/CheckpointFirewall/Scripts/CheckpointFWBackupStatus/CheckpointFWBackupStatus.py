@@ -27,28 +27,27 @@ def main():
                     if isError(entry):
                         res += resSSH
                         break
+                    device = entry['ModuleName']
+                    if demisto.get(entry, 'Contents.success'):
+                        output = demisto.get(entry, 'Contents.output')
+                        backFileLoc = output.find("Backup file location")
+                        backFileLocEnd = output.find("Backup process finished")
+                        result = 'Answer returned'
+                        devicesBackupStarted.append({
+                            'DeviceName': device,
+                            'System': demisto.get(entry, 'Contents.system'),
+                            'Status': ("Done" if output.find("local backup succeeded.") > -1 else "Pending"),
+                            'Path': (output[backFileLoc + len(
+                                "Backup file location: "): backFileLocEnd - 1] if backFileLoc > -1
+                                else None)})  # noqa: E128
                     else:
-                        device = entry['ModuleName']
-                        if demisto.get(entry, 'Contents.success'):
-                            output = demisto.get(entry, 'Contents.output')
-                            backFileLoc = output.find("Backup file location")
-                            backFileLocEnd = output.find("Backup process finished")
-                            result = 'Answer returned'
-                            devicesBackupStarted.append({
-                                'DeviceName': device,
-                                'System': demisto.get(entry, 'Contents.system'),
-                                'Status': ("Done" if output.find("local backup succeeded.") > -1 else "Pending"),
-                                'Path': (output[backFileLoc + len(
-                                    "Backup file location: "): backFileLocEnd - 1] if backFileLoc > -1
-                                    else None)})  # noqa: E128
-                        else:
-                            devicesBackupError.append(device)
-                            output = "Output:\n" + str(demisto.get(entry, 'Contents.output')) + "Error:\n" + \
-                                     str(demisto.get(entry, 'Contents.error'))
-                            result = 'Failed to query'
+                        devicesBackupError.append(device)
+                        output = "Output:\n" + str(demisto.get(entry, 'Contents.output')) + "Error:\n" + \
+                                 str(demisto.get(entry, 'Contents.error'))
+                        result = 'Failed to query'
 
-                        tbl.append({'DeviceName': device, 'System': demisto.get(entry, 'Contents.system'),
-                                    'Query result': result, 'Output': output})
+                    tbl.append({'DeviceName': device, 'System': demisto.get(entry, 'Contents.system'),
+                                'Query result': result, 'Output': output})
             except Exception as ex:
                 res.append({"Type": entryTypes["error"], "ContentsFormat": formats["text"],
                             "Contents": "Error occurred while parsing output from command. "

@@ -102,8 +102,7 @@ def get_access_token():
     if dbot_response.status_code not in {200, 201}:
         msg = 'Error in authentication. Try checking the credentials you entered.'
         try:
-            demisto.info('Authentication failure from server: {} {} {}'.format(
-                dbot_response.status_code, dbot_response.reason, dbot_response.text))
+            demisto.info(f'Authentication failure from server: {dbot_response.status_code} {dbot_response.reason} {dbot_response.text}')
             err_response = dbot_response.json()
             server_msg = err_response.get('message')
             if not server_msg:
@@ -112,9 +111,9 @@ def get_access_token():
                 if title:
                     server_msg = f'{title}. {detail}'
             if server_msg:
-                msg += ' Server message: {}'.format(server_msg)
+                msg += f' Server message: {server_msg}'
         except Exception as ex:
-            demisto.error('Failed parsing error response - Exception: {}'.format(ex))
+            demisto.error(f'Failed parsing error response - Exception: {ex}')
         raise Exception(msg)
     try:
         gcloud_function_exec_id = dbot_response.headers.get('Function-Execution-Id')
@@ -213,7 +212,7 @@ def isolate_machine_command():
 
 def isolate_machine(machine_id, comment, isolation_type):
 
-    cmd_url = '/machines/{}/isolate'.format(machine_id)
+    cmd_url = f'/machines/{machine_id}/isolate'
     json = {
         'Comment': comment
     }
@@ -252,7 +251,7 @@ def unisolate_machine_command():
 
 def unisolate_machine(machine_id, comment):
 
-    cmd_url = '/machines/{}/unisolate'.format(machine_id)
+    cmd_url = f'/machines/{machine_id}/unisolate'
     json = {
         'Comment': comment
     }
@@ -389,7 +388,7 @@ def get_file_related_machines_command():
             'Endpoint(val.Hostname && val.Hostname === obj.Hostname)': endpoint_context
         }
 
-        title = 'Windows Defender ATP machines related to file {}'.format(file)
+        title = f'Windows Defender ATP machines related to file {file}'
         entry = {
             'Type': entryTypes['note'],
             'Contents': machines,
@@ -405,7 +404,7 @@ def get_file_related_machines_command():
 
 def get_file_related_machines(file):
 
-    cmd_url = '/files/{}/machines'.format(file)
+    cmd_url = f'/files/{file}/machines'
     response = http_request('GET', cmd_url)
     return response
 
@@ -455,7 +454,7 @@ def get_machine_details_command():
             'Endpoint(val.Hostname && val.Hostname === obj.Hostname)': endpoint_context
         }
 
-        title = 'Windows Defender ATP machine {} details'.format(machine_id)
+        title = f'Windows Defender ATP machine {machine_id} details'
         entry = {
             'Type': entryTypes['note'],
             'Contents': machine,
@@ -471,7 +470,7 @@ def get_machine_details_command():
 
 def get_machine_details(machine_id):
 
-    cmd_url = '/machines/{}'.format(machine_id)
+    cmd_url = f'/machines/{machine_id}'
     response = http_request('GET', cmd_url)
     return response
 
@@ -507,7 +506,7 @@ def block_file(file_sha1, comment, title, expiration_time, severity, recommended
 
 def get_user_related_machines(user_id):
 
-    cmd_url = '/users/{}/machines'.format(user_id)
+    cmd_url = f'/users/{user_id}/machines'
     response = http_request('GET', cmd_url)
     return response
 
@@ -523,7 +522,7 @@ def stop_and_quarantine_file_command():
 
 def stop_and_quarantine_file(machine_id, file_sha1, comment):
 
-    cmd_url = '/machines/{}/stopAndQuarantineFile'.format(machine_id)
+    cmd_url = f'/machines/{machine_id}/stopAndQuarantineFile'
     json = {
         'Comment': comment,
         'Sha1': file_sha1
@@ -545,7 +544,7 @@ def run_antivirus_scan_command():
 
 def run_antivirus_scan(machine_id, comment, scan_type):
 
-    cmd_url = '/machines/{}/runAntiVirusScan'.format(machine_id)
+    cmd_url = f'/machines/{machine_id}/runAntiVirusScan'
     json = {
         'Comment': comment,
         'ScanType': scan_type
@@ -638,7 +637,7 @@ def update_alert_command():
         'Contents': '',
         'ContentsFormat': formats['json'],
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': 'Alert {0} was updated successfully'.format(alert_id),
+        'HumanReadable': f'Alert {alert_id} was updated successfully',
         'EntryContext': ec
     }
 
@@ -652,19 +651,19 @@ def update_alert(alert_id, json):
 
 
 def get_alert_related_domains(alert_id):
-    cmd_url = '/alerts/{}/domains'.format(alert_id)
+    cmd_url = f'/alerts/{alert_id}/domains'
     response = http_request('GET', cmd_url)
     return response
 
 
 def get_alert_related_files(alert_id):
-    cmd_url = '/alerts/{}/files'.format(alert_id)
+    cmd_url = f'/alerts/{alert_id}/files'
     response = http_request('GET', cmd_url)['value']
     return response
 
 
 def get_alert_related_ips(alert_id):
-    cmd_url = '/alerts/{}/ips'.format(alert_id)
+    cmd_url = f'/alerts/{alert_id}/ips'
     response = http_request('GET', cmd_url)
     return response
 
@@ -794,7 +793,7 @@ def get_alert_related_user_command():
 
 
 def get_alert_related_user(alert_id):
-    cmd_url = '/alerts/{}/user'.format(alert_id)
+    cmd_url = f'/alerts/{alert_id}/user'
     response = http_request('GET', cmd_url)
     return response
 

@@ -88,7 +88,7 @@ def create_malicious_data(data_from_api_json):
     malicious_description = ""
     if 'reputationValues' in data_from_api_json:
         reputation = data_from_api_json['reputationValues'].get("reputation", "Unknown")
-        malicious_description = 'Reputation: {}'.format(reputation)
+        malicious_description = f'Reputation: {reputation}'
     malicious_data = {
         'Description': malicious_description,
         'Vendor': 'Symantec Deepsight Intelligence'
@@ -547,7 +547,7 @@ def test_module():
     try:
         result = get_ip_data("5.79.86.16")
     except Exception:
-        raise Exception("Test failed: API request did not succeed, result: {}".format(result))
+        raise Exception(f"Test failed: API request did not succeed, result: {result}")
     if result:
         demisto.results('ok')
 

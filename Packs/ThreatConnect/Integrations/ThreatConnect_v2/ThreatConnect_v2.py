@@ -373,7 +373,7 @@ def ip_command():
         'ContentsFormat': formats['json'],
         'Contents': indicators,
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': tableToMarkdown('ThreatConnect IP Reputation for: {}'.format(ip_addr), indicators,
+        'HumanReadable': tableToMarkdown(f'ThreatConnect IP Reputation for: {ip_addr}', indicators,
                                          headerTransform=pascalToSpace),
         'EntryContext': ec
     })
@@ -408,7 +408,7 @@ def url_command():
         'ContentsFormat': formats['json'],
         'Contents': indicators,
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': tableToMarkdown('ThreatConnect URL Reputation for: {}'.format(url_addr), indicators,
+        'HumanReadable': tableToMarkdown(f'ThreatConnect URL Reputation for: {url_addr}', indicators,
                                          headerTransform=pascalToSpace),
         'EntryContext': ec
     })
@@ -439,7 +439,7 @@ def file_command():
         'ContentsFormat': formats['json'],
         'Contents': indicators,
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': tableToMarkdown('ThreatConnect File Report for: {}'.format(file_name), indicators,
+        'HumanReadable': tableToMarkdown(f'ThreatConnect File Report for: {file_name}', indicators,
                                          headerTransform=pascalToSpace),
         'EntryContext': ec
     })
@@ -470,7 +470,7 @@ def domain_command():
         'ContentsFormat': formats['json'],
         'Contents': indicators,
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': tableToMarkdown('ThreatConnect Domain Reputation for: {}'.format(domain_addr), indicators,
+        'HumanReadable': tableToMarkdown(f'ThreatConnect Domain Reputation for: {domain_addr}', indicators,
                                          headerTransform=pascalToSpace),
         'EntryContext': ec
     })
@@ -548,7 +548,7 @@ def tc_associated_groups(tc, owners, indicator_value, indicator_type):
     if apiBranch is not None:
         if apiBranch in ENCODED_API_BRANCHES:
             indicator_value = quote(indicator_value, safe='')
-        ro.set_request_uri("/v2/indicators/{}/{}/groups".format(apiBranch, indicator_value))
+        ro.set_request_uri(f"/v2/indicators/{apiBranch}/{indicator_value}/groups")
         results = tc.api_request(ro)
         if results.headers['content-type'] == 'application/json':
             if 'data' in results.json():
@@ -592,7 +592,7 @@ def tc_indicator_get_tags(tc, owners, indicator_value, indicator_type):
     if apiBranch is not None:
         if apiBranch in ENCODED_API_BRANCHES:
             indicator_value = quote(indicator_value, safe='')
-        ro.set_request_uri("/v2/indicators/{}/{}/tags".format(apiBranch, indicator_value))
+        ro.set_request_uri(f"/v2/indicators/{apiBranch}/{indicator_value}/tags")
         results = tc.api_request(ro)
         if results.headers['content-type'] == 'application/json':
             if 'data' in results.json():
@@ -636,7 +636,7 @@ def tc_indicator_get_attributes(tc, owners, indicator_value, indicator_type):
     if apiBranch is not None:
         if apiBranch in ENCODED_API_BRANCHES:
             indicator_value = quote(indicator_value, safe='')
-        ro.set_request_uri("/v2/indicators/{}/{}/tags".format(apiBranch, indicator_value))
+        ro.set_request_uri(f"/v2/indicators/{apiBranch}/{indicator_value}/tags")
         results = tc.api_request(ro)
         if results.headers['content-type'] == 'application/json':
             if 'data' in results.json():
@@ -685,7 +685,7 @@ def tc_indicators(owners, limit):
     tc.set_api_result_limit(limit)
     ro = RequestObject()
     ro.set_http_method('GET')
-    ro.set_request_uri('/v2/indicators?resultLimit={}'.format(limit))
+    ro.set_request_uri(f'/v2/indicators?resultLimit={limit}')
 
     if owners is not None:
         ro.set_owner(owners)
@@ -730,7 +730,7 @@ def tc_tag_indicator_command():
 
     md = []
     for ind in indicators:
-        md.append('Indicator {} with ID {}, was tagged with: {}'.format(indicator, ind.id, tag))
+        md.append(f'Indicator {indicator} with ID {ind.id}, was tagged with: {tag}')
 
     demisto.results({
         'Type': entryTypes['note'],
@@ -811,7 +811,7 @@ def tc_get_indicator_command():
         'ContentsFormat': formats['json'],
         'Contents': raw_indicators,
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': tableToMarkdown('ThreatConnect indicator for: {}'.format(indicator), indicators,
+        'HumanReadable': tableToMarkdown(f'ThreatConnect indicator for: {indicator}', indicators,
                                          headerTransform=pascalToSpace),
         'EntryContext': ec
     })
@@ -822,7 +822,7 @@ def tc_get_indicator_command():
             'ContentsFormat': formats['json'],
             'Contents': indicator_groups,
             'ReadableContentsFormat': formats['markdown'],
-            'HumanReadable': tableToMarkdown('ThreatConnect Associated Groups for indicator: {}'.format(indicator),
+            'HumanReadable': tableToMarkdown(f'ThreatConnect Associated Groups for indicator: {indicator}',
                                              indicator_groups,
                                              headerTransform=pascalToSpace)
         })
@@ -833,7 +833,7 @@ def tc_get_indicator_command():
             'ContentsFormat': formats['json'],
             'Contents': indicators_associations,
             'ReadableContentsFormat': formats['markdown'],
-            'HumanReadable': tableToMarkdown('ThreatConnect Associated Indicators for indicator: {}'.format(indicator),
+            'HumanReadable': tableToMarkdown(f'ThreatConnect Associated Indicators for indicator: {indicator}',
                                              indicators_associations,
                                              headerTransform=pascalToSpace)
         })
@@ -844,7 +844,7 @@ def tc_get_indicator_command():
             'ContentsFormat': formats['json'],
             'Contents': indicator_tags,
             'ReadableContentsFormat': formats['markdown'],
-            'HumanReadable': tableToMarkdown('ThreatConnect Tags for indicator: {}'.format(indicator), indicator_tags,
+            'HumanReadable': tableToMarkdown(f'ThreatConnect Tags for indicator: {indicator}', indicator_tags,
                                              headerTransform=pascalToSpace)
         })
 
@@ -854,7 +854,7 @@ def tc_get_indicator_command():
             'ContentsFormat': formats['json'],
             'Contents': indicator_attributes,
             'ReadableContentsFormat': formats['markdown'],
-            'HumanReadable': tableToMarkdown('ThreatConnect Attributes for indicator: {}'.format(indicator), indicator_attributes,
+            'HumanReadable': tableToMarkdown(f'ThreatConnect Attributes for indicator: {indicator}', indicator_attributes,
                                              headerTransform=pascalToSpace)
         })
 
@@ -864,7 +864,7 @@ def tc_get_indicator_command():
             'ContentsFormat': formats['json'],
             'Contents': indicator_observations,
             'ReadableContentsFormat': formats['markdown'],
-            'HumanReadable': tableToMarkdown('ThreatConnect Observations for indicator: {}'.format(indicator),
+            'HumanReadable': tableToMarkdown(f'ThreatConnect Observations for indicator: {indicator}',
                                              indicator_observations,
                                              headerTransform=pascalToSpace)
         })
@@ -922,7 +922,7 @@ def tc_get_indicators_by_tag_command():
         'ContentsFormat': formats['json'],
         'Contents': response,
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': tableToMarkdown('ThreatConnect Indicators with tag: {}'.format(tag), indicators,
+        'HumanReadable': tableToMarkdown(f'ThreatConnect Indicators with tag: {tag}', indicators,
                                          headerTransform=pascalToSpace),
         'EntryContext': ec
     })
@@ -933,9 +933,9 @@ def tc_get_indicators_by_tag(tag, owner, limit):
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('GET')
-    cmd = '/v2/tags/{}/indicators?resultLimit={}'.format(tag, limit)
+    cmd = f'/v2/tags/{tag}/indicators?resultLimit={limit}'
     if owner is not None:
-        cmd += '?owner={}'.format(owner)
+        cmd += f'?owner={owner}'
 
     ro.set_request_uri(cmd)
 
@@ -1003,7 +1003,7 @@ def tc_create_incident_command():
         'ContentsFormat': formats['json'],
         'Contents': raw_incident,
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': 'Incident {} Created Successfully'.format(incident_name),
+        'HumanReadable': f'Incident {incident_name} Created Successfully',
         'EntryContext': {
             'TC.Incident(val.ID && val.ID === obj.ID)': createContext([ec], removeNull=True)
         }
@@ -1242,7 +1242,7 @@ def tc_delete_indicator_command():
     demisto.results({
         'Type': entryTypes['note'],
         'ContentsFormat': formats['text'],
-        'Contents': 'Indicator {} removed Successfully'.format(indicator)
+        'Contents': f'Indicator {indicator} removed Successfully'
     })
 
 
@@ -1268,7 +1268,7 @@ def tc_delete_indicator_tag_command():
 
     md = []
     for ind in indicators:
-        md.append('Removed tag {} from indicator {}.'.format(tag, ind.indicator))
+        md.append(f'Removed tag {tag} from indicator {ind.indicator}.')
     if len(md) == 0:
         md.append('No indicators found')
 
@@ -1328,7 +1328,7 @@ def tc_create_campaign_command():
         'ContentsFormat': formats['json'],
         'Contents': raw_campaign,
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': 'Campaign {} Created Successfully'.format(name),
+        'HumanReadable': f'Campaign {name} Created Successfully',
         'EntryContext': {
             'TC.Campaign(val.ID && val.ID === obj.ID)': createContext([ec], removeNull=True)
         }
@@ -1355,7 +1355,7 @@ def tc_create_campaign(name, owner, first_seen, tag=None, security_label=None, d
             # Associate Attribute description
             ro = RequestObject()
             ro.set_http_method('POST')
-            ro.set_request_uri('/v2/groups/events/{}/attributes'.format(event_id))
+            ro.set_request_uri(f'/v2/groups/events/{event_id}/attributes')
             body = {
                 'type': 'Description',
                 'value': description,
@@ -1396,7 +1396,7 @@ def tc_create_event_command():
         'ContentsFormat': formats['json'],
         'Contents': raw_event,
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': 'Incident {} Created Successfully'.format(name),
+        'HumanReadable': f'Incident {name} Created Successfully',
         'EntryContext': {
             'TC.Event(val.ID && val.ID === obj.ID)': createContext([ec], removeNull=True)
         }
@@ -1423,7 +1423,7 @@ def tc_create_event(name, owner, event_date, tag=None, status=None, description=
             # Associate Attribute description
             ro = RequestObject()
             ro.set_http_method('POST')
-            ro.set_request_uri('/v2/groups/events/{}/attributes'.format(event_id))
+            ro.set_request_uri(f'/v2/groups/events/{event_id}/attributes')
             body = {
                 'type': 'Description',
                 'value': description,
@@ -1456,7 +1456,7 @@ def tc_create_threat_command():
         'ContentsFormat': formats['json'],
         'Contents': raw_threat,
         'ReadableContentsFormat': formats['markdown'],
-        'HumanReadable': 'Threat {} Created Successfully'.format(name),
+        'HumanReadable': f'Threat {name} Created Successfully',
         'EntryContext': {
             'TC.Threat(val.ID && val.ID === obj.ID)': createContext([ec], removeNull=True)
         }
@@ -1482,17 +1482,17 @@ def tc_delete_group_command():
         demisto.results({
             'Type': entryTypes['note'],
             'ContentsFormat': formats['text'],
-            'Contents': '{} {} deleted Successfully'.format(group_type.lower(), group_id)
+            'Contents': f'{group_type.lower()} {group_id} deleted Successfully'
         })
     else:
-        return_error('Failed to delete {} {}'.format(group_type, group_id))
+        return_error(f'Failed to delete {group_type} {group_id}')
 
 
 def tc_delete_group(group_id, group_type):
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('DELETE')
-    ro.set_request_uri('/v2/groups/{}/{}'.format(group_type, group_id))
+    ro.set_request_uri(f'/v2/groups/{group_type}/{group_id}')
     response = tc.api_request(ro).json()
 
     return response['status'] == 'Success'
@@ -1502,7 +1502,7 @@ def tc_add_group_attribute_request(group_type, group_id, attribute_type, attribu
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('POST')
-    ro.set_request_uri('/v2/groups/{}/{}/attributes'.format(group_type, group_id))
+    ro.set_request_uri(f'/v2/groups/{group_type}/{group_id}/attributes')
     body = {
         'type': attribute_type,
         'value': attribute_value,
@@ -1534,7 +1534,7 @@ def tc_add_group_attribute():
     }
 
     return_outputs(
-        tableToMarkdown('The attribute was added successfully to group {}'.format(group_id), contents, headers,
+        tableToMarkdown(f'The attribute was added successfully to group {group_id}', contents, headers,
                         removeNull=True),
         context,
         attribute
@@ -1545,7 +1545,7 @@ def add_group_security_label_request(group_type, group_id, security_label):
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('POST')
-    ro.set_request_uri('/v2/groups/{}/{}/securityLabels/{}'.format(group_type, group_id, security_label))
+    ro.set_request_uri(f'/v2/groups/{group_type}/{group_id}/securityLabels/{security_label}')
 
     response = tc.api_request(ro).json()
 
@@ -1559,15 +1559,14 @@ def add_group_security_label():
 
     add_group_security_label_request(group_type, group_id, security_label)
 
-    demisto.results('The security label {} was added successfully to {} {}'.format(security_label, group_type,
-                                                                                   group_id))
+    demisto.results(f'The security label {security_label} was added successfully to {group_type} {group_id}')
 
 
 def add_group_tags_request(group_type, group_id, tag_name):
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('POST')
-    ro.set_request_uri('/v2/groups/{}/{}/tags/{}'.format(group_type, group_id, tag_name))
+    ro.set_request_uri(f'/v2/groups/{group_type}/{group_id}/tags/{tag_name}')
 
     response = tc.api_request(ro).json()
 
@@ -1581,7 +1580,7 @@ def add_group_tag():
 
     add_group_tags_request(group_type, group_id, tag_name)
 
-    demisto.results('The tag {} was added successfully to group {} {}'.format(tag_name, group_type, group_id))
+    demisto.results(f'The tag {tag_name} was added successfully to group {group_type} {group_id}')
 
 
 def get_events_request():
@@ -1661,7 +1660,7 @@ def associate_indicator_request(indicator_type, indicator, group_type, group_id)
     ro = RequestObject()
     ro.set_http_method('POST')
     indicator = urllib.parse.quote(indicator, safe='')
-    ro.set_request_uri('/v2/indicators/{}/{}/groups/{}/{}'.format(indicator_type, indicator, group_type, group_id))
+    ro.set_request_uri(f'/v2/indicators/{indicator_type}/{indicator}/groups/{group_type}/{group_id}')
     response = tc.api_request(ro).json()
 
     return response
@@ -1699,7 +1698,7 @@ def get_groups_request(group_type):
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('GET')
-    ro.set_request_uri('/v2/groups/{}'.format(group_type))
+    ro.set_request_uri(f'/v2/groups/{group_type}')
 
     return tc.api_request(ro).json()
 
@@ -1745,7 +1744,7 @@ def tc_get_groups():
     }
 
     return_outputs(
-        tableToMarkdown('ThreatConnect {}'.format(group_type), content, headers, removeNull=True),
+        tableToMarkdown(f'ThreatConnect {group_type}', content, headers, removeNull=True),
         context,
         raw_response
     )
@@ -1755,7 +1754,7 @@ def get_group_request(group_type, group_id):
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('GET')
-    ro.set_request_uri('/v2/groups/{}/{}'.format(group_type, group_id))
+    ro.set_request_uri(f'/v2/groups/{group_type}/{group_id}')
 
     return tc.api_request(ro).json()
 
@@ -1821,7 +1820,7 @@ def get_group_attributes_request(group_type, group_id):
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('GET')
-    ro.set_request_uri('/v2/groups/{}/{}/attributes'.format(group_type, group_id))
+    ro.set_request_uri(f'/v2/groups/{group_type}/{group_id}/attributes')
 
     return tc.api_request(ro).json()
 
@@ -1871,7 +1870,7 @@ def get_group_security_labels_request(group_type, group_id):
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('GET')
-    ro.set_request_uri('/v2/groups/{}/{}/securityLabels'.format(group_type, group_id))
+    ro.set_request_uri(f'/v2/groups/{group_type}/{group_id}/securityLabels')
 
     return tc.api_request(ro).json()
 
@@ -1917,7 +1916,7 @@ def get_group_tags_request(group_type, group_id):
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('GET')
-    ro.set_request_uri('/v2/groups/{}/{}/tags'.format(group_type, group_id))
+    ro.set_request_uri(f'/v2/groups/{group_type}/{group_id}/tags')
 
     return tc.api_request(ro).json()
 
@@ -1964,7 +1963,7 @@ def get_group_indicator_request(group_type, group_id):
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('GET')
-    ro.set_request_uri('/v2/groups/{}/{}/indicators'.format(group_type, group_id))
+    ro.set_request_uri(f'/v2/groups/{group_type}/{group_id}/indicators')
 
     return tc.api_request(ro).json()
 
@@ -2017,7 +2016,7 @@ def get_group_associated_request(group_type, group_id):
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('GET')
-    ro.set_request_uri('/v2/groups/{}/{}/groups'.format(group_type, group_id))
+    ro.set_request_uri(f'/v2/groups/{group_type}/{group_id}/groups')
 
     return tc.api_request(ro).json()
 
@@ -2064,8 +2063,7 @@ def associate_group_to_group_request(group_type, group_id, associated_group_type
     tc = get_client()
     ro = RequestObject()
     ro.set_http_method('POST')
-    ro.set_request_uri('/v2/groups/{}/{}/groups/{}/{}'.format(group_type, group_id, associated_group_type,
-                                                              associated_group_id))
+    ro.set_request_uri(f'/v2/groups/{group_type}/{group_id}/groups/{associated_group_type}/{associated_group_id}')
 
     return tc.api_request(ro).json()
 
@@ -2098,7 +2096,7 @@ def associate_group_to_group():
         context = {
             'TC.Group.AssociatedGroup(val.GroupID && val.GroupID === obj.GroupID)': context_entries
         }
-        return_outputs('The group {} was associated successfully.'.format(associated_group_id),
+        return_outputs(f'The group {associated_group_id} was associated successfully.',
                        context,
                        response)
     else:
@@ -2170,7 +2168,7 @@ def get_document_request(document_id):
         # retrieve the Document
         documents.retrieve()
     except RuntimeError as e:
-        return_error('Error: {0}'.format(str(e)))
+        return_error(f'Error: {str(e)}')
 
     # iterate through the retrieved Documents (in this case there should only be one) and print its properties
     for document in documents:
@@ -2276,7 +2274,7 @@ if __name__ in ('__main__', '__builtin__', 'builtins'):
     try:
         command_func = demisto.command()
         LOG('command is %s' % (demisto.command(),))
-        if command_func in COMMANDS.keys():
+        if command_func in COMMANDS:
             COMMANDS[command_func]()
 
     except Exception as e:

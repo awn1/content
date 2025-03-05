@@ -1,7 +1,6 @@
 import os
 import pytest
 import json
-import io
 import demistomock as demisto  # noqa: F401
 
 os.environ["HTTP_PROXY"] = "test"
@@ -20,7 +19,7 @@ Submit_url_input = {
 
 
 def util_load_json(path):
-    with io.open(path, mode='r', encoding='utf-8') as f:
+    with open(path, encoding='utf-8') as f:
         return json.loads(f.read())
 
 

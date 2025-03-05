@@ -179,7 +179,7 @@ def http_request(method, url, api_params={}, data=None):
         raise Exception(err_msg)
 
     if response.status_code in (201, 204):  # 201-Created OR 204-No Content
-        return
+        return None
     try:
         response = response.json()
     except ValueError:
@@ -252,10 +252,9 @@ def get_asset_list(args):
             size = len(response.get('items'))
         if one_call or size < int(page_length):
             break
-        else:
-            new_offset = int(offset) + int(page_length)
-            params['offset'] = str(new_offset)
-            offset = new_offset
+        new_offset = int(offset) + int(page_length)
+        params['offset'] = str(new_offset)
+        offset = new_offset
 
     op_data = {
         "Asset Type": asset_type

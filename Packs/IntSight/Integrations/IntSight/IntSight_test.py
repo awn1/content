@@ -459,7 +459,7 @@ def test_get_mssp_sub_accounts(mocker_results, mocker):
         action=IntSight.get_mssp_sub_accounts,
         side_effect=get_mssp_sub_accounts_http_response
     )
-    assert (10 == mocker_results.call_args[0][0]['Contents'][0]['AssetsLimit'])
+    assert (mocker_results.call_args[0][0]['Contents'][0]['AssetsLimit'] == 10)
 
 
 @pytest.mark.filterwarnings('ignore::urllib3.exceptions.InsecureRequestWarning')
