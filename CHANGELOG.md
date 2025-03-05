@@ -1,4 +1,4 @@
-# Content Infrastructure 1.36.0 (2025-03-05)
+# Content Infrastructure 0.0.30 (2025-03-05)
 
 ### Features
 
