@@ -35,6 +35,7 @@ FULL_IGNORE = [
     "12345678",
     "123456789",
     "1234563",
+    "440",
 ]
 FULL_IGNORE_LOWER = [ignore.lower() for ignore in FULL_IGNORE]
 
