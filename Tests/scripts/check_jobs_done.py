@@ -72,6 +72,7 @@ BUCKET_UPLOAD_JOBS = [
     "upload-packs-to-marketplace",
     "upload-packs-to-marketplace-v2",
     "upload-packs-to-xpanse-marketplace",
+    "upload-content-graph-data-to-bigquery",
 ]
 
 CONTENT_COMMON_JOBS = [
