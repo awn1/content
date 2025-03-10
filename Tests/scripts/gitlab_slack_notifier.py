@@ -63,6 +63,10 @@ from Tests.scripts.test_playbooks_report import TEST_PLAYBOOKS_TO_JIRA_TICKETS_C
 from Tests.scripts.utils.log_util import install_logging
 
 ROOT_ARTIFACTS_FOLDER = Path(os.getenv("ARTIFACTS_FOLDER", "./artifacts"))
+
+BIGQUERY_UPLOAD_SUCCESS_FILE = ROOT_ARTIFACTS_FOLDER / "bigquery-upload-success.txt"
+BIGQUERY_UPLOAD_FAILURE_FILE = ROOT_ARTIFACTS_FOLDER / "bigquery-upload-failure.txt"
+
 ARTIFACTS_FOLDER_XSOAR = ROOT_ARTIFACTS_FOLDER / "xsoar"
 ARTIFACTS_FOLDER_XSIAM = ROOT_ARTIFACTS_FOLDER / "marketplacev2"
 ARTIFACTS_FOLDER_XPANSE = ROOT_ARTIFACTS_FOLDER / "xpanse"
@@ -653,6 +657,21 @@ def bucket_upload_results(
     return slack_msg_append, threaded_messages
 
 
+def construct_slack_message_for_bigquery_content_upload() -> dict[str, str] | None:
+    """
+    Construct the slack message indicating the status of the content graph data upload to BigQuery job
+    within the upload-flow or None if wasn't executed.
+    Returns:
+        dict[str, str] | None: A dictionary containing the slack message object, or None if the upload job wasn't executed.
+    """
+    if BIGQUERY_UPLOAD_SUCCESS_FILE.exists():
+        return {"color": "good", "title": "Successfully uploaded content graph data to BigQuery"}
+    if BIGQUERY_UPLOAD_FAILURE_FILE.exists():
+        return {"color": "danger", "title": "Failed to upload content graph data to BigQuery."}
+
+    return None
+
+
 def construct_slack_msg_sync_buckets(threaded_messages, slack_msg_append):
     bucket_sync_failure, bucket_sync_success = bucket_sync_msg_builder(ROOT_ARTIFACTS_FOLDER)
     threaded_messages.extend(bucket_sync_success)
@@ -706,6 +725,10 @@ def construct_slack_msg(
             slack_msg, threaded_message = bucket_upload_results(*bucket)
             threaded_messages.extend(threaded_message)
             slack_msg_append.extend(slack_msg)
+
+        if bigquery_upload_message := construct_slack_message_for_bigquery_content_upload():
+            slack_msg_append.append(bigquery_upload_message)
+
         construct_slack_msg_sync_buckets(threaded_messages, slack_msg_append)
     elif triggering_workflow_lower in ["deploy auto upgrade packs", "override corepacks"] and not dry_run_bool:
         construct_slack_msg_sync_buckets(threaded_messages, slack_msg_append)

@@ -6,6 +6,7 @@ if [ "$#" -lt "1" ]; then
 
   -ct, --ci-token             The ci token.
   [-b, --branch]              The branch name. Default is the current branch.
+  [-ib, --infra-branch]       Branch name in Infra repo. Default is branch master.
   [-gb, --bucket]             The name of the bucket to upload the packs to. Default is marketplace-dist-dev.
   [-gb2, --bucket_v2]         The name of the bucket to upload the marketplace v2 packs to. Default is marketplace-v2-dist-dev.
   [-gb3, --bucket_xpanse]     The name of the bucket to upload the xpanse marketplace packs to. Default is xpanse-dist-dev.
@@ -46,6 +47,12 @@ while [[ "$#" -gt 0 ]]; do
 
   -b | --branch)
     _branch="$2"
+    shift
+    shift
+    ;;
+
+  -ib | --infra-branch)
+    _infra_branch="$2"
     shift
     shift
     ;;

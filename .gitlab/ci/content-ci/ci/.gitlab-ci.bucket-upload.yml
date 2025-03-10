@@ -263,6 +263,7 @@ jobs-done-check-upload-flow:
     - upload-packs-to-xpanse-marketplace
     - upload-packs-to-xsoar-saas-marketplace
     - run-validations-upload-flow-new-validate-flow
+    - upload-content-graph-data-to-bigquery
   tags:
     - gke
   variables:
@@ -454,6 +455,7 @@ install-packs-in-server-master:
     - source .gitlab/helper_functions.sh
     - !reference [.clean-machine]
     - !reference [ .unlock-machine ]
+
 
 install-packs-in-xsiam-ga:
   needs:
@@ -747,6 +749,31 @@ upload-packs-to-xsoar-saas-marketplace:
     - section_end "Zip Content Packs From GCS"
     - *upload_packs_results_upload
     - job-done
+
+
+upload-content-graph-data-to-bigquery:
+  stage: upload-content-graph-data-to-bigquery
+  needs: ["upload-packs-to-marketplace", "upload-packs-to-marketplace-v2", "upload-packs-to-xpanse-marketplace", "upload-packs-to-xsoar-saas-marketplace"]
+  tags:
+    - cortex-content-1738
+  extends:
+    - .bucket-upload-rule
+    - .default-job-settings
+  variables:
+    XSOAR_CONTENT_BUILD_PROJECT: "xdr-xsoar-content-dev-01"
+    MP_ANALYTICS_DATASET_ID: "marketplace_analytics"
+    CONTENT_ITEMS_METADATA_TABLE_ID: "content_items_data"
+  script:
+    - section_start "Load graph from artifacts"
+    - demisto-sdk graph update -i "${ARTIFACTS_FOLDER}/content_graph/xsoar.zip"
+    - section_end "Load graph from artifacts"
+
+    - section_start "Upload data from content graph to bigquery"
+    - poetry run python3 -u  "${CI_PROJECT_DIR}/Tests/Marketplace/upload_marketplace_data_to_bigquery.py"
+    - section_end "Upload data from content graph to bigquery"
+
+    - job-done
+
 
 xsoar-force-pack-upload:
   needs: [ "xsoar-prepare-testing-bucket-upload-flow" ]

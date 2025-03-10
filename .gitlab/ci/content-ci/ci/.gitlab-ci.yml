@@ -17,6 +17,7 @@ stages:
   - run-instances
   - results
   - upload-to-marketplace
+  - upload-content-graph-data-to-bigquery
   - create-updated-corepacks-list
   - validate-core-packs-list-versions
   - upload-updated-core-packs-list
@@ -47,3 +48,4 @@ include:
   - local: .gitlab/ci/gitlab-ci.shared.variables.yml
   - local: .gitlab/ci/content-ci/ci/override-corepacks.yml
   - local: .gitlab/ci/content-ci/ci/deploy-auto-upgrade-packs.yml
+
