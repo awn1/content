@@ -117,6 +117,14 @@ build-docs:
     - section_start "Heap stats"
     - npm run heapstats
     - section_end "Heap stats"
+    - section_start "Increase MMP" # To avoid allocation memory error, For more info see: https://stackoverflow.com/questions/38558989/node-js-heap-out-of-memory/59923848#59923848
+    - echo "check mmp"
+    - sysctl vm.max_map_count
+    - echo "Increasing max_map_count to 655300"
+    - sysctl -w vm.max_map_count=655300
+    - echo "check mmp again"
+    - sysctl vm.max_map_count
+    - section_end "Increase MMP"
     - section_start "Build docusaurus"
     - npm run build-docusaurus || EXIT_CODE=$?
     - |
