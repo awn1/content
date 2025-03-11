@@ -93,8 +93,8 @@ build-docs:
   tags:
     - cortex-content-high-mem
   variables:
-    KUBERNETES_MEMORY_REQUEST: 32Gi
-    KUBERNETES_MEMORY_LIMIT: 32Gi
+    KUBERNETES_MEMORY_REQUEST: 48Gi
+    KUBERNETES_MEMORY_LIMIT: 48Gi
     KUBERNETES_CPU_REQUEST: "8"
     KUBERNETES_CPU_LIMIT: "8"
   script:
