@@ -1,3 +1,17 @@
+# Content Infrastructure 0.0.31 (2025-03-11)
+
+### Features
+
+- Increase map max count in content-docs build to avoid out of memory erros.
+- Introduced a new step to content-ci that uploads marketplace content-items metadata to a BigQuery table.
+- Updated the demisto-sdk version 1.36.1 in Infra.
+
+### Bugfixes
+
+- Adding a non-secret to the ignore list.
+- Fixing a value that was in the wrong ignore list.
+
+
 # Content Infrastructure 0.0.30 (2025-03-05)
 
 ### Features
