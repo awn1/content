@@ -1,3 +1,10 @@
+# Content Infrastructure 0.0.32 (2025-03-12)
+
+### Bugfixes
+
+- Increase memory limit in content-docs build to 48 GB
+
+
 # Content Infrastructure 0.0.31 (2025-03-11)
 
 ### Features
