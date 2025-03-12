@@ -1,3 +1,5 @@
+import pysnooper
+
 from CommonServerPython import *  # noqa: F401, N999
 from SiemApiModule import *  # noqa: E402
 import urllib3
@@ -32,6 +34,14 @@ VENDOR = "mimecast"
 PRODUCT = "mimecast"
 
 
+def snooper_debug_writer(line: str) -> None:
+    """
+    A writer function to replace sys.stdout,
+    redirecting PySnooper's output to demisto.debug().
+    """
+    demisto.debug(line)
+
+
 class MimecastOptions(IntegrationOptions):
     app_key: str
     secret_key: str
@@ -46,6 +56,7 @@ class MimecastClient(IntegrationEventsClient):
     def __init__(self, request: IntegrationHTTPRequest, options: MimecastOptions):  # pragma: no cover
         super().__init__(request=request, options=options)
 
+    @pysnooper.snoop(snooper_debug_writer)
     def prepare_headers(self, uri: str):  # pragma: no cover
         """
         Args:
@@ -86,6 +97,7 @@ class MimecastClient(IntegrationEventsClient):
         pass
 
 
+@pysnooper.snoop(snooper_debug_writer)
 class MimecastGetSiemEvents(IntegrationGetEvents):
 
     def __init__(self, client: MimecastClient, options: IntegrationOptions):  # pragma: no cover
@@ -123,6 +135,7 @@ class MimecastGetSiemEvents(IntegrationGetEvents):
 
         return stored
 
+    @pysnooper.snoop(snooper_debug_writer)
     def _iter_events(self):  # pragma: no cover
         while True:
             self.client.request = IntegrationHTTPRequest(**(self.get_req_object_siem()))
@@ -134,6 +147,7 @@ class MimecastGetSiemEvents(IntegrationGetEvents):
 
             yield events
 
+    @pysnooper.snoop(snooper_debug_writer)
     def process_siem_response(self, response: Response) -> list:
         """
         Args:
@@ -175,6 +189,7 @@ class MimecastGetSiemEvents(IntegrationGetEvents):
             headers_list = list(resp_headers)
             raise DemistoException(f'headers of failed request for siem errors: {headers_list}')
 
+    @pysnooper.snoop(snooper_debug_writer)
     def process_siem_events(self, siem_json_resp: dict) -> list:
         """
         Args:
@@ -209,6 +224,7 @@ class MimecastGetSiemEvents(IntegrationGetEvents):
             if key in event and not isinstance(event[key], list):
                 event[key] = [event[key]]
 
+    @pysnooper.snoop(snooper_debug_writer)
     def get_req_object_siem(self):
         """
         Returns all data needed for the siem http request.
@@ -222,6 +238,7 @@ class MimecastGetSiemEvents(IntegrationGetEvents):
         }
         return req_obj
 
+    @pysnooper.snoop(snooper_debug_writer)
     def prepare_siem_request_body(self):
         """
         Return the data parameter for the http siem request
@@ -267,6 +284,7 @@ class MimecastGetSiemEvents(IntegrationGetEvents):
             raise DemistoException(f'Only compressed siem log files are supported. file_name: {file_name}')
 
 
+@pysnooper.snoop(snooper_debug_writer)
 class MimecastGetAuditEvents(IntegrationGetEvents):
 
     def __init__(self, client: MimecastClient, options: IntegrationOptions):  # pragma: no cover
@@ -285,6 +303,7 @@ class MimecastGetAuditEvents(IntegrationGetEvents):
         self.options.limit = 1 if demisto.command() == 'test-module' else None
         return super().run()
 
+    @pysnooper.snoop(snooper_debug_writer)
     def _iter_events(self):
         self.client.request = IntegrationHTTPRequest(**(self.get_req_object_audit()))
         response = self.call()
@@ -302,6 +321,7 @@ class MimecastGetAuditEvents(IntegrationGetEvents):
             if not events:
                 break
 
+    @pysnooper.snoop(snooper_debug_writer)
     def process_audit_response(self, res: dict):
         """
         Args:
@@ -328,6 +348,7 @@ class MimecastGetAuditEvents(IntegrationGetEvents):
 
         return event_list
 
+    @pysnooper.snoop(snooper_debug_writer)
     def get_req_object_audit(self):
         """
         Returns all the parameters needed for the audit API call
@@ -340,6 +361,7 @@ class MimecastGetAuditEvents(IntegrationGetEvents):
             'verify': self.options.verify,  # type: ignore[attr-defined]
         }
 
+    @pysnooper.snoop(snooper_debug_writer)
     def prepare_audit_events_data(self):
         """
         prepares the data section of the audit events api call.
@@ -377,6 +399,7 @@ class MimecastGetAuditEvents(IntegrationGetEvents):
         return audit_time_format
 
 
+@pysnooper.snoop(snooper_debug_writer)
 def handle_last_run_entrance(user_inserted_last_run: str, audit_event_handler: MimecastGetAuditEvents,
                              siem_event_handler: MimecastGetSiemEvents):
     start_time = arg_to_datetime(user_inserted_last_run)
@@ -397,6 +420,7 @@ def handle_last_run_entrance(user_inserted_last_run: str, audit_event_handler: M
                      f'duplicate list last run {demisto_last_run.get(AUDIT_EVENT_DEDUP_LIST, [])}\n')
 
 
+@pysnooper.snoop(snooper_debug_writer)
 def dedup_audit_events(audit_events: list, last_run_potential_dup: list) -> list:
     """
     This function gets the audit_events list and removes from it duplicates from the prev run
@@ -411,6 +435,7 @@ def dedup_audit_events(audit_events: list, last_run_potential_dup: list) -> list
     return [event for event in audit_events if event.get('id') not in last_run_potential_dup]
 
 
+@pysnooper.snoop(snooper_debug_writer)
 def set_audit_next_run(audit_events: list) -> str:
     """
     Return the first element in the audit_events list (were latest event is stored).
@@ -419,6 +444,7 @@ def set_audit_next_run(audit_events: list) -> str:
     return next_run
 
 
+@pysnooper.snoop(snooper_debug_writer)
 def handle_last_run_exit(audit_next_run: str, duplicates_audit: list, siem_next_run: str):
     """Sets the next_run object
 
@@ -454,6 +480,7 @@ def siem_events_last_run(siem_event_handler: MimecastGetSiemEvents, demisto_last
     return siem_next_run
 
 
+@pysnooper.snoop(snooper_debug_writer)
 def prepare_potential_audit_duplicates_for_next_run(audit_events: list, next_run_time: str) -> list:
     """
     Notice: This function modifies the audit_events list
@@ -480,6 +507,7 @@ def prepare_potential_audit_duplicates_for_next_run(audit_events: list, next_run
     return same_time_events
 
 
+@pysnooper.snoop(snooper_debug_writer)
 def audit_events_last_run(audit_event_handler: MimecastGetAuditEvents, audit_events: list, demisto_last_run: dict):
     """ de dup events same events from previous round.
         set audit next run time to be the latest event time if no event then the end_time.
@@ -505,6 +533,8 @@ def audit_events_last_run(audit_event_handler: MimecastGetAuditEvents, audit_eve
     return audit_events, audit_next_run, duplicates_audit
 
 
+
+@pysnooper.snoop(snooper_debug_writer)
 def main():  # pragma: no cover
     # Args is always stronger. Get last run even stronger
     demisto.info('\n started running main\n')
