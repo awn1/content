@@ -187,7 +187,7 @@ class StatisticsHandler:
         top_downloaded_packs = filtered_pack_list[:20]
 
         current_iteration_index = 0
-        while len(top_downloaded_packs) < 20:
+        while len(top_downloaded_packs) < 20 and current_iteration_index < len(packs_sorted_by_download_count):
             current_pack = packs_sorted_by_download_count[current_iteration_index]
             if current_pack not in top_downloaded_packs:
                 top_downloaded_packs.append(current_pack)
