@@ -18,7 +18,7 @@ from demisto_sdk.commands.test_content.ParallelLoggingManager import ParallelLog
 from google.api_core.exceptions import PreconditionFailed
 from google.cloud import storage  # type: ignore[attr-defined]
 
-from Tests.scripts.infra.resources.constants import DEFAULT_REQUEST_TIMEOT
+from Tests.scripts.infra.resources.constants import DEFAULT_REQUEST_TIMEOUT
 from Tests.test_dependencies import get_used_integrations
 
 logging_manager: ParallelLoggingManager = None
@@ -207,7 +207,7 @@ def turn_off_telemetry(xsoar_client):
     """
 
     body, status_code, _ = demisto_client.generic_request_func(
-        self=xsoar_client, method="POST", path="/telemetry?status=notelemetry", _request_timeout=DEFAULT_REQUEST_TIMEOT
+        self=xsoar_client, method="POST", path="/telemetry?status=notelemetry", _request_timeout=DEFAULT_REQUEST_TIMEOUT
     )
 
     if status_code != 200:

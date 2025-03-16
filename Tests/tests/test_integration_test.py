@@ -34,7 +34,7 @@ def test_print_investigation_error(command, output, mocker):
 
     """
     body = {"entries": [{"type": 4, "parentContent": command, "taskId": "12", "contents": "2"}]}
-    mocker.patch.object(demisto_client, "generic_request_func", return_value=[str(body), "200"])
+    mocker.patch.object(demisto_client, "generic_request_func", return_value=[body, "200"])
     logging_manager = mocker.MagicMock()
     client = demisto_client
     __print_investigation_error(client, "", "", logging_manager)
