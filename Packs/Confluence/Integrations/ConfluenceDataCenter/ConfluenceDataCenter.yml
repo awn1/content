@@ -1,0 +1,133 @@
+category: Utilities
+commonfields:
+  id: ConfluenceDataCenter
+  version: -1
+configuration:
+- display: Confluence Base Url
+  name: base_url
+  required: true
+  type: 0
+- display: Personal Access Token
+  additionalinfo: Personal Access Token generated from Profile > Settings > Personal Access Tokens.
+  name: token
+  required: true
+  type: 4
+- display: Default Space
+  additionalinfo: The space key of the default space to use if not specified in the command. Required for fetching new pages.
+  name: default_space
+  required: false
+  type: 0
+- display: Trust any certificate (not secure)
+  name: insecure
+  required: false
+  type: 8
+- display: Use system proxy settings
+  name: proxy
+  required: false
+  type: 8
+- display: Fetch space pages
+  name: isFetch
+  required: false
+  type: 8
+  additionalinfo: When enabled, fetches new pages as incidents. Requires Default Space to be set.
+- display: Incident type
+  name: incidentType
+  required: false
+  type: 13
+  additionalinfo: 'Incident type to create when fetching pages'
+- display: Mirroring direction
+  name: mirror_direction
+  required: false
+  type: 15
+  options:
+  - Incoming
+  - None
+  additionalinfo: Select the direction for mirroring between Confluence and XSOAR
+display: ConfluenceDataCenter
+name: ConfluenceDataCenter
+script:
+  commands:
+  - name: confluence-dc-list-spaces
+    arguments:
+    - name: limit
+      description: 'Maximum number of spaces to return. Default is 25.'
+      defaultvalue: 25
+      required: false
+    description: 'Lists all spaces in Confluence Data Center.'
+    execution: false
+    outputs:
+    - contextPath: ConfluenceDC.Space.Key
+      description: 'The key of the Confluence space.'
+      type: String
+    - contextPath: ConfluenceDC.Space.Name
+      description: 'The name of the Confluence space.'
+      type: String
+    - contextPath: ConfluenceDC.Space.Type
+      description: 'The type of the Confluence space (e.g., global, personal).'
+      type: String
+  - name: confluence-dc-get-space-content
+    arguments:
+    - name: space_key
+      description: 'The key of the space to get content from.'
+      required: true
+    - name: content_type
+      description: 'Type of content to retrieve (page, blogpost, or attachment).'
+      required: false
+    - name: limit
+      description: 'Maximum number of content items to return. Default is 25.'
+      defaultvalue: 25
+      required: false
+    description: 'Retrieves content from a specific Confluence space.'
+    execution: false
+    outputs:
+    - contextPath: ConfluenceDC.Content.ID
+      description: 'The ID of the content item.'
+      type: String
+    - contextPath: ConfluenceDC.Content.Title
+      description: 'The title of the content item.'
+      type: String
+    - contextPath: ConfluenceDC.Content.Type
+      description: 'The type of the content item.'
+      type: String
+    - contextPath: ConfluenceDC.Content.SpaceKey
+      description: 'The key of the space containing the content.'
+      type: String
+  - name: confluence-dc-get-page
+    arguments:
+    - name: page_id
+      description: 'The ID of the page to retrieve.'
+      required: true
+    - name: expand
+      description: 'Additional information to include (e.g., body, version, space).'
+      required: false
+    description: 'Retrieves a specific page from Confluence Data Center.'
+    execution: false
+    outputs:
+    - contextPath: ConfluenceDC.Page.ID
+      description: 'The ID of the page.'
+      type: String
+    - contextPath: ConfluenceDC.Page.Title
+      description: 'The title of the page.'
+      type: String
+    - contextPath: ConfluenceDC.Page.Version
+      description: 'The version number of the page.'
+      type: Number
+    - contextPath: ConfluenceDC.Page.SpaceKey
+      description: 'The key of the space containing the page.'
+      type: String
+    - contextPath: ConfluenceDC.Page.Body
+      description: 'The content of the page (if expanded).'
+      type: String
+  isfetch: false
+  runonce: false
+  script: '-'
+  type: python
+  subtype: python3
+  dockerimage: demisto/python3:3.12.8.1983910
+fromversion: 6.5.0
+marketplaces:
+- xsoar
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)
