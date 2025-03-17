@@ -21,7 +21,7 @@ def list_buckets_command(service: str, params: Dict[str, Any], args: Dict[str, A
     target_role_arn = f"arn:aws:iam::{args.get('account_id')}:role/{params.get('target_role_name')}"
     sts_client = aws_client.aws_session(service=service,
                                         region=args.get('region'),
-                                        role_session_name=demisto.integrationInstance(),
+                                        role_session_name=demisto.integrationInstance().replace(" ", "-"),
                                         role_session_duration=params.get('main_role_session_duration'),
                                         target_role_arn=target_role_arn)
     data = []
@@ -39,7 +39,7 @@ def put_public_access_block(service: str, params: Dict[str, Any], args: Dict[str
     target_role_arn = f"arn:aws:iam::{args.get('account_id')}:role/{params.get('target_role_name')}"
     client = aws_client.aws_session(service=service,
                                     region=args.get('region'),
-                                    role_session_name=demisto.integrationInstance(),
+                                    role_session_name=demisto.integrationInstance().replace(" ", "-"),
                                     role_session_duration=args.get('main_role_session_duration'),
                                     target_role_arn=target_role_arn)
     kwargs = {'Bucket': args.get('bucket'),

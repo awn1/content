@@ -95,10 +95,10 @@ class AWSClient:
                 'RoleArn': role_arn,
                 'RoleSessionName': role_session_name,
             })
-        elif self.aws_role_arn and self.aws_role_session_name is not None:
+        elif self.aws_role_arn and (self.aws_role_session_name or role_session_name):
             kwargs.update({
                 'RoleArn': self.aws_role_arn,
-                'RoleSessionName': self.aws_role_session_name,
+                'RoleSessionName': self.aws_role_session_name or role_session_name,
             })
 
         if role_session_duration is not None:
