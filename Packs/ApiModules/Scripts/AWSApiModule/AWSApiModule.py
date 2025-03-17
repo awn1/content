@@ -84,7 +84,7 @@ class AWSClient:
             self.config = self.config.merge(Config(**command_config))  # type: ignore[arg-type]
 
     def aws_session(self, service, region=None, role_arn=None, role_session_name=None, role_session_duration=None,
-                    role_policy=None):
+                    role_policy=None, target_role_arn=None):
         kwargs = {}
         client = None
 
@@ -120,6 +120,21 @@ class AWSClient:
                                           region_name=region if region else self.aws_default_region,
                                           endpoint_url=self.sts_endpoint_url)
                 sts_response = sts_client.assume_role(**kwargs)
+                if target_role_arn:
+                    target_sts_client = boto3.client(
+                        service_name='sts',
+                        region_name=region if region else self.aws_default_region,
+                        aws_access_key_id=sts_response['Credentials']['AccessKeyId'],
+                        aws_secret_access_key=sts_response['Credentials']['SecretAccessKey'],
+                        aws_session_token=sts_response['Credentials']['SessionToken'],
+                        verify=self.verify_certificate,
+                        config=self.config,
+                        endpoint_url=self.endpoint_url
+                    )
+                    sts_response = target_sts_client.assume_role(
+                        RoleArn=target_role_arn,
+                        RoleSessionName=role_session_name
+                    )
                 client = boto3.client(
                     service_name=service,
                     region_name=region if region else self.aws_default_region,

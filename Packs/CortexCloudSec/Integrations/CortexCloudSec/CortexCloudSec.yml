@@ -1,0 +1,143 @@
+category: IT Services
+sectionOrder:
+- Connect
+- Collect
+commonfields:
+  id: Cloudsec AWS automation
+  version: -1
+configuration:
+- display: Main Role Arn
+  name: main_role_arn
+  type: 0
+  section: Connect
+  required: true
+- display: Role Session Duration
+  name: main_role_session_duration
+  type: 0
+  section: Connect
+  advanced: true
+  required: false
+- display: Target Role Name
+  name: target_role_name
+  type: 0
+  section: Connect
+  required: true
+- display: Timeout
+  name: timeout
+  additionalinfo: The time in seconds till a timeout exception is reached. You can specify just the read timeout (for example 60) or also the connect timeout followed after a comma (for example 60,10). If a connect timeout is not specified, a default of 10 second will be used.
+  defaultvalue: 60,10
+  type: 0
+  section: Connect
+  advanced: true
+  required: false
+- display: Retries
+  name: retries
+  defaultvalue: 5
+  additionalinfo: "The maximum number of retry attempts when connection or throttling errors are encountered. Set to 0 to disable retries. The default value is 5 and the limit is 10. Note: Increasing the number of retries will increase the execution time."
+  type: 0
+  section: Connect
+  advanced: true
+  required: false
+- display: Trust any certificate (not secure)
+  name: insecure
+  type: 8
+  section: Connect
+  advanced: true
+  required: false
+- display: Use system proxy settings
+  name: proxy
+  type: 8
+  section: Connect
+  advanced: true
+  required: false
+description: Amazon Web Services Simple Storage Service.
+display: Cloudsec AWS automation
+name: Cloudsec AWS automation
+script:
+  commands:
+  - arguments:
+    - description: The AWS Account ID.
+      name: account_id
+      required: true
+    - auto: PREDEFINED
+      description: The AWS Region.
+      name: region
+      required: true
+      predefined:
+      - us-east-1
+      - us-east-2
+      - us-west-1
+      - us-west-2
+      - ca-central-1
+      - eu-west-1
+      - eu-central-1
+      - eu-west-2
+      - ap-northeast-1
+      - ap-northeast-2
+      - ap-southeast-1
+      - ap-southeast-2
+      - ap-south-1
+      - sa-east-1
+      - eu-north-1
+      - eu-west-3
+      - us-gov-east-1
+      - us-gov-west-1
+    description: List all S3 buckets in AWS account.
+    name: aws-s3-list-buckets
+    outputs:
+    - contextPath: AWS.S3.Buckets.BucketName
+      description: The name of the bucket.
+      type: string
+    - contextPath: AWS.S3.Buckets.CreationDate
+      description: Date the bucket was created.
+      type: Date
+  - arguments:
+    - description: The AWS Account ID.
+      name: account_id
+      required: true
+    - auto: PREDEFINED
+      description: The AWS Region.
+      name: region
+      required: true
+      predefined:
+      - us-east-1
+      - us-east-2
+      - us-west-1
+      - us-west-2
+      - ca-central-1
+      - eu-west-1
+      - eu-central-1
+      - eu-west-2
+      - ap-northeast-1
+      - ap-northeast-2
+      - ap-southeast-1
+      - ap-southeast-2
+      - ap-south-1
+      - sa-east-1
+      - eu-north-1
+      - eu-west-3
+      - us-gov-east-1
+      - us-gov-west-1
+    - description: The name of the Amazon S3 bucket whose PublicAccessBlock configuration you want to retrieve.
+      name: bucket
+      required: true
+    - description: Specifies whether Amazon S3 should block public access control lists (ACLs) for this bucket and objects in this bucket.
+      name: BlockPublicAcls
+      required: true
+    - description: Specifies whether Amazon S3 should ignore public ACLs for this bucket and objects in this bucket.
+      name: IgnorePublicAcls
+      required: true
+    - description: Specifies whether Amazon S3 should block public bucket policies for this bucket.
+      name: BlockPublicPolicy
+      required: true
+    - description: Specifies whether Amazon S3 should restrict public bucket policies for this bucket.
+      name: RestrictPublicBuckets
+      required: true
+    description: Creates or modifies the PublicAccessBlock configuration for an Amazon S3 bucket.
+    name: aws-s3-put-public-access-block
+  dockerimage: demisto/boto3py3:1.0.0.115129
+  runonce: false
+  script: ''
+  type: python
+  subtype: python3
+fromversion: 5.0.0
