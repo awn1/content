@@ -11,6 +11,7 @@ default:
 stages:
   - cleanup
   - security
+  - packwise
   - unittests-and-validations
   - check-user-permissions
   - prepare-testing-bucket
@@ -48,4 +49,4 @@ include:
   - local: .gitlab/ci/gitlab-ci.shared.variables.yml
   - local: .gitlab/ci/content-ci/ci/override-corepacks.yml
   - local: .gitlab/ci/content-ci/ci/deploy-auto-upgrade-packs.yml
-
+  - local: .gitlab/ci/content-ci/ci/.gitlab-ci.packwise.yml

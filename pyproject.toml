@@ -138,6 +138,14 @@ types-toml = "^0.10.8.7"
 types-tqdm = "^4.66.0.2"
 types-ujson = "^5.6.0.0"
 
+[tool.poetry.group.packwise]
+optional = true
+
+[tool.poetry.group.packwise.dependencies]
+loguru = "^0.7.2"
+pathspec = "^0.12.1"
+python-dotenv = "*"
+
 [tool.poetry.group.testing]
 optional = true
 
