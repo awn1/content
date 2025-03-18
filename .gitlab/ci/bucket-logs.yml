@@ -20,19 +20,6 @@ from-marketplace-dist-logs:
   script:
     - ./BucketLogs/process-logs.sh
 
-from-xsoar-registry-logs:
-  extends:
-    - .update-marketplace-bucket-logs-schedule-rule
-    - .default-job-settings
-  stage: bucket-logs
-  variables:
-    BUCKET_NAME: artifacts.xsoar-registry.appspot.com
-    LOG_TABLE: bucket_logs.xsoar_registry_usage
-  before_script:
-    - gcloud auth activate-service-account --key-file $GCLOUD_SERVICE_KEY
-  script:
-    - ./BucketLogs/process-logs.sh
-
 content-logs-processing-fan-in:
   extends:
     - .update-marketplace-bucket-logs-schedule-rule-always
