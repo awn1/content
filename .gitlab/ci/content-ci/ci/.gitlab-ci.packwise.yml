@@ -1,0 +1,102 @@
+.create_artifacts_folder: &create_artifacts_folder
+  - section_start "Create Artifacts" --collapsed
+  - |
+    if [[ -n "${ARTIFACTS_FOLDER}" ]] && [[ ! -d "${ARTIFACTS_FOLDER}/logs" ]]; then
+      echo "Creating Artifacts folder: ${ARTIFACTS_FOLDER} and it's log folder"
+      mkdir -p -m 777 "${ARTIFACTS_FOLDER}/logs" # using the -p to create the logs folder as well.
+    fi
+  - section_end "Create Artifacts"
+
+
+packwise:
+  rules:
+    - if: '$PACKWISE == "true"'
+
+  extends:
+    - .default-job-settings
+    - .docker_services
+
+  services:
+    - name: ${DOCKER_IO}/library/docker:20.10.12-dind
+      alias: docker
+  tags:
+    - gce
+
+  variables:
+    # Configuration variables
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    # Packwise variables
+    REPO_PATH: $REPO_PATH
+    CONTENT_CONFIG_BRANCH: $CONTENT_CONFIG_BRANCH
+    PACKS: $PACKS
+    ALL_PACKS: $ALL_PACKS
+    HOOK: $HOOK
+    PR_ASSIGNEES: $PR_ASSIGNEES
+    PR_REVIEWERS: $PR_REVIEWERS
+    COMMIT_MESSAGE: $COMMIT_MESSAGE
+    BRANCH_NAME_INFIX: $BRANCH_NAME_INFIX
+    RELEASE_NOTE: $RELEASE_NOTE
+    PR_TITLE: $PR_TITLE
+    PR_BODY: $PR_BODY
+    PACKS_PER_PR: $PACKS_PER_PR
+    # GITHUB_TOKEN: $GITHUB_TOKEN
+    LOG_PATH: ${CI_PROJECT_DIR}/logs/packwise.log
+
+
+  stage: packwise
+
+  script:
+    - section_start "Setting up git"
+    - git config user.email "bot@demisto.com"
+    - git config user.name "Content Bot"
+    - section_end "Setting up git"
+
+    - section_start "Pulling master branch" --collapsed
+    - git fetch -u origin master:master
+    - section_end "Pulling master branch"
+
+    - section_start "Installing packwise dependencies" --collapsed
+    - poetry install --with packwise
+    - section_end "Installing packwise dependencies"
+
+    - section_start "Configure Docker" --collapsed
+    - gcloud auth configure-docker ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
+    - section_end "Configure Docker"
+
+    - section_start "Running packwise pre-commit" --collapsed
+    - python Utils/packwise.py pre-commit
+    - section_end "Running packwise pre-commit"
+
+    # This section is for debugging
+    - section_start "Checking for changes in Packs" --collapsed
+    - git diff --name-only Packs/
+    - section_end "Checking for changes in Packs"
+
+    # We need to stage the changes for the `update-release-notes` command
+    - section_start "Staging changes in Packs" --collapsed
+    - git add $(git diff --name-only Packs/)
+    - section_end "Staging changes in Packs"
+
+    - section_start "Generating release notes" --collapsed
+    - echo "Calling update release notes with text='${RELEASE_NOTE}'"
+    - demisto-sdk update-release-notes -g --text "${RELEASE_NOTE}" --prev-ver master
+    - section_end "Generating release notes"
+
+    # This section is for debugging
+    - section_start "Checking staged changes after release notes" --collapsed
+    - git diff --name-only --staged
+    - section_end "Checking staged changes after release notes"
+
+    - section_start "Opening PRs"
+    - python Utils/packwise.py push
+    - section_end "Opening PRs"
+
+    # Add slack notifier CIAC-12757
+
+  artifacts:
+    paths:
+      - ${CI_PROJECT_DIR}/logs/packwise.log

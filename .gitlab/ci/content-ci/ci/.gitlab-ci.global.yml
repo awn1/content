@@ -801,6 +801,9 @@
           elif [[ "$CI_COMMIT_BRANCH" =~ ^AUD-demisto/.* ]]; then
             echo "In docker auto update branch, Pre Commit only changed files with relevant hooks."
             demisto-sdk pre-commit --mode=docker_autoupdate --docker-image="${PRE_COMMIT_DOCKER_IMAGE}" || PRE_COMMIT_SUCCESS=1
+          elif [[ "$CI_COMMIT_BRANCH" =~ ^packwise/.* ]]; then
+            echo "In packwise branch, pre commit with ignore flag."
+            demisto-sdk pre-commit --mode=packwise || PRE_COMMIT_SUCCESS=1
           else
             echo "Pre Commit only changed files"
             demisto-sdk pre-commit --mode=ci --docker-image="${PRE_COMMIT_DOCKER_IMAGE}" || PRE_COMMIT_SUCCESS=1
