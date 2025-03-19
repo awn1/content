@@ -184,6 +184,7 @@ def parse_incidents(incidents: List[dict],
 
         if attachment_path:
             parsed_incident['attachment'] = attachment_path
+            parsed_incident['attachment'] = attachment_path
 
         if attachment_entry_ids:
             parsed_incident['entry_id_attachment'] = []
