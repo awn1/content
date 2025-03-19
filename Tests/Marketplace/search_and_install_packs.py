@@ -8,6 +8,7 @@ import os
 import re
 from datetime import datetime
 from functools import lru_cache
+from itertools import chain
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any
@@ -235,6 +236,29 @@ def handle_malformed_pack_ids(malformed_pack_ids, packs_to_install):
             )
 
 
+def find_missing_dependencies_ids(body: str) -> list[str]:
+    """
+    Find the missing dependencies IDs from the installation error message.
+    Args:
+        body (str): The response message of the failed installation pack.
+
+    Returns: list of missing dependencies IDs (list[list[str]])
+    """
+    missing_dependencies_ids = []
+    if body:
+        with contextlib.suppress(json.JSONDecodeError):
+            response_info = json.loads(body)
+            missing_dependencies_pattern = re.compile(r"PackID \[[\w\- ]+\] - dependencies: \[([\w\, ]+)\]")
+            missing_dependencies = missing_dependencies_pattern.findall(response_info.get("error"))
+            missing_dependencies = list(
+                map(lambda dep: dep.strip(), chain.from_iterable(map(lambda dep: dep.split(","), missing_dependencies)))
+            )
+            if missing_dependencies:
+                missing_dependencies_ids = missing_dependencies
+                logging.debug(f"Found missing dependencies IDs: {missing_dependencies_ids}")
+    return missing_dependencies_ids
+
+
 def install_packs_from_artifacts(client: DemistoClient, host: str, test_pack_path: str, pack_ids_to_install: list) -> bool:
     """
     Installs all the packs located in the artifacts folder of the BitHub actions build. Please note:
@@ -284,6 +308,7 @@ def install_packs(
     attempts_count: int = 5,
     sleep_interval: int = 60,
     request_timeout: int = 900,
+    all_packs_dependencies_data: dict[str, dict] | None = None,
 ) -> tuple[bool, list]:
     """Make a packs installation request.
        If a pack fails to install due to malformed pack, this function catches the corrupted pack and call another
@@ -301,6 +326,8 @@ def install_packs(
     Returns:
         bool: True if the operation succeeded and False otherwise and a list of packs that were installed.
     """
+    if all_packs_dependencies_data is None:
+        all_packs_dependencies_data = {}
     if not packs_to_install:
         logging.info("There are no packs to install on servers. Consolidating installation as success")
         return True, []
@@ -336,17 +363,30 @@ def install_packs(
             ]
             body = {"packs": packs_to_install, "ignoreWarnings": True}
             return body
+        if missing_dependencies_ids := find_missing_dependencies_ids(ex.body):
+            if not attempt_left:
+                raise Exception(f"Missing dependencies for packs: {', '.join(missing_dependencies_ids)}") from ex
+
+            # We've more attempts, retrying with the missing dependencies.
+            logging.error(
+                f"Unable to install packs due to missing dependencies: {', '.join(missing_dependencies_ids)} - retrying with them"
+            )
+            packs_to_install = (
+                packs_to_install + create_install_request_body([missing_dependencies_ids], all_packs_dependencies_data)[0]
+            )
+            body = {"packs": packs_to_install, "ignoreWarnings": True}
+            return body
 
         error_ids = get_error_ids(ex.body)
         if WLM_TASK_FAILED_ERROR_CODE in error_ids:
             if POLLING_FAILURE in error_ids[WLM_TASK_FAILED_ERROR_CODE].lower():
-                logging.error(f"Got {WLM_TASK_FAILED_ERROR_CODE} error code - polling request failed for task ID, " f"retrying.")
+                logging.error(f"Got {WLM_TASK_FAILED_ERROR_CODE} error code - polling request failed for task ID, retrying.")
             else:
                 # If we got this error code, it may mean that the modeling rules are not valid,
                 # but to make sure it wasn't a tenant or a server-side issue, we'll want to more retries.
                 logging.error(
                     f"Got [{WLM_TASK_FAILED_ERROR_CODE}] error code - might be an indication of a"
-                    f" problem in Modeling rules or Datasets, retrying."
+                    " problem in Modeling rules or Datasets, retrying."
                 )
 
         if not attempt_left:  # exhausted all attempts, understand what happened and exit.
@@ -1113,13 +1153,17 @@ def search_and_install_packs_and_their_dependencies(
     if install_packs_in_batches:
         batch_packs_install_request_body, batches_dependencies = create_batches(packs_to_install_request_body)
         for packs_to_install_body, batch_dependencies in zip(batch_packs_install_request_body, batches_dependencies):
-            batch_success, _ = install_packs(client, host, packs_to_install_body, attempts_count=3)
+            batch_success, _ = install_packs(
+                client, host, packs_to_install_body, attempts_count=3, all_packs_dependencies_data=all_packs_dependencies_data
+            )
             if not batch_success:
                 logging.info(f"Failed to install bulk installation of batch: {packs_to_install_body}.")
                 logging.info(f"Trying to install one by one in the following order: {batch_dependencies}.")
                 one_by_one_success = True
                 for one_by_one_packs in batch_dependencies:
-                    pack_success, _ = install_packs(client, host, one_by_one_packs, attempts_count=1)
+                    pack_success, _ = install_packs(
+                        client, host, one_by_one_packs, attempts_count=1, all_packs_dependencies_data=all_packs_dependencies_data
+                    )
                     if not pack_success:
                         logging.error(f"Failed to install pack one by one: {one_by_one_packs}.")
                     one_by_one_success &= pack_success
@@ -1129,7 +1173,9 @@ def search_and_install_packs_and_their_dependencies(
         batch_packs_install_request_body = [list(itertools.chain.from_iterable(packs_to_install_request_body))]
 
         for packs_to_install_body in batch_packs_install_request_body:
-            pack_success, _ = install_packs(client, host, packs_to_install_body)
+            pack_success, _ = install_packs(
+                client, host, packs_to_install_body, all_packs_dependencies_data=all_packs_dependencies_data
+            )
             success &= pack_success
 
     return sorted_packs_to_install, success
