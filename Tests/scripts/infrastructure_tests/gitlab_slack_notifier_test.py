@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from gitlab import Gitlab
@@ -180,22 +180,36 @@ def test_construct_coverage_slack_msg_no_coverage_last_month(
     assert "Last month: no coverage found for last month" in result[0]["title"]
 
 
-# Define common mock objects
+# Mock objects
 mock_pipeline_1 = MagicMock(id=67889)
 mock_pipeline_2 = MagicMock(id=67890)
 mock_job_1 = MagicMock(id=67890, name="blacklist-validation-job")
 mock_job_2 = MagicMock(id=67889, name="blacklist-validation-job")
 
+# Mock artifacts
+mock_artifacts_1 = {"secrets": ["secret1", "secret2"]}
+mock_artifacts_2 = {"secrets": ["secret1", "secret3"]}
+
 
 @pytest.mark.parametrize(
-    """is_within_time_window_return, get_scheduled_pipelines_by_name_return, get_job_by_name_side_effect, is_pivot_return,
-    secrets_sha_has_been_changed_return, expected_result""",
+    """is_within_time_window_return, get_scheduled_pipelines_by_name_return, get_job_by_name_side_effect,
+    download_and_read_artifact_side_effect, is_blacklist_pivot_return, secrets_sha_has_been_changed_return, expected_result""",
     [
-        pytest.param(True, None, None, None, None, (True, "Daily Heartbeat - "), id="Within time window"),
+        pytest.param(
+            True,
+            [mock_pipeline_1, mock_pipeline_2],
+            [mock_job_1, mock_job_2],
+            [mock_artifacts_1, mock_artifacts_2],
+            None,
+            None,
+            (True, "Daily Heartbeat - "),
+            id="Within time window",
+        ),
         pytest.param(
             False,
             [mock_pipeline_1, mock_pipeline_2],
             [mock_job_1, mock_job_2],
+            [mock_artifacts_1, mock_artifacts_2],
             True,
             None,
             (True, "Secrets found! :warning:"),
@@ -205,6 +219,7 @@ mock_job_2 = MagicMock(id=67889, name="blacklist-validation-job")
             False,
             [mock_pipeline_1, mock_pipeline_2],
             [mock_job_1, mock_job_2],
+            [mock_artifacts_1, mock_artifacts_2],
             False,
             None,
             (True, "Successfully fixed! :muscle:"),
@@ -214,29 +229,34 @@ mock_job_2 = MagicMock(id=67889, name="blacklist-validation-job")
             False,
             [mock_pipeline_1, mock_pipeline_2],
             [mock_job_1, mock_job_2],
+            [mock_artifacts_1, mock_artifacts_2],
             None,
             True,
-            (True, "The set of detected secrets has changed! :warning:"),
+            (True, "The set of detected secrets has changed! Secrets found :warning:"),
             id="No pivot, secrets SHA changed",
         ),
         pytest.param(
             False,
             [mock_pipeline_1, mock_pipeline_2],
             [mock_job_1, mock_job_2],
+            [mock_artifacts_1, mock_artifacts_1],
             None,
             False,
             (False, ""),
             id="No pivot, secrets SHA not changed",
         ),
-        pytest.param(False, [mock_pipeline_2], None, None, None, (False, ""), id="Not enough pipelines"),
+        pytest.param(False, [mock_pipeline_2], None, None, None, None, (False, ""), id="Not enough pipelines"),
     ],
 )
+@patch("time.sleep")  # Mock time.sleep
 def test_should_send_blacklist_message(
+    mock_sleep,
     mocker,
     is_within_time_window_return,
     get_scheduled_pipelines_by_name_return,
     get_job_by_name_side_effect,
-    is_pivot_return,
+    download_and_read_artifact_side_effect,
+    is_blacklist_pivot_return,
     secrets_sha_has_been_changed_return,
     expected_result,
 ):
@@ -248,8 +268,9 @@ def test_should_send_blacklist_message(
         is_within_time_window_return (bool): The return value for the is_within_time_window function.
         get_scheduled_pipelines_by_name_return (list): The return value for the get_scheduled_pipelines_by_name function.
         get_job_by_name_side_effect (list): The side effect for the get_job_by_name function.
-        is_pivot_return (bool or None): The return value for the is_pivot function.
-        secrets_sha_has_been_changed_return (bool or None): The return value for the secrets_sha_has_been_changed function.
+        download_and_read_artifact_side_effect (list): The side effect for the download_and_read_artifact function.
+        is_blacklist_pivot_return (bool or None): The return value for the is_blacklist_pivot function.
+        secrets_sha_has_been_changed_return (bool or None): The return value for the secrets_sha_has_changed function.
         expected_result (tuple): The expected result from the should_send_blacklist_message function.
 
     Scenarios:
@@ -278,14 +299,17 @@ def test_should_send_blacklist_message(
     # Mock the jobs
     mocker.patch.object(gitlab_slack_notifier, "get_job_by_name", side_effect=get_job_by_name_side_effect)
 
+    # Mock the artifact download
+    mocker.patch.object(gitlab_slack_notifier, "download_and_read_artifact", side_effect=download_and_read_artifact_side_effect)
+
     # Mock the pivot check
-    mocker.patch.object(gitlab_slack_notifier, "is_pivot", return_value=is_pivot_return)
+    mocker.patch.object(gitlab_slack_notifier, "is_blacklist_pivot", return_value=is_blacklist_pivot_return)
 
     # Mock the secrets SHA check
-    mocker.patch.object(gitlab_slack_notifier, "secrets_sha_has_been_changed", return_value=secrets_sha_has_been_changed_return)
+    mocker.patch.object(gitlab_slack_notifier, "secrets_sha_has_changed", return_value=secrets_sha_has_been_changed_return)
 
-    #  Mock the blacklist status details
+    # Mock the blacklist status details
     mocker.patch.object(gitlab_slack_notifier, "get_blacklist_status_details", return_value="")
 
-    result = gitlab_slack_notifier.should_send_blacklist_message(gitlab_client, project_id, 1, 2, 3, "")
+    result = gitlab_slack_notifier.should_send_blacklist_message(gitlab_client, project_id, 1, 2, 3)
     assert result == expected_result
