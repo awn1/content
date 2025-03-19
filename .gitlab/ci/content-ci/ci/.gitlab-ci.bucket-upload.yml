@@ -438,8 +438,6 @@ install-packs-in-server-master:
     - echo "CLOUD Chosen machine ids are:${CLOUD_CHOSEN_MACHINE_IDS}"
     - section_end "Lock Machine"
 
-    - !reference [.update-content-graph]
-
     - !reference [.uninstall-packs-and-reset-bucket-cloud]
 
     - section_start "Get Instance Variables" --collapsed
