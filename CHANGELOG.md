@@ -1,3 +1,18 @@
+# Content Infrastructure 0.0.33 (2025-03-19)
+
+### Features
+
+- Added the packwise mechanism ([CIAC-11337](https://jira-dc.paloaltonetworks.com/browse/CIAC-11337))
+- Enhanced the Slack notification mechanism for blacklist validation. ([12898](https://jira-dc.paloaltonetworks.com/browse/12898))
+- The xsoar_registry_usage table update has been removed because it is not supported on devops and also seems to have no use.
+
+### Bugfixes
+
+- Changed the API endpoint for getting integration configuration from xsoar server for cloud servers.
+  Added support for responses as dict object and not string to spare the need for AST parsing. ([CIAC-12918](https://jira-dc.paloaltonetworks.com/browse/CIAC-12918))
+- Fix missing dependencies in search_and_install_packs.
+
+
 # Content Infrastructure 0.0.32 (2025-03-12)
 
 ### Bugfixes

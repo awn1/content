@@ -6,6 +6,7 @@ import math
 import os
 import sys
 import tempfile
+import time
 import zipfile
 from collections.abc import Iterable
 from datetime import datetime, timedelta
@@ -37,20 +38,23 @@ from Tests.scripts.common import (
     CONTENT_NIGHTLY,
     CONTENT_PR,
     DOCKERFILES_PR,
+    SECRETS_FOUND,
     TEST_MODELING_RULES_REPORT_FILE_NAME,
     TEST_PLAYBOOKS_REPORT_FILE_NAME,
     TEST_USE_CASE_REPORT_FILE_NAME,
+    download_and_read_artifact,
+    get_blacklist_status_details,
     get_instance_directories,
     get_job_by_name,
     get_properties_for_test_suite,
     get_scheduled_pipelines_by_name,
     get_slack_user_name,
     get_test_results_files,
-    is_pivot,
+    is_blacklist_pivot,
     is_within_time_window,
     join_list_by_delimiter_in_chunks,
     replace_escape_characters,
-    secrets_sha_has_been_changed,
+    secrets_sha_has_changed,
     slack_link,
 )
 from Tests.scripts.generic_test_report import (
@@ -108,10 +112,14 @@ DAYS_TO_SEARCH = 30
 ALLOWED_COVERAGE_PROXIMITY = 0.25  # Percentage threshold for allowed coverage proximity.
 BLACKLIST_VALIDATION_JOB = "blacklist-validation-job"
 BLACKLIST_VALIDATION_PIPELINE = "Blacklist validation pipeline"
-TARGET_HOUR = 6
-TARGET_MINUTES = 0
-WINDOW_MINUTES = 25
+BLACKLIST_VALIDATION_ARTIFACTS_PATH = Path("./artifacts") / "black_list_report_for_slack.json"
 LOOK_BACK_HOURS = 2
+TARGET_HOUR = 6  # 6:00 AM UTC is 8:00 or 9:00 AM in Israel, depending on DST
+TARGET_MINUTES = 0
+# The message should be sent within 10 minutes before or after the target hour, as we expect a job to finish within 20 minutes.
+# This is the default for blacklist validation; other jobs may require a different '--window_minutes' value.
+WINDOW_MINUTES = 10
+SECONDS_TO_SLEEP = 30
 
 
 def options_handler() -> argparse.Namespace:
@@ -139,17 +147,20 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument("-dr", "--dry_run", help="true for a dry run pipeline, false for a prod pipeline", default="false")
     parser.add_argument(
         "--target_hours",
+        type=int,
         help="The starting hour (0-23) in UTC for the range window when the Slack message should be sent.",
         default=TARGET_HOUR,
     )
     parser.add_argument(
         "--target_minutes",
+        type=int,
         help="The starting minute (0-59) in UTC for the range window when the Slack message should be sent",
         default=TARGET_MINUTES,
     )
     parser.add_argument(
         "--window_minutes",
-        help="The duration of the range window in minutes during which the Slack message can be sent.",
+        type=int,
+        help="The time range before and after the target time, in minutes, during which the Slack message can be sent.",
         default=WINDOW_MINUTES,
     )
 
@@ -829,33 +840,6 @@ def read_and_parse(file_path: str, error_title: str, on_error_append_to: list):
     return []
 
 
-def get_blacklist_status_details(thread_message: str) -> str:
-    """
-    Parses the blacklist check result from the given file path and returns its detailed status.
-
-    Args:
-        thread_message (str): The file path containing the blacklist check result.
-
-    Returns:
-        str: A description of the blacklist check status.
-    """
-    try:
-        msg = read_and_parse(file_path=thread_message, error_title="", on_error_append_to=[])[0]
-
-        if msg.get("color") == "good" and not msg.get("text"):
-            return "No secrets found"
-        if msg.get("color") == "danger" and msg.get("text"):
-            return "Secrets found"
-        if msg.get("color") == "warning" and msg.get("text") == "error":
-            return "An error occurred"
-
-        return "Unknown status"
-
-    except Exception as e:
-        logging.exception(f"Failed to get blacklist status details: {e}")
-        return "Error occurred"
-
-
 def missing_content_packs_test_conf(artifact_folder: Path) -> list[dict[str, Any]]:
     if missing_packs_list := split_results_file(get_artifact_data(artifact_folder, "missing_content_packs_test_conf.txt")):
         title = f"Notice - Missing packs - ({len(missing_packs_list)})"
@@ -1007,30 +991,25 @@ def get_pipeline_slack_data(gitlab_client: Gitlab, pipeline_id: str, project_id:
 
 
 def should_send_blacklist_message(
-    gitlab_client: Gitlab, project_id: str, target_hours: int, target_minutes: int, window_minutes: int, thread_message: str
+    gitlab_client: Gitlab, project_id: str, target_hours: int, target_minutes: int, window_minutes: int
 ) -> tuple[bool, str]:
     """
     Check if a message should be sent for the blacklist validation pipeline.
     Conditions to send a message:
-    - Within a time window of 25 minutes from 6:00 UTC, a message is sent daily.
-    - If the status of the job that scanned for blacklist changes from the previous job, a message is sent.
-    - If the artifacts of the job that scanned for blacklist have changed from the previous job, a message is sent.
-        (This is to handle cases where the job status remains the same because a new secret was found).
+    - The current time falls within a specified time window (default: ±10 minutes) around a target time (default: 6:00 UTC).
+    - A change in secret detection: the previous job found secrets while the current one did not, or vice versa.
+    - The blacklist scan artifacts have changed compared to the previous job, even if the job status remains the same
+    (e.g., due to a newly discovered secret).
+
     Args:
         gitlab_client (Gitlab): The Gitlab client.
         project_id (str): The project id.
         target_hours (int): The starting hour for sending the message.
         target_minutes (int): The starting minute for sending the message.
         window_minutes (int): The range window for sending the message.
-        thread_message (str): The message to be sent in the thread.
     Returns:
         tuple[bool, str]: A tuple of a boolean indicating if a message should be sent and a short message to append.
     """
-    if is_within_time_window(target_hours, target_minutes, window_minutes):
-        status_details = get_blacklist_status_details(thread_message)
-        return True, f"Daily Heartbeat - {status_details}"
-    logging.info("The time is not within the time window - moving on to check the pipelines status.")
-
     last_pipelines = get_scheduled_pipelines_by_name(gitlab_client, project_id, BLACKLIST_VALIDATION_PIPELINE, LOOK_BACK_HOURS)
     if len(last_pipelines) < 2:
         logging.info("Not enough pipelines to compare, quitting")
@@ -1043,28 +1022,37 @@ def should_send_blacklist_message(
     second_to_last_blacklist_job = get_job_by_name(
         gitlab_client, project_id, second_to_last_pipeline_id, BLACKLIST_VALIDATION_JOB
     )
-
+    # Ensure both jobs have artifacts before comparing. If missing, log and return early.
     if not (last_blacklist_job and second_to_last_blacklist_job):
         logging.info("Failed to get jobs for the blacklist validation pipelines, quitting")
         return False, ""
-    pivot = is_pivot(last_blacklist_job, second_to_last_blacklist_job)
+    logging.info(
+        f"Comparing artifacts from last job {last_blacklist_job.id} and second to last job {second_to_last_blacklist_job.id}"
+    )
 
+    logging.info(f"Sleeping for {SECONDS_TO_SLEEP} seconds before requesting artifacts")
+    time.sleep(SECONDS_TO_SLEEP)
+    last_job_artifacts = download_and_read_artifact(
+        gitlab_client, project_id, last_blacklist_job.id, BLACKLIST_VALIDATION_ARTIFACTS_PATH
+    )
+    second_to_last_job_artifacts = download_and_read_artifact(
+        gitlab_client, project_id, second_to_last_blacklist_job.id, BLACKLIST_VALIDATION_ARTIFACTS_PATH
+    )
+
+    if is_within_time_window(target_hours, target_minutes, window_minutes):
+        status_details = get_blacklist_status_details(last_job_artifacts)
+        return True, f"Daily Heartbeat - {status_details}"
+    logging.info("The current time is outside the time window — proceeding to check for a pivot or changes in found secrets.")
+
+    pivot = is_blacklist_pivot(last_job_artifacts, second_to_last_job_artifacts)
     if pivot:
-        return True, "Secrets found! :warning:"
+        return True, f"{SECRETS_FOUND}! :warning:"
     if pivot is False:
         return True, "Successfully fixed! :muscle:"
-    # If both the previous and current jobs failed, we still need to check if the
-    # detected secrets have changed and send a message if they have.
 
-    elif secrets_sha_has_been_changed(
-        gitlab_client,
-        project_id,
-        last_blacklist_job.id,
-        second_to_last_blacklist_job.id,
-        artifact_path=Path("./artifacts") / "black_list_report_for_slack.json",
-    ):
-        logging.info("Although the job status hasn't changed, the SHA of the detected secrets has changed - sending a message.")
-        return True, "The set of detected secrets has changed! :warning:"
+    # Even if the color of the detected secrets has not changed, the set of secrets may have changed.
+    elif secrets_sha_has_changed(last_job_artifacts, second_to_last_job_artifacts):
+        return True, f"The set of detected secrets has changed! {SECRETS_FOUND} :warning:"
     else:
         logging.info(
             "No message will be sent for the 'blacklist validation' pipeline."
@@ -1092,18 +1080,14 @@ def main():
         f"slack channel:{computed_slack_channel} dry run:{options.dry_run}"
     )
     if triggering_workflow == BLACKLIST_VALIDATION:
-        should_send_message, informative_title = should_send_blacklist_message(
-            gitlab_client,
-            project_id,
-            int(options.target_hours),
-            int(options.target_minutes),
-            int(options.window_minutes),
-            options.thread,
+        should_send_message, custom_title = should_send_blacklist_message(
+            gitlab_client, project_id, options.target_hours, options.target_minutes, options.window_minutes
         )
-        custom_title = informative_title
-
+        # Send a thread message only if secrets have been found
+        options.thread = BLACKLIST_VALIDATION_ARTIFACTS_PATH if SECRETS_FOUND in custom_title else None
         if not should_send_message:
             return
+
     pull_request = None
     if options.current_branch != DEFAULT_BRANCH:
         try:
@@ -1145,7 +1129,6 @@ def main():
         options.dry_run,
         custom_title,
     )
-
     slack_msg_output_file = ROOT_ARTIFACTS_FOLDER / SLACK_MESSAGE
     logging.info(f"Writing Slack message to {slack_msg_output_file}")
     write_json_to_file(slack_msg_data, slack_msg_output_file)

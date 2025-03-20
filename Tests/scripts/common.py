@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 from itertools import pairwise
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import gitlab
 import requests
@@ -66,6 +66,7 @@ GREEN_COLOR = "\033[92m"
 TEST_PLAYBOOKS_REPORT_FILE_NAME = "test_playbooks_report.xml"
 TEST_MODELING_RULES_REPORT_FILE_NAME = "test_modeling_rules_report.xml"
 TEST_USE_CASE_REPORT_FILE_NAME = "test_use_case_report.xml"
+SECRETS_FOUND = "Secrets found"
 
 E2E_RESULT_FILE_NAME = "e2e_tests_result.xml"
 
@@ -106,6 +107,12 @@ STRING_TO_BOOL_MAP = {
     "False": False,
     "t": True,
     "f": False,
+}
+
+STATUS_MAP = {
+    "good": "No secrets found",
+    "danger": SECRETS_FOUND,
+    "warning": "An error occurred",
 }
 
 
@@ -444,6 +451,79 @@ def is_pivot(current_entity: ProjectPipeline | ProjectJob, entity_to_compare: Pr
     return None
 
 
+def extract_blacklist_status(artifact: str) -> str | None:
+    """
+    Extracts the 'color' status from a blacklist job artifact.
+
+    Args:
+        artifact (str): JSON string representing the artifact.
+
+    Returns:
+        str | None: The color status if available, otherwise None.
+    """
+    try:
+        artifact_data = json.loads(artifact)
+
+        if not artifact_data or not isinstance(artifact_data, list):
+            logging.error("Invalid artifact format: Expected a non-empty list")
+            return None
+
+        return artifact_data[0].get("color")
+
+    except json.JSONDecodeError:
+        logging.exception("Failed to parse blacklist artifact: Invalid JSON")
+        return None
+    except (IndexError, AttributeError) as e:
+        logging.exception(f"Unexpected artifact structure: {e}")
+        return None
+
+
+def get_blacklist_status_details(job_artifact: str) -> str:
+    """
+    Parses the blacklist check result from the given artifact and returns its detailed status.
+
+    Args:
+        job_artifact (str): JSON string representing the blacklist artifact.
+
+    Returns:
+        str: A description of the blacklist check status.
+    """
+    color = extract_blacklist_status(job_artifact)
+
+    message = STATUS_MAP.get(cast(str, color), "Unknown status")  # the cast is for mypy
+    logging.info(f"Blacklist check status: {message}")
+
+    return message
+
+
+def is_blacklist_pivot(last_blacklist_artifact: str, second_to_last_blacklist_artifact: str) -> bool | None:
+    """
+    Determines if there is a pivot in the blacklist job based on the color field in the artifacts.
+
+    Args:
+        last_blacklist_artifact (str): JSON string representing the most recent blacklist job artifact.
+        second_to_last_blacklist_artifact (str): JSON string representing the previous blacklist job artifact.
+
+    Returns:
+        bool | None:
+            - True if the last artifact is 'good' and the previous was 'danger'.
+            - False if the last artifact is 'danger' and the previous was 'good'.
+            - None if no pivot is detected or data is missing.
+    """
+    color_last = extract_blacklist_status(last_blacklist_artifact)
+    color_prev = extract_blacklist_status(second_to_last_blacklist_artifact)
+
+    if color_last and color_prev:
+        logging.info(f"Last artifact color: '{color_last}', Previous artifact color: '{color_prev}'")
+
+        if color_last == "good" and color_prev == "danger":
+            return False
+        if color_last == "danger" and color_prev == "good":
+            return True
+
+    return None
+
+
 def get_reviewer(pr_url: str) -> str | None:
     """
     Get the first reviewer who approved the PR.
@@ -632,38 +712,39 @@ def download_and_read_artifact(gitlab_client: gitlab.Gitlab, project_id: str, jo
 
             # Read the content of the specified file within the extracted directory
             return (Path(temp_dir) / artifact_path).read_text()
-            return (Path(temp_dir) / artifact_path).read_text()
-
     except Exception as e:
-        error_message = f"Failed to download or extract artifacts for job {job_id}: {e}"
-        raise Exception(error_message) from e
+        logging.error(f"Failed to download or extract artifacts for job {job_id}: {e}")
+        raise
 
 
-def secrets_sha_has_been_changed(
-    gitlab_client: gitlab.Gitlab, project_id: str, last_job_id: int, second_to_last_job_id, artifact_path: Path
-) -> bool:
+def secrets_sha_has_changed(last_job_artifacts, second_to_last_job_artifacts) -> bool:
     """
-    Check if the SHA representing a list of secrets has changed between the last and second-to-last jobs.
+    Check if the SHA of secrets has changed between the last and second-to-last job artifacts.
 
     Args:
-        gitlab_client (gitlab.Gitlab): The GitLab client instance.
-        project_id (str): The ID of the GitLab project.
-        last_job_id (int): The job ID of the last run.
-        second_to_last_job_id (int): The job ID of the second-to-last run.
-        artifact_path (str): The path to the artifact containing the secrets data.
+        last_job_artifacts (str): Artifacts from the last job.
+        second_to_last_job_artifacts (str): Artifacts from the second-to-last job.
 
     Returns:
-        bool: True if the SHA of secrets has changed, False otherwise.
+        bool: True if SHA changed, False otherwise.
     """
-    last_job_artifacts = download_and_read_artifact(gitlab_client, project_id, last_job_id, artifact_path)
-    second_to_last_job_artifacts = download_and_read_artifact(gitlab_client, project_id, second_to_last_job_id, artifact_path)
-    sha_of_secrets_in_last_job = json.loads(last_job_artifacts)[0].get("hash")
-    sha_of_secrets_in_second_to_last_job = json.loads(second_to_last_job_artifacts)[0].get("hash")
-    logging.info(
-        f"The SHA of secrets found in last_job is : {sha_of_secrets_in_last_job},"
-        f"and in previous run it was is : {sha_of_secrets_in_second_to_last_job}",
-    )
-    return sha_of_secrets_in_last_job != sha_of_secrets_in_second_to_last_job
+    try:
+        sha_last = json.loads(last_job_artifacts)[0].get("hash")
+        sha_prev = json.loads(second_to_last_job_artifacts)[0].get("hash")
+
+        if not sha_last or not sha_prev:
+            logging.warning("Missing SHA in one or both jobs.")
+            return False
+
+        logging.info(f"Last job SHA: {sha_last}, Previous job SHA: {sha_prev}")
+    except json.JSONDecodeError:
+        logging.exception("Failed to parse job artifacts: Invalid JSON")
+        return False
+    except (IndexError, KeyError) as e:
+        logging.exception(f"Unexpected artifact structure: {e}")
+        return False
+
+    return sha_last != sha_prev
 
 
 def get_nearest_newer_commit_with_pipeline(
