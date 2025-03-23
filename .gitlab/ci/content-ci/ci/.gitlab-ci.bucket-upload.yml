@@ -217,15 +217,6 @@ run-validations-upload-flow:
     - .run-validations
     - .bucket-upload-rule
 
-run-validations-upload-flow-new-validate-flow:
-  needs:
-    - cloning-repositories-upload-flow
-  variables:
-    DEMISTO_SDK_GRAPH_FORCE_CREATE: "true"
-  extends:
-    - .run-validations-new-validate-flow
-    - .bucket-upload-rule
-
 run-pre-commit-upload-flow:
   needs:
     - cloning-repositories-upload-flow
@@ -246,7 +237,6 @@ jobs-done-check-upload-flow:
   needs:
     - cloning-repositories-upload-flow
     - run-pre-commit-upload-flow
-    - run-validations-upload-flow
     - mpv2-prepare-testing-bucket-upload-flow
     - upload-id-set-bucket
     - xpanse-prepare-testing-bucket-upload-flow
@@ -262,7 +252,7 @@ jobs-done-check-upload-flow:
     - upload-packs-to-marketplace-v2
     - upload-packs-to-xpanse-marketplace
     - upload-packs-to-xsoar-saas-marketplace
-    - run-validations-upload-flow-new-validate-flow
+    - run-validations-upload-flow
     - upload-content-graph-data-to-bigquery
   tags:
     - gke
@@ -544,12 +534,11 @@ upload-packs-to-marketplace:
   tags:
     - $BUILD_JOB_TAG
   needs:
-    - run-validations-upload-flow
     - install-packs-in-server6_11
     - install-packs-in-server6_12
     - install-packs-in-server-master
     - run-pre-commit-upload-flow
-    - run-validations-upload-flow-new-validate-flow
+    - run-validations-upload-flow
   stage: upload-to-marketplace
   artifacts:
     expire_in: 30 days
@@ -601,7 +590,7 @@ upload-packs-to-marketplace:
 upload-packs-to-marketplace-v2:
   tags:
     - $BUILD_JOB_TAG
-  needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "mpv2-prepare-testing-bucket-upload-flow", "install-packs-in-xsiam-ga", "run-validations-upload-flow-new-validate-flow"]
+  needs: ["run-pre-commit-upload-flow", "mpv2-prepare-testing-bucket-upload-flow", "install-packs-in-xsiam-ga", "run-validations-upload-flow"]
   stage: upload-to-marketplace
   artifacts:
     expire_in: 30 days
@@ -651,7 +640,7 @@ upload-packs-to-marketplace-v2:
 upload-packs-to-xpanse-marketplace:
   tags:
     - $BUILD_JOB_TAG
-  needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "xpanse-prepare-testing-bucket-upload-flow", "run-validations-upload-flow-new-validate-flow"] # "install-packs-in-xpanse-dev"
+  needs: ["run-pre-commit-upload-flow", "xpanse-prepare-testing-bucket-upload-flow", "run-validations-upload-flow"] # "install-packs-in-xpanse-dev"
   stage: upload-to-marketplace
   artifacts:
     expire_in: 30 days
@@ -701,7 +690,7 @@ upload-packs-to-xpanse-marketplace:
 upload-packs-to-xsoar-saas-marketplace:
   tags:
     - $BUILD_JOB_TAG
-  needs: ["run-validations-upload-flow", "run-pre-commit-upload-flow", "xsoar-saas-prepare-testing-bucket-upload-flow", "run-validations-upload-flow-new-validate-flow", "install-packs-in-xsoar-ng-ga"]
+  needs: ["run-pre-commit-upload-flow", "xsoar-saas-prepare-testing-bucket-upload-flow", "run-validations-upload-flow", "install-packs-in-xsoar-ng-ga"]
   stage: upload-to-marketplace
   artifacts:
     expire_in: 30 days

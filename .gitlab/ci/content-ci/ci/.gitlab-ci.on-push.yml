@@ -96,17 +96,6 @@ run-validations:
     - if: '$IS_NIGHTLY == "true"'
     - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
     - if: '$TRIGGER_TEST_BRANCH == "true"'
-
-# runs in gitlab for the on-push flow (except for contributors)
-run-validations-new-validate-flow:
-  needs:
-    - cloning-repositories
-  extends:
-    - .run-validations-new-validate-flow
-  rules:
-    - if: '$IS_NIGHTLY == "true"'
-    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/'
-    - if: '$TRIGGER_TEST_BRANCH == "true"'
   after_script:
     - !reference [.default-after-script]
     - !reference [.comment_validation_summary_on_pr]
@@ -514,7 +503,6 @@ jobs-done-check-nightly:
     - cloning-repositories
     - run-pre-commit
     - run-validations
-    - run-validations-new-validate-flow
     - mpv2-prepare-testing-bucket
     - xpanse-prepare-testing-bucket
     - xsoar-prepare-testing-bucket
@@ -560,7 +548,6 @@ jobs-done-check-on-push:
     - cloning-repositories
     - run-pre-commit
     - run-validations
-    - run-validations-new-validate-flow
     - stop-running-pipelines
     - test-upload-flow
     - validate-content-conf
@@ -606,7 +593,6 @@ jobs-done-check-on-merge:
     - merge-dev-secrets
     - run-pre-commit
     - run-validations
-    - run-validations-new-validate-flow
     - test-upload-flow
     - validate-content-conf
     - mpv2-prepare-testing-bucket
