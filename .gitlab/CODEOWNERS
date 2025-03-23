@@ -37,4 +37,5 @@ Tests/scripts/print_cloud_machine_details.sh @mwienfeld
 Tests/scripts/run_tests.sh @mwienfeld
 Tests/scripts/test_modeling_rules.sh @acarmi
 Tests/scripts/lock_cloud_machines.py @mwienfeld
+Tests/scripts/validate.sh @yhayun
 .gitlab/ci/.gitlab-ci.sdk-nightly.yml @sfainberg

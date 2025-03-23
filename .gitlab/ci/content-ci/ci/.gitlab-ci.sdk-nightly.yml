@@ -114,13 +114,6 @@ demisto-sdk-nightly:run-validations:
     - .run-validations
     - .sdk-nightly-schedule-rule
 
-demisto-sdk-nightly:run-validations-new-validate-flow:
-  needs:
-    - demisto-sdk-nightly:cloning-repositories
-  extends:
-    - .run-validations-new-validate-flow
-    - .sdk-nightly-schedule-rule
-
 demisto-sdk-nightly:check-idset-dependent-commands:
   needs:
     - demisto-sdk-nightly:cloning-repositories
@@ -539,7 +532,6 @@ demisto-sdk-nightly:jobs-done-check:
     - demisto-sdk-nightly:cloning-repositories
     - demisto-sdk-nightly:run-pre-commit
     - demisto-sdk-nightly:run-validations
-    - demisto-sdk-nightly:run-validations-new-validate-flow
     - demisto-sdk-nightly:test-infrastructure
     - demisto-sdk-nightly:test-upload-flow
     - demisto-sdk-nightly:check-idset-dependent-commands

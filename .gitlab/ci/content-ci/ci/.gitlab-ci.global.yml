@@ -833,60 +833,6 @@
 
 .run-validations:
   stage: unittests-and-validations
-  tags:
-    - $BUILD_JOB_TAG
-  extends:
-    - .default-job-settings
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 16Gi
-    KUBERNETES_MEMORY_LIMIT: 16Gi
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_DRIVER: overlay2
-    DOCKER_TLS_CERTDIR: ""
-  services:
-    - name: ${DOCKER_IO}/library/docker:20.10.12-dind
-      alias: docker
-  artifacts:
-    expire_in: 30 days
-    paths:
-      - ${CI_PROJECT_DIR}/artifacts/*
-      - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
-    when: always
-  script:
-    - section_start "Copy conf.json To Server Type Artifacts Folder"
-    - cp "./Tests/conf.json" "${ARTIFACTS_FOLDER_SERVER_TYPE}/conf.json"
-    - section_end "Copy conf.json To Server Type Artifacts Folder"
-    - section_start "Validate Files and Yaml"
-    - gcloud auth configure-docker ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
-    - |
-      if [[ "$CI_COMMIT_BRANCH" =~ ^AUD-demisto/.* ]]; then
-        echo "In auto update docker flow, skipping validate and linter execution."
-      else
-        ./Tests/scripts/validate.sh
-      fi
-    - section_start "Validate Files and Yaml"
-    - section_start "Check Spelling"
-    - python3 ./Tests/scripts/circleci_spell_checker.py $CI_COMMIT_BRANCH
-    - section_end "Check Spelling"
-    - section_start "Validate landingPageSections.json"
-    - echo "Download index.zip"
-    - INDEX_PATH=$(mktemp)
-    - |
-      gcloud auth activate-service-account --key-file="$GCS_MARKET_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
-      echo "successfully activated google cloud service account"
-      gsutil cp "gs://marketplace-dist/content/packs/index.zip" $INDEX_PATH
-      echo "successfully downloaded index.zip"
-    - echo "successfully downloaded index.zip into $INDEX_PATH"
-
-    - UNZIP_PATH=$(mktemp -d)
-    - unzip $INDEX_PATH -d $UNZIP_PATH > "${ARTIFACTS_FOLDER}/logs/unzip_index.log"
-
-    - python3 Tests/Marketplace/validate_landing_page_sections.py -i $UNZIP_PATH
-    - section_end "Validate landingPageSections.json"
-    - job-done
-
-.run-validations-new-validate-flow:
-  stage: unittests-and-validations
   extends:
     - .default-job-settings
   tags:
@@ -922,7 +868,7 @@
           echo "validation config has been modified, will run new validate with -a"
           export SHOULD_VALIDATE_ALL=true
         fi
-        ./Tests/scripts/new_validate.sh
+        ./Tests/scripts/validate.sh
       fi
     - section_end "Validate Files and Yaml"
     - job-done

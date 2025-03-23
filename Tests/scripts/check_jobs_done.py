@@ -43,7 +43,6 @@ SDK_NIGHTLY_JOBS = [
     "demisto-sdk-nightly:cloning-repositories",
     "demisto-sdk-nightly:run-pre-commit: [from-yml]",
     "demisto-sdk-nightly:run-validations",
-    "demisto-sdk-nightly:run-validations-new-validate-flow",
     "demisto-sdk-nightly:test-infrastructure",
     "demisto-sdk-nightly:test-upload-flow",
     "demisto-sdk-nightly:check-idset-dependent-commands",
@@ -59,7 +58,6 @@ BUCKET_UPLOAD_JOBS = [
     "cloning-repositories-upload-flow",
     "run-pre-commit-upload-flow: [from-yml]",
     "run-validations-upload-flow",
-    "run-validations-upload-flow-new-validate-flow",
     "mpv2-prepare-testing-bucket-upload-flow",
     "upload-id-set-bucket",
     "xpanse-prepare-testing-bucket-upload-flow",
@@ -79,7 +77,6 @@ CONTENT_COMMON_JOBS = [
     "cloning-repositories",
     "run-pre-commit: [from-yml]",
     "run-validations",
-    "run-validations-new-validate-flow",
     "mpv2-prepare-testing-bucket",
     "xpanse-prepare-testing-bucket",
     "xsoar-prepare-testing-bucket",
@@ -155,7 +152,7 @@ def main():
     base_path = Path(args.job_done_files)
     should_fail = False
     for job in JOBS_PER_TRIGGERING_WORKFLOW[args.triggering_workflow]:
-        if "new-validate-flow" in job:
+        if "run-validations" in job:
             continue
         job_file = base_path / f"{job}.txt"
         logging.info(f"checking job {job} with file {job_file} in {job_file.absolute()}")
