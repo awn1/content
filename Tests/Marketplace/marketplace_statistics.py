@@ -121,7 +121,7 @@ class StatisticsHandler:
     """
 
     DOWNLOADS_TABLE = "oproxy-dev.shared_views.top_packs"  # packs downloads statistics table
-    TOP_PACKS_14_DAYS_TABLE = "oproxy-dev.shared_views.top_packs_14_days"
+    TOP_PACKS_14_DAYS_TABLE = "oproxy-dev.shared_views.top_packs_14_days"  # this table is a view of the "usage" table
     BIG_QUERY_MAX_RESULTS = 2000  # big query max row results
 
     def __init__(self, service_account: str, index_folder_path: str):

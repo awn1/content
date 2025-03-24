@@ -671,7 +671,11 @@
   - !reference [.split-packs-to-machines]
   - section_start "Install Packs and run Test-Module"
   - ./Tests/scripts/install_content_and_test_integrations.sh || EXIT_CODE=$?
-  - if [ "${EXIT_CODE}" -ne 0 ]; then exit 1; fi
+  - |
+    if [ "${EXIT_CODE}" -ne 0 ]; then
+      echo "Got non-zero exit code: ${EXIT_CODE}, exiting"
+      exit "${EXIT_CODE}"
+    fi
   - cp -f "${ARTIFACTS_FOLDER_SERVER_TYPE}/conf.json" Tests/conf.json
   - section_end "Install Packs and run Test-Module"
 

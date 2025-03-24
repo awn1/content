@@ -248,14 +248,15 @@ def find_missing_dependencies_ids(body: str) -> list[str]:
     if body:
         with contextlib.suppress(json.JSONDecodeError):
             response_info = json.loads(body)
-            missing_dependencies_pattern = re.compile(r"PackID \[[\w\- ]+\] - dependencies: \[([\w\, ]+)\]")
-            missing_dependencies = missing_dependencies_pattern.findall(response_info.get("error"))
-            missing_dependencies = list(
-                map(lambda dep: dep.strip(), chain.from_iterable(map(lambda dep: dep.split(","), missing_dependencies)))
-            )
-            if missing_dependencies:
-                missing_dependencies_ids = missing_dependencies
-                logging.debug(f"Found missing dependencies IDs: {missing_dependencies_ids}")
+            if error := response_info.get("error"):
+                missing_dependencies_pattern = re.compile(r"PackID \[[\w\- ]+\] - dependencies: \[([\w\, ]+)\]")
+                missing_dependencies = missing_dependencies_pattern.findall(error)
+                missing_dependencies = list(
+                    map(lambda dep: dep.strip(), chain.from_iterable(map(lambda dep: dep.split(","), missing_dependencies)))
+                )
+                if missing_dependencies:
+                    missing_dependencies_ids = missing_dependencies
+                    logging.debug(f"Found missing dependencies IDs: {missing_dependencies_ids}")
     return missing_dependencies_ids
 
 
