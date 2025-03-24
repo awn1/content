@@ -68,7 +68,7 @@ VISO_API_KEY = os.getenv("VISO_API_KEY")
 WITHOUT_VISO = os.getenv("WITHOUT_VISO")
 WAIT_IN_LINE_CHANNEL_ID: str = os.environ["WAIT_IN_LINE_CHANNEL_ID"]
 CONTENT_TENANTS_GROUP_OWNER = os.getenv("CONTENT_TENANTS_GROUP_OWNER")
-TTL_EXPIRED_DAYS_DEFAULT = 5
+TTL_EXPIRED_DAYS_DEFAULT = 3  # since the max ttl for a disposable tenant is 144 hours, we want to warn 3 days before it expires
 TTL_EXPIRED_DAYS = timedelta(days=int(os.getenv("TTL_EXPIRED_DAYS", TTL_EXPIRED_DAYS_DEFAULT)))
 LICENSE_EXPIRED_DAYS_DEFAULT = 5
 LICENSE_EXPIRED_DAYS = timedelta(days=int(os.getenv("LICENSE_EXPIRED_DAYS", LICENSE_EXPIRED_DAYS_DEFAULT)))
