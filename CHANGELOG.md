@@ -1,3 +1,20 @@
+# Content Infrastructure 0.0.35 (2025-03-24)
+
+### Features
+
+- Since the max ttl was reduced to 144, the TTL_EXPIRED_DAYS_DEFAULT was lowered to 3 days.
+- Updated the demisto-sdk version 1.36.4 in Infra.
+- Removed graph-update step from `install-packs-on-cloud-instances`
+
+### Bugfixes
+
+- Fix error in find_missing_dependencies_ids.
+
+### Deprecations and Removals
+
+- Removed old-validate flow from all builds. ([12658](https://jira-dc.paloaltonetworks.com/browse/12658))
+
+
 # Content Infrastructure 0.0.33 (2025-03-19)
 
 ### Features
