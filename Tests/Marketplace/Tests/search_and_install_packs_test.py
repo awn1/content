@@ -1124,3 +1124,63 @@ def test_filter_packs_by_min_server_version_no_packs_filtered(mocker: MockFixtur
     filtered_packs = script.filter_packs_by_min_server_version(packs_id, server_version, "")
 
     assert filtered_packs == packs_id
+
+
+def test_find_missing_dependencies_ids_success():
+    """
+    Given: A valid JSON response body with missing dependencies.
+    When: The find_missing_dependencies_ids function is called with this body.
+    Then: It should return a list of missing dependency IDs.
+    """
+    body = json.dumps(
+        {
+            "error": (
+                "the following required dependencies are missing:\nPackID [CommonScripts] - dependencies: [DemistoRESTAPI]"
+                "\nPackID [Jira] - dependencies: [CommonScripts]\nPackID [PrismaCloud] - dependencies: [CommonTypes]"
+                "\nPackID [PrismaCloudCompute] - dependencies: [Jira, PrismaCloud, ServiceNow]\n"
+            ),
+        }
+    )
+
+    result = script.find_missing_dependencies_ids(body)
+
+    assert result == ["DemistoRESTAPI", "CommonScripts", "CommonTypes", "Jira", "PrismaCloud", "ServiceNow"]
+
+
+def test_find_missing_dependencies_ids_no_dependencies(mocker):
+    """
+    Given: A valid JSON response body without missing dependencies.
+    When: The find_missing_dependencies_ids function is called with this body.
+    Then: It should return an empty list.
+    """
+    body = json.dumps({"error": "Some other error message"})
+
+    result = script.find_missing_dependencies_ids(body)
+
+    assert result == []
+
+
+def test_find_missing_dependencies_ids_invalid_json(mocker):
+    """
+    Given: An invalid JSON response body.
+    When: The find_missing_dependencies_ids function is called with this body.
+    Then: It should return an empty list and not raise an exception.
+    """
+    body = "Invalid JSON"
+
+    result = script.find_missing_dependencies_ids(body)
+
+    assert result == []
+
+
+def test_find_missing_dependencies_ids_no_error_key():
+    """
+    Given: A valid JSON response body without an 'error' key.
+    When: The find_missing_dependencies_ids function is called with this body.
+    Then: It should return an empty list.
+    """
+    body = json.dumps({"errors": ["Some other error message"]})
+
+    result = script.find_missing_dependencies_ids(body)
+
+    assert result == []
