@@ -1,7 +1,7 @@
 
 # McAfee NSM (Network Security Manager)
 This pack includes Cortex XSIAM content.
-
+<~XSIAM>
 ## McAfee NSM Syslog configuration
 McAfee NSM syslog event types:
 * IPS Events
@@ -14,10 +14,10 @@ McAfee NSM syslog event types:
 3. Click *+* and add the target server. 
    If you do not have a configured target server, click **Add** near Target Server and  fill in the target server details.
 
-   ![link](https://raw.githubusercontent.com/demisto/content/2063d324e6515a85b484705df5e4d153425e5110/Packs/McAfeeNSM/doc_imgs/nsm_add_target_server.png)
+   ![link](doc_files/nsm_add_target_server.png)
 4. In Facility, select **Log Alert (note 1)**.
 5. In Severity mapping, leave the configuration as it.  It should be:
- ![link](https://raw.githubusercontent.com/demisto/content/95eff3fe52a33695a10a76209cf8f2c4edbc185f/Packs/McAfeeNSM/doc_imgs/nsm_ips_severity_mapping.png)
+ ![link](doc_files/nsm_ips_severity_mapping.png)
 6. Click the Notify for all Alerts checkbox.
 7. Click **Save**.
 
@@ -27,7 +27,7 @@ McAfee NSM syslog event types:
 3. Fill in the "Server Name or IP Address" and "Port" fields .
 4. In the Facilities dropdown, select **Security/authorization (code 4)**.
 5. In Severity mapping, leave the configuration as it.  It should be:
-    ![link](https://raw.githubusercontent.com/demisto/content/53399299a79f6d8323502c6489c02b87a8720a7b/Packs/McAfeeNSM/doc_imgs/nsm_faults_severity_mapping.png)
+    ![link](doc_files/nsm_faults_severity_mapping.png)
 6. In the Forward Faults dropdown, select **informational and above**.
 7. In Message Preference, click the Syslog default checkbox.
 8. Click **Save**.
@@ -39,7 +39,7 @@ McAfee NSM syslog event types:
 4. In the Protocol dropdown, select **Protocol**.
 5. In the Facilities dropdown, select **Log Alert (note 1)**.
 6. In Severity mapping, leave the configuration as it.  It should be:
-    ![link](https://raw.githubusercontent.com/demisto/content/53399299a79f6d8323502c6489c02b87a8720a7b/Packs/McAfeeNSM/doc_imgs/nsm_audit_severity_mapping.png)
+    ![link](doc_files/nsm_audit_severity_mapping.png)
 7. In the Forward audit dropdown, select **Allow All Auditlogs**.
 7. In Message Preference, click the Syslog default checkbox.
 8. Click **Save**.
@@ -75,4 +75,4 @@ You can configure the specific vendor and product for this instance.
 4. When configuring the Syslog Collector, set the following values:
    - vendor as vendor - mcafee
    - product as product - nsm
- 
+</~XSIAM>

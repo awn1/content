@@ -69,6 +69,7 @@ tasks:
     quietmode: 0
     isoversize: false
     isautoswitchedtoquietmode: false
+    continueonerrortype: ""
   "2":
     id: "2"
     taskid: c91fc254-410b-425e-87b2-c69a28f65349
@@ -99,14 +100,6 @@ tasks:
             value:
               simple: Suspicious
           ignorecase: true
-        - operator: isEqualString
-          left:
-            value:
-              simple: FileVerdict
-            iscontext: true
-          right:
-            value:
-              simple: Malicious
       - - operator: isEqualString
           left:
             value:
@@ -225,9 +218,11 @@ tasks:
       brand: ''
     nexttasks:
       '#default#':
-      - '39'
+      - "39"
       Benign:
-      - "77"
+      - "85"
+      Greyware:
+      - "86"
     separatecontext: false
     conditions:
     - label: Benign
@@ -241,31 +236,31 @@ tasks:
             iscontext: true
           right:
             value:
-              simple: '0'
-        - operator: isEqualString
-          left:
-            value:
-              complex:
-                root: inputs.GraywareAsMalware
-            iscontext: true
-          right:
-            value:
-              simple: 'False'
+              simple: "0"
+    - label: Greyware
+      condition:
       - - operator: isEqualString
           left:
             value:
-              complex:
-                root: inputs.ShouldRescanBenign
+              simple: WildFire.Verdicts.Verdict
             iscontext: true
           right:
             value:
-              simple: 'True'
-          ignorecase: true
+              simple: "2"
+      - - operator: isEqualString
+          left:
+            value:
+              simple: inputs.GraywareAsMalware
+            iscontext: true
+          right:
+            value:
+              simple: "False"
+    continueonerrortype: ""
     view: |-
       {
         "position": {
           "x": 900,
-          "y": 875
+          "y": 825
         }
       }
     note: false
@@ -275,9 +270,8 @@ tasks:
     quietmode: 0
     isoversize: false
     isautoswitchedtoquietmode: false
-    continueonerrortype: ""
-  '33':
-    id: '33'
+  "33":
+    id: "33"
     taskid: 6b6f4826-2aa2-456a-8587-93f122f1c99e
     type: title
     task:
@@ -334,7 +328,7 @@ tasks:
       {
         "position": {
           "x": 430,
-          "y": 2075
+          "y": 2070
         }
       }
     note: false
@@ -396,7 +390,7 @@ tasks:
       {
         "position": {
           "x": 900,
-          "y": 2370
+          "y": 2250
         }
       }
     note: false
@@ -428,7 +422,7 @@ tasks:
       {
         "position": {
           "x": 900,
-          "y": 2910
+          "y": 2800
         }
       }
     note: false
@@ -472,7 +466,7 @@ tasks:
       {
         "position": {
           "x": 900,
-          "y": 2670
+          "y": 2560
         }
       }
     note: false
@@ -504,7 +498,7 @@ tasks:
       {
         "position": {
           "x": 900,
-          "y": 4100
+          "y": 3990
         }
       }
     note: false
@@ -550,7 +544,7 @@ tasks:
       {
         "position": {
           "x": 900,
-          "y": 3410
+          "y": 3310
         }
       }
     note: false
@@ -596,7 +590,7 @@ tasks:
       {
         "position": {
           "x": 900,
-          "y": 3750
+          "y": 3650
         }
       }
     note: false
@@ -614,7 +608,7 @@ tasks:
     task:
       id: da1d7739-25a2-416b-8c41-98d80f898913
       version: -1
-      name: Continue with the incident investigation
+      name: Continue with the alert investigation
       description: Continue manually with the alert investigation.
       type: regular
       iscommand: false
@@ -627,7 +621,7 @@ tasks:
       {
         "position": {
           "x": 1270,
-          "y": 3920
+          "y": 3820
         }
       }
     note: false
@@ -658,7 +652,7 @@ tasks:
       {
         "position": {
           "x": 900,
-          "y": 3255
+          "y": 3115
         }
       }
     note: false
@@ -685,8 +679,8 @@ tasks:
     view: |-
       {
         "position": {
-          "x": 430,
-          "y": 4290
+          "x": 40,
+          "y": 4160
         }
       }
     note: false
@@ -889,8 +883,8 @@ tasks:
     view: |-
       {
         "position": {
-          "x": 1280,
-          "y": 1720
+          "x": 1340,
+          "y": 1590
         }
       }
     note: false
@@ -926,8 +920,8 @@ tasks:
     view: |-
       {
         "position": {
-          "x": 1280,
-          "y": 1880
+          "x": 1340,
+          "y": 1750
         }
       }
     note: false
@@ -937,6 +931,7 @@ tasks:
     quietmode: 0
     isoversize: false
     isautoswitchedtoquietmode: false
+    continueonerrortype: ""
   "61":
     id: "61"
     taskid: 109f06df-2f1f-4c89-8b00-e84b143cf481
@@ -1048,8 +1043,6 @@ tasks:
         simple: Quarantine
       HostContainment:
         simple: 'True'
-      IAMUserDomain:
-        simple: ''
       UserContainment:
         simple: "True"
       UserVerification:
@@ -1080,6 +1073,7 @@ tasks:
     quietmode: 0
     isoversize: false
     isautoswitchedtoquietmode: false
+    continueonerrortype: ""
   "63":
     id: "63"
     taskid: 461f2351-9e50-443b-8486-795bc963d33c
@@ -1123,8 +1117,6 @@ tasks:
         complex:
           root: alert
           accessor: agentid
-      timeRange:
-        simple: 2 hours ago
     separatecontext: false
     loop:
       iscommand: false
@@ -1135,7 +1127,7 @@ tasks:
       {
         "position": {
           "x": 900,
-          "y": 2500
+          "y": 2390
         }
       }
     note: false
@@ -1145,6 +1137,7 @@ tasks:
     quietmode: 0
     isoversize: false
     isautoswitchedtoquietmode: false
+    continueonerrortype: ""
   "64":
     id: "64"
     taskid: f232d4e1-9457-469a-805a-2064f2f0c30e
@@ -1265,7 +1258,7 @@ tasks:
       {
         "position": {
           "x": 1300,
-          "y": 3050
+          "y": 2940
         }
       }
     note: false
@@ -1275,6 +1268,7 @@ tasks:
     quietmode: 0
     isoversize: false
     isautoswitchedtoquietmode: false
+    continueonerrortype: ""
   "65":
     id: "65"
     taskid: d59aca07-8dd0-410e-8c3f-a971980653cf
@@ -1345,7 +1339,7 @@ tasks:
       {
         "position": {
           "x": 900,
-          "y": 3050
+          "y": 2940
         }
       }
     note: false
@@ -1355,6 +1349,7 @@ tasks:
     quietmode: 0
     isoversize: false
     isautoswitchedtoquietmode: false
+    continueonerrortype: ""
   "66":
     id: "66"
     taskid: 32acfe19-fb1e-43f7-8302-9f695f5173cb
@@ -1397,8 +1392,8 @@ tasks:
     view: |-
       {
         "position": {
-          "x": 1370,
-          "y": 3580
+          "x": 1270,
+          "y": 3480
         }
       }
     note: false
@@ -1408,6 +1403,7 @@ tasks:
     quietmode: 0
     isoversize: false
     isautoswitchedtoquietmode: false
+    continueonerrortype: ""
   "67":
     id: "67"
     taskid: 58f335fb-7b1f-4de2-83e6-5c80421dbdc5
@@ -1457,8 +1453,8 @@ tasks:
     view: |-
       {
         "position": {
-          "x": 430,
-          "y": 2500
+          "x": 40,
+          "y": 2390
         }
       }
     note: false
@@ -1493,8 +1489,8 @@ tasks:
     view: |-
       {
         "position": {
-          "x": 1280,
-          "y": 2040
+          "x": 1340,
+          "y": 1910
         }
       }
     note: false
@@ -1577,8 +1573,8 @@ tasks:
     view: |-
       {
         "position": {
-          "x": 1280,
-          "y": 2200
+          "x": 1340,
+          "y": 2070
         }
       }
     note: false
@@ -1624,7 +1620,7 @@ tasks:
       {
         "position": {
           "x": 1760,
-          "y": 3050
+          "y": 2940
         }
       }
     note: false
@@ -1665,7 +1661,7 @@ tasks:
       {
         "position": {
           "x": 1760,
-          "y": 3240
+          "y": 3140
         }
       }
     note: false
@@ -1711,7 +1707,7 @@ tasks:
       {
         "position": {
           "x": 430,
-          "y": 1840
+          "y": 1815
         }
       }
     note: false
@@ -1742,7 +1738,7 @@ tasks:
       {
         "position": {
           "x": 1760,
-          "y": 2910
+          "y": 2800
         }
       }
     note: false
@@ -1777,8 +1773,8 @@ tasks:
     view: |-
       {
         "position": {
-          "x": 1280,
-          "y": 1280
+          "x": 1340,
+          "y": 1150
         }
       }
     note: false
@@ -1820,11 +1816,20 @@ tasks:
           right:
             value:
               simple: Success
+        - operator: isEqualString
+          left:
+            value:
+              simple: inputs.ShouldRescanBenign
+            iscontext: true
+          right:
+            value:
+              simple: "True"
+          ignorecase: true
     view: |-
       {
         "position": {
-          "x": 1280,
-          "y": 1480
+          "x": 1340,
+          "y": 1350
         }
       }
     note: false
@@ -1851,7 +1856,6 @@ tasks:
       '#none#':
       - "80"
     separatecontext: false
-    continueonerrortype: ""
     view: |-
       {
         "position": {
@@ -1866,6 +1870,7 @@ tasks:
     quietmode: 0
     isoversize: false
     isautoswitchedtoquietmode: false
+    continueonerrortype: ""
   "80":
     id: "80"
     taskid: 8ac754b3-8eb9-4480-8804-df4cf57620fa
@@ -2086,6 +2091,68 @@ tasks:
     quietmode: 0
     isoversize: false
     isautoswitchedtoquietmode: false
+  "85":
+    id: "85"
+    taskid: d5e7fd85-67c3-44c5-8f35-f08f3727a564
+    type: title
+    task:
+      id: d5e7fd85-67c3-44c5-8f35-f08f3727a564
+      version: -1
+      name: Benign
+      type: title
+      iscommand: false
+      brand: ""
+      description: ''
+    nexttasks:
+      '#none#':
+      - "77"
+    separatecontext: false
+    continueonerrortype: ""
+    view: |-
+      {
+        "position": {
+          "x": 1550,
+          "y": 1010
+        }
+      }
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+  "86":
+    id: "86"
+    taskid: 4457cf9c-89af-450f-8fe6-c211a98c3eca
+    type: title
+    task:
+      id: 4457cf9c-89af-450f-8fe6-c211a98c3eca
+      version: -1
+      name: Greyware
+      type: title
+      iscommand: false
+      brand: ""
+      description: ''
+    nexttasks:
+      '#none#':
+      - "77"
+    separatecontext: false
+    continueonerrortype: ""
+    view: |-
+      {
+        "position": {
+          "x": 1130,
+          "y": 1010
+        }
+      }
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
 view: |-
   {
     "linkLabelsPosition": {
@@ -2094,13 +2161,14 @@ view: |-
       "2_81_True Positive": 0.62,
       "34_39_No": 0.58,
       "34_67_Yes": 0.54,
-      "46_47_#default#": 0.54,
+      "46_47_#default#": 0.35,
       "46_66_yes": 0.49,
       "47_48_#default#": 0.5,
       "55_35_#default#": 0.19,
       "58_35_#default#": 0.33,
       "6_35_Blocked": 0.12,
       "6_57_#default#": 0.58,
+      "70_50_#default#": 0.18,
       "70_71_Benign": 0.63,
       "75_67_#default#": 0.67,
       "78_39_no": 0.14,
@@ -2111,9 +2179,9 @@ view: |-
     },
     "paper": {
       "dimensions": {
-        "height": 6155,
-        "width": 1710,
-        "x": 430,
+        "height": 6025,
+        "width": 2100,
+        "x": 40,
         "y": -1800
       }
     }
@@ -2334,10 +2402,59 @@ inputs:
   required: false
   description: Comment for the ticket.
   playbookInputQuery:
+inputSections:
+- inputs:
+  - AutoCloseAlert
+  - ShouldManualReviewFP
+  name: Alert Management
+  description: Alert management settings and data, including escalation processes, and user engagements.
+- inputs:
+  - Query
+  - SHA256
+  - Path
+  name: Enrichment
+  description: Enrichment settings and data, including assets and indicators enrichment using third-party enrichers.
+- inputs:
+  - GraywareAsMalware
+  - ShouldRescanBenign
+  name: Investigation
+  description: Investigation settings and data, including any deep dive alert investigation and verdict determination.
+- inputs:
+  - AutoEradication
+  - AutoContainment
+  - FileRemediation
+  - AutoRecovery
+  name: Remediation
+  description: Remediation settings and data, including containment, eradication, and recovery.
+- inputs:
+  - ShouldOpenTicket
+  - serviceNowShortDescription
+  - serviceNowImpact
+  - serviceNowUrgency
+  - serviceNowSeverity
+  - serviceNowTicketType
+  - serviceNowCategory
+  - serviceNowAssignmentGroup
+  - ZendeskPriority
+  - ZendeskRequester
+  - ZendeskStatus
+  - ZendeskSubject
+  - ZendeskTags
+  - ZendeskType
+  - ZendeskAssigne
+  - ZendeskCollaborators
+  - description
+  - addCommentPerEndpoint
+  - CommentToAdd
+  name: Ticket Management
+  description: Ticket management settings and data.
+outputSections:
+- outputs: []
+  name: General (Outputs group)
+  description: Generic group for outputs
 outputs: []
 tests:
 - No tests (auto formatted)
 fromversion: 6.6.0
 marketplaces:
   - marketplacev2
-

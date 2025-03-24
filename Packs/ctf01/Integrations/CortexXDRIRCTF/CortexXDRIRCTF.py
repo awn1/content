@@ -183,10 +183,12 @@ class Client(CoreClient):
 
         return filtered_incidents
 
-    def get_incidents(self, incident_id_list=None, lte_modification_time=None, gte_modification_time=None,
-                      lte_creation_time=None, gte_creation_time=None, status=None, starred=None,
-                      starred_incidents_fetch_window=None, sort_by_modification_time=None, sort_by_creation_time=None,
-                      page_number=0, limit=1000, gte_creation_time_milliseconds=0):
+    def get_incidents(  # type: ignore[override]
+        self, incident_id_list=None, lte_modification_time=None, gte_modification_time=None,
+        lte_creation_time=None, gte_creation_time=None, status=None, starred=None,
+        starred_incidents_fetch_window=None, sort_by_modification_time=None, sort_by_creation_time=None,
+        page_number=0, limit=1000, gte_creation_time_milliseconds=0
+    ):
         """
         Filters and returns incidents
 
@@ -394,104 +396,6 @@ def get_tenant_info_command(client: Client):
         outputs_prefix=f'{INTEGRATION_CONTEXT_BRAND}.TenantInformation',
         outputs=tenant_info,
         raw_response=tenant_info
-    )
-
-
-def get_incidents_command(client, args):
-    """
-    Retrieve a list of incidents from XDR, filtered by some filters.
-    """
-
-    # sometimes incident id can be passed as integer from the playbook
-    incident_id_list = args.get('incident_id_list')
-    if isinstance(incident_id_list, int):
-        incident_id_list = str(incident_id_list)
-
-    incident_id_list = argToList(incident_id_list)
-    # make sure all the ids passed are strings and not integers
-    for index, id_ in enumerate(incident_id_list):
-        if isinstance(id_, int | float):
-            incident_id_list[index] = str(id_)
-
-    lte_modification_time = args.get('lte_modification_time')
-    gte_modification_time = args.get('gte_modification_time')
-    since_modification_time = args.get('since_modification_time')
-
-    if since_modification_time and gte_modification_time:
-        raise ValueError('Can\'t set both since_modification_time and lte_modification_time')
-    if since_modification_time:
-        gte_modification_time, _ = parse_date_range(since_modification_time, TIME_FORMAT)
-
-    lte_creation_time = args.get('lte_creation_time')
-    gte_creation_time = args.get('gte_creation_time')
-    since_creation_time = args.get('since_creation_time')
-
-    if since_creation_time and gte_creation_time:
-        raise ValueError('Can\'t set both since_creation_time and lte_creation_time')
-    if since_creation_time:
-        gte_creation_time, _ = parse_date_range(since_creation_time, TIME_FORMAT)
-
-    statuses = argToList(args.get('status', ''))
-
-    starred = args.get('starred')
-    starred_incidents_fetch_window = args.get('starred_incidents_fetch_window', '3 days')
-    starred_incidents_fetch_window, _ = parse_date_range(starred_incidents_fetch_window, to_timestamp=True)
-
-    sort_by_modification_time = args.get('sort_by_modification_time')
-    sort_by_creation_time = args.get('sort_by_creation_time')
-
-    page = int(args.get('page', 0))
-    limit = int(args.get('limit', 100))
-
-    # If no filters were given, return a meaningful error message
-    if not incident_id_list and (not lte_modification_time and not gte_modification_time and not since_modification_time
-                                 and not lte_creation_time and not gte_creation_time and not since_creation_time
-                                 and not statuses and not starred):
-        raise ValueError("Specify a query for the incidents.\nFor example:"
-                         " !xdr-get-incidents since_creation_time=\"1 year\" sort_by_creation_time=\"desc\" limit=10")
-
-    if statuses:
-        raw_incidents = []
-
-        for status in statuses:
-            raw_incidents += client.get_incidents(
-                incident_id_list=incident_id_list,
-                lte_modification_time=lte_modification_time,
-                gte_modification_time=gte_modification_time,
-                lte_creation_time=lte_creation_time,
-                gte_creation_time=gte_creation_time,
-                sort_by_creation_time=sort_by_creation_time,
-                sort_by_modification_time=sort_by_modification_time,
-                page_number=page,
-                limit=limit,
-                status=status,
-                starred=starred,
-                starred_incidents_fetch_window=starred_incidents_fetch_window,
-            )
-
-        if len(raw_incidents) > limit:
-            raw_incidents = raw_incidents[:limit]
-    else:
-        raw_incidents = client.get_incidents(
-            incident_id_list=incident_id_list,
-            lte_modification_time=lte_modification_time,
-            gte_modification_time=gte_modification_time,
-            lte_creation_time=lte_creation_time,
-            gte_creation_time=gte_creation_time,
-            sort_by_creation_time=sort_by_creation_time,
-            sort_by_modification_time=sort_by_modification_time,
-            page_number=page,
-            limit=limit,
-            starred=starred,
-            starred_incidents_fetch_window=starred_incidents_fetch_window,
-        )
-
-    return (
-        tableToMarkdown('Incidents', raw_incidents),
-        {
-            f'{INTEGRATION_CONTEXT_BRAND}.Incident(val.incident_id==obj.incident_id)': raw_incidents
-        },
-        raw_incidents
     )
 
 
@@ -891,8 +795,7 @@ def get_modified_remote_data_command(client, args):
     demisto.debug(f'Performing get-modified-remote-data command. Last update is: {last_update}')
 
     last_update_utc = dateparser.parse(last_update, settings={'TIMEZONE': 'UTC'})  # convert to utc format
-    if last_update_utc:
-        last_update_without_ms = last_update_utc.isoformat().split('.')[0]
+    last_update_without_ms = last_update_utc.isoformat().split('.')[0] if last_update_utc else ""
 
     raw_incidents = client.get_incidents(gte_modification_time=last_update_without_ms, limit=100)
 
@@ -2488,9 +2391,6 @@ def main():  # pragma: no cover
             last_run_obj['next_run'] = next_run
             demisto.setLastRun(last_run_obj)
             demisto.incidents(incidents)
-
-        elif command == 'xdr-get-incidents':
-            return_outputs(*get_incidents_command(client, args))
 
         elif command == 'xdr-get-incident-extra-data-ctf':
             return_outputs(*get_incident_extra_data_command(client, args))

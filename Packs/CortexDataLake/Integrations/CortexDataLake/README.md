@@ -1,12 +1,12 @@
 ## Overview
 ---
 
-Palo Alto Networks Cortex Data Lake XSOAR Connector provides cloud-based, centralized log storage and aggregation for your on premise, virtual (private cloud and public cloud) firewalls, for Prisma Access, and for cloud-delivered services such as Cortex XDR.
-This integration was integrated and tested with version 2 of Cortex Data Lake XSOAR Connector.
+Palo Alto Networks Strata Logging Service XSOAR Connector provides cloud-based, centralized log storage and aggregation for your on premise, virtual (private cloud and public cloud) firewalls, for Prisma Access, and for cloud-delivered services such as Cortex XDR.
+This integration was integrated and tested with version 2 of Strata Logging Service XSOAR Connector.
 
 ---
 
-## Configure Cortex Data Lake XSOAR Connector on Cortex XSOAR
+## Configure Strata Logging Service XSOAR Connector on Cortex XSOAR
 ---
 
 1. Go to the Palo Alto Networks [HUB](https://apps.paloaltonetworks.com/apps) and select and add the **Cortex XSOAR** app as described [here](https://docs.paloaltonetworks.com/hub/hub-getting-started/get-started/accessing-applications.html).
@@ -24,7 +24,7 @@ The License ID will be used in Step 4.
    
 5. In the Palo Alto Networks HUB, enter the License ID and the Customer name in the screen obtained in Step 1. The License ID and Customer name were obtained in Steps 2 and 3. Click **Start Authorization Process** to get the Authentication Token, Registration ID, and Encryption Key - these three fields will be used in the Palo Alto Networks Cortex v2 integration instance in Step 7 below.
 6. In Palo Alto Networks Cortex XSOAR, navigate to __Settings__ > __Integrations__ > __Servers & Services__.
-7. Search for Cortex Data Lake XSOAR Connector.
+7. Search for Strata Logging Service XSOAR Connector.
 8. Click __Add instance__ to create and configure a new integration instance.
     * __Name__: a textual name for the integration instance.
     * __Authentication Token__: Retrieved in the authentication process in Step 4.
@@ -110,6 +110,8 @@ Runs a query on the Cortex logging service.
 | --- | --- | --- |
 | query | A free-text SQL query. For example, query="SELECT * FROM \`firewall.traffic\` limit 10". There are multiple tables in Loggings, for example: threat, traffic, and so on. Refer to the Cortex Logging service schema reference for the full list. | Optional |
 | limit | The number of logs to return. Default is 10 | Optional | 
+| page | Page to return. | Optional | 
+| page_size | Number of entries per page. Defaults to 50 (in case only page was provided). | Optional | 
 | transform_results | If set to false, query results are not mapped into the standard command context. Default is "true". | Optional | 
 
 
@@ -193,6 +195,8 @@ Runs a query on the Cortex logging service, according to preset queries.
 | start_time | The query start time. For example, start_time="2018-04-26 00:00:00" | Optional | 
 | end_time | The query end time. For example, end_time="2018-04-26 00:00:00" | Optional | 
 | limit | The number of logs to return. Default is 10 | Optional | 
+| page | Page to return. | Optional | 
+| page_size | Number of entries per page. Defaults to 50 (in case only page was provided). | Optional | 
 | time_range | First log time (\<number\> \<time unit\>, e.g., 12 hours, 7 days, 3 months, 1 year) | Optional | 
 
 
@@ -328,6 +332,8 @@ Runs a query on the Cortex logging service, according to preset queries.
 | start_time | Query start time. For example, start_time="2018-04-26 00:00:00" | Optional | 
 | end_time | Query end time. For example, end_time="2018-04-26 00:00:00" | Optional | 
 | limit | Amount of logs. Default is 10 | Optional | 
+| page | Page to return. | Optional | 
+| page_size | Number of entries per page. Defaults to 50 (in case only page was provided). | Optional | 
 | time_range | First log time (\<number\> \<time unit\>, e.g., 12 hours, 7 days, 3 months, 1 year) | Optional | 
 
 
@@ -344,7 +350,7 @@ Runs a query on the Cortex logging service, according to preset queries.
 | CDL.Logging.Traffic.App | String | Application associated with the network traffic. | 
 | CDL.Logging.Traffic.Vsys | String | Virtual system associated with the network traffic. | 
 | CDL.Logging.Traffic.IsNat | String | Indicates whether the firewall is performing network address translation (NAT) for the logged traffic. If it is, this value is 1. | 
-| CDL.Logging.Traffic.LogTime | date | Time the log was received in Cortex Data Lake XSOAR Connector. | 
+| CDL.Logging.Traffic.LogTime | date | Time the log was received in Strata Logging Service XSOAR Connector. | 
 | CDL.Logging.Traffic.SubcategoryOfApp | String | Identifies the application's subcategory. The subcategory is related to the application's category, | 
 | CDL.Logging.Traffic.Protocol | String | IP protocol associated with the session. | 
 | CDL.Logging.Traffic.NatDestinationPort | String | Post-NAT destination port. | 
@@ -490,6 +496,8 @@ Runs a query on the threat table with the query 'SELECT * FROM `firewall.threat`
 | start_time | The query start time. For example, start_time="2018-04-26 00:00:00" | Optional | 
 | end_time | The query end time. For example, end_time="2018-04-26 00:00:00" | Optional | 
 | limit | The number of logs to return. Default is 10. | Optional | 
+| page | Page to return. | Optional | 
+| page_size | Number of entries per page. Defaults to 50 (in case only page was provided). | Optional | 
 | time_range | First log time (\<number\> \<time unit\>, e.g., 12 hours, 7 days, 3 months, 1 year) | Optional | 
 | SHA256 | The SHA256 hash of the file for the query. For example, SHA256="503ca1a4fc0d48b18c0336f544ba0f0abf305ae3a3f49b3c2b86b8645d6572dc" would return all logs associated with this file. | Required | 
 
@@ -637,6 +645,8 @@ Searches the Cortex firewall.traffic table. Traffic logs contain entries for the
 | end_time | The query end time. For example, end_time="2018-04-26 00:00:00". | Optional | 
 | time_range | First fetch time (\<number\> \<time unit\>, e.g., 12 hours, 7 days, 3 months, 1 year) | Optional | 
 | limit | The number of logs to return. Default is 5. | Optional | 
+| page | Page to return. | Optional | 
+| page_size | Number of entries per page. Defaults to 50 (in case only page was provided). | Optional | 
 | dest_ip | A destination IP address or an array of destination IPs addresses for which to search, for example 1.1.1.1,2.2.2.2. | Optional | 
 | dest_port | Destination port utilized by the session. Can be port number or an array of destination port numbers to search. For example '443' or '443,445' | Optional | 
 | ip | IP address. Enter an IP address or an array of IP addresses for which to search, for example 1.1.1.1,2.2.2.2. | Optional | 
@@ -655,7 +665,7 @@ Searches the Cortex firewall.traffic table. Traffic logs contain entries for the
 | CDL.Logging.Traffic.App | String | Application associated with the network traffic. | 
 | CDL.Logging.Traffic.Vsys | String | Virtual system associated with the network traffic. | 
 | CDL.Logging.Traffic.IsNat | String | Indicates whether the firewall is performing network address translation (NAT) for the logged traffic. If it is, this value is 1. | 
-| CDL.Logging.Traffic.LogTime | date | Time the log was received in Cortex Data Lake XSOAR Connector. | 
+| CDL.Logging.Traffic.LogTime | date | Time the log was received in Strata Logging Service XSOAR Connector. | 
 | CDL.Logging.Traffic.SubcategoryOfApp | String | Identifies the application's subcategory. The subcategory is related to the application's category, | 
 | CDL.Logging.Traffic.Protocol | String | IP protocol associated with the session. | 
 | CDL.Logging.Traffic.NatDestinationPort | String | Post-NAT destination port. | 
@@ -768,6 +778,8 @@ Searches the Cortex panw.threat table, which is the threat logs table for PAN-OS
 | end_time | The query end time. For example, end_time="2018-04-26 00:00:00" | Optional | 
 | time_range | First fetch time (\<number\> \<time unit\>, e.g., 12 hours, 7 days, 3 months, 1 year) | Optional | 
 | limit | The number of logs to return. Default is 5. | Optional | 
+| page | Page to return. | Optional | 
+| page_size | Number of entries per page. Defaults to 50 (in case only page was provided). | Optional | 
 | ip | IP address. Enter an IP address or an array of IP addresses for which to search, for example 1.1.1.1,2.2.2.2. | Optional | 
 | port | Port utilized by the session. Enter a port or array of ports to search. | Optional | 
 
@@ -917,6 +929,8 @@ Searches the URL table
 | end_time | The query end time. For example, end_time="2018-04-26 00:00:00" | Optional | 
 | time_range | First log time (&lt;number&gt; &lt;time unit&gt;, e.g., 12 hours, 7 days, 3 months, 1 year) | Optional | 
 | limit | The number of logs to return. Default is 5. | Optional | 
+| page | Page to return. | Optional | 
+| page_size | Number of entries per page. Defaults to 50 (in case only page was provided). | Optional | 
 | ip | IP address. Enter an IP address or an array of IP addresses for which to search, for example 1.1.1.1,2.2.2.2. | Optional | 
 | port | Port utilized by the session. Enter a port or array of ports to search. | Optional | 
 | url | This argument allows to perform a LIKE search of the specified values on the Url and Uri fields An example value will be paloaltonetworks.com,demisto which will provide results like https://apps.paloaltonetworks.com and https://demisto.com | Optional | 
@@ -943,7 +957,7 @@ Searches the URL table
 | CDL.Logging.URL.ThreatCategory | String | Threat category of the detected threat. | 
 | CDL.Logging.URL.ThreatName | String | Threat name of the detected threat. | 
 | CDL.Logging.URL.Subtype | String | Identifies the log subtype. | 
-| CDL.Logging.URL.LogTime | String | Time the log was received in Cortex Data Lake XSOAR Connector. | 
+| CDL.Logging.URL.LogTime | String | Time the log was received in Strata Logging Service XSOAR Connector. | 
 | CDL.Logging.URL.LogSourceName | String | Name that uniquely identifies the source of the log. | 
 | CDL.Logging.URL.Denied | Boolean | Indicates whether the session was denied due to a URL filtering rule. | 
 | CDL.Logging.URL.Category | String | The URL category. | 
@@ -1034,18 +1048,19 @@ header field. |
 
 
 ### cdl-query-file-data
+
 ***
 Searches the Cortex firewall.file_data table.
-
 
 #### Base Command
 
 `cdl-query-file-data`
+
 #### Input
 
 | **Argument Name** | **Description** | **Required** |
 | --- | --- | --- |
-| action | Identifies the action that the firewall took for the network traffic. | Optional | 
+| action | Identifies the action that the firewall took for the network traffic. Possible values are: unknown, n-a, aged-out, decoder, tcp-reuse, resources-unavailable, tcp-fin, tcp-rst-from-server, tcp-rst-from-client, policy-deny, threat, decrypt-error, decrypt-unsupport-param, decrypt-cert-validation, request-timeout, shutdown-from-endpoint, abort-from-endpoint, split-tunnel. | Optional | 
 | app | Application associated with the network traffic. | Optional | 
 | app_category | Identifies the high-level family of the application. | Optional | 
 | dest_device_host | Hostname of the device to which the session was directed. | Optional | 
@@ -1083,7 +1098,8 @@ Searches the Cortex firewall.file_data table.
 | end_time | The query end time. For example, end_time="2018-04-26 00:00:00". | Optional | 
 | time_range | First log time (&lt;number&gt; &lt;time unit&gt;. For example, 12 minutes, 7 days, 3 weeks). | Optional | 
 | limit | Limit the results to return. The default is 5. | Optional | 
-
+| page | Page to return. | Optional | 
+| page_size | Number of entries per page. Defaults to 50 (in case only page was provided). | Optional | 
 
 #### Context Output
 
@@ -1130,8 +1146,8 @@ Searches the Cortex firewall.file_data table.
 | CDL.Logging.File.ReportID | Number | Identifies the analysis requested from the sandbox \(cloud or appliance\). | 
 | CDL.Logging.File.DestinationPort | Number | Network traffic's destination port. If this value is 0, then the app is using
 its standard port. | 
-| CDL.Logging.File.IsDupLog | Boolean | Indicates whether this log data is available in multiple locations, such as from Cortex Data Lake XSOAR Connector as well as from an on-premise log collector. | 
-| CDL.Logging.File.LogTime | Date | Time the log was received in Cortex Data Lake XSOAR Connector. | 
+| CDL.Logging.File.IsDupLog | Boolean | Indicates whether this log data is available in multiple locations, such as from Strata Logging Service XSOAR Connector as well as from an on-premise log collector. | 
+| CDL.Logging.File.LogTime | Date | Time the log was received in Strata Logging Service XSOAR Connector. | 
 | CDL.Logging.File.SessionID | Number | Identifies the firewall's internal identifier for a specific network session. | 
 | CDL.Logging.File.RecordSize | Number | Record size. | 
 | CDL.Logging.File.IngestionTime | Date | Ingestion time of the log. | 
@@ -1154,7 +1170,7 @@ its standard port. |
 | CDL.Logging.File.FileID | Number | Numerical identifier for the threat type. | 
 | CDL.Logging.File.IsCaptivePortal | Boolean | Indicates if user information for the session was captured through Captive Portal. | 
 | CDL.Logging.File.Protocol | String | IP protocol associated with the session. | 
-| CDL.Logging.File.CustomerID | Number | The ID that uniquely identifies the Cortex Data Lake XSOAR Connector instance which received this log record. | 
+| CDL.Logging.File.CustomerID | Number | The ID that uniquely identifies the Strata Logging Service XSOAR Connector instance which received this log record. | 
 | CDL.Logging.File.Subtype | String | Identifies the log subtype. | 
 | CDL.Logging.File.TunneledApp | String | Tunneled app \(For internal use only\). | 
 | CDL.Logging.File.LogSourceID | String | ID that uniquely identifies the source of the log - serial number of the firewall that generated the log. | 
@@ -1303,4 +1319,4 @@ against. That is, log types must be fully qualified and the instance ID is a par
 `<instanceID>.firewall.traffic`
 However in this integration the instance ID is added automatically to the query so the name `firewall.traffic` is a valid table name
 * The SQL syntax supported for queries is `csql`
-* The provided authentication items ([configuration step 4](#configure-cortex-data-lake-on-cortex-xsoar)) can only be used once for each Cortex Data Lake XSOAR Connector tenant (but can be shared for different Cortex XSOAR instances). Trying to re-generate those items will revoke any previously generated set of authentication items.
+* The provided authentication items ([configuration step 4](#configure-cortex-data-lake-on-cortex-xsoar)) can only be used once for each Strata Logging Service XSOAR Connector tenant (but can be shared for different Cortex XSOAR instances). Trying to re-generate those items will revoke any previously generated set of authentication items.

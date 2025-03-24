@@ -7,14 +7,17 @@ This playbook uses the following sub-playbooks, integrations, and scripts.
 ### Sub-playbooks
 
 * Cortex ASM - AWS Enrichment
+* Cortex ASM - Active Directory Enrichment
 * Cortex ASM - Azure Enrichment
+* Cortex ASM - Certificate Enrichment
+* Cortex ASM - Cortex Endpoint Enrichment_Core_Combo
+* Cortex ASM - Domain Enrichment
 * Cortex ASM - GCP Enrichment
 * Cortex ASM - On Prem Enrichment
 * Cortex ASM - Prisma Cloud Enrichment
 * Cortex ASM - Qualys Enrichment
-* Cortex ASM - Rapid7 Enrichment
-* Cortex ASM - Service Ownership
 * Cortex ASM - ServiceNow CMDB Enrichment
+* Cortex ASM - ServiceNow ITSM Enrichment
 * Cortex ASM - Splunk Enrichment
 * Cortex ASM - Tenable.io Enrichment
 
@@ -25,9 +28,8 @@ This playbook uses the following sub-playbooks, integrations, and scripts.
 ### Scripts
 
 * Sleep
-* GetTime
-* GridFieldSetup
 * InferWhetherServiceIsDev
+* GridFieldSetup
 
 ### Commands
 

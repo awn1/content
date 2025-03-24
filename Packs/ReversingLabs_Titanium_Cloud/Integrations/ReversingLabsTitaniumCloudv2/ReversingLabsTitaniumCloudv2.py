@@ -1,14 +1,17 @@
 from copy import deepcopy
+
+from requests import Response
+
 from CommonServerPython import *
 from ReversingLabs.SDK.ticloud import FileReputation, AVScanners, FileAnalysis, RHA1FunctionalSimilarity, \
     RHA1Analytics, URIStatistics, URIIndex, AdvancedSearch, ExpressionSearch, FileDownload, FileUpload, \
     URLThreatIntelligence, AnalyzeURL, DynamicAnalysis, CertificateAnalytics, YARAHunting, YARARetroHunting, \
     ReanalyzeFile, ImpHashSimilarity, DomainThreatIntelligence, IPThreatIntelligence, NetworkReputation, \
-    NetworkReputationUserOverride
+    NetworkReputationUserOverride, CustomerUsage
 from ReversingLabs.SDK.helper import NotFoundError
 
 
-VERSION = "v2.4.0"
+VERSION = "v2.5.0"
 USER_AGENT = f"ReversingLabs XSOAR TitaniumCloud {VERSION}"
 
 TICLOUD_URL = demisto.params().get("base")
@@ -28,6 +31,8 @@ HTTPS_PROXY_PASSWORD = demisto.params().get("https_credentials", {}).get("passwo
 
 
 def format_proxy(addr, username=None, password=None):
+    protocol = ''
+    proxy_name = ''
     if addr.startswith("http://"):
         protocol = addr[:7]
         proxy_name = addr[7:]
@@ -82,6 +87,7 @@ def classification_to_score(classification):
     score_dict = {
         "UNKNOWN": 0,
         "KNOWN": 1,
+        "NO_THREATS_FOUND": 1,
         "SUSPICIOUS": 2,
         "MALICIOUS": 3
     }
@@ -902,8 +908,8 @@ def analyze_url_output(response_json, url):
     return results
 
 
-def detonate_sample_command():
-    sandbox = DynamicAnalysis(
+def create_da_object():
+    da = DynamicAnalysis(
         host=TICLOUD_URL,
         username=USERNAME,
         password=PASSWORD,
@@ -912,17 +918,27 @@ def detonate_sample_command():
         verify=VERIFY_CERTS
     )
 
+    return da
+
+
+def detonate_sample_command():
+    da = create_da_object()
+
     sha1 = demisto.getArg("sha1")
     platform = demisto.getArg("platform")
 
     try:
-        response = sandbox.detonate_sample(sample_sha1=sha1, platform=platform)
+        response = da.detonate_sample(sample_sha1=sha1, platform=platform)
     except Exception as e:
+        if hasattr(e, "response_object"):
+            return_error(f"status code: {e.response_object.status_code}, "  # type: ignore[attr-defined]
+                         f"message: {e.response_object.text}")  # type: ignore[attr-defined]
+
         return_error(str(e))
 
     response_json = response.json()
-
     results = detonate_sample_output(response_json=response_json, sha1=sha1)
+
     return_results(results)
 
 
@@ -942,37 +958,46 @@ def detonate_sample_output(response_json, sha1):
     return results
 
 
-def dynamic_analysis_results_command():
-    sandbox = DynamicAnalysis(
-        host=TICLOUD_URL,
-        username=USERNAME,
-        password=PASSWORD,
-        user_agent=USER_AGENT,
-        proxies=PROXIES,
-        verify=VERIFY_CERTS
-    )
+def sample_dynamic_analysis_results_command():
+    da = create_da_object()
 
     sha1 = demisto.getArg("sha1")
+    analysis_id = demisto.getArg("analysis_id")
+    latest_analysis = argToBoolean(demisto.getArg("latest_analysis"))
 
     try:
-        response = sandbox.get_dynamic_analysis_results(sample_hash=sha1, latest=True)
+        response = da.get_dynamic_analysis_results(
+            sample_hash=sha1,
+            analysis_id=analysis_id if analysis_id else None,
+            latest=latest_analysis if latest_analysis else None
+        )
     except Exception as e:
+        if hasattr(e, "response_object"):
+            return_error(f"status code: {e.response_object.status_code}, "  # type: ignore[attr-defined]
+                         f"message: {e.response_object.text}")  # type: ignore[attr-defined]
+
         return_error(str(e))
 
     response_json = response.json()
-
-    results, file_results = dynamic_analysis_results_output(response_json, sha1)
+    results, file_results = sample_dynamic_analysis_results_output(response_json, sha1)
 
     return_results([results, file_results])
 
 
-def dynamic_analysis_results_output(response_json, sha1):
+def sample_dynamic_analysis_results_output(response_json, sha1):
     classification = response_json.get("rl", {}).get("report", {}).get("classification")
-    classification = classification.upper()
     md5 = response_json.get("rl", {}).get("report", {}).get("md5")
     sha256 = response_json.get("rl", {}).get("report", {}).get("sha256")
+    last_analysis = response_json.get("rl", {}).get("report", {}).get("last_analysis")
 
-    d_bot_score = classification_to_score(classification)
+    markdown = f"""## ReversingLabs Sample Dynamic Analysis output for sample {sha1}\n **Classification**: {classification}
+    **Sample SHA1**: {sha1}
+    **Sample MD5**: {md5}
+    **Sample SHA256**: {sha256}
+    **Last analysis**: {last_analysis}\n ### Full report is returned as JSON in a downloadable file
+    """
+
+    d_bot_score = classification_to_score(classification.upper())
 
     dbot_score = Common.DBotScore(
         indicator=sha1,
@@ -992,13 +1017,160 @@ def dynamic_analysis_results_output(response_json, sha1):
 
     results = CommandResults(
         outputs_prefix='ReversingLabs',
-        outputs={'dynamic_analysis_results': response_json},
-        readable_output="Full report is returned in a downloadable file",
+        outputs={'sample_dynamic_analysis_results': response_json},
+        readable_output=markdown,
         indicator=indicator
     )
 
     file_results = fileResult(
         f'Dynamic analysis report file for sample {sha1}',
+        json.dumps(response_json, indent=4),
+        file_type=EntryType.ENTRY_INFO_FILE
+    )
+
+    return results, file_results
+
+
+def detonate_url_command():
+    da = create_da_object()
+
+    url = demisto.getArg("url")
+    platform = demisto.getArg("platform")
+
+    try:
+        response = da.detonate_url(url_string=url, platform=platform)
+    except Exception as e:
+        if hasattr(e, "response_object"):
+            return_error(f"status code: {e.response_object.status_code}, "  # type: ignore[attr-defined]
+                         f"message: {e.response_object.text}")  # type: ignore[attr-defined]
+
+        return_error(str(e))
+
+    response_json = response.json()
+    results = detonate_url_output(response_json=response_json, url=url)
+
+    return_results(results)
+
+
+def detonate_url_output(response_json, url):
+    report_base = response_json.get("rl", {})
+
+    markdown = f"""## ReversingLabs submit URL {url} for Dynamic Analysis\n **Status**: {report_base.get("status")}
+    **Requested URL**: {report_base.get("url")}
+    **URL SHA1**: {report_base.get("sha1")}
+    **URL BASE64**: {report_base.get("url_base64")}
+    **Analysis ID**: {report_base.get("analysis_id")}
+    """
+
+    results = CommandResults(
+        outputs_prefix="ReversingLabs",
+        outputs={"detonate_url_dynamic": response_json},
+        readable_output=markdown
+    )
+
+    return results
+
+
+def url_dynamic_analysis_results_command():
+    da = create_da_object()
+
+    sha1 = demisto.getArg("sha1")
+    url = demisto.getArg("url")
+    analysis_id = demisto.getArg("analysis_id")
+    latest_analysis = argToBoolean(demisto.getArg("latest_analysis"))
+
+    try:
+        response = da.get_dynamic_analysis_results(
+            url_sha1=sha1 if sha1 else None,
+            url=url if url else None,
+            analysis_id=analysis_id if analysis_id else None,
+            latest=latest_analysis if latest_analysis else None
+        )
+
+    except Exception as e:
+        if hasattr(e, "response_object"):
+            return_error(f"status code: {e.response_object.status_code}, "  # type: ignore[attr-defined]
+                         f"message: {e.response_object.text}")  # type: ignore[attr-defined]
+
+        return_error(str(e))
+
+    response_json = response.json()
+    results, file_results = url_dynamic_analysis_results_output(
+        response_json=response_json,
+        passed_url=url,
+        passed_sha1=sha1
+    )
+
+    return_results([results, file_results])
+
+
+def url_dynamic_analysis_results_output(response_json, passed_url=None, passed_sha1=None):
+    report = response_json.get("rl", {}).get("report", {})
+    is_merged = report.get("history_analysis")
+    classification = report.get("classification")
+    url = report.get("url", passed_url)
+
+    markdown = f"""## ReversingLabs URL Dynamic Analysis output for URL\n **URL**: {url}
+    **Classification**: {classification}
+    **URL SHA1**: {report.get("sha1", passed_sha1)}
+    **URL BASE64**: {report.get("url_base64")}
+    **Risk score**: {report.get("risk_score")}
+    """
+
+    if is_merged:
+        markdown = markdown + f"**Last analysis**: {report.get('last_analysis')}\n"
+
+    else:
+        markdown = markdown + f"""**Analysis ID**: {report.get("analysis_id")}\n **Analysis time**: {report.get("analysis_time")}
+        **Analysis duration**: {report.get("analysis_duration")}
+        **Platform**: {report.get("platform")}
+        **Configuration**: {report.get("configuration")}
+        **PCAP link**: {report.get("pcap")}
+        **Memory strings link**: {report.get("memory_strings")}
+        **Screenshots lin**: {report.get("screenshots")}
+        **Dropped files link**: {report.get("dropped_files_url")}
+        """
+
+    network = report.get("network", {})
+    if network:
+        markdown = markdown + "\n### Network"
+
+        for key in network:
+            table = tableToMarkdown(key, network.get(key))
+            markdown = markdown + "\n" + table
+
+    signatures_table = tableToMarkdown("Signatures", report.get("signatures"))
+    markdown = f"{markdown}\n {signatures_table}\n"
+
+    if not is_merged:
+        dropped_files_table = tableToMarkdown("Dropped files", report.get("dropped_files"))
+        markdown = f"{markdown}\n {dropped_files_table}"
+
+    d_bot_score = classification_to_score(classification.upper())
+
+    dbot_score = Common.DBotScore(
+        indicator=url,
+        indicator_type=DBotScoreType.URL,
+        integration_name="ReversingLabs TitaniumCloud v2",
+        malicious_description=classification,
+        score=d_bot_score,
+        reliability=RELIABILITY
+    )
+
+    indicator = Common.URL(
+        url=url,
+        dbot_score=dbot_score
+    )
+
+    results = CommandResults(
+        outputs_prefix="ReversingLabs",
+        outputs={"url_dynamic_analysis_results": response_json},
+        readable_output=markdown,
+        indicator=indicator
+    )
+
+    file_results = fileResult(
+        f"Dynamic analysis report file for URL {url}",
         json.dumps(response_json, indent=4),
         file_type=EntryType.ENTRY_INFO_FILE
     )
@@ -1047,6 +1219,8 @@ def certificate_analytics_output(response_json, thumbprint):
 
 
 def yara_ruleset_command():
+    response = Response()
+    output_key = ''
     yara = YARAHunting(
         host=TICLOUD_URL,
         username=USERNAME,
@@ -1181,6 +1355,8 @@ def yara_matches_feed_output(response_json, time_value):
 
 
 def yara_retro_actions_command():
+    response = Response()
+    output_key = ''
     retro = YARARetroHunting(
         host=TICLOUD_URL,
         username=USERNAME,
@@ -2259,6 +2435,117 @@ def network_reputation_overrides_list_output(response):
     return results
 
 
+def create_customer_usage_obj():
+    cu = CustomerUsage(
+        host=TICLOUD_URL,
+        username=USERNAME,
+        password=PASSWORD,
+        user_agent=USER_AGENT,
+        proxies=PROXIES,
+        verify=VERIFY_CERTS
+    )
+
+    return cu
+
+
+def customer_usage_data_command():
+    cu = create_customer_usage_obj()
+
+    data_type = demisto.getArg("data_type")
+    from_time = demisto.getArg("from")
+    to_time = demisto.getArg("to")
+    single_time_unit = demisto.getArg("single_time_unit")
+    whole_company = argToBoolean(demisto.getArg("whole_company"))
+
+    if data_type == "DAILY USAGE":
+        response = cu.daily_usage(
+            single_date=single_time_unit,
+            from_date=from_time,
+            to_date=to_time,
+            whole_company=whole_company
+        )
+
+    elif data_type == "MONTHLY USAGE":
+        response = cu.monthly_usage(
+            single_month=single_time_unit,
+            from_month=from_time,
+            to_month=to_time,
+            whole_company=whole_company
+        )
+
+    elif data_type == "DATE RANGE USAGE":
+        response = cu.date_range_usage(
+            whole_company=whole_company
+        )
+
+    elif data_type == "QUOTA LIMITS":
+        response = cu.quota_limits(
+            whole_company=whole_company
+        )
+
+    else:
+        raise Exception("Unknown data type request. Precisely one of the following values needs to be set as data_type: "
+                        "DAILY USAGE, MONTHLY USAGE, DATE RANGE USAGE, QUOTA LIMITS")
+
+    response_json = response.json()
+    results = customer_usage_data_output(
+        data_type=data_type,
+        whole_company=whole_company,
+        response_json=response_json
+    )
+    return_results(results)
+
+
+def customer_usage_data_output(data_type, whole_company, response_json):
+    markdown = f"## ReversingLabs {data_type} data for {USERNAME} \n Results for the whole company: {whole_company}"
+
+    if "usage_reports" in response_json.get("rl"):
+        data_to_use = response_json.get("rl").get("usage_reports")
+
+    else:
+        data_to_use = response_json.get("rl")
+
+    if data_to_use:
+        usage_table = tableToMarkdown("Usage data", data_to_use)
+        markdown = f"{markdown} \n {usage_table}"
+
+    else:
+        markdown = f"{markdown} \n There were no results."
+
+    results = CommandResults(
+        outputs_prefix="ReversingLabs",
+        outputs={"customer_usage_data": response_json},
+        readable_output=markdown
+    )
+
+    return results
+
+
+def customer_usage_yara_command():
+    cu = create_customer_usage_obj()
+
+    response = cu.active_yara_rulesets()
+    response_json = response.json()
+
+    results = customer_usage_yara_output(response_json=response_json)
+    return_results(results)
+
+
+def customer_usage_yara_output(response_json):
+    markdown = f"## ReversingLabs active YARA rulesets for {USERNAME}"
+
+    response_table = tableToMarkdown("Results", response_json.get("rl"))
+    markdown = f"{markdown} \n {response_table}"
+
+    results = CommandResults(
+        outputs_prefix="ReversingLabs",
+        outputs={"customer_usage_yara": response_json},
+        readable_output=markdown
+    )
+
+    return results
+
+
 def main():
     command = demisto.command()
 
@@ -2304,11 +2591,17 @@ def main():
     elif command == "reversinglabs-titaniumcloud-analyze-url":
         analyze_url_command()
 
-    elif command == "reversinglabs-titaniumcloud-submit-for-dynamic-analysis":
+    elif command == "reversinglabs-titaniumcloud-submit-sample-for-dynamic-analysis":
         detonate_sample_command()
 
-    elif command == "reversinglabs-titaniumcloud-get-dynamic-analysis-results":
-        dynamic_analysis_results_command()
+    elif command == "reversinglabs-titaniumcloud-get-sample-dynamic-analysis-results":
+        sample_dynamic_analysis_results_command()
+
+    elif command == "reversinglabs-titaniumcloud-submit-url-for-dynamic-analysis":
+        detonate_url_command()
+
+    elif command == "reversinglabs-titaniumcloud-get-url-dynamic-analysis-results":
+        url_dynamic_analysis_results_command()
 
     elif command == "reversinglabs-titaniumcloud-certificate-analytics":
         certificate_analytics_command()
@@ -2375,6 +2668,12 @@ def main():
 
     elif command == "reversinglabs-titaniumcloud-network-reputation-overrides-list":
         network_reputation_overrides_list_command()
+
+    elif command == "reversinglabs-titaniumcloud-customer-usage-data":
+        customer_usage_data_command()
+
+    elif command == "reversinglabs-titaniumcloud-customer-usage-yara":
+        customer_usage_yara_command()
 
     else:
         return_error(f"Command {command} does not exist")

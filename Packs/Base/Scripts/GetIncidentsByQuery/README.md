@@ -2,7 +2,7 @@ Gets a list of incident objects and the associated incident outputs that
 match the specified query and filters. The results are returned in a structured data file.
 
 This automation runs using the default Limited User role, unless you explicitly change the permissions.
-For more information, see the section about permissions here: [https://docs-cortex.paloaltonetworks.com/r/Cortex-XSOAR/6.10/Cortex-XSOAR-Administrator-Guide/Automations](https://docs-cortex.paloaltonetworks.com/r/Cortex-XSOAR/6.10/Cortex-XSOAR-Administrator-Guide/Automations)
+For more information, see the section about permissions here: For Cortex XSOAR 6, see the https://docs-cortex.paloaltonetworks.com/r/Cortex-XSOAR/6.x/Cortex-XSOAR-Playbook-Design-Guide/Automations for Cortex XSOAR 8 Cloud, see the https://docs-cortex.paloaltonetworks.com/r/Cortex-XSOAR/8/Cortex-XSOAR-Cloud-Documentation/Create-a-script for Cortex XSOAR 8 On-prem, see the https://docs-cortex.paloaltonetworks.com/r/Cortex-XSOAR/8.7/Cortex-XSOAR-On-prem-Documentation/Create-a-script.
 
 ## Script Data
 ---
@@ -28,7 +28,7 @@ This script is used in the following playbooks and scripts.
 | fromDate | The start date by which to filter incidents. Date format will be the same as in the incidents query page, for example: "3 days ago", ""2019-01-01T00:00:00 \+0200"\). |
 | toDate | The end date by which to filter incidents. Date format will be the same as in the incidents query page, for example: "3 days ago", ""2019-01-01T00:00:00 \+0200"\). |
 | limit | The maximum number of incidents to fetch. |
-| includeContext | Whether to query and fetch incident context. Can be "true" or "false". The default is "false". |
+| includeContext | Deprecated due to performance considerations. Rather than using this argument, it is recommended to retrieve the context of the incidents separately, preferably for a limited number of incidents. |
 | timeField | The incident field to specify for the date range. Can be "created" or "modified". The default is "created". Due to performance considerations, you should only use "modified" if you have a large number of incidents. |
 | NonEmptyFields | A comma-separated list of non-empty value incident field names by which to filter incidents. |
 | outputFormat | The output file format. |

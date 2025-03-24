@@ -14,6 +14,8 @@ Use the Palo Alto Networks Wildfire integration to automatically identify unknow
 5. Get sample file from WildFire.
 6. Get verdict regarding multiple hashes (up to 500) using the wildfire-get-verdicts command.
 
+## Supported File Types
+For a list of the supported file types, see [here](https://docs.paloaltonetworks.com/advanced-wildfire/administration/advanced-wildfire-overview/advanced-wildfire-file-type-support/advanced-wildfire-file-type-support-complete#idbfe44505-f816-40db-8b28-4047bb834a8c).
 ## Configure WildFire v2 on Cortex XSOAR
 
 1. Navigate to **Settings** > **Integrations** > **Servers & Services**.
@@ -393,11 +395,11 @@ Retrieves results for a file hash using WildFire.
 | WildFire.Report.maec_report | string | MAEC report output | 
 
 #### Command Example
-```!wildfire-report url=https://www.demisto.com```
+```!wildfire-report url=https://www.XSOAR.com```
 
 #### Human Readable Output
 
->### Wildfire URL report for https://www.demisto.com
+>### Wildfire URL report for https://www.XSOAR.com
 >|sha256|type|verdict|
 >|---|---|---|
 >| 288cd35401e334a2defc0b428d709f58d4ea28c8e9c6e47fdba88da2d6bc88a7 | wf-report | benign |
@@ -580,14 +582,14 @@ Notice: Submitting indicators using this command might make the indicator data p
 
 
 #### Command Example
-```!wildfire-upload-url upload=https://www.demisto.com```
+```!wildfire-upload-url upload=https://www.XSOAR.com```
 
 #### Human Readable Output
 
 >### WildFire Upload URL
 >|MD5|SHA256|Status|URL|
 >|---|---|---|---|
->| 67632f32e6af123aa8ffd1fe8765a783 | c51a8231d1be07a2545ac99e86a25c5d68f88380b7ebf7ac91501661e6d678bb | Pending | https://www.demisto.com |
+>| 67632f32e6af123aa8ffd1fe8765a783 | c51a8231d1be07a2545ac99e86a25c5d68f88380b7ebf7ac91501661e6d678bb | Pending | https://www.XSOAR.com |
 
 
 ### wildfire-get-sample

@@ -3,6 +3,11 @@ from CommonServerUserPython import *
 import boto3
 from botocore.config import Config
 
+STS_ENDPOINTS = {
+    "us-gov-west-1": "https://sts.us-gov-west-1.amazonaws.com",
+    "us-gov-east-1": "https://sts.us-gov-east-1.amazonaws.com",
+}  # See: https://docs.aws.amazon.com/general/latest/gr/sts.html
+
 
 def validate_params(aws_default_region, aws_role_arn, aws_role_session_name, aws_access_key_id, aws_secret_access_key):
     """
@@ -46,6 +51,11 @@ class AWSClient:
         self.aws_secret_access_key, self.aws_session_token = extract_session_from_secret(aws_secret_access_key, aws_session_token)
         self.verify_certificate = verify_certificate
 
+        sts_regional_endpoint = demisto.params().get("sts_regional_endpoint") or None
+        if sts_regional_endpoint:
+            demisto.debug(f"Sets the environment variable AWS_STS_REGIONAL_ENDPOINTS={sts_regional_endpoint}")
+            os.environ["AWS_STS_REGIONAL_ENDPOINTS"] = sts_regional_endpoint.lower()
+
         proxies = handle_proxy(proxy_param_name='proxy', checkbox_default_value=False)
         (read_timeout, connect_timeout) = AWSClient.get_timeout(timeout)
         if int(retries) > 10:
@@ -53,9 +63,9 @@ class AWSClient:
         self.config = Config(
             connect_timeout=connect_timeout,
             read_timeout=read_timeout,
-            retries=dict(
-                max_attempts=int(retries)
-            ),
+            retries={
+                "max_attempts": int(retries)
+            },
             proxies=proxies
         )
 
@@ -63,7 +73,7 @@ class AWSClient:
         command_config = {}
         retries = demisto.getArg('retries')  # Supports retries and timeout parameters on the command execution level
         if retries is not None:
-            command_config['retries'] = dict(max_attempts=int(retries))
+            command_config['retries'] = {"max_attempts": int(retries)}
         timeout = demisto.getArg('timeout')
         if timeout is not None:
             (read_timeout, connect_timeout) = AWSClient.get_timeout(timeout)
@@ -76,6 +86,7 @@ class AWSClient:
     def aws_session(self, service, region=None, role_arn=None, role_session_name=None, role_session_duration=None,
                     role_policy=None):
         kwargs = {}
+        client = None
 
         self.update_config()
 
@@ -100,7 +111,8 @@ class AWSClient:
         elif self.aws_role_policy is not None:
             kwargs.update({'Policy': self.aws_role_policy})
 
-        demisto.debug('{kwargs}='.format(kwargs=kwargs))
+        demisto.debug(f'{kwargs=}')
+        self.sts_endpoint_url = self.sts_endpoint_url or STS_ENDPOINTS.get(region) or STS_ENDPOINTS.get(self.aws_default_region)
 
         if kwargs and not self.aws_access_key_id:  # login with Role ARN
             if not self.aws_access_key_id:
@@ -121,6 +133,7 @@ class AWSClient:
         elif self.aws_access_key_id and (role_arn or self.aws_role_arn):  # login with Access Key ID and Role ARN
             sts_client = boto3.client(
                 service_name='sts',
+                region_name=region if region else self.aws_default_region,
                 aws_access_key_id=self.aws_access_key_id,
                 aws_secret_access_key=self.aws_secret_access_key,
                 verify=self.verify_certificate,

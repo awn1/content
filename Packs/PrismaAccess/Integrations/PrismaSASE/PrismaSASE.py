@@ -99,12 +99,12 @@ class Client(BaseClient):
                     if key == 'profile_setting':
                         val = argToList(field_value)
                         rule[key] = {'group': val}
-                    if key == 'source_user':
+                    elif key == 'source_user':
                         val = argToList(field_value, ';')
                         rule[key] = val
-                    if isinstance(SECURITYRULE_FIELDS.get(key), str):
+                    elif isinstance(SECURITYRULE_FIELDS.get(key), str):
                         rule[key] = field_value  # type: ignore
-                    if isinstance(SECURITYRULE_FIELDS.get(key), list):
+                    elif isinstance(SECURITYRULE_FIELDS.get(key), list):
                         val = argToList(field_value)
                         rule[key] = val  # type: ignore
 
@@ -812,6 +812,22 @@ class Client(BaseClient):
             tsg_id=tsg_id
         )
 
+    def get_cie_user(self, json_data: Dict[str, Any]) -> dict:  # pragma: no cover
+        """
+        Get CIE user
+        Args:
+            json_data: The JSON data to send in the request body.
+        Returns:
+            The response from the API.
+        """
+        url_suffix = 'cie/directory-sync/v1/cache-users'
+
+        return self.http_request(
+            method="POST",
+            url_suffix=url_suffix,
+            json_data=json_data,
+        )
+
 
 """HELPER FUNCTIONS"""
 
@@ -1091,6 +1107,7 @@ def create_security_rule_command(client: Client, args: Dict[str, Any]) -> Comman
     demisto.debug(f'sending security rule to the API. Rule: {rule}')
     raw_response = client.create_security_rule(rule=rule, query_params=query_params, tsg_id=tsg_id)  # type: ignore
     outputs = raw_response
+    outputs["position"] = query_params["position"]
 
     return CommandResults(
         outputs_prefix=f'{PA_OUTPUT_PREFIX}SecurityRule',
@@ -1976,7 +1993,7 @@ def list_url_category_command(client: Client, args: Dict[str, Any]) -> CommandRe
     for profile in profiles:
         # we only want predefined profiles
         if profile.get('folder', '') == 'predefined':
-            for category in categories.keys():
+            for category in categories:
                 categories[category].extend(profile.get(category, []))
                 categories[category].extend(profile.get('credential_enforcement', {}).get(category, []))
                 # remove duplicates
@@ -2005,6 +2022,89 @@ def quarantine_host_command(client: Client, args: Dict[str, Any]) -> CommandResu
     )
 
 
+def cie_user_prepare_args(args: Dict[str, Any]) -> Dict[str, Any]:
+    """
+        Prepare args for get_cie_user_command.
+    Args:
+        args: Dict[str, Any] - args to prepare
+    Returns:
+        Dict[str, Any] - The JSON data for the API call
+    """
+    operator_mapping = {"Equal": "equal", "Starts With": "startsWith", "Ends With": "endsWith",
+                        "Contain": "contain", "Text Search": "textSearch"}
+
+    missing_args = {"attributes_to_return": args.get('attributes_to_return'), "operator": args.get('operator'),
+                    "attributes_to_filter_by": args.get('attributes_to_filter_by')}
+    errors = [name for name, value in missing_args.items() if not value]
+    if errors:
+        raise ValueError(f"The following arguments are empty: {', '.join(errors)}")
+
+    # Ensure "Unique Identifier" is always in the list for the deduplication process
+    attributes_to_return = list(set(argToList(args.get("attributes_to_return", ""))) | {"Unique Identifier"})
+    args["attributes_to_return"] = attributes_to_return
+
+    return {
+        "domain": args.get("domain"),
+        "attrs": attributes_to_return,
+        "name":
+            {
+                "attrNameOR": argToList(args.get("attributes_to_filter_by", "")),
+                "attrValue": args.get("value_for_filter"),
+                "match": operator_mapping.get(args.get('operator', 'Equal'))
+        },
+        "useNormalizedAttrs": "True"
+    }
+
+
+def parse_cie_user_response(args: Dict[str, Any], raw_response: Dict[str, Any]) -> Dict[str, Any]:
+    """
+        Parse the raw response from the API call.
+    Args:
+        args: dict - The arguments passed to the command
+        raw_response: dict - The raw response from the API call
+    Returns:
+        Dict[str, Any] - The parsed response
+    """
+    default_error_msg = "The get_cie_user_command failed. Please verify the arguments and try again."
+    result_response = raw_response.get("result", {})
+    if error := result_response.get("error"):
+        raise ValueError(
+            f"Error: {error.get('error-message', default_error_msg)}")
+    parsed_raw_response = result_response.get("data", {}).get("domains", [])
+    if parsed_raw_response and (objects := parsed_raw_response[0].get("objects", [])):
+        return {key: objects[0].get(key) for key in args.get('attributes_to_return', [])}
+    return {}
+
+
+def get_cie_user_command(client: Client, args: Dict[str, Any]) -> CommandResults:
+    """
+    Command get cie user
+    Args:
+        client: Client
+        args: Dict[str, Any]
+    Returns:
+        CommandResults
+    """
+    payload = cie_user_prepare_args(args)
+
+    raw_response = client.get_cie_user(payload)
+
+    outputs = parse_cie_user_response(args, raw_response)
+
+    if outputs:
+        return CommandResults(
+            outputs_prefix=f'{PA_OUTPUT_PREFIX}CIE.User',
+            outputs_key_field='unique_identifier',
+            outputs={key.lower().replace(" ", "_").replace("-", "_"): value for key, value in outputs.items()},
+            readable_output=tableToMarkdown('CIE User', outputs),
+            raw_response=raw_response
+        )
+    return CommandResults(
+        readable_output='No user found with the given arguments. Please verify the arguments and try again.',
+        raw_response=raw_response
+    )
+
+
 def run_push_jobs_polling_command(client: Client, args: dict):
     """
     This function is generically handling the polling flow. In the polling flow, there is always an initial call that
@@ -2016,11 +2116,11 @@ def run_push_jobs_polling_command(client: Client, args: dict):
     polling_interval = args.get('interval_in_seconds') or DEFAULT_POLLING_INTERVAL
     polling_timeout = arg_to_number(args.get('polling_timeout_in_seconds')) or DEFAULT_POLLING_TIMEOUT
     tsg_id = args.get('tsg_id')
-    if folders := argToList(args.get('folders')):
+    if (folders := argToList(args.get('folders'))) and folders[0] != "done":
         # first call, folder in args. We make the first push
         res = client.push_candidate_config(folders=folders, tsg_id=tsg_id)
         # remove folders, not needed for the rest
-        args['folders'] = []
+        args['folders'] = ["done"]
         # The result from the push returns a job id
         job_id = res.get('job_id', '')
         args['job_id'] = job_id
@@ -2072,7 +2172,7 @@ def run_push_jobs_polling_command(client: Client, args: dict):
             job_result = job.get('result_str')
             if job_result != 'OK':
                 outputs['result'] = job_result
-                outputs['details'] = res.get('details', '')
+                outputs['details'] = job.get("summary")
                 return CommandResults(entry_type=EntryType.ERROR,
                                       outputs=outputs,
                                       outputs_prefix=f'{PA_OUTPUT_PREFIX}CandidateConfig',
@@ -2139,6 +2239,8 @@ def main():  # pragma: no cover
         'prisma-sase-external-dynamic-list-delete': delete_custom_url_category_command,
 
         'prisma-sase-quarantine-host': quarantine_host_command,
+
+        'prisma-sase-cie-user-get': get_cie_user_command,
 
     }
     client = Client(

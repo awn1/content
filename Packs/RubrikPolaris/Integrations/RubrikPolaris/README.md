@@ -1,30 +1,27 @@
-The Rubrik Radar integration will fetch the Rubrik Radar Anomaly Event and is rich with commands to perform the on-demand scans, backups, recoveries and many more features to manage and protect the organizational data.
-This integration was integrated and tested with version 1.0.0 of RubrikPolaris
+The Rubrik Security Cloud integration will fetch the Rubrik Anomaly Event and is rich with commands to perform the on-demand scans, backups, recoveries and many more features to manage and protect the organizational data.
+This integration was integrated and tested with version 1.0.0 of Rubrik Security Cloud
 
-## Configure Rubrik Radar on Cortex XSOAR
+## Configure Rubrik Security Cloud in Cortex
 
-1. Navigate to **Settings** > **Integrations** > **Servers & Services**.
-2. Search for Rubrik Radar.
-3. Click **Add instance** to create and configure a new integration instance.
 
-    | **Parameter** | **Description** | **Required** |
-    | --- | --- | --- |
-    | Service Account JSON |  | False |
-    | Polaris Account (e.g. ${polarisAccount}.my.rubrik.com) |  | False |
-    | Email |  | False |
-    | Password |  | False |
-    | Fetch incidents |  | False |
-    | Incident type |  | False |
-    | First fetch time | The time interval for the first fetch \(retroactive\). Examples of supported values can be found at https://dateparser.readthedocs.io/en/latest/\#relative-dates. | False |
-    | Fetch Limit (Maximum of 1000) | Maximum number of incidents to fetch every time. The maximum value is 1000. | False |
-    | Radar Critical Severity Level Mapping | When a Radar event of Critical severity is detected and fetched, this setting indicates what severity will get assigned within XSOAR. | False |
-    | Radar Warning Severity Level Mapping | When a Radar event of Warning severity is detected and fetched, this setting indicates what severity will get assigned within XSOAR. | False |
-    | Use system proxy settings | Whether to use XSOAR's system proxy settings to connect to the API. | False |
-    | Trust any certificate (not secure) | Whether to allow connections without verifying SSL certificates validity. | False |
+| **Parameter** | **Description** | **Required** |
+| --- | --- | --- |
+| Service Account JSON |  | False |
+| Rubrik Account (e.g. ${rubrikAccount}.my.rubrik.com) |  | False |
+| Email |  | False |
+| Password |  | False |
+| Fetch incidents |  | False |
+| Incident type |  | False |
+| First fetch time | The time interval for the first fetch \(retroactive\). Examples of supported values can be found at https://dateparser.readthedocs.io/en/latest/\#relative-dates. | False |
+| Fetch Limit (Maximum of 1000) | Maximum number of incidents to fetch every time. The maximum value is 1000. | False |
+| Anomaly Event Critical Severity Level Mapping | When a Anomaly event of Critical severity is detected and fetched, this setting indicates what severity will get assigned within XSOAR. | False |
+| Anomaly Event Warning Severity Level Mapping | When a Anomaly event of Warning severity is detected and fetched, this setting indicates what severity will get assigned within XSOAR. | False |
+| Source Reliability | Reliability of the source providing the intelligence data. | False |
+| Use system proxy settings | Whether to use XSOAR's system proxy settings to connect to the API. | False |
+| Trust any certificate (not secure) | Whether to allow connections without verifying SSL certificates validity. | False |
 
-4. Click **Test** to validate the URLs, token, and connection.
 ## Commands
-You can execute these commands from the Cortex XSOAR CLI, as part of an automation, or in a playbook.
+You can execute these commands from the CLI, as part of an automation, or in a playbook.
 After you successfully execute a command, a DBot message appears in the War Room with the command details.
 ### rubrik-radar-analysis-status
 ***
@@ -685,7 +682,7 @@ Retrieve the download link for the requested scanned file.
 
 ### rubrik-radar-anomaly-csv-analysis
 ***
-Request for the analysis and retrieve the download link for the Radar CSV analyzed file.
+Request for the analysis and retrieve the download link or directly download file for the Radar CSV analyzed file.
 
 
 #### Base Command
@@ -696,8 +693,9 @@ Request for the analysis and retrieve the download link for the Radar CSV analyz
 | **Argument Name** | **Description** | **Required** |
 | --- | --- | --- |
 | cluster_id | The unique ID of the cluster.<br/><br/>Note: Users can retrieve the list of the cluster IDs by executing the "rubrik-gps-cluster-list" command. | Required | 
-| snapshot_id | The snapshot ID.<br/><br/>Note: Users can retrieve the list of snapshot IDs by executing the "rubrik-polaris-vm-object-snapshot-list" command. | Required | 
-| object_id | The VM object ID.<br/><br/>Note: Users can retrieve the list of object IDs by executing the "rubrik-polaris-vm-objects-list" command. | Required | 
+| snapshot_id | The CDM snapshot ID.<br/><br/>Note: Users can retrieve the list of snapshot IDs by executing the "rubrik-polaris-vm-object-snapshot-list" command.<br/>Use the "rubrik-radar-suspicious-file-list" command to retrieve the actual CDM ID from the Anomaly ID.<br/>Example format to get the snapshot CDM ID from Anomaly ID: "&lt;Cluster-ID&gt;:::VirtualMachine:::&lt;Snappable-ID&gt;:::&lt;CDM-ID&gt;". | Required | 
+| object_id | The VM object ID (Snappable ID).<br/><br/>Note: Users can retrieve the list of Snappable IDs by executing the "rubrik-polaris-vm-objects-list" command.<br/>Example format to get the Snappable ID: "VirtualMachine:::&lt;Snappable-ID&gt;". | Required | 
+| download_file | If set to True, the command downloads the anomaly analysis CSV file directly on XSOAR server.<br/><br/>Possible values are: True, False. Default is False. | Optional |
 
 
 #### Context Output
@@ -708,16 +706,40 @@ Request for the analysis and retrieve the download link for the Radar CSV analyz
 | RubrikPolaris.RadarAnomalyCSV.snapshotId | String | Snapshot ID of the CSV. | 
 | RubrikPolaris.RadarAnomalyCSV.objectId | String | Object ID of the CSV. | 
 | RubrikPolaris.RadarAnomalyCSV.investigationCsvDownloadLink.downloadLink | String | The download link of the CSV analysis. | 
+| File.Size | String | File size in bytes. | 
+| File.SHA1 | String | SHA1 hash of file. | 
+| File.SHA256 | String | SHA256 hash of file. | 
+| File.SHA512 | String | SHA512 hash of file. | 
+| File.Name | String | File name. | 
+| File.SSDeep | String | SSDeep hash of the file. | 
+| File.EntryID | Unknown | The entry ID of the file. | 
+| File.Info | String | File information. | 
+| File.Type | String | The file type. | 
+| File.MD5 | String | MD5 hash of the file. | 
+| File.Extension | String | The file extension. | 
 
 
 #### Command Example
-```!rubrik-radar-anomaly-csv-analysis cluster_id="cc19573c-db6c-418a-9d48-067a256543ba" snapshot_id="7b71d588-911c-4165-b6f3-103a1684d2a3" object_id="868aa03d-4145-4cb1-808b-e10c4f7a3741-vm-4335"```
+```!rubrik-radar-anomaly-csv-analysis cluster_id="0000-000-000-000-0000" snapshot_id="0000-000-000-000-0000" object_id="0000-000-000-000-vm-0000" download_file=True```
 
 #### Human Readable Output
-### Radar Anomaly CSV Analysis
-|CSV Download Link|
-|---|
-| Download the analyzed [CSV](https://www.example.com/csv_file) file. |
+>### Radar Anomaly CSV Analysis
+>|CSV Download Link|
+>|---|
+>| Download the analyzed [CSV](https://www.example.com/snapshot_000-000-000-000.csv) file. |
+
+>Uploaded file: snapshot_000-000-000-000.csv Download
+>
+>|Property|Value|
+>|---|---|
+>| Type | text/csv; charset=utf-8 |
+>| Size | 10,069 bytes |
+>| Info | ASCII text, with very long lines |
+>| MD5 | 10000000000000000000000000 |
+>| SHA1 | 1000000000000000000000000000000 |
+>| SHA256 | 1000000000000000000000000000000000000000000000000000000000 |
+>| SHA512 | 10000000000000000000000000000000000000000000000000000000000000000000000 |
+>| SSDeep | 1:100000000000000000000000000000000000000000000000000000000: |
 
 
 
@@ -1085,6 +1107,7 @@ Note: To know about the file information and which file can be downloaded, use t
 | --- | --- | --- |
 | snapshot_id | The Snapshot ID of the file that needs to be downloaded.<br/><br/>Note: Users can retrieve the list of the snapshot IDs by executing the "rubrik-polaris-vm-object-snapshot-list" command. | Required | 
 | file_path | The absolute path of the file to be downloaded. A list of files can be downloaded as a zip folder. Multiple file paths can be separated with comma(,).<br/><br/>Note: Users can retrieve the list of the files with absolute path by executing the "rubrik-gps-snapshot-files-list" command.<br/><br/>Format accepted: "/&lt;directory name&gt;/&lt;sub directory name or file name&gt;"<br/><br/>Example: "/C:/PerfLogs/Admin", "/C:/Windows/Microsoft.NET". | Required | 
+| object_type | The type of object for which the file to be downloaded.<br/><br/>Possible values are: "WindowsFileset", "LinuxFileset", "VolumeGroup", "VmwareVm". Default is VmwareVm. | Optional | 
 
 
 #### Context Output
@@ -1735,3 +1758,1438 @@ Note: To know about the recovery status, use the "rubrik-gps-async-result" comma
 |Recover Files Request ID|
 |---|
 | dummy_id |
+
+
+### rubrik-sonar-user-access-list
+
+***
+Retrieve the user access information.
+
+#### Base Command
+
+`rubrik-sonar-user-access-list`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| user_name | The name of the user to search for. | Optional | 
+| user_email | The email or the UPN of the user to search for. | Optional | 
+| search_time_period | Specify the search time period to look for user access.<br/><br/>Supported formats: 2 minutes, 2 hours, 2 days, 2 weeks, 2 months, 2 years, yyyy-mm-dd, yyyy-mm-ddTHH:MM:SSZ.<br/><br/>For example: 01 May 2023, 01 Mar 2023 04:45:33, 2023-04-17T14:05:44Z. Default is 7 days. | Optional | 
+| risk_levels | The comma-separated list of risk levels.<br/><br/>Supported values are: UNKNOWN_RISK, HIGH_RISK, MEDIUM_RISK, LOW_RISK, NO_RISK.<br/><br/>Note: For any other values, whether the obtained result is filtered or not, is not confirmed. | Optional | 
+| group_id | Specify the group ID to filter with. | Optional | 
+| include_whitelisted_results | The boolean indicates to include the whitelisted results.<br/><br/>Possible values are: "True", "False". Default is False. | Optional | 
+| principal_summary_category | Specify the principal summary category to filter with.<br/><br/>Supported values are: PRINCIPAL_SUMMARY_CATEGORY_UNSPECIFIED, USERS_WITH_SENSITIVE_ACCESS, NEW_USERS_WITH_SENSITIVE_ACCESS, USERS_WITH_RISK_LEVEL_INCREASE. Default is USERS_WITH_SENSITIVE_ACCESS.<br/><br/>Note: For any other values, whether the obtained result is filtered or not, is not confirmed. | Optional | 
+| limit | Number of results to retrieve in the response. The maximum allowed size is 1000. Default is 50. | Optional | 
+| page_number | Specify the page number to get the particular page of results in the response. Default is 1.<br/><br/>Note: This argument is only applicable when provided with the "user_email" argument. | Optional | 
+| sort_by | Specify the field to use for sorting the response.<br/><br/>Supported values are: RISK_LEVEL, RISK_SENSITIVE_FILES, RISK_SENSITIVE_HITS, TOTAL_SENSITIVE_HITS, TOTAL_SENSITIVE_FILES, SID, TOTAL_SENSITIVE_OBJECTS. Default is RISK_LEVEL.<br/><br/>Note: For any other values, whether the obtained result is filtered or not, is not confirmed. | Optional | 
+| sort_order | Specify the order to sort the data in.<br/><br/>Possible values are: "ASC", "DESC". Default is DESC. | Optional | 
+| next_page_token | The next page cursor to retrieve the next set of results. | Optional | 
+
+#### Context Output
+
+| **Path** | **Type** | **Description** |
+| --- | --- | --- |
+| RubrikPolaris.UserAccess.principalId | String | The ID of the user. | 
+| RubrikPolaris.UserAccess.fullName | String | The full name of the user. | 
+| RubrikPolaris.UserAccess.upn | String | The user principal name. | 
+| RubrikPolaris.UserAccess.riskLevel | String | The risk level of the user. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.highRiskFileCount.totalCount | Number | The total number of high-risk files. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.highRiskFileCount.violatedCount | Number | The number of high-risk files that violate policies. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.highRiskFileCount.__typename | String | The high-risk file count field type. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.mediumRiskFileCount.totalCount | Number | Total number of medium-risk files. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.mediumRiskFileCount.violatedCount | Number | The number of medium-risk files that violate policies. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.mediumRiskFileCount.__typename | String | The type of the medium risk file count field. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.lowRiskFileCount.totalCount | Number | The total number of low-risk files. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.lowRiskFileCount.violatedCount | Number | The number of low-risk files that violate policies. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.lowRiskFileCount.__typename | String | The type of the low-risk file count field. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.__typename | String | The type of the sensitive files field. | 
+| RubrikPolaris.UserAccess.totalSensitiveHits.totalHits | Number | The total number of sensitive hits. | 
+| RubrikPolaris.UserAccess.totalSensitiveHits.violatedHits | Number | The number of sensitive hits that violate policies. | 
+| RubrikPolaris.UserAccess.totalSensitiveHits.__typename | String | The type of the total sensitive hits field. | 
+| RubrikPolaris.UserAccess.sensitiveObjectCount.totalCount | Number | The total number of sensitive objects. | 
+| RubrikPolaris.UserAccess.sensitiveObjectCount.violatedCount | Number | The Number of sensitive objects that violate policies. | 
+| RubrikPolaris.UserAccess.sensitiveObjectCount.__typename | String | The type of the sensitive object count field. | 
+| RubrikPolaris.UserAccess.numDescendants | Number | The number of descendant users associated with this user. | 
+| RubrikPolaris.UserAccess.domainName | String | The domain name associated with this user. | 
+| RubrikPolaris.UserAccess.__typename | String | The type of the User Access field. | 
+| RubrikPolaris.PageToken.UserAccess.name | String | Name of the command. | 
+| RubrikPolaris.PageToken.UserAccess.startCursor | String | The start cursor for the current page. | 
+| RubrikPolaris.PageToken.UserAccess.endCursor | String | The end cursor for the current page. | 
+| RubrikPolaris.PageToken.UserAccess.hasNextPage | Boolean | Whether the result has the next page or not. | 
+| RubrikPolaris.PageToken.UserAccess.hasPreviousPage | Boolean | Whether the result has the previous page or not. | 
+| RubrikPolaris.PageToken.UserAccess.next_upn_page_number | String | The next UPN page number. | 
+| RubrikPolaris.PageToken.UserAccess.has_next_upn_page | Boolean | Whether the result has the next UPN page or not. | 
+
+#### Command example
+```!rubrik-sonar-user-access-list user_name="Demo Rubrik" user_email="demo@rubrik.com" limit="1"```
+#### Context Example
+```json
+{
+    "RubrikPolaris": {
+        "PageToken": {
+            "UserAccess": {
+                "endCursor": "cursor_1",
+                "hasNextPage": false,
+                "hasPreviousPage": false,
+                "has_next_upn_page": false,
+                "name": "rubrik-sonar-user-access-list",
+                "next_upn_page_number": 1,
+                "startCursor": "cursor_1"
+            }
+        },
+        "UserAccess": {
+            "__typename": "PrincipalSummary",
+            "domainName": "rubrik.com",
+            "fullName": "Demo Rubrik",
+            "numDescendants": 0,
+            "principalId": "S-1-0-01-0000000000-0000000000-000000000-0001",
+            "riskLevel": "HIGH_RISK",
+            "sensitiveFiles": {
+                "__typename": "SensitiveFiles",
+                "highRiskFileCount": {
+                    "__typename": "SummaryCount",
+                    "totalCount": 0,
+                    "violatedCount": 124
+                },
+                "lowRiskFileCount": {
+                    "__typename": "SummaryCount",
+                    "totalCount": 0,
+                    "violatedCount": 0
+                },
+                "mediumRiskFileCount": {
+                    "__typename": "SummaryCount",
+                    "totalCount": 0,
+                    "violatedCount": 0
+                }
+            },
+            "sensitiveObjectCount": {
+                "__typename": "SummaryCount",
+                "totalCount": 0,
+                "violatedCount": 1
+            },
+            "totalSensitiveHits": {
+                "__typename": "SummaryHits",
+                "totalHits": 0,
+                "violatedHits": 86972
+            },
+            "upn": "demo@rubrik.com"
+        }
+    }
+}
+```
+
+#### Human Readable Output
+
+>### User Access (Showing Records 1-1 out of 1)
+>|User ID|User Full Name|User Principal Name|Risk Level|Total Sensitive Objects|Total Sensitive Files|Total Sensitive Hits|
+>|---|---|---|---|---|---|---|
+>| [S-1-0-01-0000000000-0000000000-000000000-0001](https://rubrik-test.my.rubrik.com/sonar/user_intelligence?redirected_user_id=S-1-0-01-0000000000-0000000000-000000000-0001) | Demo Rubrik | demo@rubrik\.com | HIGH_RISK | 1 | 124 | 86972 |
+>
+>Note: To retrieve the next set of results, use **next_page_token** = "cursor_2".<br/>
+>If **next_page_token** is provided, then it will reset the record numbers. For the initial use of **next_page_token**, please avoid specifying the **page_number**.
+
+
+### rubrik-sonar-user-access-get
+
+***
+Retrieve the user access information based on the provided user ID.
+
+#### Base Command
+
+`rubrik-sonar-user-access-get`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| user_id | Specify the user_id to retrieve the user access information.<br/><br/>Note: Users can get the list of the user IDs by executing the "rubrik-sonar-user-access-list" command. | Required | 
+| search_time_period | Specify the search time period to look for user access. Default is 7 days.<br/><br/>Supported formats: 2 minutes, 2 hours, 2 days, 2 weeks, 2 months, 2 years, yyyy-mm-dd, yyyy-mm-ddTHH:MM:SSZ.<br/><br/>For example: 01 May 2023, 01 Mar 2023 04:45:33, 2023-04-17T14:05:44Z. | Optional | 
+| historical_delta_days | Specify the number of days in the past to collect delta for the sensitive hits. Default is 7. | Optional | 
+| include_whitelisted_results | The boolean indicates to include the whitelisted results. Default is False.<br/><br/>Possible values are: "True", "False". | Optional | 
+
+#### Context Output
+
+| **Path** | **Type** | **Description** |
+| --- | --- | --- |
+| RubrikPolaris.UserAccess.principalId | String | The ID of the user. | 
+| RubrikPolaris.UserAccess.fullName | String | The full name of the user. | 
+| RubrikPolaris.UserAccess.upn | String | The user principal name. | 
+| RubrikPolaris.UserAccess.riskLevel | String | The risk level of the user. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.__typename | String | The type of object representing the policy hits summary. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.policyId | String | The unique identifier of the policy associated with the hits summary. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.policyName | String | The human-readable name of the policy associated with the hits summary. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.__typename | String | The type of object representing the analyzer hits for a specific SID. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.highRiskHits.__typename | String | The type of object representing high-risk hits for the analyzer. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.highRiskHits.totalHits | Number | The total number of high-risk hits detected by the analyzer. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.highRiskHits.violatedHits | Number | The number of high-risk hits that violated security policies. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.lowRiskHits.__typename | String | The type of object representing low-risk hits for the analyzer. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.lowRiskHits.totalHits | Number | The total number of low-risk hits detected by the analyzer. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.lowRiskHits.violatedHits | Number | The number of low-risk hits that violated security policies. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.mediumRiskHits.__typename | String | The type of object representing medium-risk hits for the analyzer. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.mediumRiskHits.totalHits | Number | The total number of medium-risk hits detected by the analyzer. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.mediumRiskHits.violatedHits | Number | The number of medium-risk hits that violated security policies. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.totalHits.__typename | String | The type of object representing the total number of hits for the analyzer. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.totalHits.totalHits | Number | The total number of hits detected by the analyzer \(all risk levels combined\). | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidAnalyzerHits.totalHits.violatedHits | Number | The number of hits detected by the analyzer that violated security policies \(all risk levels combined\). | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.__typename | String | The type of object representing the difference in analyzer hits between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.highRiskHits.__typename | String | The type of object representing the difference in high-risk hits for the analyzer between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.highRiskHits.totalHits | Number | The difference in the total number of high-risk hits detected by the analyzer between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.highRiskHits.violatedHits | Number | The difference in the number of high-risk hits that violated security policies between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.lowRiskHits.__typename | String | The type of object representing the difference in low-risk hits for the analyzer between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.lowRiskHits.totalHits | Number | The difference in the total number of low-risk hits detected by the analyzer between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.lowRiskHits.violatedHits | Number | The difference in the number of low-risk hits that violated security policies between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.mediumRiskHits.__typename | String | The type of object representing the difference in medium-risk hits for the analyzer between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.mediumRiskHits.totalHits | Number | The difference in the total number of medium-risk hits detected by the analyzer between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.mediumRiskHits.violatedHits | Number | The difference in the number of medium-risk hits that violated security policies between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.totalHits.__typename | String | The type of object representing the total difference in hits for the analyzer between the current and previous periods \(all risk levels combined\). | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.totalHits.totalHits | Number | The total difference in the number of hits detected by the analyzer between the current and previous periods \(all risk levels combined\). | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaAnalyzerHits.totalHits.violatedHits | Number | The difference in the number of hits detected by the analyzer that violated security policies between the current and previous periods \(all risk levels combined\). | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.__typename | String | The type of object representing the difference in risk hits between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.highRiskHits.__typename | String | The type of object representing the difference in high-risk hits between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.highRiskHits.totalHits | Number | The difference in the total number of high-risk hits detected between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.highRiskHits.violatedHits | Number | The difference in the number of high-risk hits that violated security policies between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.lowRiskHits.__typename | String | The type of object representing the difference in low-risk hits between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.lowRiskHits.totalHits | Number | The difference in the total number of low-risk hits detected between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.lowRiskHits.violatedHits | Number | The difference in the number of low-risk hits that violated security policies between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.mediumRiskHits.__typename | String | The type of object representing the difference in medium-risk hits between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.mediumRiskHits.totalHits | Number | The difference in the total number of medium-risk hits detected between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.mediumRiskHits.violatedHits | Number | The difference in the number of medium-risk hits that violated security policies between the current and previous periods. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.totalHits.__typename | String | The type of object representing the total difference in risk hits between the current and previous periods \(all risk levels combined\). | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.totalHits.totalHits | Number | The total difference in the number of risk hits detected between the current and previous periods \(all risk levels combined\). | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidDeltaRiskHits.totalHits.violatedHits | Number | The difference in the number of risk hits detected that violated security policies between the current and previous periods \(all risk levels combined\). | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.__typename | String | The type of object representing the risk hits for a specific SID. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.highRiskHits.__typename | String | The type of object representing high-risk hits for the risk engine. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.highRiskHits.totalHits | Number | The total number of high-risk hits detected by the risk engine for the specific SID. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.highRiskHits.violatedHits | Number | The number of high-risk hits that violated security policies for the specific SID. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.lowRiskHits.__typename | String | The type of object representing low-risk hits for the risk engine. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.lowRiskHits.totalHits | Number | The total number of low-risk hits detected by the risk engine for the specific SID. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.lowRiskHits.violatedHits | Number | The number of low-risk hits that violated security policies for the specific SID. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.mediumRiskHits.__typename | String | The type of object representing medium-risk hits for the risk engine. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.mediumRiskHits.totalHits | Number | The total number of medium-risk hits detected by the risk engine for the specific SID. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.mediumRiskHits.violatedHits | Number | The number of medium-risk hits that violated security policies for the specific SID. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.totalHits.__typename | String | The type of object representing the total number of risk hits for the specific SID \(all risk levels combined\). | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.totalHits.totalHits | Number | The total number of risk hits detected by the risk engine for the specific SID \(all risk levels combined\). | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidRiskHits.totalHits.violatedHits | Number | The number of risk hits detected by the risk engine that violated security policies for the specific SID \(all risk levels combined\). | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidSensitiveFiles.__typename | String | The type of object representing the sensitive files associated with the specific SID. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidSensitiveFiles.totalFileCount.__typename | String | The type of object representing the total number of sensitive files associated with the specific SID. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidSensitiveFiles.totalFileCount.totalCount | Number | The total number of sensitive files associated with the specific SID, including both compliant and non-compliant files. | 
+| RubrikPolaris.UserAccess.policy_hits_summary.sidSensitiveFiles.totalFileCount.violatedCount | Number | The number of sensitive files associated with the specific SID that violate security policies. | 
+| RubrikPolaris.UserAccess.riskReasons.accessRiskReasons | Unknown | The reasons why the user's access is considered risky. | 
+| RubrikPolaris.UserAccess.riskReasons.insecureReasons | Unknown | The reasons why the user's access is considered insecure. | 
+| RubrikPolaris.UserAccess.riskReasons.__typename | String | The type of the risk reasons field. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.highRiskFileCount.totalCount | Number | The total number of high-risk files. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.highRiskFileCount.violatedCount | Number | The number of high-risk files that violate policies. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.highRiskFileCount.__typename | String | The high-risk file count field type. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.mediumRiskFileCount.totalCount | Number | Total number of medium-risk files. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.mediumRiskFileCount.violatedCount | Number | The number of medium-risk files that violate policies. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.mediumRiskFileCount.__typename | String | The type of the medium risk file count field. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.lowRiskFileCount.totalCount | Number | The total number of low-risk files. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.lowRiskFileCount.violatedCount | Number | The number of low-risk files that violate policies. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.lowRiskFileCount.__typename | String | The type of the low-risk file count field. | 
+| RubrikPolaris.UserAccess.sensitiveFiles.__typename | String | The type of the sensitive files field. | 
+| RubrikPolaris.UserAccess.totalSensitiveHits.totalHits | Number | The total number of sensitive hits. | 
+| RubrikPolaris.UserAccess.totalSensitiveHits.violatedHits | Number | The number of sensitive hits that violate policies. | 
+| RubrikPolaris.UserAccess.totalSensitiveHits.__typename | String | The type of the total sensitive hits field. | 
+| RubrikPolaris.UserAccess.sensitiveObjectCount.totalCount | Number | The total number of sensitive objects. | 
+| RubrikPolaris.UserAccess.sensitiveObjectCount.violatedCount | Number | The Number of sensitive objects that violate policies. | 
+| RubrikPolaris.UserAccess.sensitiveObjectCount.__typename | String | The type of the sensitive object count field. | 
+| RubrikPolaris.UserAccess.numDescendants | Number | The number of descendant users associated with this user. | 
+| RubrikPolaris.UserAccess.domainName | String | The domain name associated with this user. | 
+| RubrikPolaris.UserAccess.directGroups.name | String | The name of the direct group. | 
+| RubrikPolaris.UserAccess.directGroups.sid | String | The security identifier \(SID\) of the direct group. | 
+| RubrikPolaris.UserAccess.directGroups.__typename | String | The type of the direct groups field. | 
+| RubrikPolaris.UserAccess.__typename | String | The type of the User Access field. | 
+
+#### Command example
+```!rubrik-sonar-user-access-get user_id="S-1-0-01-0000000000-0000000000-000000000-0001"```
+#### Context Example
+```json
+{
+    "RubrikPolaris": {
+        "UserAccess": {
+            "__typename": "PrincipalSummary",
+            "directGroups": [
+                {
+                    "__typename": "UserAccessGroup",
+                    "name": "Domain Admins",
+                    "sid": "S-1-0-01-0000000000-0000000000-000000000-002"
+                },
+                {
+                    "__typename": "UserAccessGroup",
+                    "name": "Domain Users",
+                    "sid": "S-1-0-01-0000000000-0000000000-000000000-003"
+                }
+            ],
+            "domainName": "rubrik.com",
+            "fullName": "DemoRubrik",
+            "numDescendants": 0,
+            "principalId": "S-1-0-01-0000000000-0000000000-000000000-0001",
+            "riskLevel": "HIGH_RISK",
+            "policy_hits_summary": [
+                {
+                    "policyId": "00000000-0000-0000-0000-000000000001",
+                    "policyName": "Policy 1",
+                    "sidSensitiveFiles": {
+                        "totalFileCount": {
+                            "totalCount": 164,
+                            "violatedCount": 164,
+                            "__typename": "SummaryCount"
+                        },
+                        "__typename": "SensitiveFiles"
+                    },
+                    "sidAnalyzerHits": {
+                        "highRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "mediumRiskHits": {
+                            "totalHits": 138118,
+                            "violatedHits": 138118,
+                            "__typename": "SummaryHits"
+                        },
+                        "lowRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "totalHits": {
+                            "totalHits": 138118,
+                            "violatedHits": 138118,
+                            "__typename": "SummaryHits"
+                        },
+                        "__typename": "SensitiveHits"
+                    },
+                    "sidDeltaAnalyzerHits": {
+                        "highRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "mediumRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "lowRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "totalHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "__typename": "SensitiveHits"
+                    },
+                    "sidRiskHits": {
+                        "highRiskHits": {
+                            "totalHits": 138118,
+                            "violatedHits": 138118,
+                            "__typename": "SummaryHits"
+                        },
+                        "mediumRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "lowRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "totalHits": {
+                            "totalHits": 138118,
+                            "violatedHits": 138118,
+                            "__typename": "SummaryHits"
+                        },
+                        "__typename": "SensitiveHits"
+                    },
+                    "sidDeltaRiskHits": {
+                        "highRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "mediumRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "lowRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "totalHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "__typename": "SensitiveHits"
+                    },
+                    "__typename": "PolicyHitsSummary"
+                },
+                {
+                    "policyId": "00000000-0000-0000-0000-000000000002",
+                    "policyName": "Policy 2",
+                    "sidSensitiveFiles": {
+                        "totalFileCount": {
+                            "totalCount": 130,
+                            "violatedCount": 130,
+                            "__typename": "SummaryCount"
+                        },
+                        "__typename": "SensitiveFiles"
+                    },
+                    "sidAnalyzerHits": {
+                        "highRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "mediumRiskHits": {
+                            "totalHits": 101434,
+                            "violatedHits": 101434,
+                            "__typename": "SummaryHits"
+                        },
+                        "lowRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "totalHits": {
+                            "totalHits": 101434,
+                            "violatedHits": 101434,
+                            "__typename": "SummaryHits"
+                        },
+                        "__typename": "SensitiveHits"
+                    },
+                    "sidDeltaAnalyzerHits": {
+                        "highRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "mediumRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "lowRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "totalHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "__typename": "SensitiveHits"
+                    },
+                    "sidRiskHits": {
+                        "highRiskHits": {
+                            "totalHits": 101434,
+                            "violatedHits": 101434,
+                            "__typename": "SummaryHits"
+                        },
+                        "mediumRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "lowRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "totalHits": {
+                            "totalHits": 101434,
+                            "violatedHits": 101434,
+                            "__typename": "SummaryHits"
+                        },
+                        "__typename": "SensitiveHits"
+                    },
+                    "sidDeltaRiskHits": {
+                        "highRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "mediumRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "lowRiskHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "totalHits": {
+                            "totalHits": 0,
+                            "violatedHits": 0,
+                            "__typename": "SummaryHits"
+                        },
+                        "__typename": "SensitiveHits"
+                    },
+                    "__typename": "PolicyHitsSummary"
+                }
+            ],
+            "riskReasons": {
+                "__typename": "PrincipalRiskReasons",
+                "accessRiskReasons": [
+                    "MEDIUM_RISK_ANALYZER_HITS",
+                    "OPEN_ACCESS"
+                ],
+                "insecureReasons": [
+                    "PASSWORD_NEVER_EXPIRES"
+                ]
+            },
+            "sensitiveFiles": {
+                "__typename": "SensitiveFiles",
+                "highRiskFileCount": {
+                    "__typename": "SummaryCount",
+                    "totalCount": 0,
+                    "violatedCount": 250
+                },
+                "lowRiskFileCount": {
+                    "__typename": "SummaryCount",
+                    "totalCount": 0,
+                    "violatedCount": 0
+                },
+                "mediumRiskFileCount": {
+                    "__typename": "SummaryCount",
+                    "totalCount": 0,
+                    "violatedCount": 0
+                }
+            },
+            "sensitiveObjectCount": {
+                "__typename": "SummaryCount",
+                "totalCount": 0,
+                "violatedCount": 2
+            },
+            "totalSensitiveHits": {
+                "__typename": "SummaryHits",
+                "totalHits": 0,
+                "violatedHits": 173954
+            },
+            "upn": "demo@rubrik.com"
+        }
+    }
+}
+```
+
+#### Human Readable Output
+
+>### User Access
+>|User ID|User Full Name|User Principal Name|Risk Level|Access Risk Reason(s)|Insecure Reason(s)|Groups|Total Sensitive Objects|Total Sensitive Files|Total Sensitive Hits|
+>|---|---|---|---|---|---|---|---|---|---|
+>| [S-1-0-01-0000000000-0000000000-000000000-0001](https://rubrik-test.my.rubrik.com/sonar/user_intelligence?redirected_user_id=S-1-0-01-0000000000-0000000000-000000000-0001) | DemoRubrik | demo@rubrik\.com | HIGH_RISK | MEDIUM_RISK_ANALYZER_HITS, OPEN_ACCESS | PASSWORD_NEVER_EXPIRES | Domain Admins, Domain Users | 2 | 250 | 173954 |
+>
+>
+>### Sensitive Hits
+>|Policy Name|Total Sensitive Files|Total Sensitive Hits|Sensitive Hits Delta|High Risk Hits|Medium Risk Hits|Low Risk Hits|
+>|---|---|---|---|---|---|---|
+>| Policy 1 | 164 | 138118 | 0 | 0 | 138118 | 0 |
+>| Policy 2 | 130 | 101434 | 0 | 0 | 101434 | 0 |
+
+
+### rubrik-sonar-file-context-list
+
+***
+Retrieve the context of the file, folder, or file share for the provided object and the file details.
+
+#### Base Command
+
+`rubrik-sonar-file-context-list`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| object_id | The Object ID or the Snappable ID.<br/><br/>Note: Users can get the list of the object IDs by executing the "rubrik-polaris-object-list" command. | Required | 
+| snapshot_id | The Snapshot ID of the object.<br/><br/>Note: Users can get the list of the snapshot IDs by executing the "rubrik-polaris-object-snapshot-list" command. | Required | 
+| file_name | Specify the name of the file, folder, or file share object. | Optional | 
+| file_path | Specify the standard file path to filter with. | Optional | 
+| user_id | Specify the user ID to filter with.<br/><br/>Note: Users can get the list of the user IDs by executing the "rubrik-sonar-user-access-list" command. | Optional | 
+| include_whitelisted_results | The boolean indicates to include the whitelisted results.<br/><br/>Possible values are: "True", "False". Default is False. | Optional | 
+| limit | Number of results to retrieve in the response. The maximum allowed size is 1000. Default is 50. | Optional | 
+| sort_by | Specify the field to use for sorting the response.<br/><br/>Supported values are: HITS, NAME, DAILY_CHANGE, LAST_ACCESS_TIME, OPEN_ACCESS_TYPE, FILES_WITH_HITS, FILES_WITH_OPEN_ACCESS_HITS, STALE_FILES_WITH_HITS, CLUSTER, OBJECT_NAME, OBJECT_LOCATION, SNAPSHOT_TIME, NUM_ACTIVITIES, NUM_ACTIVITIES_DELTA, NATIVE_PATH. Default is HITS.<br/><br/>Note: For any other values, whether the obtained result is filtered or not, is not confirmed. | Optional | 
+| sort_order | Specify the order to sort the data in.<br/><br/>Possible values are: "ASC", "DESC". Default is DESC. | Optional | 
+| next_page_token | The next page cursor to retrieve the next set of results. | Optional | 
+
+#### Context Output
+
+| **Path** | **Type** | **Description** |
+| --- | --- | --- |
+| RubrikPolaris.FileContext.nativePath | String | The native path of the file. | 
+| RubrikPolaris.FileContext.stdPath | String | The standardized path of the file. | 
+| RubrikPolaris.FileContext.filename | String | The filename. | 
+| RubrikPolaris.FileContext.mode | String | The file mode. | 
+| RubrikPolaris.FileContext.size | Number | The file size in bytes. | 
+| RubrikPolaris.FileContext.lastAccessTime | Number | The last access time of the file in milliseconds since the epoch. | 
+| RubrikPolaris.FileContext.lastModifiedTime | Number | The last modified time of the file in milliseconds since the epoch. | 
+| RubrikPolaris.FileContext.directory | String | The value of Directory. | 
+| RubrikPolaris.FileContext.numDescendantFiles | Number | The number of descendant files of the file. | 
+| RubrikPolaris.FileContext.numDescendantErrorFiles | Number | The number of descendant files of the file that could not be processed. | 
+| RubrikPolaris.FileContext.numDescendantSkippedExtFiles | Number | The number of descendant files of the file that were skipped because of their file extension. | 
+| RubrikPolaris.FileContext.numDescendantSkippedSizeFiles | Number | The number of descendant files of the file that were skipped because of their file size. | 
+| RubrikPolaris.FileContext.errorCode | String | The error code, if any, for the file. | 
+| RubrikPolaris.FileContext.hits.totalHits | Number | The total number of hits for the file. | 
+| RubrikPolaris.FileContext.hits.violations | Number | The number of violations for the file. | 
+| RubrikPolaris.FileContext.hits.violationsDelta | Number | The change in the number of violations for the file since the last scan. | 
+| RubrikPolaris.FileContext.hits.totalHitsDelta | Number | The change in the total number of hits for the file since the last scan. | 
+| RubrikPolaris.FileContext.hits.__typename | String | The type of the hits field. | 
+| RubrikPolaris.FileContext.filesWithHits.totalHits | Number | The total number of files with hits. | 
+| RubrikPolaris.FileContext.filesWithHits.violations | Number | The number of files with violations. | 
+| RubrikPolaris.FileContext.filesWithHits.__typename | String | The type of the files with hits field. | 
+| RubrikPolaris.FileContext.openAccessFilesWithHits.totalHits | Number | The total number of open access files with hits. | 
+| RubrikPolaris.FileContext.openAccessFilesWithHits.violations | Number | The number of open access files with violations. | 
+| RubrikPolaris.FileContext.openAccessFilesWithHits.__typename | String | The type of the open access files with hits field. | 
+| RubrikPolaris.FileContext.staleFilesWithHits.totalHits | Number | The total number of stale files with hits. | 
+| RubrikPolaris.FileContext.staleFilesWithHits.violations | Number | The number of stale files with violations. | 
+| RubrikPolaris.FileContext.staleFilesWithHits.__typename | String | The type of the stale files with hits field. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.analyzerGroup.groupType | String | The type of the analyzer group. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.analyzerGroup.id | String | The ID of the analyzer group. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.analyzerGroup.name | String | The name of the analyzer group. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.analyzerGroup.__typename | String | The type of the analyzer group field. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.analyzerResults.hits.totalHits | Number | The total number of hits for the analyzer results. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.analyzerResults.hits.violations | Number | The number of violations for the analyzer results. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.analyzerResults.hits.__typename | String | The type of the hits field. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.analyzerResults.analyzer.id | String | The ID of the analyzer. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.analyzerResults.analyzer.name | String | The name of the analyzer. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.analyzerResults.analyzer.analyzerType | String | The type of the analyzer. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.analyzerResults.analyzer.__typename | String | The type of the analyzer field. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.analyzerResults.__typename | String | The type of the analyzer results field. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.hits.totalHits | Number | The total number of hits for the analyzer group results. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.hits.violations | Number | The number of violations for the analyzer group results. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.hits.violationsDelta | Number | The change in the number of violations for the analyzer group results since the last scan. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.hits.totalHitsDelta | Number | The change in the total number of hits for the analyzer group results since the last scan. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.hits.__typename | String | The type of the hits field. | 
+| RubrikPolaris.FileContext.analyzerGroupResults.__typename | String | The type of the analyzer group results field. | 
+| RubrikPolaris.FileContext.sensitiveFiles.highRiskFileCount.totalCount | Number | The total number of high-risk files for the policy object. | 
+| RubrikPolaris.FileContext.sensitiveFiles.highRiskFileCount.violatedCount | Number | The number of high-risk files for the policy object that violates policies. | 
+| RubrikPolaris.FileContext.sensitiveFiles.highRiskFileCount.__typename | String | The type of the high-risk file count field. | 
+| RubrikPolaris.FileContext.sensitiveFiles.mediumRiskFileCount.totalCount | Number | Total number of medium-risk files for the policy object. | 
+| RubrikPolaris.FileContext.sensitiveFiles.mediumRiskFileCount.violatedCount | Number | The number of medium-risk files for the policy object that violates policies. | 
+| RubrikPolaris.FileContext.sensitiveFiles.mediumRiskFileCount.__typename | String | The type of the medium risk file count field. | 
+| RubrikPolaris.FileContext.sensitiveFiles.lowRiskFileCount.totalCount | Number | Total number of low-risk files for the policy object. | 
+| RubrikPolaris.FileContext.sensitiveFiles.lowRiskFileCount.violatedCount | Number | The number of low-risk files for the policy object that violates policies. | 
+| RubrikPolaris.FileContext.sensitiveFiles.lowRiskFileCount.__typename | String | The type of the low-risk file count field. | 
+| RubrikPolaris.FileContext.sensitiveFiles.__typename | String | The type of the sensitive files field. | 
+| RubrikPolaris.FileContext.openAccessType | String | The open access type for the file. | 
+| RubrikPolaris.FileContext.stalenessType | String | The staleness type for the file. | 
+| RubrikPolaris.FileContext.numActivities | Number | The number of activities for the file. | 
+| RubrikPolaris.FileContext.numActivitiesDelta | Number | The change in the number of activities for the file since the last time it was checked. | 
+| RubrikPolaris.FileContext.__typename | String | The type of the file context field. | 
+| RubrikPolaris.PageToken.FileContext.name | String | Name of the command. | 
+| RubrikPolaris.PageToken.FileContext.endCursor | String | The end cursor for the current page. | 
+| RubrikPolaris.PageToken.FileContext.hasNextPage | Boolean | Whether the result has the next page or not. | 
+
+#### Command example
+```!rubrik-sonar-file-context-list object_id="1" snapshot_id="1" limit="2"```
+#### Context Example
+```json
+{
+    "RubrikPolaris": {
+        "FileContext": [
+            {
+                "__typename": "FileResult",
+                "analyzerGroupResults": [
+                    {
+                        "__typename": "AnalyzerGroupResult",
+                        "analyzerGroup": {
+                            "__typename": "AnalyzerGroup",
+                            "groupType": "CUSTOM",
+                            "id": "00000000-0000-0000-0000-000000000001",
+                            "name": "UK PII"
+                        },
+                        "analyzerResults": [
+                            {
+                                "__typename": "AnalyzerResult",
+                                "analyzer": {
+                                    "__typename": "Analyzer",
+                                    "analyzerType": "UK_DL",
+                                    "id": "00000000-0000-0000-0000-000000000001",
+                                    "name": "UK DL"
+                                },
+                                "hits": {
+                                    "__typename": "Hits",
+                                    "totalHits": 0,
+                                    "violations": 2000
+                                }
+                            }
+                        ],
+                        "hits": {
+                            "__typename": "Hits",
+                            "totalHits": 0,
+                            "totalHitsDelta": 0,
+                            "violations": 2000,
+                            "violationsDelta": 0
+                        }
+                    }
+                ],
+                "directory": "/C:/File Shares",
+                "errorCode": "NOERROR",
+                "filename": "uk_drivers_license_number.xlsx",
+                "filesWithHits": {
+                    "__typename": "Hits",
+                    "totalHits": 0,
+                    "violations": 1
+                },
+                "hits": {
+                    "__typename": "Hits",
+                    "totalHits": 0,
+                    "totalHitsDelta": 0,
+                    "violations": 2000,
+                    "violationsDelta": 0
+                },
+                "lastAccessTime": 1648099578,
+                "lastModifiedTime": 1648099578,
+                "mode": "FILE",
+                "nativePath": "/C:/File Shares/uk_drivers_license_number.xlsx",
+                "numActivities": 0,
+                "numActivitiesDelta": 0,
+                "numDescendantErrorFiles": 0,
+                "numDescendantFiles": 0,
+                "numDescendantSkippedExtFiles": 0,
+                "numDescendantSkippedSizeFiles": 0,
+                "openAccessFilesWithHits": {
+                    "__typename": "Hits",
+                    "totalHits": 0,
+                    "violations": 1
+                },
+                "openAccessType": "INHERITED",
+                "sensitiveFiles": {
+                    "__typename": "SensitiveFiles",
+                    "highRiskFileCount": {
+                        "__typename": "SummaryCount",
+                        "totalCount": 0,
+                        "violatedCount": 1
+                    },
+                    "lowRiskFileCount": {
+                        "__typename": "SummaryCount",
+                        "totalCount": 0,
+                        "violatedCount": 0
+                    },
+                    "mediumRiskFileCount": {
+                        "__typename": "SummaryCount",
+                        "totalCount": 0,
+                        "violatedCount": 0
+                    }
+                },
+                "size": 85708,
+                "staleFilesWithHits": {
+                    "__typename": "Hits",
+                    "totalHits": 0,
+                    "violations": 1
+                },
+                "stalenessType": "IS_STALE",
+                "stdPath": "/C:/File Shares/uk_drivers_license_number.xlsx"
+            },
+            {
+                "__typename": "FileResult",
+                "analyzerGroupResults": [
+                    {
+                        "__typename": "AnalyzerGroupResult",
+                        "analyzerGroup": {
+                            "__typename": "AnalyzerGroup",
+                            "groupType": "CUSTOM",
+                            "id": "00000000-0000-0000-0000-000000000001",
+                            "name": "UK PII"
+                        },
+                        "analyzerResults": [
+                            {
+                                "__typename": "AnalyzerResult",
+                                "analyzer": {
+                                    "__typename": "Analyzer",
+                                    "analyzerType": "UK_NINO",
+                                    "id": "00000000-0000-0000-0000-000000000001",
+                                    "name": "UK NINO"
+                                },
+                                "hits": {
+                                    "__typename": "Hits",
+                                    "totalHits": 0,
+                                    "violations": 1712
+                                }
+                            }
+                        ],
+                        "hits": {
+                            "__typename": "Hits",
+                            "totalHits": 0,
+                            "totalHitsDelta": 0,
+                            "violations": 1712,
+                            "violationsDelta": 0
+                        }
+                    }
+                ],
+                "directory": "/C:/File Shares",
+                "errorCode": "NOERROR",
+                "filename": "uk_national_insurance_number.csv",
+                "filesWithHits": {
+                    "__typename": "Hits",
+                    "totalHits": 0,
+                    "violations": 1
+                },
+                "hits": {
+                    "__typename": "Hits",
+                    "totalHits": 0,
+                    "totalHitsDelta": 0,
+                    "violations": 1712,
+                    "violationsDelta": 0
+                },
+                "lastAccessTime": 1648099580,
+                "lastModifiedTime": 1648099580,
+                "mode": "FILE",
+                "nativePath": "/C:/File Shares/uk_national_insurance_number.csv",
+                "numActivities": 0,
+                "numActivitiesDelta": 0,
+                "numDescendantErrorFiles": 0,
+                "numDescendantFiles": 0,
+                "numDescendantSkippedExtFiles": 0,
+                "numDescendantSkippedSizeFiles": 0,
+                "openAccessFilesWithHits": {
+                    "__typename": "Hits",
+                    "totalHits": 0,
+                    "violations": 1
+                },
+                "openAccessType": "INHERITED",
+                "sensitiveFiles": {
+                    "__typename": "SensitiveFiles",
+                    "highRiskFileCount": {
+                        "__typename": "SummaryCount",
+                        "totalCount": 0,
+                        "violatedCount": 1
+                    },
+                    "lowRiskFileCount": {
+                        "__typename": "SummaryCount",
+                        "totalCount": 0,
+                        "violatedCount": 0
+                    },
+                    "mediumRiskFileCount": {
+                        "__typename": "SummaryCount",
+                        "totalCount": 0,
+                        "violatedCount": 0
+                    }
+                },
+                "size": 120064,
+                "staleFilesWithHits": {
+                    "__typename": "Hits",
+                    "totalHits": 0,
+                    "violations": 1
+                },
+                "stalenessType": "IS_STALE",
+                "stdPath": "/C:/File Shares/uk_national_insurance_number.csv"
+            }
+        ],
+        "PageToken": {
+            "FileContext": {
+                "endCursor": "cursor_2",
+                "hasNextPage": true,
+                "name": "rubrik-sonar-file-context-list"
+            }
+        }
+    }
+}
+```
+
+#### Human Readable Output
+
+>### File Context
+>|File Name|File Size in Bytes|Total Sensitive Hits|Daily Hits Change|File Path|Access Type|Last Access Time|Last Modified Time|
+>|---|---|---|---|---|---|---|---|
+>| uk_drivers_license_number.xlsx | 85708 | 2000 | 0 | /C:/File Shares/uk_drivers_license_number.xlsx | INHERITED | 2022-03-24T05:26:18Z | 2022-03-24T05:26:18Z |
+>| uk_national_insurance_number.csv | 120064 | 1712 | 0 | /C:/File Shares/uk_national_insurance_number.csv | INHERITED | 2022-03-24T05:26:20Z | 2022-03-24T05:26:20Z |
+>
+>Note: To retrieve the next set of results use, "next_page_token" = cursor_2
+
+
+### rubrik-radar-suspicious-file-list
+
+***
+Retrieve the suspicious list of files for a snapshot ID with detected file anomalies.
+
+#### Base Command
+
+`rubrik-radar-suspicious-file-list`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| snapshot_id | The Snapshot ID of the object or Activity Series ID.<br/><br/>Note: Users can get the list of the snapshot IDs by executing the "rubrik-polaris-object-snapshot-list" command. For the Activity Series ID, the users can execute the "rubrik-event-list" command with the "activity_type" argument set to "ANOMALY". | Required | 
+
+#### Context Output
+
+| **Path** | **Type** | **Description** |
+| --- | --- | --- |
+| RubrikPolaris.SuspiciousFile.id | String | The anomaly result ID. | 
+| RubrikPolaris.SuspiciousFile.snapshotFid | String | The snapshot ID. | 
+| RubrikPolaris.SuspiciousFile.cluster.id | String | The cluster ID. | 
+| RubrikPolaris.SuspiciousFile.cluster.defaultAddress | String | The default address of the cluster. | 
+| RubrikPolaris.SuspiciousFile.cluster.systemStatusAffectedNodes.ipAddress | String | The IP address of the affected node. | 
+| RubrikPolaris.SuspiciousFile.cluster.name | String | The cluster name. | 
+| RubrikPolaris.SuspiciousFile.cluster.version | String | The cluster version. | 
+| RubrikPolaris.SuspiciousFile.cluster.status | String | The cluster status. | 
+| RubrikPolaris.SuspiciousFile.cluster.__typename | String | The type name of the cluster response. | 
+| RubrikPolaris.SuspiciousFile.cdmId | String | The snapshot CDM ID. | 
+| RubrikPolaris.SuspiciousFile.managedId | String | The managed object ID. | 
+| RubrikPolaris.SuspiciousFile.anomalyProbability | Number | The probability of the anomaly. | 
+| RubrikPolaris.SuspiciousFile.workloadId | String | The workload ID. | 
+| RubrikPolaris.SuspiciousFile.location | String | The location of the anomaly. | 
+| RubrikPolaris.SuspiciousFile.isAnomaly | Boolean | Indicates if the file is an anomaly. | 
+| RubrikPolaris.SuspiciousFile.objectType | String | The object type. | 
+| RubrikPolaris.SuspiciousFile.snappableNew.objectType | String | The object type of the snapshot. | 
+| RubrikPolaris.SuspiciousFile.severity | String | The severity of the anomaly. | 
+| RubrikPolaris.SuspiciousFile.detectionTime | Date | The detection time of the anomaly. | 
+| RubrikPolaris.SuspiciousFile.snapshotDate | Date | The snapshot date of the anomaly. | 
+| RubrikPolaris.SuspiciousFile.encryption | String | The encryption standard of the anomaly. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.strainAnalysisInfo.strainId | String | The ID of the Ransomware Strain. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.strainAnalysisInfo.totalAffectedFiles | Number | The total number of affected files. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.strainAnalysisInfo.totalRansomwareNotes | Number | The total number of ransomware notes. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.strainAnalysisInfo.sampleAffectedFilesInfo.filePath | String | The path of the affected file. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.strainAnalysisInfo.sampleAffectedFilesInfo.lastModified | Date | The last modified time of the affected file. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.strainAnalysisInfo.sampleAffectedFilesInfo.fileSizeBytes | Number | The size of the affected file in bytes. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.strainAnalysisInfo.sampleAffectedFilesInfo.__typename | String | The type name of the affected file response. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.strainAnalysisInfo.sampleRansomwareNoteFilesInfo.filePath | String | The path of the ransomware note file. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.strainAnalysisInfo.sampleRansomwareNoteFilesInfo.lastModified | Date | The last modified time of the ransomware note file. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.strainAnalysisInfo.sampleRansomwareNoteFilesInfo.fileSizeBytes | Number | The size of the ransomware note file in bytes. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.strainAnalysisInfo.sampleRansomwareNoteFilesInfo.__typename | String | The type name of the ransomware note file response. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.strainAnalysisInfo.__typename | String | The type name of the strain analysis response. | 
+| RubrikPolaris.SuspiciousFile.anomalyInfo.__typename | String | The type name of the anomaly response. | 
+| RubrikPolaris.SuspiciousFile.__typename | String | The type name of the suspicious file response. | 
+
+#### Command example
+```!rubrik-radar-suspicious-file-list snapshot_id="00000000-0000-0000-0000-000000000001"```
+#### Context Example
+```json
+{
+    "RubrikPolaris": {
+      "SuspiciousFile": {
+        "id": "00000000-0000-0000-0000-000000000001:::VirtualMachine:::00000000-0000-0000-0000-000000000001-vm-206:::00000000-0000-0000-0000-000000000001",
+        "snapshotFid": "00000000-0000-0000-0000-000000000001",
+        "cluster": {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "defaultAddress": "cluster.rubrik",
+          "systemStatusAffectedNodes": [
+            {
+              "ipAddress": "0.0.0.0"
+            }
+          ],
+          "name": "Cluster_B",
+          "version": "8.1.3",
+          "status": "Connected",
+          "__typename": "Cluster"
+        },
+        "snappableNew": {
+          "objectType": "VmwareVirtualMachine"
+        },
+        "cdmId": "00000000-0000-0000-0000-000000000001",
+        "managedId": "VirtualMachine:::00000000-0000-0000-0000-000000000001-vm-206",
+        "anomalyProbability": 0.949999988079071,
+        "workloadId": "00000000-0000-0000-0000-000000000001-vm-206",
+        "location": "instance.rubrik",
+        "isAnomaly": true,
+        "severity": "Critical",
+        "detectionTime": "2024-02-05T18:49:03.000Z",
+        "snapshotDate": "2024-02-05T16:59:30.000Z",
+        "encryption": "HIGH",
+        "anomalyInfo": {
+          "strainAnalysisInfo": [
+            {
+              "strainId": "LockBit",
+              "totalAffectedFiles": 1,
+              "totalRansomwareNotes": 1,
+              "sampleAffectedFilesInfo": [
+                {
+                  "filePath": "/C:/Shares/Restore-My-Files.txt.lockbit",
+                  "lastModified": "2024-02-05T16:00:44.000Z",
+                  "fileSizeBytes": 2512,
+                  "__typename": "SuspiciousFileInfo"
+                }
+              ],
+              "sampleRansomwareNoteFilesInfo": [
+                {
+                  "filePath": "/C:/Users/Public/Desktop/Restore-My-Files.txt",
+                  "lastModified": "2024-02-08T02:00:03.000Z",
+                  "fileSizeBytes": 2484,
+                  "__typename": "SuspiciousFileInfo"
+                }
+              ],
+              "__typename": "StrainInfo"
+            }
+          ],
+          "__typename": "AnomalyInfo"
+        },
+        "__typename": "GetAnomalyDetailsReply"
+      }
+    }
+}
+```
+
+#### Human Readable Output
+
+>### Anomaly Information
+>|Anomaly ID|Is Anomaly|Anomaly Probability|Severity|Encryption|Anomaly Type|Total Suspicious Files|Total Ransomware Note|Detection Time|Snapshot Time|
+>|---|---|---|---|---|---|---|---|---|---|
+>| 00000000-0000-0000-0000-000000000001:::VirtualMachine:::00000000-0000-0000-0000-000000000001-vm-206:::00000000-0000-0000-0000-000000000001 | true | 0.949999988079071 | Critical | HIGH | LockBit | 1 | 1 | 2024-02-05T18:49:03.000Z | 2024-02-05T16:59:30.000Z |
+>
+>
+>### Suspicious Files
+>|File Path|Suspicious Activity|File Size in Bytes|Last Modified Time|
+>|---|---|---|---|
+>| /C:/Shares/Restore-My-Files.txt.lockbit | Ransomware Encryption | 2512 | 2024-02-05T16:00:44.000Z |
+>| /C:/Users/Public/Desktop/Restore-My-Files.txt | Ransomware Note | 2484 | 2024-02-08T02:00:03.000Z |
+
+
+### ip
+
+***
+Retrieve the sensitive information available for the given IP address(es).
+
+#### Base Command
+
+`ip`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| ip | The IP address\(es\) for which to retrieve sensitive information. | Required | 
+
+#### Context Output
+
+| **Path** | **Type** | **Description** |
+| --- | --- | --- |
+| DBotScore.Indicator | String | The indicator that was tested. | 
+| DBotScore.Type | String | The indicator type. | 
+| DBotScore.Vendor | String | The vendor used to calculate the score. | 
+| DBotScore.Score | Number | The actual score. | 
+| DBotScore.Reliability | String | Reliability of the source providing the intelligence data. | 
+| IP.Address | String | IP address. | 
+| IP.Relationships.EntityA | String | The source of the relationship. | 
+| IP.Relationships.EntityB | String | The destination of the relationship. | 
+| IP.Relationships.Relationship | String | The name of the relationship. | 
+| IP.Relationships.EntityAType | String | The type of the source of the relationship. | 
+| IP.Relationships.EntityBType | String | The type of the destination of the relationship. | 
+| IP.ASN | String | The autonomous system name for the IP address, for example: "AS8948". | 
+| IP.Hostname | String | The hostname that is mapped to this IP address. | 
+| IP.Geo.Location | String | The geolocation where the IP address is located, in the format: latitude:longitude. | 
+| IP.Geo.Country | String | The country in which the IP address is located. | 
+| IP.Geo.Description | String | Additional information about the location. | 
+| IP.DetectionEngines | Number | The total number of engines that checked the indicator. | 
+| IP.PositiveDetections | Number | The number of engines that positively detected the indicator as malicious. | 
+| IP.Malicious.Vendor | String | The vendor reporting the IP address as malicious. | 
+| IP.Malicious.Description | String | A description explaining why the IP address was reported as malicious. | 
+| IP.Tags | Unknown | Tags of the IP address. | 
+| IP.FeedRelatedIndicators.value | String | Indicators that are associated with the IP address. | 
+| IP.FeedRelatedIndicators.type | String | The type of the indicators that are associated with the IP address. | 
+| IP.FeedRelatedIndicators.description | String | The description of the indicators that are associated with the IP address. | 
+| IP.MalwareFamily | String | The malware family associated with the IP address. | 
+| IP.Organization.Name | String | The organization of the IP address. | 
+| IP.Organization.Type | String | The organization type of the IP address. | 
+| IP.ASOwner | String | The autonomous system owner of the IP address. | 
+| IP.Region | String | The region in which the IP address is located. | 
+| IP.Port | String | Ports that are associated with the IP address. | 
+| IP.Internal | Boolean | Whether the IP address is internal or external. | 
+| IP.UpdatedDate | Date | The date that the IP address was last updated. | 
+| IP.Registrar.Abuse.Name | String | The name of the contact for reporting abuse. | 
+| IP.Registrar.Abuse.Address | String | The address of the contact for reporting abuse. | 
+| IP.Registrar.Abuse.Country | String | The country of the contact for reporting abuse. | 
+| IP.Registrar.Abuse.Network | String | The network of the contact for reporting abuse. | 
+| IP.Registrar.Abuse.Phone | String | The phone number of the contact for reporting abuse. | 
+| IP.Registrar.Abuse.Email | String | The email address of the contact for reporting abuse. | 
+| IP.Campaign | String | The campaign associated with the IP address. | 
+| IP.TrafficLightProtocol | String | The Traffic Light Protocol \(TLP\) color that is suitable for the IP address. | 
+| IP.CommunityNotes.note | String | Notes on the IP address that were given by the community. | 
+| IP.CommunityNotes.timestamp | Date | The time in which the note was published. | 
+| IP.Publications.source | String | The source in which the article was published. | 
+| IP.Publications.title | String | The name of the article. | 
+| IP.Publications.link | String | A link to the original article. | 
+| IP.Publications.timestamp | Date | The time in which the article was published. | 
+| IP.ThreatTypes.threatcategory | String | The threat category associated to this indicator by the source vendor. For example, Phishing, Control, TOR, etc. | 
+| IP.ThreatTypes.threatcategoryconfidence | String | The confidence level provided by the vendor for the threat type category For example, a confidence of 90 for the threat type category 'malware' means that the vendor rates that this is 90% confidence of being a malware. | 
+| RubrikPolaris.IP.ip | String | IP address of the object. | 
+| RubrikPolaris.IP.generalInfo.fid | String | The foreign ID of the object. | 
+| RubrikPolaris.IP.generalInfo.name | String | The name of the object. | 
+| RubrikPolaris.IP.generalInfo.objectType | String | The type of the object. | 
+| RubrikPolaris.IP.generalInfo.protectionStatus | String | The protection status of the object. | 
+| RubrikPolaris.IP.generalInfo.lastSnapshot | Date | The timestamp of the last snapshot of the object. | 
+| RubrikPolaris.IP.generalInfo.redirectLink | String | The link to the object in the Rubrik UI. | 
+| RubrikPolaris.IP.sensitiveInfo.riskLevel | String | The risk level of the object. | 
+| RubrikPolaris.IP.sensitiveInfo.sensitiveFiles.mediumCount | String | The number of sensitive files of medium risk level. | 
+| RubrikPolaris.IP.sensitiveInfo.sensitiveHits | Number | The number of sensitive files. | 
+| RubrikPolaris.IP.sensitiveInfo.openAccessFiles | Number | The number of open access files. | 
+| RubrikPolaris.IP.sensitiveInfo.staleFiles | Number | The number of stale files. | 
+| RubrikPolaris.IP.sensitiveInfo.redirectLink | String | The link to the sensitive information in the Rubrik UI. | 
+| RubrikPolaris.IP.sensitiveInfo.policyNames | String | The names of the policies associated with the object. | 
+| RubrikPolaris.IP.anomalyInfo.severity | String | The severity of the anomaly. | 
+| RubrikPolaris.IP.anomalyInfo.detectionTime | Date | The timestamp of the anomaly detection. | 
+| RubrikPolaris.IP.anomalyInfo.createdFileCount | String | The number of created files. | 
+| RubrikPolaris.IP.anomalyInfo.deletedFileCount | String | The number of deleted files. | 
+| RubrikPolaris.IP.anomalyInfo.modifiedFileCount | String | The number of modified files. | 
+| RubrikPolaris.IP.anomalyInfo.suspiciousFileCount | String | The number of suspicious files. | 
+| RubrikPolaris.IP.anomalyInfo.redirectLink | String | The link to the anomaly information in the Rubrik UI. | 
+| RubrikPolaris.IP.threatHuntInfo.latestThreatHunt.huntId | String | The ID of the latest threat hunt. | 
+| RubrikPolaris.IP.threatHuntInfo.latestThreatHunt.huntStartTime | Date | The timestamp of the latest threat hunt. | 
+| RubrikPolaris.IP.threatHuntInfo.latestThreatHunt.isMalicious | String | Whether the latest threat hunt is malicious. | 
+| RubrikPolaris.IP.threatHuntInfo.latestMaliciousThreatHunt.huntId | String | The ID of the latest malicious threat hunt. | 
+| RubrikPolaris.IP.threatHuntInfo.latestMaliciousThreatHunt.huntStartTime | Date | The timestamp of the latest malicious threat hunt. | 
+| RubrikPolaris.IP.threatHuntInfo.latestMaliciousThreatHunt.isMalicious | String | Whether the latest malicious threat hunt is malicious. | 
+| RubrikPolaris.IP.threatHuntInfo.redirectLink | String | The link to the threat hunt information in the Rubrik UI. | 
+| RubrikPolaris.IP.threatMonitoringInfo.latestThreatMonitoring.snapshotFid | String | The foreign ID of the latest threat monitoring snapshot. | 
+| RubrikPolaris.IP.threatMonitoringInfo.latestThreatMonitoring.monitoringScanTime | Date | The timestamp of the latest threat monitoring scan. | 
+| RubrikPolaris.IP.threatMonitoringInfo.latestThreatMonitoring.isMalicious | String | Whether the latest threat monitoring snapshot is malicious. | 
+| RubrikPolaris.IP.threatMonitoringInfo.latestMaliciousThreatMonitoring.snapshotFid | String | The foreign ID of the latest malicious threat monitoring snapshot. | 
+| RubrikPolaris.IP.threatMonitoringInfo.latestMaliciousThreatMonitoring.monitoringScanTime | Date | The timestamp of the latest malicious threat monitoring scan. | 
+| RubrikPolaris.IP.threatMonitoringInfo.latestMaliciousThreatMonitoring.isMalicious | String | Whether the latest malicious threat monitoring snapshot is malicious. | 
+| RubrikPolaris.IP.threatMonitoringInfo.redirectLink | String | The link to the threat monitoring information in the Rubrik UI. | 
+
+#### Command example
+```!ip ip="0.0.0.1"```
+#### Context Example
+```json
+{
+    "DBotScore": {
+        "Indicator": "0.0.0.1",
+        "Reliability": "A - Completely reliable",
+        "Score": 2,
+        "Type": "ip",
+        "Vendor": "Rubrik Security Cloud"
+    },
+    "IP": {
+        "Address": "0.0.0.1",
+        "UpdatedDate": "2024-10-21T08:51:52Z"
+    },
+    "RubrikPolaris": {
+        "IP": {
+            "ip": "0.0.0.1",
+            "generalInfo": {
+                "fid": "12345678-1234-1234-1234-123456789012",
+                "name": "DEMO-RADAR",
+                "objectType": "Vsphere Virtual Machine",
+                "protectionStatus": "Protected",
+                "lastSnapshot": "2024-10-18T06:02:25Z",
+                "redirectLink": "https://rubrik-test.my.rubrik.com/inventory_hierarchy/vsphere/12345678-1234-1234-1234-123456789012/overview"
+            },
+            "sensitiveInfo": {
+                "riskLevel": "Medium",
+                "sensitiveFiles": {
+                    "mediumCount": "11"
+                },
+                "sensitiveHits": 2910,
+                "openAccessFiles": 6,
+                "staleFiles": 11,
+                "redirectLink": "https://rubrik-test.my.rubrik.com/sonar/objects/detail/12345678-1234-1234-1234-123456789012/12345678-1234-1234-1234-123456789012/browse",
+                "policyNames": [
+                    "U.S. PII"
+                ]
+            },
+            "anomalyInfo": {
+                "severity": "Critical",
+                "detectionTime": "2024-10-14T17:57:06Z",
+                "createdFileCount": "4487",
+                "deletedFileCount": "4477",
+                "modifiedFileCount": "32",
+                "suspiciousFileCount": "4476",
+                "redirectLink": "https://rubrik-test.my.rubrik.com/radar/investigations/vsphere/12345678-1234-1234-1234-123456789012/snapshot/77dc1474-a654-5f20-bcac-348a0f83cd3a/summary"
+            },
+            "threatHuntInfo": {
+                "latestThreatHunt": {
+                    "huntId": "12345678-1234-1234-1234-123456789012",
+                    "huntStartTime": "2024-10-11T09:23:26Z",
+                    "isMalicious": "Matches Found"
+                },
+                "latestMaliciousThreatHunt": {
+                    "huntId": "12345678-1234-1234-1234-123456789012",
+                    "huntStartTime": "2024-10-11T09:23:26Z",
+                    "isMalicious": "Matches Found"
+                },
+                "redirectLink": "https://rubrik-test.my.rubrik.com/radar/investigations/threat_hunts/12345678-1234-1234-1234-123456789012/details"
+            },
+            "threatMonitoringInfo": {
+                "latestThreatMonitoring": {
+                    "snapshotFid": "12345678-1234-1234-1234-123456789012",
+                    "monitoringScanTime": "2024-10-18T05:51:31Z",
+                    "isMalicious": "No Matches"
+                },
+                "latestMaliciousThreatMonitoring": {
+                    "snapshotFid": "12345678-1234-1234-1234-123456789012",
+                    "monitoringScanTime": "2024-10-14T04:41:15Z",
+                    "isMalicious": "Matches Found"
+                },
+                "redirectLink": "https://rubrik-test.my.rubrik.com/radar/threat_monitoring/12345678-1234-1234-1234-123456789012/Cluster_B/8b4fe6f6-cc87-4354-a125-b65e23cf8c90"
+            }
+        }
+    }
+}
+```
+
+#### Human Readable Output
+
+>### General Information for the given medium risk IP: 0.0.0.1
+>|Fid|Last Snapshot|Name|Object Type|Protection Status|Redirect Link|
+>|---|---|---|---|---|---|
+>| 12345678-1234-1234-1234-123456789012 | 2024-10-18T06:02:25Z | DEMO-RADAR | Vsphere Virtual Machine | Protected | [https://rubrik-test.my.rubrik.com/inventory_hierarchy/vsphere/12345678-1234-1234-1234-123456789012/overview](https://rubrik-test.my.rubrik.com/inventory_hierarchy/vsphere/12345678-1234-1234-1234-123456789012/overview) |
+>
+>### Sensitive Information
+>|Open Access Files|Policy Names|Redirect Link|Risk Level|Sensitive Files|Sensitive Hits|Stale Files|
+>|---|---|---|---|---|---|---|
+>| 6 | U.S. PII | [https://rubrik-test.my.rubrik.com/sonar/objects/detail/12345678-1234-1234-1234-123456789012/12345678-1234-1234-1234-123456789012/browse](https://rubrik-test.my.rubrik.com/sonar/objects/detail/12345678-1234-1234-1234-123456789012/12345678-1234-1234-1234-123456789012/browse) | Medium | mediumCount: 11 | 2910 | 11 |
+>
+>### Anomaly Information
+>|Created File Count|Deleted File Count|Detection Time|Modified File Count|Redirect Link|Severity|Suspicious File Count|
+>|---|---|---|---|---|---|---|
+>| 4487 | 4477 | 2024-10-14T17:57:06Z | 32 | [https://rubrik-test.my.rubrik.com/radar/investigations/vsphere/12345678-1234-1234-1234-123456789012/snapshot/77dc1474-a654-5f20-bcac-348a0f83cd3a/summary](https://rubrik-test.my.rubrik.com/radar/investigations/vsphere/12345678-1234-1234-1234-123456789012/snapshot/77dc1474-a654-5f20-bcac-348a0f83cd3a/summary) | Critical | 4476 |
+>
+>### Threat Hunt Information
+>|Latest Malicious Threat Hunt|Latest Threat Hunt|Redirect Link|
+>|---|---|---|
+>| huntId: 12345678-1234-1234-1234-123456789012<br/>huntStartTime: 2024-10-11T09:23:26Z<br/>isMalicious: Matches Found | huntId: 12345678-1234-1234-1234-123456789012<br/>huntStartTime: 2024-10-11T09:23:26Z<br/>isMalicious: Matches Found | [https://rubrik-test.my.rubrik.com/radar/investigations/threat_hunts/12345678-1234-1234-1234-123456789012/details](https://rubrik-test.my.rubrik.com/radar/investigations/threat_hunts/12345678-1234-1234-1234-123456789012/details) |
+>
+>### Threat Monitoring Information
+>|Latest Malicious Threat Monitoring|Latest Threat Monitoring|Redirect Link|
+>|---|---|---|
+>| snapshotFid: 12345678-1234-1234-1234-123456789012<br/>monitoringScanTime: 2024-10-14T04:41:15Z<br/>isMalicious: Matches Found | snapshotFid: 12345678-1234-1234-1234-123456789012<br/>monitoringScanTime: 2024-10-18T05:51:31Z<br/>isMalicious: No Matches | [https://rubrik-test.my.rubrik.com/radar/threat_monitoring/12345678-1234-1234-1234-123456789012/Cluster_B/8b4fe6f6-cc87-4354-a125-b65e23cf8c90](https://rubrik-test.my.rubrik.com/radar/threat_monitoring/12345678-1234-1234-1234-123456789012/Cluster_B/8b4fe6f6-cc87-4354-a125-b65e23cf8c90) |
+
+
+### domain
+
+***
+Retrieve the sensitive information available for the given domain(s).
+
+#### Base Command
+
+`domain`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| domain | The domain(s) for which to retrieve sensitive information. | Required | 
+
+#### Context Output
+
+| **Path** | **Type** | **Description** |
+| --- | --- | --- |
+| DBotScore.Indicator | String | The indicator that was tested. | 
+| DBotScore.Type | String | The indicator type. | 
+| DBotScore.Vendor | String | The vendor used to calculate the score. | 
+| DBotScore.Score | Number | The actual score. | 
+| DBotScore.Reliability | String | Reliability of the source providing the intelligence data. | 
+| Domain.Name | String | The domain name, for example: "google.com". | 
+| Domain.Relationships.EntityA | string | The source of the relationship. | 
+| Domain.Relationships.EntityB | string | The destination of the relationship. | 
+| Domain.Relationships.Relationship | string | The name of the relationship. | 
+| Domain.Relationships.EntityAType | string | The type of the source of the relationship. | 
+| Domain.Relationships.EntityBType | string | The type of the destination of the relationship. | 
+| Domain.DNS | String | A list of IP objects resolved by DNS. | 
+| Domain.DetectionEngines | Number | The total number of engines that checked the indicator. | 
+| Domain.PositiveDetections | Number | The number of engines that positively detected the indicator as malicious. | 
+| Domain.CreationDate | Date | The date that the domain was created. | 
+| Domain.UpdatedDate | String | The date that the domain was last updated. | 
+| Domain.ExpirationDate | Date | The expiration date of the domain. | 
+| Domain.DomainStatus | Datte | The status of the domain. | 
+| Domain.NameServers | Unknown | \(List&lt;String&gt;\) Name servers of the domain. | 
+| Domain.Organization | String | The organization of the domain. | 
+| Domain.Subdomains | Unknown | \(List&lt;String&gt;\) Subdomains of the domain. | 
+| Domain.Admin.Country | String | The country of the domain administrator. | 
+| Domain.Admin.Email | String | The email address of the domain administrator. | 
+| Domain.Admin.Name | String | The name of the domain administrator. | 
+| Domain.Admin.Phone | String | The phone number of the domain administrator. | 
+| Domain.Registrant.Country | String | The country of the registrant. | 
+| Domain.Registrant.Email | String | The email address of the registrant. | 
+| Domain.Registrant.Name | String | The name of the registrant. | 
+| Domain.Registrant.Phone | String | The phone number for receiving abuse reports. | 
+| Domain.Tags | Unknown | Tags of the domain. | 
+| Domain.FeedRelatedIndicators.value | String | Indicators that are associated with the domain. | 
+| Domain.FeedRelatedIndicators.type | String | The type of the indicators that are associated with the domain. | 
+| Domain.FeedRelatedIndicators.description | String | The description of the indicators that are associated with the domain. | 
+| Domain.MalwareFamily | String | The malware family associated with the domain. | 
+| Domain.WHOIS.DomainStatus | String | The status of the domain. | 
+| Domain.WHOIS.NameServers | String | \(List&lt;String&gt;\) Name servers of the domain. | 
+| Domain.WHOIS.CreationDate | Date | The date that the domain was created. | 
+| Domain.WHOIS.UpdatedDate | Date | The date that the domain was last updated. | 
+| Domain.WHOIS.ExpirationDate | Date | The expiration date of the domain. | 
+| Domain.WHOIS.Registrant.Name | String | The name of the registrant. | 
+| Domain.WHOIS.Registrant.Email | String | The email address of the registrant. | 
+| Domain.WHOIS.Registrant.Phone | String | The phone number of the registrant. | 
+| Domain.WHOIS.Registrar.Name | String | The name of the registrar, for example: "GoDaddy". | 
+| Domain.WHOIS.Registrar.AbuseEmail | String | The email address of the contact for reporting abuse. | 
+| Domain.WHOIS.Registrar.AbusePhone | String | The phone number of contact for reporting abuse. | 
+| Domain.WHOIS.Admin.Name | String | The name of the domain administrator. | 
+| Domain.WHOIS.Admin.Email | String | The email address of the domain administrator. | 
+| Domain.WHOIS.Admin.Phone | String | The phone number of the domain administrator. | 
+| Domain.WHOIS/History | String | List of Whois objects. | 
+| Domain.Malicious.Vendor | String | The vendor reporting the domain as malicious. | 
+| Domain.Malicious.Description | String | A description explaining why the domain was reported as malicious. | 
+| Domain.DomainIDNName | String | The internationalized domain name \(IDN\) of the domain. | 
+| Domain.Port | String | Ports that are associated with the domain. | 
+| Domain.Internal | Bool | Whether or not the domain is internal or external. | 
+| Domain.Category | String | The category associated with the indicator. | 
+| Domain.Campaign | String | The campaign associated with the domain. | 
+| Domain.TrafficLightProtocol | String | The Traffic Light Protocol \(TLP\) color that is suitable for the domain. | 
+| Domain.ThreatTypes.threatcategory | String | The threat category associated to this indicator by the source vendor. For example, Phishing, Control, TOR, etc. | 
+| Domain.ThreatTypes.threatcategoryconfidence | String | Threat Category Confidence is the confidence level provided by the vendor for the threat type category For example a confidence of 90 for threat type category 'malware' means that the vendor rates that this is 90% confidence of being a malware. | 
+| Domain.Geo.Location | String | The geolocation where the domain address is located, in the format: latitude:longitude. | 
+| Domain.Geo.Country | String | The country in which the domain address is located. | 
+| Domain.Geo.Description | String | Additional information about the location. | 
+| Domain.Tech.Country | String | The country of the domain technical contact. | 
+| Domain.Tech.Name | String | The name of the domain technical contact. | 
+| Domain.Tech.Organization | String | The organization of the domain technical contact. | 
+| Domain.Tech.Email | String | The email address of the domain technical contact. | 
+| Domain.CommunityNotes.note | String | Notes on the domain that were given by the community. | 
+| Domain.CommunityNotes.timestamp | Date | The time in which the note was published. | 
+| Domain.Publications.source | String | The source in which the article was published. | 
+| Domain.Publications.title | String | The name of the article. | 
+| Domain.Publications.link | String | A link to the original article. | 
+| Domain.Publications.timestamp | Date | The time in which the article was published. | 
+| Domain.Billing | String | The billing address of the domain. | 
+| RubrikPolaris.Domain.domain | String | The domain of the object. | 
+| RubrikPolaris.Domain.generalInfo.fid | String | The foreign ID of the object. | 
+| RubrikPolaris.Domain.generalInfo.name | String | The name of the object. | 
+| RubrikPolaris.Domain.generalInfo.objectType | String | The type of the object. | 
+| RubrikPolaris.Domain.generalInfo.protectionStatus | String | The protection status of the object. | 
+| RubrikPolaris.Domain.generalInfo.lastSnapshot | Date | The timestamp of the last snapshot of the object. | 
+| RubrikPolaris.Domain.generalInfo.redirectLink | String | The link to the object in the Rubrik UI. | 
+| RubrikPolaris.Domain.sensitiveInfo.riskLevel | String | The risk level of the object. | 
+| RubrikPolaris.Domain.sensitiveInfo.sensitiveFiles.mediumCount | String | The number of sensitive files of medium risk level. | 
+| RubrikPolaris.Domain.sensitiveInfo.sensitiveHits | Number | The number of sensitive files. | 
+| RubrikPolaris.Domain.sensitiveInfo.openAccessFiles | Number | The number of open access files. | 
+| RubrikPolaris.Domain.sensitiveInfo.staleFiles | Number | The number of stale files. | 
+| RubrikPolaris.Domain.sensitiveInfo.redirectLink | String | The link to the sensitive information in the Rubrik UI. | 
+| RubrikPolaris.Domain.sensitiveInfo.policyNames | String | The names of the policies associated with the object. | 
+| RubrikPolaris.Domain.anomalyInfo.severity | String | The severity of the anomaly. | 
+| RubrikPolaris.Domain.anomalyInfo.detectionTime | Date | The timestamp of the anomaly detection. | 
+| RubrikPolaris.Domain.anomalyInfo.createdFileCount | String | The number of created files. | 
+| RubrikPolaris.Domain.anomalyInfo.deletedFileCount | String | The number of deleted files. | 
+| RubrikPolaris.Domain.anomalyInfo.modifiedFileCount | String | The number of modified files. | 
+| RubrikPolaris.Domain.anomalyInfo.suspiciousFileCount | String | The number of suspicious files. | 
+| RubrikPolaris.Domain.anomalyInfo.redirectLink | String | The link to the anomaly information in the Rubrik UI. | 
+| RubrikPolaris.Domain.threatHuntInfo.latestThreatHunt.huntId | String | The ID of the latest threat hunt. | 
+| RubrikPolaris.Domain.threatHuntInfo.latestThreatHunt.huntStartTime | Date | The timestamp of the latest threat hunt. | 
+| RubrikPolaris.Domain.threatHuntInfo.latestThreatHunt.isMalicious | String | Whether the latest threat hunt is malicious. | 
+| RubrikPolaris.Domain.threatHuntInfo.latestMaliciousThreatHunt.huntId | String | The ID of the latest malicious threat hunt. | 
+| RubrikPolaris.Domain.threatHuntInfo.latestMaliciousThreatHunt.huntStartTime | Date | The timestamp of the latest malicious threat hunt. | 
+| RubrikPolaris.Domain.threatHuntInfo.latestMaliciousThreatHunt.isMalicious | String | Whether the latest malicious threat hunt is malicious. | 
+| RubrikPolaris.Domain.threatHuntInfo.redirectLink | String | The link to the threat hunt information in the Rubrik UI. | 
+| RubrikPolaris.Domain.threatMonitoringInfo.latestThreatMonitoring.snapshotFid | String | The foreign ID of the latest threat monitoring snapshot. | 
+| RubrikPolaris.Domain.threatMonitoringInfo.latestThreatMonitoring.monitoringScanTime | Date | The timestamp of the latest threat monitoring scan. | 
+| RubrikPolaris.Domain.threatMonitoringInfo.latestThreatMonitoring.isMalicious | String | Whether the latest threat monitoring snapshot is malicious. | 
+| RubrikPolaris.Domain.threatMonitoringInfo.latestMaliciousThreatMonitoring.snapshotFid | String | The foreign ID of the latest malicious threat monitoring snapshot. | 
+| RubrikPolaris.Domain.threatMonitoringInfo.latestMaliciousThreatMonitoring.monitoringScanTime | Date | The timestamp of the latest malicious threat monitoring scan. | 
+| RubrikPolaris.Domain.threatMonitoringInfo.latestMaliciousThreatMonitoring.isMalicious | String | Whether the latest malicious threat monitoring snapshot is malicious. | 
+| RubrikPolaris.Domain.threatMonitoringInfo.redirectLink | String | The link to the threat monitoring information in the Rubrik UI. | 
+
+#### Command example
+```!domain domain="DEMO-RADAR" using-brand=RubrikPolaris```
+#### Context Example
+```json
+{
+    "DBotScore": {
+        "Indicator": "DEMO-RADAR",
+        "Reliability": "A - Completely reliable",
+        "Score": 2,
+        "Type": "domain",
+        "Vendor": "Rubrik Security Cloud"
+    },
+    "Domain": {
+        "Name": "DEMO-RADAR",
+        "UpdatedDate": "2024-11-05T04:34:47Z",
+        "WHOIS": {
+            "UpdatedDate": "2024-11-05T04:34:47Z"
+        }
+    },
+    "RubrikPolaris": {
+        "Domain": {
+            "domain": "DEMO-RADAR",
+            "generalInfo": {
+                "fid": "12345678-1234-1234-1234-123456789012",
+                "name": "DEMO-RADAR",
+                "objectType": "Vsphere Virtual Machine",
+                "protectionStatus": "Protected",
+                "lastSnapshot": "2024-10-18T06:02:25Z",
+                "redirectLink": "https://rubrik-test.my.rubrik.com/inventory_hierarchy/vsphere/12345678-1234-1234-1234-123456789012/overview"
+            },
+            "anomalyInfo": {
+                "severity": "Critical",
+                "detectionTime": "2024-10-14T17:57:06Z",
+                "createdFileCount": "4487",
+                "deletedFileCount": "4477",
+                "modifiedFileCount": "32",
+                "suspiciousFileCount": "4476",
+                "redirectLink": "https://rubrik-test.my.rubrik.com/radar/investigations/vsphere/12345678-1234-1234-1234-123456789012/snapshot/77dc1474-a654-5f20-bcac-348a0f83cd3a/summary"
+            },
+            "sensitiveInfo": {
+                "riskLevel": "Medium",
+                "sensitiveFiles": {
+                    "mediumCount": "11"
+                },
+                "sensitiveHits": 2910,
+                "openAccessFiles": 6,
+                "staleFiles": 11,
+                "redirectLink": "https://rubrik-test.my.rubrik.com/sonar/objects/detail/12345678-1234-1234-1234-123456789012/12345678-1234-1234-1234-123456789012/browse",
+                "policyNames": [
+                    "U.S. PII"
+                ]
+            },
+            "threatHuntInfo": {
+                "latestThreatHunt": {
+                    "huntId": "12345678-1234-1234-1234-123456789012",
+                    "huntStartTime": "2024-10-11T09:23:26Z",
+                    "isMalicious": "Matches Found"
+                },
+                "latestMaliciousThreatHunt": {
+                    "huntId": "12345678-1234-1234-1234-123456789012",
+                    "huntStartTime": "2024-10-11T09:23:26Z",
+                    "isMalicious": "Matches Found"
+                },
+                "redirectLink": "https://rubrik-test.my.rubrik.com/radar/investigations/threat_hunts/12345678-1234-1234-1234-123456789012/details"
+            },
+            "threatMonitoringInfo": {
+                "latestThreatMonitoring": {
+                    "snapshotFid": "12345678-1234-1234-1234-123456789012",
+                    "monitoringScanTime": "2024-10-18T05:51:31Z",
+                    "isMalicious": "No Matches"
+                },
+                "latestMaliciousThreatMonitoring": {
+                    "snapshotFid": "12345678-1234-1234-1234-123456789012",
+                    "monitoringScanTime": "2024-10-14T04:41:15Z",
+                    "isMalicious": "Matches Found"
+                },
+                "redirectLink": "https://rubrik-test.my.rubrik.com/radar/threat_monitoring/12345678-1234-1234-1234-123456789012/Cluster_B/8b4fe6f6-cc87-4354-a125-b65e23cf8c90"
+            }
+        }
+    }
+}
+```
+
+#### Human Readable Output
+
+>### General Information for the given medium risk domain: DEMO-RADAR
+>|Fid|Last Snapshot|Name|Object Type|Protection Status|Redirect Link|
+>|---|---|---|---|---|---|
+>| 12345678-1234-1234-1234-123456789012 | 2024-10-18T06:02:25Z | DEMO-RADAR | Vsphere Virtual Machine | Protected | [https://rubrik-test.my.rubrik.com/inventory_hierarchy/vsphere/12345678-1234-1234-1234-123456789012/overview](https://rubrik-test.my.rubrik.com/inventory_hierarchy/vsphere/12345678-1234-1234-1234-123456789012/overview) |
+>
+### Sensitive Information
+>|Open Access Files|Policy Names|Redirect Link|Risk Level|Sensitive Files|Sensitive Hits|Stale Files|
+>|---|---|---|---|---|---|---|
+>| 6 | U.S. PII | [https://rubrik-test.my.rubrik.com/sonar/objects/detail/12345678-1234-1234-1234-123456789012/12345678-1234-1234-1234-123456789012/browse](https://rubrik-test.my.rubrik.com/sonar/objects/detail/12345678-1234-1234-1234-123456789012/12345678-1234-1234-1234-123456789012/browse) | Medium | mediumCount: 11 | 2910 | 11 |
+>
+>### Anomaly Information
+>|Created File Count|Deleted File Count|Detection Time|Modified File Count|Redirect Link|Severity|Suspicious File Count|
+>|---|---|---|---|---|---|---|
+>| 4487 | 4477 | 2024-10-14T17:57:06Z | 32 | [https://rubrik-test.my.rubrik.com/radar/investigations/vsphere/12345678-1234-1234-1234-123456789012/snapshot/77dc1474-a654-5f20-bcac-348a0f83cd3a/summary](https://rubrik-test.my.rubrik.com/radar/investigations/vsphere/12345678-1234-1234-1234-123456789012/snapshot/77dc1474-a654-5f20-bcac-348a0f83cd3a/summary) | Critical | 4476 |
+>
+>### Threat Hunt Information
+>|Latest Malicious Threat Hunt|Latest Threat Hunt|Redirect Link|
+>|---|---|---|
+>| huntId: 12345678-1234-1234-1234-123456789012<br>huntStartTime: 2024-10-11T09:23:26Z<br>isMalicious: Matches Found | huntId: 12345678-1234-1234-1234-123456789012<br>huntStartTime: 2024-10-11T09:23:26Z<br>isMalicious: Matches Found | [https://rubrik-test.my.rubrik.com/radar/investigations/threat_hunts/12345678-1234-1234-1234-123456789012/details](https://rubrik-test.my.rubrik.com/radar/investigations/threat_hunts/12345678-1234-1234-1234-123456789012/details) |
+>
+>### Threat Monitoring Information
+>|Latest Malicious Threat Monitoring|Latest Threat Monitoring|Redirect Link|
+>|---|---|---|
+>| snapshotFid: 12345678-1234-1234-1234-123456789012<br>monitoringScanTime: 2024-10-14T04:41:15Z<br>isMalicious: Matches Found | snapshotFid: 12345678-1234-1234-1234-123456789012<br>monitoringScanTime: 2024-10-18T05:51:31Z<br>isMalicious: No Matches | [https://rubrik-test.my.rubrik.com/radar/threat_monitoring/12345678-1234-1234-1234-123456789012/Cluster_B/8b4fe6f6-cc87-4354-a125-b65e23cf8c90](https://rubrik-test.my.rubrik.com/radar/threat_monitoring/12345678-1234-1234-1234-123456789012/Cluster_B/8b4fe6f6-cc87-4354-a125-b65e23cf8c90) |

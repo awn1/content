@@ -7,41 +7,50 @@ configuration:
   name: server
   required: true
   type: 0
+  section: Connect
 - display: Credentials
   name: credentials
   type: 9
   required: false
+  section: Connect
 - display: Trust any certificate (not secure)
   name: unsecure
   type: 8
   required: false
+  section: Connect
 - display: Use system proxy settings
   name: proxy
   type: 8
   required: false
+  section: Connect
 - display: Fetch incidents
   name: isFetch
   type: 8
   required: false
+  section: Collect
 - display: Incident type
   name: incidentType
   type: 13
   required: false
+  section: Collect
 - defaultvalue: 3 days
   display: First fetch timestamp (<number> <time unit>, e.g., 12 hours, 7 days, 3 months, 1 year)
   name: fetch_time
   type: 0
   required: false
+  section: Collect
 - defaultvalue: MALOP CREATION TIME
   display: Fetch by "MALOP CREATION TIME" or by "MALOP UPDATE TIME" (Fetching by Malop update time might create duplicates of Malops as incidents)
   name: fetch_by
   type: 0
   required: false
+  section: Collect
 - defaultvalue: "false"
   display: Check this box to Enable Polling for Cybereason EPP Malops.
   name: enable_epp_poll
   type: 8
   required: false
+  section: Collect
 description: Endpoint detection and response to manage and query malops, connections and processes.
 display: Cybereason
 name: Cybereason
@@ -363,6 +372,44 @@ script:
       description: Malop managemant status.
       type: string
   - arguments:
+    - description: malopGuid of the Cybereason Malop.
+      name: malopGuid
+      required: true
+    description: Get Management Malop details.
+    name: cybereason-query-malop-management
+    outputs:
+    - contextPath: Cybereason.Malops.GUID
+      description: The unique globally unique identifier (guid) for the Malop.
+      type: string
+    - contextPath: Cybereason.Malops.CreationTime
+      description: The time reported as when the malicious behavior began on the system. This is not the time that the Malop was first detected by Cybereason.
+      type: string
+    - contextPath: Cybereason.Malops.Link
+      description: Link to the Malop on Cybereason.
+      type: string
+    - contextPath: Cybereason.Malops.LastUpdatedTime
+      description: Last updated time of malop.
+      type: string
+    - contextPath: Cybereason.Malops.InvolvedHash
+      description: List of file hashes involved in this Malop.
+      type: string
+    - contextPath: Cybereason.Malops.Status
+      description: Malop managemant status.
+      type: string
+  - arguments:
+    - description: processGuid of the Cybereason Malop (can accept multiple guids separated by comma).
+      name: processGuid
+      required: true
+    description: Get Process Attack Tree URL.
+    name: cybereason-process-attack-tree
+    outputs:
+    - contextPath: Cybereason.Process.ProcessID
+      description: Cybereason Process ID.
+      type: string
+    - contextPath: Cybereason.Process.URL
+      description: Attack tree url for a given Process.
+      type: string
+  - arguments:
     - description: Array of malop GUIDs separated by comma. (Malop GUID can be retrieved with the command cybereason-query-malops command).
       name: malopGuids
       required: true
@@ -454,6 +501,29 @@ script:
       description: "Malop status: To Review,Unread,Remediated,Not Relevant."
       type: string
   - arguments:
+    - description: Malop GUID to update its investigation status.
+      name: malopGuid
+      required: true
+    - auto: PREDEFINED
+      description: Investigation status to update.
+      name: investigationStatus
+      predefined:
+      - Pending
+      - Reopened
+      - Under Investigation
+      - On Hold
+      - Closed
+      required: true
+    description: Updates malop investigation status.
+    name: cybereason-update-malop-investigation-status
+    outputs:
+    - contextPath: Cybereason.Malops.GUID
+      description: Malop GUID.
+      type: string
+    - contextPath: Cybereason.Malops.InvestigationStatus
+      description: "Malop investigation status: Pending, Reopened, Under Investigation, On Hold, Closed."
+      type: string
+  - arguments:
     - default: true
       description: Malop process file MD5 to prevent.
       name: md5
@@ -535,10 +605,10 @@ script:
       description: File evidences.
       type: string
   - arguments:
-    - default: true
-      description: Domain to query.
+    - description: Domain to query.
       name: domain
       required: true
+      default: true
     description: Query domains as part of investigation.
     name: cybereason-query-domain
     outputs:
@@ -613,10 +683,10 @@ script:
       description: Unique batch id.
       type: Unknown
   - arguments:
-    - default: true
-      description: The batch id for the file download operation.
+    - description: The batch id for the file download operation.
       name: batchID
       required: true
+      default: true
     description: Downloads the actual file to the machine.
     name: cybereason-download-file
   - arguments:
@@ -799,7 +869,10 @@ script:
   script: '-'
   type: python
   subtype: python3
-  dockerimage: demisto/python3:3.10.13.84405
+  dockerimage: demisto/python3:3.11.11.1940698
 tests:
 - Cybereason Test
 fromversion: 5.0.0
+sectionOrder:
+- Connect
+- Collect

@@ -1,6 +1,5 @@
 import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
-from typing import Dict, List, Tuple
 
 from CommonServerUserPython import *
 from datetime import datetime, timedelta
@@ -20,7 +19,7 @@ CONTENT_TYPE_JSON = 'application/json'
 API_VERSION = 'v1.0'
 INTEGRATION_VERSION = 'v1.0'
 
-URL_SUFFIX: Dict[str, str] = {
+URL_SUFFIX: dict[str, str] = {
     'FETCH_INCIDENTS': 'get_incidents',
     'GET_COLUMN': 'get_columns',
     'GET_COUNT': 'get_count',
@@ -160,7 +159,7 @@ def api_check_command(client: Client) -> str:
     return 'ok'
 
 
-def check_arg(key: str, args: Dict[str, Any]) -> Any:
+def check_arg(key: str, args: dict[str, Any]) -> Any:
     """
         Check Arg Service
 
@@ -179,7 +178,7 @@ def check_arg(key: str, args: Dict[str, Any]) -> Any:
     return tmp
 
 
-def get_generic_data(data: Dict[str, Any], key: str, output_prefix: str) -> CommandResults:
+def get_generic_data(data: dict[str, Any], key: str, output_prefix: str) -> CommandResults:
     """
         Get Generic Data Service
 
@@ -203,7 +202,7 @@ def get_generic_data(data: Dict[str, Any], key: str, output_prefix: str) -> Comm
     )
 
 
-def fetch_incidents(client: Client, first_fetch: str, max_fetch: int, query: str) -> Tuple[Dict[str, str], List[dict]]:
+def fetch_incidents(client: Client, first_fetch: str, max_fetch: int, query: str) -> tuple[dict[str, str], list[dict]]:
     """
         This function is called for fetching incidents.
 
@@ -235,31 +234,30 @@ def fetch_incidents(client: Client, first_fetch: str, max_fetch: int, query: str
 
     data = client.get_incidents(method='GET', last_run=last_fetch, query=query)
 
-    incidents: List[Dict[str, Any]] = []
+    incidents: list[dict[str, Any]] = []
     for incident in data['incidents']:
         # convert the date to ISO8601
         created_at_str = f"{datetime.strptime(incident['Time']['Generated'], LOGSIGN_INC_DATE_FORMAT).isoformat()}Z"
         created_at_dt = datetime.strptime(created_at_str, DATE_FORMAT)
 
-        if created_at_dt > latest_created_time:
-            inc = {
-                'name': f"Logsign-{created_at_str}",
-                'occured': created_at_str,
-                'rawJSON': json.dumps(incident)
-            }
+        inc = {
+            'name': f"Logsign-{created_at_str}",
+            'occured': created_at_str,
+            'rawJSON': json.dumps(incident)
+        }
 
-            incidents.append(inc)
-            latest_created_time = created_at_dt
+        incidents.append(inc)
+        latest_created_time = created_at_dt
 
-            if len(incidents) >= max_fetch:
-                break
+        if len(incidents) >= max_fetch:
+            break
 
     # Save the next_run as a dict with the last_fetch key to be stored
     next_run = {'last_fetch': datetime.strftime(latest_created_time, DATE_FORMAT)}
     return next_run, incidents
 
 
-def get_query_command(client: Client, url_suffix: str, args: Dict[str, Any]) -> CommandResults:
+def get_query_command(client: Client, url_suffix: str, args: dict[str, Any]) -> CommandResults:
     """
         This function is called for query commands.
 

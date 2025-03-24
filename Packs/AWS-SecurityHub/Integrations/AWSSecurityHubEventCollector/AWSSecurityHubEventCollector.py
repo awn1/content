@@ -113,7 +113,7 @@ def get_events(client: "SecurityHubClient", start_time: dt.datetime | None = Non
         result = [event for event in result if event['Id'] not in id_ignore_set]
 
         count += len(result)
-        yield result
+        yield result  # type: ignore
 
         if 'NextToken' in response and (limit == 0 or count < limit):
             kwargs['NextToken'] = response['NextToken']
@@ -143,7 +143,7 @@ def fetch_events(client: "SecurityHubClient", last_run: dict, first_fetch_time: 
 
     id_ignore_list: list = last_run.get('last_update_date_finding_ids', [])
 
-    events: list["AwsSecurityFindingTypeDef"] = []
+    events: list[AwsSecurityFindingTypeDef] = []
     error = None
 
     try:
@@ -250,7 +250,7 @@ def main():  # pragma: no cover
             retries=retries,
         )
 
-        client: "SecurityHubClient" = aws_client.aws_session(
+        client: SecurityHubClient = aws_client.aws_session(
             service='securityhub',
             region=aws_default_region,
             role_arn=aws_role_arn,

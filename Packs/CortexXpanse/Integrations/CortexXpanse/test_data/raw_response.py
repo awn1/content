@@ -130,6 +130,21 @@ EXTERNAL_SERVICE_RESPONSE = {
                     "Acme"
                 ],
                 "externally_inferred_vulnerability_score": 7.8,
+                "ipv6s": [
+                    "2600:1900:4000:9664:0:7::"
+                ],
+                "aws_cloud_tags": [
+                    "Name:AD Lab"
+                ],
+                "gcp_cloud_tags": [
+                    "Name:gcp Lab"
+                ],
+                "azure_cloud_tags": [
+                    "Name:azure Lab"
+                ],
+                "mac_address": ["00:11:22:33:44:55"],
+                "has_xdr_agent": "NO",
+                "has_bu_overrides": False,
                 "externally_inferred_cves": [
                     "CVE-2020-15778",
                     "CVE-2021-41617",
@@ -833,7 +848,7 @@ INTERNET_EXPOSURE_PRE_FORMAT = [
 LIST_ALERTS_RESPONSE = {
     "reply": {
         "total_count": 696,
-        "result_count": 2,
+        "result_count": 3,
         "alerts": [
             {
                 "external_id": "FAKE-GUID",
@@ -1144,6 +1159,161 @@ LIST_ALERTS_RESPONSE = {
                 "action": "NOT_AVAILABLE",
                 "action_pretty": "N/A",
                 "tags": null
+            },
+            {
+                "external_id": "FAKE-GUID-3",
+                "severity": "high",
+                "matching_status": "MATCHED",
+                "end_match_attempt_ts": null,
+                "local_insert_ts": 1659455246813,
+                "last_modified_ts": 1660240426055,
+                "bioc_indicator": null,
+                "matching_service_rule_id": null,
+                "attempt_counter": null,
+                "bioc_category_enum_key": null,
+                "is_whitelisted": false,
+                "starred": false,
+                "deduplicate_tokens": null,
+                "filter_rule_id": null,
+                "mitre_technique_id_and_name": null,
+                "mitre_tactic_id_and_name": null,
+                "agent_version": null,
+                "agent_ip_addresses_v6": null,
+                "agent_device_domain": null,
+                "agent_fqdn": null,
+                "agent_os_type": "NO_HOST",
+                "agent_os_sub_type": null,
+                "agent_data_collection_status": null,
+                "mac": null,
+                "is_pcap": false,
+                "alert_type": "Unclassified",
+                "resolution_status": "STATUS_230_REOPENED",
+                "resolution_comment": "ASM alert reopened",
+                "dynamic_fields": null,
+                "events": [
+                    {
+                        "agent_install_type": "NA",
+                        "agent_host_boot_time": null,
+                        "event_sub_type": null,
+                        "module_id": null,
+                        "association_strength": null,
+                        "dst_association_strength": null,
+                        "story_id": null,
+                        "event_id": null,
+                        "event_type": null,
+                        "event_timestamp": 1659452809020,
+                        "actor_process_instance_id": null,
+                        "actor_process_image_path": null,
+                        "actor_process_image_name": null,
+                        "actor_process_command_line": null,
+                        "actor_process_signature_status": "N/A",
+                        "actor_process_signature_vendor": null,
+                        "actor_process_image_sha256": null,
+                        "actor_process_image_md5": null,
+                        "actor_process_causality_id": null,
+                        "actor_causality_id": null,
+                        "actor_process_os_pid": null,
+                        "actor_thread_thread_id": null,
+                        "causality_actor_process_image_name": null,
+                        "causality_actor_process_command_line": null,
+                        "causality_actor_process_image_path": null,
+                        "causality_actor_process_signature_vendor": null,
+                        "causality_actor_process_signature_status": "N/A",
+                        "causality_actor_causality_id": null,
+                        "causality_actor_process_execution_time": null,
+                        "causality_actor_process_image_md5": null,
+                        "causality_actor_process_image_sha256": null,
+                        "action_file_path": null,
+                        "action_file_name": null,
+                        "action_file_md5": null,
+                        "action_file_sha256": null,
+                        "action_file_macro_sha256": null,
+                        "action_registry_data": null,
+                        "action_registry_key_name": null,
+                        "action_registry_value_name": null,
+                        "action_registry_full_key": null,
+                        "action_local_ip": null,
+                        "action_local_ip_v6": null,
+                        "action_local_port": null,
+                        "action_remote_ip": null,
+                        "action_remote_ip_v6": null,
+                        "action_remote_port": 80,
+                        "action_external_hostname": null,
+                        "action_country": "UNKNOWN",
+                        "action_process_instance_id": null,
+                        "action_process_causality_id": null,
+                        "action_process_image_name": null,
+                        "action_process_image_sha256": null,
+                        "action_process_image_command_line": null,
+                        "action_process_signature_status": "N/A",
+                        "action_process_signature_vendor": null,
+                        "os_actor_effective_username": null,
+                        "os_actor_process_instance_id": null,
+                        "os_actor_process_image_path": null,
+                        "os_actor_process_image_name": null,
+                        "os_actor_process_command_line": null,
+                        "os_actor_process_signature_status": "N/A",
+                        "os_actor_process_signature_vendor": null,
+                        "os_actor_process_image_sha256": null,
+                        "os_actor_process_causality_id": null,
+                        "os_actor_causality_id": null,
+                        "os_actor_process_os_pid": null,
+                        "os_actor_thread_thread_id": null,
+                        "fw_app_id": null,
+                        "fw_interface_from": null,
+                        "fw_interface_to": null,
+                        "fw_rule": null,
+                        "fw_rule_id": null,
+                        "fw_device_name": null,
+                        "fw_serial_number": null,
+                        "fw_url_domain": null,
+                        "fw_email_subject": null,
+                        "fw_email_sender": null,
+                        "fw_email_recipient": null,
+                        "fw_app_subcategory": null,
+                        "fw_app_category": null,
+                        "fw_app_technology": null,
+                        "fw_vsys": null,
+                        "fw_xff": null,
+                        "fw_misc": null,
+                        "fw_is_phishing": "N/A",
+                        "dst_agent_id": null,
+                        "dst_causality_actor_process_execution_time": null,
+                        "dns_query_name": null,
+                        "dst_action_external_hostname": null,
+                        "dst_action_country": null,
+                        "dst_action_external_port": null,
+                        "contains_featured_host": "NO",
+                        "contains_featured_user": "NO",
+                        "contains_featured_ip": "NO",
+                        "image_name": null,
+                        "container_id": null,
+                        "cluster_name": null,
+                        "referenced_resource": null,
+                        "operation_name": null,
+                        "identity_sub_type": null,
+                        "identity_type": null,
+                        "project": null,
+                        "cloud_provider": null,
+                        "resource_type": null,
+                        "resource_sub_type": null,
+                        "user_agent": null,
+                        "user_name": null
+                    }
+                ],
+                "alert_id": "34",
+                "detection_timestamp": 1659452809020,
+                "name": "Networking Infrastructure",
+                "category": null,
+                "endpoint_id": null,
+                "description": "Networking and security infrastructure, such as firewalls and routers, generally should not have their administration panels open to public Internet. Compromise of these devices, often though password guessing or vulnerability exploitation, provides privileged access to an enterprise network.",
+                "host_ip": null,
+                "host_name": null,
+                "mac_addresses": null,
+                "source": "ASM",
+                "action": "NOT_AVAILABLE",
+                "action_pretty": "N/A",
+                "tags": null
             }
         ]
     }
@@ -1407,7 +1577,7 @@ INCIDENT_GET_RAW = {
                     "country_codes": "RU",
                     "cloud_providers": "On Prem",
                     "ipv4_addresses": "1.1.1.1",
-                    "ipv6_addresses": null,
+                    "ipv6_addresses": "1111:2222:33333:4444:5555:6666:7777:8888",
                     "domain_names": "acme.com",
                     "service_ids": "8b4ea64b-e3da-3942-9fdd-aaa5289cfdc1",
                     "website_ids": null,
@@ -1585,113 +1755,695 @@ ALERT_UPDATE_RAW = {
     }
 }
 
-IP_DOMAIN_RAW = {
+EXTERNAL_WEBSITES_RESPONSE = response = {
     "reply": {
-        "total_count": 1,
-        "result_count": 1,
-        "assets_internet_exposure": [
+        "total_count": 3343,
+        "result_count": 5,
+        "websites": [
             {
-                "asm_ids": [
-                    "4b1f3765-de40-3a1a-8535-667420408fd9"
+                "website_id": null,
+                "host": "example.com",
+                "protocol": "HTTPS",
+                "is_active": "ACTIVE",
+                "site_categories": [],
+                "technology_ids": [
+                    "http-2",
+                    "google-font-api",
+                    "hsts"
                 ],
-                "name": "*.acme.com",
-                "asset_type": "DOMAIN",
-                "cloud_provider": null,
-                "externally_detected_providers": [
-                    "Amazon Web Services"
+                "first_observed": 1704494700000,
+                "last_observed": 1705363560000,
+                "provider_names": [
+                    "Google"
                 ],
                 "ips": [
                     "1.1.1.1"
                 ],
-                "service_type": [
-                    "HttpServer"
+                "port": 443,
+                "active_service_ids": [
+                    null
                 ],
-                "last_observed": 1697361335282,
-                "first_observed": 1679457579382,
-                "has_active_externally_services": true,
-                "has_xdr_agent": "NA",
-                "certificate_classifications": [],
-                "certificate_issuer": null,
-                "certificate_algorithm": null,
-                "mac_addresses": [],
-                "cloud_id": null,
-                "ip_ranges": [],
-                "domain_resolves": true,
-                "operation_system": null,
-                "asm_va_score": null,
-                "externally_inferred_cves": [],
-                "agent_id": null,
-                "tags": [
-                    "BU:Xpanse VanDelay Demo 3"
-                ],
-                "ipv6s": null,
-                "has_alerts": false,
-                "has_incidents": false,
-                "annotation": null,
-                "cloud_resource_type": null,
-                "provider_account": null,
-                "domain": "*.acme.com",
-                "asset_explainers": [],
-                "date_added": 1679398600086,
-                "certificate_details": null,
-                "domain_details": {
-                    "admin": {},
-                    "alignedRegistrar": "MarkMonitor",
-                    "collectionTime": 1695942091000,
-                    "creationDate": 785376000000,
-                    "dnssec": null,
-                    "domainName": "acme.com",
-                    "domainStatuses": [
-                        "clientUpdateProhibited",
-                        "clientTransferProhibited",
-                        "clientDeleteProhibited"
-                    ],
-                    "dropped": false,
-                    "nameServers": [],
-                    "registrant": {},
-                    "registrar": {},
-                    "registryDomainId": null,
-                    "registryExpiryDate": 1732060800000,
-                    "reseller": null,
-                    "retrievedDate": 1696075229360,
-                    "tech": {},
-                    "updatedDate": 1666137600000
-                },
-                "last_sampled_ip": "1.1.1.1",
-                "recent_ips": [
+                "http_type": "HTTPS",
+                "third_party_script_domains": [],
+                "security_assessments": [
                     {
-                        "id": "218b3cc9-2d26-3a17-aadd-9eac08cc30ec",
-                        "ip": "1.1.1.1",
-                        "ipv6": null,
-                        "source": {
-                            "name": "DOMAIN_RESOLUTION"
-                        },
-                        "provider": {
-                            "name": "AWS",
-                            "additionalProviderInfo": null,
-                            "isCdn": false,
-                            "legacyName": "AWS",
-                            "displayName": "Amazon Web Services",
-                            "cdn": false
-                        },
-                        "firstObserved": 1692418207732,
-                        "lastObserved": 1697361335282
+                        "name": "Has HTTPS Enabled",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This website uses HTTPS which encrypts data in transit between browser and server."
+                        }
+                    },
+                    {
+                        "name": "Secure Forms",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Forms on this website are submitted over HTTPS."
+                        }
+                    },
+                    {
+                        "name": "No Mixed Content",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Pages on this website do not include content fetched using cleartext HTTP."
+                        }
+                    },
+                    {
+                        "name": "Protocol Downgrade",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Redirects never downgrade from HTTPS to HTTP."
+                        }
+                    },
+                    {
+                        "name": "Sets valid X-Frame-Options Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This header prevents browser from rendering this site inside an iframe or other embedding methods. This helps to prevent click-jacking attacks."
+                        }
+                    },
+                    {
+                        "name": "Sets valid X-Content-Type-Options Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This header is used by the server to prevent browsers from guessing the media type (MIME type) known as MIME sniffing. The absence of this header might cause browsers to transform non-executable content into executable content."
+                        }
+                    },
+                    {
+                        "name": "Sets valid Content-Type Header",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This header is used to indicate the original media type of the resource. The charset attribute is necessary in this header to prevent XSS in HTML pages."
+                        }
+                    },
+                    {
+                        "name": "Sets HTTP Strict Transport Security Header",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This website sets a HSTS Header which ensures that the browser will always request the encrypted HTTPS version of the website regardless of what links are clicked or URL a site visitor enters."
+                        }
+                    },
+                    {
+                        "name": "Sets valid Referrer-Policy Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This HTTP header controls how much referrer information should be included with requests. Today, the default behavior in modern browsers is to no longer send all referrer information (origin, path, and query string) to the same site but to only send the origin to other sites. However, since not all users may be using the latest browsers we suggest forcing this behavior by sending this header on all requests."
+                        }
                     }
                 ],
-                "business_units": [
-                    [
-                        {
-                            "creation_time": 1697472961328,
-                            "family": "business_units",
-                            "family_alias": "BU",
-                            "id": "BU:fabdd2a9-e1e7-4d76-ba75-35a817980d3f",
-                            "name": "Xpanse VanDelay Demo 3",
-                            "parent_id": null,
-                            "update_time": 1697472961328
-                        }
-                    ]
+                "authentication": [
+                    "Form Based Auth"
+                ],
+                "rootPageHttpStatusCode": "302",
+                "isNonConfiguredHost": false,
+                "externally_inferred_vulnerability_score": null,
+                "externally_inferred_cves": [],
+                "tags": [
+                    "nemo"
                 ]
-            }
-        ]
+            },
+            {
+                "website_id": null,
+                "host": "example.com",
+                "protocol": "HTTPS",
+                "is_active": "ACTIVE",
+                "site_categories": [],
+                "technology_ids": [
+                    "http-2",
+                    "google-font-api",
+                    "hsts"
+                ],
+                "first_observed": 1704494700000,
+                "last_observed": 1705363560000,
+                "provider_names": [
+                    "Google"
+                ],
+                "ips": [
+                    "1.1.1.1"
+                ],
+                "port": 443,
+                "active_service_ids": [
+                    null
+                ],
+                "http_type": "HTTPS",
+                "third_party_script_domains": [],
+                "security_assessments": [
+                    {
+                        "name": "Has HTTPS Enabled",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This website uses HTTPS which encrypts data in transit between browser and server."
+                        }
+                    },
+                    {
+                        "name": "Secure Forms",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Forms on this website are submitted over HTTPS."
+                        }
+                    },
+                    {
+                        "name": "No Mixed Content",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Pages on this website do not include content fetched using cleartext HTTP."
+                        }
+                    },
+                    {
+                        "name": "Protocol Downgrade",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Redirects never downgrade from HTTPS to HTTP."
+                        }
+                    },
+                    {
+                        "name": "Sets valid X-Frame-Options Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This header prevents browser from rendering this site inside an iframe or other embedding methods. This helps to prevent click-jacking attacks."
+                        }
+                    },
+                    {
+                        "name": "Sets valid X-Content-Type-Options Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This header is used by the server to prevent browsers from guessing the media type (MIME type) known as MIME sniffing. The absence of this header might cause browsers to transform non-executable content into executable content."
+                        }
+                    },
+                    {
+                        "name": "Sets valid Content-Type Header",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This header is used to indicate the original media type of the resource. The charset attribute is necessary in this header to prevent XSS in HTML pages."
+                        }
+                    },
+                    {
+                        "name": "Sets HTTP Strict Transport Security Header",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This website sets a HSTS Header which ensures that the browser will always request the encrypted HTTPS version of the website regardless of what links are clicked or URL a site visitor enters."
+                        }
+                    },
+                    {
+                        "name": "Sets valid Referrer-Policy Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This HTTP header controls how much referrer information should be included with requests. Today, the default behavior in modern browsers is to no longer send all referrer information (origin, path, and query string) to the same site but to only send the origin to other sites. However, since not all users may be using the latest browsers we suggest forcing this behavior by sending this header on all requests."
+                        }
+                    }
+                ],
+                "authentication": [
+                    "Form Based Auth"
+                ],
+                "rootPageHttpStatusCode": "302",
+                "isNonConfiguredHost": false,
+                "externally_inferred_vulnerability_score": null,
+                "externally_inferred_cves": [],
+                "tags": [
+                    "nemo"
+                ]
+            },
+            {
+                "website_id": null,
+                "host": "example.com",
+                "protocol": "HTTPS",
+                "is_active": "ACTIVE",
+                "site_categories": [],
+                "technology_ids": [
+                    "http-2",
+                    "google-font-api",
+                    "hsts"
+                ],
+                "first_observed": 1704494700000,
+                "last_observed": 1705363560000,
+                "provider_names": [
+                    "Google"
+                ],
+                "ips": [
+                    "1.1.1.1"
+                ],
+                "port": 443,
+                "active_service_ids": [
+                    null
+                ],
+                "http_type": "HTTPS",
+                "third_party_script_domains": [],
+                "security_assessments": [
+                    {
+                        "name": "Has HTTPS Enabled",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This website uses HTTPS which encrypts data in transit between browser and server."
+                        }
+                    },
+                    {
+                        "name": "Secure Forms",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Forms on this website are submitted over HTTPS."
+                        }
+                    },
+                    {
+                        "name": "No Mixed Content",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Pages on this website do not include content fetched using cleartext HTTP."
+                        }
+                    },
+                    {
+                        "name": "Protocol Downgrade",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Redirects never downgrade from HTTPS to HTTP."
+                        }
+                    },
+                    {
+                        "name": "Sets valid X-Frame-Options Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This header prevents browser from rendering this site inside an iframe or other embedding methods. This helps to prevent click-jacking attacks."
+                        }
+                    },
+                    {
+                        "name": "Sets valid X-Content-Type-Options Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This header is used by the server to prevent browsers from guessing the media type (MIME type) known as MIME sniffing. The absence of this header might cause browsers to transform non-executable content into executable content."
+                        }
+                    },
+                    {
+                        "name": "Sets valid Content-Type Header",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This header is used to indicate the original media type of the resource. The charset attribute is necessary in this header to prevent XSS in HTML pages."
+                        }
+                    },
+                    {
+                        "name": "Sets HTTP Strict Transport Security Header",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This website sets a HSTS Header which ensures that the browser will always request the encrypted HTTPS version of the website regardless of what links are clicked or URL a site visitor enters."
+                        }
+                    },
+                    {
+                        "name": "Sets valid Referrer-Policy Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This HTTP header controls how much referrer information should be included with requests. Today, the default behavior in modern browsers is to no longer send all referrer information (origin, path, and query string) to the same site but to only send the origin to other sites. However, since not all users may be using the latest browsers we suggest forcing this behavior by sending this header on all requests."
+                        }
+                    }
+                ],
+                "authentication": [
+                    "Form Based Auth"
+                ],
+                "rootPageHttpStatusCode": "302",
+                "isNonConfiguredHost": false,
+                "externally_inferred_vulnerability_score": null,
+                "externally_inferred_cves": [],
+                "tags": [
+                    "nemo"
+                ]
+            },
+            {
+                "website_id": null,
+                "host": "example.com",
+                "protocol": "HTTPS",
+                "is_active": "ACTIVE",
+                "site_categories": [],
+                "technology_ids": [
+                    "http-2",
+                    "google-font-api",
+                    "hsts"
+                ],
+                "first_observed": 1704494700000,
+                "last_observed": 1705363560000,
+                "provider_names": [
+                    "Google"
+                ],
+                "ips": [
+                    "1.1.1.1"
+                ],
+                "port": 443,
+                "active_service_ids": [
+                    null
+                ],
+                "http_type": "HTTPS",
+                "third_party_script_domains": [],
+                "security_assessments": [
+                    {
+                        "name": "Has HTTPS Enabled",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This website uses HTTPS which encrypts data in transit between browser and server."
+                        }
+                    },
+                    {
+                        "name": "Secure Forms",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Forms on this website are submitted over HTTPS."
+                        }
+                    },
+                    {
+                        "name": "No Mixed Content",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Pages on this website do not include content fetched using cleartext HTTP."
+                        }
+                    },
+                    {
+                        "name": "Protocol Downgrade",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Redirects never downgrade from HTTPS to HTTP."
+                        }
+                    },
+                    {
+                        "name": "Sets valid X-Frame-Options Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This header prevents browser from rendering this site inside an iframe or other embedding methods. This helps to prevent click-jacking attacks."
+                        }
+                    },
+                    {
+                        "name": "Sets valid X-Content-Type-Options Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This header is used by the server to prevent browsers from guessing the media type (MIME type) known as MIME sniffing. The absence of this header might cause browsers to transform non-executable content into executable content."
+                        }
+                    },
+                    {
+                        "name": "Sets valid Content-Type Header",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This header is used to indicate the original media type of the resource. The charset attribute is necessary in this header to prevent XSS in HTML pages."
+                        }
+                    },
+                    {
+                        "name": "Sets HTTP Strict Transport Security Header",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This website sets a HSTS Header which ensures that the browser will always request the encrypted HTTPS version of the website regardless of what links are clicked or URL a site visitor enters."
+                        }
+                    },
+                    {
+                        "name": "Sets valid Referrer-Policy Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This HTTP header controls how much referrer information should be included with requests. Today, the default behavior in modern browsers is to no longer send all referrer information (origin, path, and query string) to the same site but to only send the origin to other sites. However, since not all users may be using the latest browsers we suggest forcing this behavior by sending this header on all requests."
+                        }
+                    }
+                ],
+                "authentication": [
+                    "Form Based Auth"
+                ],
+                "rootPageHttpStatusCode": "302",
+                "isNonConfiguredHost": false,
+                "externally_inferred_vulnerability_score": null,
+                "externally_inferred_cves": [],
+                "tags": [
+                    "nemo"
+                ]
+            },
+            {
+                "website_id": null,
+                "host": "example.com",
+                "protocol": "HTTPS",
+                "is_active": "ACTIVE",
+                "site_categories": [],
+                "technology_ids": [
+                    "http-2",
+                    "google-font-api",
+                    "hsts"
+                ],
+                "first_observed": 1704494700000,
+                "last_observed": 1705363560000,
+                "provider_names": [
+                    "Google"
+                ],
+                "ips": [
+                    "1.1.1.1"
+                ],
+                "port": 443,
+                "active_service_ids": [
+                    null
+                ],
+                "http_type": "HTTPS",
+                "third_party_script_domains": [],
+                "security_assessments": [
+                    {
+                        "name": "Has HTTPS Enabled",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This website uses HTTPS which encrypts data in transit between browser and server."
+                        }
+                    },
+                    {
+                        "name": "Secure Forms",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Forms on this website are submitted over HTTPS."
+                        }
+                    },
+                    {
+                        "name": "No Mixed Content",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Pages on this website do not include content fetched using cleartext HTTP."
+                        }
+                    },
+                    {
+                        "name": "Protocol Downgrade",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "Redirects never downgrade from HTTPS to HTTP."
+                        }
+                    },
+                    {
+                        "name": "Sets valid X-Frame-Options Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This header prevents browser from rendering this site inside an iframe or other embedding methods. This helps to prevent click-jacking attacks."
+                        }
+                    },
+                    {
+                        "name": "Sets valid X-Content-Type-Options Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This header is used by the server to prevent browsers from guessing the media type (MIME type) known as MIME sniffing. The absence of this header might cause browsers to transform non-executable content into executable content."
+                        }
+                    },
+                    {
+                        "name": "Sets valid Content-Type Header",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This header is used to indicate the original media type of the resource. The charset attribute is necessary in this header to prevent XSS in HTML pages."
+                        }
+                    },
+                    {
+                        "name": "Sets HTTP Strict Transport Security Header",
+                        "priority": 10,
+                        "score": 1,
+                        "securityAssessmentDetails": {
+                            "pages": [],
+                            "description": "This website sets a HSTS Header which ensures that the browser will always request the encrypted HTTPS version of the website regardless of what links are clicked or URL a site visitor enters."
+                        }
+                    },
+                    {
+                        "name": "Sets valid Referrer-Policy Header",
+                        "priority": 10,
+                        "score": 0,
+                        "securityAssessmentDetails": {
+                            "pages": [
+                                {
+                                    "url": "https://example.com",
+                                    "message": "not_set",
+                                    "elements": []
+                                }
+                            ],
+                            "description": "This HTTP header controls how much referrer information should be included with requests. Today, the default behavior in modern browsers is to no longer send all referrer information (origin, path, and query string) to the same site but to only send the origin to other sites. However, since not all users may be using the latest browsers we suggest forcing this behavior by sending this header on all requests."
+                        }
+                    }
+                ],
+                "authentication": [
+                    "Form Based Auth"
+                ],
+                "rootPageHttpStatusCode": "302",
+                "isNonConfiguredHost": false,
+                "externally_inferred_vulnerability_score": null,
+                "externally_inferred_cves": [],
+                "tags": [
+                    "nemo"
+                ]
+            }]
     }
 }

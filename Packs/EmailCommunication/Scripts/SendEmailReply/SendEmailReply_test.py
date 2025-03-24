@@ -1,7 +1,10 @@
 import pytest
+from freezegun import freeze_time
+
 from CommonServerPython import *
 import json
 import demistomock as demisto
+from SendEmailReply import get_unique_code
 
 
 def util_open_file(path):
@@ -273,17 +276,17 @@ def test_get_query_window(list_response, expected_result, mocker):
         (
             [{'Metadata': {'user': 'DBot'}, 'Contents': 'note1'}, {'Metadata': {'user': 'DBot'}, 'Contents': 'note2'}],
             [{'name': 'attachment1.png'}, {'name': 'attachment2.png'}],
-            "DBot: \nnote1\n\nDBot: \nnote2\n\nAttachments: ['attachment1.png', 'attachment2.png']\n\n"
+            "DBot: \n\nnote1\n\nDBot: \n\nnote2\n\nAttachments: ['attachment1.png', 'attachment2.png']\n\n"
         ),
         (
             [{'Metadata': {'user': 'DBot'}, 'Contents': 'note1'}, {'Metadata': {'user': 'DBot'}, 'Contents': 'note2'}],
             [],
-            "DBot: \nnote1\n\nDBot: \nnote2\n\n"
+            "DBot: \n\nnote1\n\nDBot: \n\nnote2\n\n"
         ),
         (
             [{'Metadata': {'user': 'DBot'}, 'Contents': 'note1'}, {'Metadata': {'user': 'DBot'}, 'Contents': 'note2'}],
             "[]",
-            "DBot: \nnote1\n\nDBot: \nnote2\n\n"
+            "DBot: \n\nnote1\n\nDBot: \n\nnote2\n\n"
         )
     ]
 )
@@ -433,26 +436,26 @@ def test_create_thread_context(email_code, email_threads, scenario, mocker):
     [
         (
             (1, 'Email Subject', False, 'end_user@company.com', 'Email Body', 'soc_sender@company.com', '', '',
-             '<html><body>Email Body</body></html>', 'html', [], '12345678', 'soc_sender@company.com', 'attachment.txt'),
+             '<html><body>Email Body</body></html>', 'html', [], '12345678', 'soc_sender@company.com', 'attachment.txt', ''),
             (1, 'Email Subject', False, 'end_user@company.com', 'Email Body', 'soc_sender@company.com', '', '',
-             'Email Body + Signature', 'html', [], 'attachment.txt', '12345678', 'soc_sender@company.com'),
+             'Email Body + Signature', 'html', [], 'attachment.txt', '12345678', 'soc_sender@company.com', ''),
             'Mail sent successfully. To: end_user@company.com'),
         (
             (1, 'Email Subject', False, 'end_user@company.com', 'Email Body', 'soc_sender@company.com',
              'cc_user@company.com', '',
-             '<html><body>Email Body</body></html>', 'html', [], '12345678', 'soc_sender@company.com', 'attachment.txt'),
+             '<html><body>Email Body</body></html>', 'html', [], '12345678', 'soc_sender@company.com', 'attachment.txt', ''),
             (1, 'Email Subject', False, 'end_user@company.com', 'Email Body', 'soc_sender@company.com',
              'cc_user@company.com', '',
-             'Email Body + Signature', 'html', [], 'attachment.txt', '12345678', 'soc_sender@company.com'),
+             'Email Body + Signature', 'html', [], 'attachment.txt', '12345678', 'soc_sender@company.com', ''),
             'Mail sent successfully. To: end_user@company.com Cc: cc_user@company.com'),
         (
             (1, 'Email Subject', False, 'end_user@company.com', 'Email Body', 'soc_sender@company.com', '',
              'bcc_user@company.com', '<html><body>Email Body</body></html>', 'html', [], '12345678',
              'soc_sender@company.com',
-             'attachment.txt'),
+             'attachment.txt', ''),
             (1, 'Email Subject', False, 'end_user@company.com', 'Email Body', 'soc_sender@company.com', '',
              'bcc_user@company.com',
-             'Email Body + Signature', 'html', [], 'attachment.txt', '12345678', 'soc_sender@company.com'),
+             'Email Body + Signature', 'html', [], 'attachment.txt', '12345678', 'soc_sender@company.com', ''),
             'Mail sent successfully. To: end_user@company.com Bcc: bcc_user@company.com')
     ]
 )
@@ -497,7 +500,8 @@ def test_resend_first_contact(email_selected_thread, email_thread, expected_resu
     from SendEmailReply import resend_first_contact
     import SendEmailReply
     mocker.patch.object(SendEmailReply, 'get_entry_id_list', return_value=['5', '10'])
-    mocker.patch.object(SendEmailReply, 'format_body', return_value='<html><body>Resending email.</body></html>')
+    mocker.patch.object(SendEmailReply, 'format_body', return_value=('<html><body>Resending email.</body></html>',
+                                                                     '<html><body>Resending email.</body></html>'))
     mocker.patch.object(SendEmailReply, 'get_email_cc', return_value='')
     send_new_email_mocker = mocker.patch.object(SendEmailReply, 'send_new_email', return_value=True)
     return_error_mocker = mocker.patch.object(SendEmailReply, 'return_error', return_value=True)
@@ -510,7 +514,8 @@ def test_resend_first_contact(email_selected_thread, email_thread, expected_resu
         assert send_new_email_args.args == (1, '<69433507> Test Email 2', False, 'end_user@company.com',
                                             'Resending email.', 'soc_sender@company.com', '', '',
                                             '<html><body>Resending email.</body></html>', 'html', ['5', '10'],
-                                            '69433507', 'soc_sender@company.com', '')
+                                            '69433507', 'soc_sender@company.com', '',
+                                            '<html><body>Resending email.</body></html>')
     if expected_result == 'fail':
         assert return_error_args.args[0] == ('The selected Thread Number to respond to (42) does not exist.  '
                                              'Please choose a valid Thread Number and re-try.')
@@ -535,7 +540,7 @@ def test_single_thread_reply(email_code, mocker):
     """
 
     def get_reply_body_side_effect(notes, incident_id, attachments, reputation_calc_async):  # noqa
-        return 'Email body.', '<html><body>Email body.</body></html>'
+        return 'Email body.', '<html><body>Email body.</body></html>', '<html><body>Email body.</body></html>'
 
     from SendEmailReply import single_thread_reply
     import SendEmailReply
@@ -563,7 +568,7 @@ def test_single_thread_reply(email_code, mocker):
     [
         ((1, 'Email Subject', False, 'end_user@company.com', 'Message body.', 'soc_sender@company.com',
           'cc_user@company.com', 'bcc_user@company.com', '<html><body>Reply body.</body></html', 'html', ['10', '12'], '',
-          '12345678', 'soc_sender@company.com'),
+          '12345678', 'soc_sender@company.com', ''),
          {'to': 'end_user@company.com', 'subject': '<12345678> Email Subject',
           'cc': 'cc_user@company.com', 'bcc': 'bcc_user@company.com',
           'htmlBody': '<html><body>Reply body.</body></html',
@@ -572,7 +577,7 @@ def test_single_thread_reply(email_code, mocker):
          ),
         ((1, 'Email Subject', False, 'end_user@company.com', 'Message body.', 'soc_sender@company.com',
           'cc_user@company.com', 'bcc_user@company.com', '<html><body>Reply body.</body></html', 'html', ['10', '12'], '',
-          '12345678', ''),
+          '12345678', '', ''),
          {'to': 'end_user@company.com', 'subject': '<12345678> Email Subject',
           'cc': 'cc_user@company.com', 'bcc': 'bcc_user@company.com',
           'htmlBody': '<html><body>Reply body.</body></html',
@@ -645,12 +650,12 @@ def test_multi_thread_new(scenario, mocker):
     mocker.patch.object(SendEmailReply, 'get_unique_code', return_value='87654321')
     set_incident_mocker = mocker.patch.object(demisto, 'executeCommand', return_value=True)
     mocker.patch.object(SendEmailReply, 'get_entry_id_list', return_value=[])
-    mocker.patch.object(SendEmailReply, 'format_body', return_value='<html>Some HTML</html>')
+    mocker.patch.object(SendEmailReply, 'format_body', return_value=('<html>Some HTML</html>', '<html>Some HTML</html>'))
     send_new_email_mocker = mocker.patch.object(SendEmailReply, 'send_new_email', return_value=True)
     reset_fields_mocker = mocker.patch.object(SendEmailReply, 'reset_fields', return_value=True)
     if scenario == 'required_fields_missing':
         # Test Scenario 1
-        expected = "The following required fields have not been set.  Please set them and try again. " \
+        expected = "The following required fields have not been set. Please set them and try again. " \
                    "['New Email Subject', 'New Email Recipients', 'New Email Body']"
         multi_thread_new('', False, '', '', 'html', 1, '12345678', '', '', 'soc_sender@company.com', 'cc_user@company.com',
                          'bcc_user@company.com', 'soc_sender@company.com', '')
@@ -666,7 +671,7 @@ def test_multi_thread_new(scenario, mocker):
         assert set_incident_call_args.args[1] == {'id': 1, 'customFields': {'emailgeneratedcodes': '87654321'}}
         valid_args = (1, 'New Subject', False, 'end_user@company.com', 'Email Body', 'soc_sender@company.com',
                       'cc_user@company.com', 'bcc_user@company.com', '<html>Some HTML</html>', 'html', [], '87654321',
-                      'soc_sender@company.com', '')
+                      'soc_sender@company.com', '', '<html>Some HTML</html>')
         assert send_new_email_mocker_args.args == valid_args
         assert reset_fields_mocker.called is True
     if scenario == 'codes_present':
@@ -679,7 +684,7 @@ def test_multi_thread_new(scenario, mocker):
         assert set_incident_call_args.args[1] == {'id': 1, 'customFields': {'emailgeneratedcodes': '12345678,87654321'}}
         valid_args = (1, 'New Subject', False, 'end_user@company.com', 'Email Body', 'soc_sender@company.com',
                       'cc_user@company.com', 'bcc_user@company.com', '<html>Some HTML</html>', 'html', [], '87654321',
-                      'soc_sender@company.com', '')
+                      'soc_sender@company.com', '', '<html>Some HTML</html>')
         assert send_new_email_mocker_args.args == valid_args
         assert reset_fields_mocker.called is True
 
@@ -747,7 +752,8 @@ def test_multi_thread_reply(scenario, mocker):
     resend_first_contact_mocker = mocker.patch.object(SendEmailReply, 'resend_first_contact', return_value=True)
     mocker.patch.object(SendEmailReply, 'reset_fields', return_value=True)
     mocker.patch.object(SendEmailReply, 'return_results', return_value=True)
-    mocker.patch.object(SendEmailReply, 'format_body', return_value='<html><body>Email body</body></html>')
+    mocker.patch.object(SendEmailReply, 'format_body', return_value=(
+        '<html><body>Email body</body></html>', '<html><body>Email body</body></html>'))
     mocker.patch.object(SendEmailReply, 'append_email_signature',
                         return_value='<html><body>Email body+signature</body></html>')
     reset_fields_mocker = mocker.patch.object(SendEmailReply, 'reset_fields', return_value=True)
@@ -801,7 +807,7 @@ def test_multi_thread_reply(scenario, mocker):
         thread_details = (
             True, 'AAMkAGRcOGZlZTEzLTkyZGDtNGJkNy1iOWMxLYM0NTAwODZhZjlxNABGAAAAAAAP2ksrJ8icRL4Zhadm7iVXBwAkkBJXBb0'
                   'sRJWC0zdXEMqsAAAAAAEMAAAkkBJFBb0fRJWC0zdXEMqsABApcWVYAAA=', False, '87692312',
-            'Re: <87692312> Test Email 4', 'end_user@company.com, soc_sender@company.com',
+            'RE: <87692312> Test Email 4', 'end_user@company.com, soc_sender@company.com',
             'soc_sender@company.com', '', '', 2)
         mocker.patch.object(SendEmailReply, 'collect_thread_details', return_value=thread_details)
         # Return all email thread entries
@@ -884,7 +890,7 @@ def test_main(new_thread, mocker):
     if new_thread == 'n/a':
         single_thread_reply_args = single_thread_reply_mocker.call_args
         expected_args = ('87654321', '10', '', 'test_cc@example.com', '', 'html', [], {}, None, False, 'end_user@company.com',
-                         'soc_sender@company.com', '123456', 'mail-sender-instance-1')
+                         'soc_sender@company.com', '123456', 'mail-sender-instance-1', False)
         assert single_thread_reply_args.args == expected_args
     elif new_thread == 'true':
         multi_thread_new_args = multi_thread_new_mocker.call_args
@@ -897,3 +903,136 @@ def test_main(new_thread, mocker):
         expected_args = ('This is a test email.', 'html', '10', 1, {}, {}, 'test_cc@example.com', 'test_bcc@example.com',
                          'soc_sender@company.com', 'mail-sender-instance-1', 'None', False)
         assert multi_thread_reply_args.args == expected_args
+
+
+# Parametrized test for happy path scenarios with various realistic markdown inputs
+@pytest.mark.parametrize("input_md, expected_html, test_id", [
+    # Test ID: #1 - Simple text conversion
+    ("Hello, World!", "<p>Hello, World!</p>", "simple_text"),
+
+    # Test ID: #2 - Header conversion
+    ("# Header 1", "<h1>Header 1</h1>", "header_conversion"),
+
+    # Test ID: #3 - Table conversion
+    ("| Header1 | Header2 |\n| ------- | ------- |\n| Cell1   | Cell2   |",
+     "<table>\n<thead>\n<tr>\n<th>Header1</th>\n<th>Header2</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Cell1</td>\n"
+     "<td>Cell2</td>\n</tr>\n</tbody>\n</table>",
+     "table_conversion"),
+
+    # Test ID: #4 - Emphasis conversion using legacy syntax
+    ("_italic_ **bold**",
+     "<p><em>italic</em> <strong>bold</strong></p>",
+     "emphasis_conversion"),
+
+    # Test ID: #5 - List conversion
+    ("- Item 1\n- Item 2",
+     "<ul>\n<li>Item 1</li>\n<li>Item 2</li>\n</ul>",
+     "list_conversion"),
+
+    # Test ID: #6 - New lines to <br> conversion
+    ("Line 1\nLine 2",
+     "<p>Line 1<br />\nLine 2</p>",
+     "newline_to_br_conversion"),
+], ids=lambda test_id: test_id)
+def test_format_body_happy_path(input_md, expected_html, test_id):
+    # Act
+    from SendEmailReply import format_body
+    result = format_body(input_md)
+
+    # Assert
+    assert result[1] == expected_html, f"Test failed for {test_id}"
+
+
+# Parametrized test for edge cases
+@pytest.mark.parametrize("input_md, expected_html, test_id", [
+    # Test ID: #1 - Empty string
+    ("", ("", ""), "empty_string"),
+
+    # Test ID: #2 - Markdown with only special characters
+    ("# $%^&*()",
+     ('<h1>$%^&amp;*()</h1>', '<h1>$%^&amp;*()</h1>'),
+     "special_characters_only"),
+], ids=lambda test_id: test_id)
+def test_format_body_edge_cases(input_md, expected_html, test_id):
+    # Act
+    from SendEmailReply import format_body
+    result = format_body(input_md)
+
+    # Assert
+    assert result == expected_html, f"Test failed for {test_id}"
+
+
+# Parametrized test for edge cases
+@pytest.mark.parametrize("input_md, expected_html, test_id", [
+    # Test ID: #1 - Demisto custom markdown underline syntax.
+    ("+underline+", ("<p><u>underline</u></p>", "<p><u>underline</u></p>"), "underline"),
+
+    # Test ID: #2 - Demisto custom markdown strikethrough syntax.
+    ("~~strikethrough~~", ("<p><s>strikethrough</s></p>", "<p><s>strikethrough</s></p>"), "strikethrough"),
+], ids=lambda test_id: test_id)
+def test_demisto_custom_markdown_syntax(input_md, expected_html, test_id):
+    # Act
+    from SendEmailReply import format_body
+    result = format_body(input_md)
+
+    # Assert
+    assert result == expected_html, f"Test failed for {test_id}"
+
+
+@freeze_time("2024-02-22 10:00:00 UTC")
+def test_get_unique_code_happy_path(mocker):
+    # Arrange
+    incident_id = "123"
+    max_tries = 1000
+    expected_code = "1231708596000000"
+    mocker.patch('SendEmailReply.demisto', return_value=None)
+    mocker.patch('SendEmailReply.get_incident_by_query', return_value=None)
+
+    # Act
+    code = get_unique_code(incident_id, max_tries)
+
+    # Assert
+    assert code == expected_code
+
+
+@freeze_time("2024-02-22 10:00:00 UTC")
+def test_get_unique_code_edge_cases(mocker):
+    # Arrange
+    incident_id = "1"
+    max_tries = 1000
+    expected_code = "0011708596000000"
+    mocker.patch('SendEmailReply.get_incident_by_query', return_value=None)
+
+    # Act
+    code = get_unique_code(incident_id, max_tries)
+
+    # Assert
+    assert code == expected_code
+
+
+@freeze_time("2024-02-22 10:00:00 UTC")
+def test_get_unique_code_error_case(mocker):
+    # Arrange
+    incident_id = "123"
+    max_tries = 0
+    mocker.patch('SendEmailReply.get_incident_by_query', return_value=[{"id": "existing_incident"}])
+    mocked_return_error = mocker.patch('SendEmailReply.return_error', side_effect=Exception('Error'))
+
+# Act and Assert
+    with pytest.raises(Exception):
+        get_unique_code(incident_id, max_tries)
+    mocked_return_error.assert_called_once_with(
+        f'Failed to generate unique code for incident {incident_id} after {max_tries} tries')
+
+
+def test_format_body(mocker):
+    from SendEmailReply import format_body
+    html_body = '![image](/markdown/image/aljhgfghdjakldvygi)'
+    mocker.patch.object(demisto, 'executeCommand', return_value=[{'FileID': '111'}])
+    mocker.patch.object(demisto, 'investigation', return_value={'id': '1234'})
+    open_mock = mocker.mock_open(read_data=b'some binary data')
+    mocker.patch('builtins.open', open_mock)
+    result = format_body(html_body)
+    expected_result = ('<p><img alt="image" src="/markdown/image/aljhgfghdjakldvygi" /></p>',
+                       '<p><img alt="image" src="data:image/png;base64,c29tZSBiaW5hcnkgZGF0YQ==" /></p>')
+    assert result == expected_result

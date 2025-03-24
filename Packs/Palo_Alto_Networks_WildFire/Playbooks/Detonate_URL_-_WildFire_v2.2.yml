@@ -185,6 +185,9 @@ tasks:
       '#none#':
       - "5"
     scriptarguments:
+      format:
+        complex:
+          root: inputs.ReportFileType
       url:
         complex:
           root: WildFire
@@ -234,6 +237,12 @@ tasks:
         complex:
           root: inputs.URL
           transformers:
+          - operator: URLEncode
+            args:
+              ignore_safe_character: {}
+              safe_character:
+                value:
+                  simple: :/
           - operator: uniq
     separatecontext: false
     continueonerrortype: ""
@@ -278,15 +287,15 @@ inputs:
   playbookInputQuery:
 - key: Interval
   value:
-    simple: "1"
+    simple: "60"
   required: false
-  description: Duration for executing the polling (in minutes).
+  description: Duration for executing the polling (in seconds).
   playbookInputQuery:
 - key: Timeout
   value:
-    simple: "8"
+    simple: "600"
   required: false
-  description: The duration after which to stop polling and to resume the playbook (in minutes).
+  description: The duration after which to stop polling and to resume the playbook (in seconds).
   playbookInputQuery:
 - key: ReportFileType
   value: {}

@@ -325,7 +325,7 @@ def build_filter_and_url_to_search_with(url_suffix: str, custom_filter: Optional
         Returns:
             The dict or the url to filter with.
         """
-    request_data = {}
+    request_data: dict = {}
     if specific_id_to_search:
         url_suffix += specific_id_to_search
     elif custom_filter:
@@ -335,7 +335,7 @@ def build_filter_and_url_to_search_with(url_suffix: str, custom_filter: Optional
 
     request_data = {'filters': request_data} if 'filters' not in request_data.keys() else request_data
     if is_scan:
-        request_data['isScan'] = True
+        request_data['isScan'] = True  # type: ignore[assignment]
     return request_data, url_suffix
 
 
@@ -959,9 +959,9 @@ def main():  # pragma: no cover
         elif command == 'fetch-incidents':
             first_fetch = params.get('first_fetch')
             max_results = params.get('max_fetch')
-            severity = params.get('severity')
+            severity = params.get('severity') or []
             look_back = arg_to_number(params.get('look_back')) or 0
-            resolution_status = params.get('resolution_status')
+            resolution_status = params.get('resolution_status') or []
             if params.get('custom_filter'):
                 filters = json.loads(str(params.get('custom_filter')))
             else:

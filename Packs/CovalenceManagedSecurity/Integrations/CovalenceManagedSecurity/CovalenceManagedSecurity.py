@@ -1,13 +1,16 @@
-import demistomock as demisto  # noqa: F401
-from CommonServerPython import *  # noqa: F401
-
-
-import os
-import requests
-import traceback
 import json
+import os
+import traceback
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from requests import HTTPError
+from enum import Enum
+from typing import Literal
+
+import demistomock as demisto  # noqa: F401
+import requests
+import urllib3
+from CommonServerPython import *  # noqa: F401
+from requests import HTTPError, Response
 
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 EMAIL = demisto.params().get('credentials')['identifier']
@@ -19,6 +22,48 @@ if not demisto.params().get('proxy', False):
     del os.environ['HTTPS_PROXY']
     del os.environ['http_proxy']
     del os.environ['https_proxy']
+
+
+class EndpointActionType(str, Enum):
+    ISOLATE = "isolate"
+    UNISOLATE = "unisolate"
+    SHUTDOWN = "shutdown"
+    RESTART = "restart"
+    DEFENDER_QUICK_SCAN = "defender_quick_scan"
+    DEFENDER_FULL_SCAN = "defender_full_scan"
+    DEFENDER_SIGNATURE_UPDATE = "defender_signature_update"
+
+
+class CloudActionType(str, Enum):
+    DISABLE_USER = "disable_user"
+    ENABLE_USER = "enable_user"
+    REVOKE_SESSIONS = "revoke_sessions"
+
+
+@dataclass
+class OrganizationResponse:
+    # pylint: disable=invalid-name
+    ID: str
+    name: str
+    client_id: str
+
+
+@dataclass
+class ActionByHostResponse:
+    host_identifier: str
+    agent_uuid: str
+    covalence_appliance: str
+    task_id: int | str
+
+
+@dataclass
+class ActionByCloudAccountResponse:
+    action_id: str
+    action_type: Literal["disable_user", "enable_user", "revoke_sessions"]
+    action_params: dict
+    created_time: str
+    status: Literal["QUEUED", "COMPLETE"]
+    result: Literal["SUCCESS", "FAILED", "PENDING"]
 
 
 class Portal():
@@ -57,6 +102,50 @@ class Portal():
             self.auth = None
             return False
 
+    def paginated_get(self, uri: str,
+                      page_size: int = 500, limit: Optional[int] = None, query: Optional[Dict[str, Any]] = None, **kwargs,):
+        results = []
+        query = query or {}
+
+        # If a limit is passed into the query dict then use it as long as it's an int and another limit
+        # hasn't already been provided as a param
+        if "limit" in query and isinstance(query["limit"], int) and limit is None:
+            # popping it out to check if it's < 0 in a common check with a param provided limit
+            limit = query.pop("limit")
+
+        # if a negative limit is provided then ignore it
+        if isinstance(limit, int) and limit < 0:
+            limit = None
+
+        # On the initial query if the limit is smaller than the page size, the page size needs to be reduced to only hit the limit
+        if isinstance(limit, int) and limit < page_size:
+            query["limit"] = limit
+        else:
+            query["limit"] = page_size
+
+        r = self.get(uri, query=query, **kwargs).json()
+        results.extend(r["items"])
+
+        while True:
+
+            results_length = len(results)
+
+            # break if the limit or total number of results has been exceeded
+            if (isinstance(limit, int) and results_length >= limit) or results_length >= r["total"]:
+                break
+
+            # If there is a limit and the results_length is >= the limit size it would have broken above.
+            # So we know here that results_length is < limit if a limit has been provided.
+            # If the limit is smaller than the page size then just get up to the limit.
+            if isinstance(limit, int) and (limit - results_length) < page_size:
+                query["limit"] = limit - results_length
+
+            query["page"] = r["page"] + 1
+            r = self.get(uri, query=query, **kwargs).json()
+            results.extend(r["items"])
+
+        return results
+
     def get(self, uri, query=None, headers=None, remove_subdomain=False, **kwargs):
         return self._request(uri, method='GET', query=query, headers=headers, remove_subdomain=remove_subdomain,
                              **kwargs)
@@ -76,7 +165,7 @@ class Portal():
             auth = '{} {}'.format(self.scheme, self.auth['token'])
             all_headers.update({'Authorization': auth})
 
-        url = '{}/{}'.format(self.portal_url, uri if len(kwargs) == 0 else uri.format(**kwargs))
+        url = f'{self.portal_url}/{uri if len(kwargs) == 0 else uri.format(**kwargs)}'
         if remove_subdomain:
             url = url.replace('services.', '')
 
@@ -155,6 +244,143 @@ class Portal():
 
         r = self.post("aros/{aro_id}/transition", aro_id=aro_id, json=request)
         return r.json()
+
+    def comment_aro(self, aro_id, comment="", is_comment_sensitive=False):
+        request = {
+            "aro_id": aro_id,
+            "sensitive": is_comment_sensitive,
+            "text": comment
+        }
+
+        r = self.post("aro_comments", json=request)
+        return r.json()
+
+    def list_escalation_contacts(self, org_id: str | None = None) -> List[Dict[str, Any]]:
+        """
+        Get the escalation contact list for a given organization.
+        :param org_id: Org ID.
+        :return: List of escalation contacts.
+        """
+        query = {}
+        if org_id:
+            query["organization_id"] = org_id
+
+        return self.paginated_get("escalation_contact_lists", query=query)
+
+    def list_organization_contacts(self, org_id: str) -> List[Dict[str, Any]]:
+        """
+        Get the organization contact list for a given organization
+        :param org_id: Org ID.
+        :return: List of organization contacts.
+        """
+        r = self.get('organizations/{org_id}', auth=self.auth, org_id=org_id)
+        org_details = r.json()
+        return org_details.get('contacts', None)
+
+    def list_organization_language(self, org_id: str) -> Dict[str, Any]:
+        """
+        Get the default language for a given organization
+        :param org_id: Org ID.
+        :return: Default Language
+        """
+        r = self.get('organizations/{org_id}', auth=self.auth, org_id=org_id)
+        org_details = r.json()
+        locale = org_details.get('profile', {}).get("default_locale", None)
+        return {"default_language": locale}
+
+
+class BrokerClient:
+    def __init__(self, host: str, verify_ssl: bool = False, api_key: str | None = None, timeout: int = 60):
+        self.host = host[:-1] if host.endswith("/") else host
+        self.session = requests.Session()
+        self.verify_ssl = verify_ssl
+        self.api_key = api_key
+        self.timeout = timeout
+
+        if not verify_ssl:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    @property
+    def api_key(self) -> str | None:
+        return self._api_key
+
+    @api_key.setter
+    def api_key(self, value: str | None) -> None:
+        if isinstance(value, str):
+            if not value.startswith("Bearer "):
+                value = f"Bearer {value}"
+            self.session.headers["Authorization"] = value
+        self._api_key = value
+
+    def ping(self) -> str:
+        return self._request(method="GET", path="/ping", check_authentication=False).text
+
+    def organizations(self, to_dataclass: bool = False) -> list[dict] | list[OrganizationResponse]:
+        response: list[dict] = self._request(method="GET", path="/organizations").json()
+        if to_dataclass is True:
+            return [OrganizationResponse(**entry) for entry in response]
+        return response
+
+    def endpoint_action_by_host(
+        self,
+        action_type: EndpointActionType,
+        org_id: str,
+        host_identifier: str,
+        to_dataclass: bool = False,
+    ) -> dict | ActionByHostResponse:
+        response: dict = self._request(
+            method="POST",
+            path=f"/endpoint/host/{action_type.value}",
+            json={"org_id": org_id, "host_identifier": host_identifier},
+        ).json()
+        if to_dataclass is True:
+            return ActionByHostResponse(**response)
+        return response
+
+    def endpoint_action_by_aro(
+            self, action_type: EndpointActionType, aro_id: str, to_dataclass: bool = False) -> dict | ActionByHostResponse:
+        response: dict = self._request(
+            method="POST",
+            path=f"/endpoint/aro/{action_type.value}",
+            json={"aro_id": aro_id},
+        ).json()
+        if to_dataclass is True:
+            return ActionByHostResponse(**response)
+        return response
+
+    def cloud_action_by_aro(
+            self, action_type: CloudActionType, aro_id: str, to_dataclass: bool = False) -> dict | ActionByCloudAccountResponse:
+        response: dict = self._request(
+            method="POST",
+            path=f"/cloud/aro/{action_type.value}",
+            json={"aro_id": aro_id},
+        ).json()
+        if to_dataclass is True:
+            return ActionByCloudAccountResponse(**response)
+        return response
+
+    # pylint: disable=too-many-arguments
+    def _request(
+        self,
+        method: Literal["GET", "POST"],
+        path: str,
+        json: dict | None = None,
+        data: dict | None = None,
+        check_authentication: bool = True,
+    ) -> Response:
+        if check_authentication is True and not isinstance(self.session.headers.get("Authorization"), str):
+            raise Exception('Must provide API Authorization to use Broker commands.')
+
+        host_and_path = f"{self.host}{path}"
+
+        if method == "GET":
+            resp: Response = self.session.get(host_and_path, verify=self.verify_ssl, timeout=self.timeout)
+        else:
+            resp: Response = self.session.post(  # type: ignore[no-redef]
+                host_and_path, json=json, data=data, verify=self.verify_ssl, timeout=self.timeout)
+
+        resp.raise_for_status()
+        return resp
 
 
 ''' Commands '''
@@ -313,16 +539,179 @@ def transition_aro_command():
     return p.transition_aro(**args)
 
 
-def main():
-    demisto.info(f'{demisto.command()} is called')
-    try:
-        if demisto.command() == 'test-module':
-            if portal_check():
-                return_results('ok')
-            else:
-                return_results('nok')
+def comment_aro_command():
+    p = Portal(bearer=API_KEY)
+    args = demisto.args()
+    return p.comment_aro(**args)
 
-        elif demisto.command() == 'fetch-incidents':
+
+def list_escalation_contacts_command(portal_instance, args):
+    contacts = []
+    headers = ['priority', 'first_name', 'last_name', 'job_title', 'phone_number', 'secondary_phone', 'email', 'notes']
+    result = portal_instance.list_escalation_contacts(**args)
+    if result and result[0]['organization_id'] == args['org_id']:
+        for contact in result[0]['escalation_contacts']:
+            # Extract the required fields
+            contact_info = {
+                'priority': contact.get('priority'),
+                'first_name': contact.get('first_name'),
+                'last_name': contact.get('last_name'),
+                'job_title': contact.get('job_title'),
+                'phone_number': contact.get('phone_number'),
+                'secondary_phone': contact.get('secondary_phone'),
+                'email': contact.get('email'),
+                'notes': contact.get('notes')
+            }
+            contacts.append(contact_info)
+
+        readable_output = tableToMarkdown('Escalation Contacts', contacts, headers=headers,
+                                          headerTransform=string_to_table_header)
+    else:
+        readable_output = "No escalation contacts found."
+    return CommandResults(
+        readable_output=readable_output,
+        outputs_prefix='FESPortal.Org',
+        outputs_key_field='ID',
+        outputs=contacts
+    )
+
+
+def list_organization_key_contacts_command(portal_instance, args):
+    contacts = []
+    headers = ['first_name', 'last_name', 'phone_number', 'email', 'type']
+    result = portal_instance.list_organization_contacts(**args)
+    if result:
+        for contact in result:
+            # Extract the required fields
+            if contact['type'] in ["Administrative", "Technical - Primary", "Technical - Secondary", "Primary", "Technical"]:
+                details_key = contact.get('contact_info') or contact.get('user')  # Data can be in either key.
+                contact_info = {
+                    'first_name': details_key.get('first_name'),
+                    'last_name': details_key.get('last_name'),
+                    'phone_number': details_key.get('phone_number'),
+                    'email': details_key.get('email'),
+                    'type': contact['type']
+
+                }
+                contacts.append(contact_info)
+        readable_output = tableToMarkdown('Key Contacts', contacts, headers=headers, headerTransform=string_to_table_header)
+    else:
+        readable_output = "No key contacts found."
+    return CommandResults(
+        readable_output=readable_output,
+        outputs_prefix='FESPortal.Org',
+        outputs_key_field='ID',
+        outputs=contacts
+    )
+
+
+def list_organization_language_command(portal_instance, args):
+    result = portal_instance.list_organization_language(**args)
+    if result:
+        readable_output = tableToMarkdown('Default Organization Language', result, headerTransform=string_to_table_header)
+    else:
+        readable_output = "No default language found."
+    return CommandResults(
+        readable_output=readable_output,
+        outputs_prefix='FESPortal.Org',
+        outputs_key_field='ID',
+        outputs=result
+    )
+
+
+''' Broker Commands '''
+
+
+def ping_broker_command(broker_instance: BrokerClient):
+    result = broker_instance.ping()
+    if 'pong' in result:
+        readable_output = '## Success'
+    else:
+        readable_output = f'Failure - {result}.'
+    return CommandResults(
+        readable_output=readable_output,
+        outputs_prefix='FESBroker.APIStatus',
+        outputs_key_field='',
+        outputs=result
+    )
+
+
+def list_organizations_broker_command(broker_instance: BrokerClient):
+    result = broker_instance.organizations()
+    if result:
+        readable_output = tableToMarkdown('Organizations', result)
+    else:
+        readable_output = "No broker organizations found."
+    return CommandResults(
+        readable_output=readable_output,
+        outputs_prefix='FESBroker.Org',
+        outputs_key_field='ID',
+        outputs=result
+    )
+
+
+def endpoint_action_by_host_broker_command(broker_instance: BrokerClient, args):
+    action_type = EndpointActionType[args["action_type"]]
+    result = broker_instance.endpoint_action_by_host(action_type, args["org_id"], args["host_identifier"])
+    return CommandResults(
+        readable_output=tableToMarkdown('Command Result - Success', result),
+        outputs_prefix='FESBroker.Action',
+        outputs_key_field='agent_uuid',
+        outputs=result
+    )
+
+
+def endpoint_action_by_aro_broker_command(broker_instance: BrokerClient, args):
+    action_type = EndpointActionType[args["action_type"]]
+    result = broker_instance.endpoint_action_by_aro(action_type, args['aro_id'])
+    return CommandResults(
+        readable_output=tableToMarkdown('Command Result - Success', result),
+        outputs_prefix='FESBroker.Action',
+        outputs_key_field='agent_uuid',
+        outputs=result
+    )
+
+
+def cloud_action_by_aro_broker_command(broker_instance: BrokerClient, args):
+    action_type = CloudActionType[args["action_type"]]
+    result = broker_instance.cloud_action_by_aro(action_type, args['aro_id'])
+    return CommandResults(
+        readable_output=tableToMarkdown('Command Result', result),
+        outputs_prefix='FESBroker.Action',
+        outputs_key_field='action_id',
+        outputs=result
+    )
+
+
+def main():
+    params = demisto.params()
+    args = demisto.args()
+    command = demisto.command()
+    broker_url = params.get('broker_url', '')
+    return_error_msg = None
+    demisto.info(f'{command} is called')
+
+    if broker_url and (command.startswith("cov-mgsec-broker") or command == 'test-module'):
+        # Initialize Broker client only if required, allowing the Portal commands to still function if the Broker
+        # connection is down or unwanted.
+        broker_instance = BrokerClient(host=broker_url, api_key=API_KEY)
+    else:
+        demisto.debug("No condition was met. Initializing BrokerClient")
+        broker_instance = BrokerClient(host=broker_url, api_key=API_KEY)
+
+    portal_instance = Portal(bearer=API_KEY)
+
+    try:
+        if command == 'test-module':
+            portal_result = portal_check()
+            if broker_url:
+                broker_result = bool(broker_instance.ping() == "pong")
+                if broker_result is True and portal_result is True:
+                    return_results('ok')
+            elif portal_result is True:
+                return_results('ok')
+
+        elif command == 'fetch-incidents':
             next_run, incidents = fetch_incidents(
                 last_run=demisto.getLastRun(),
                 first_run_time_range=FIRST_RUN_TIME_RANGE)
@@ -330,7 +719,7 @@ def main():
             demisto.setLastRun(next_run)
             demisto.incidents(incidents)
 
-        elif demisto.command() == 'cov-mgsec-get-aro':
+        elif command == 'cov-mgsec-get-aro':
             r = get_aros()
             if r:
                 readable_output = tableToMarkdown('AROs', r, removeNull=True, headerTransform=string_to_table_header)
@@ -344,7 +733,7 @@ def main():
                 readable_output=readable_output
             )
             return_results(results)
-        elif demisto.command() == 'cov-mgsec-list-org':
+        elif command == 'cov-mgsec-list-org':
             r = list_organizations()
             if r:
                 readable_output = tableToMarkdown('Organizations', r, removeNull=True,
@@ -359,7 +748,7 @@ def main():
                 readable_output=readable_output
             )
             return_results(results)
-        elif demisto.command() == 'cov-mgsec-transition-aro':
+        elif command == 'cov-mgsec-transition-aro':
             r = transition_aro_command()
             if r:
                 readable_output = tableToMarkdown('ARO', r, removeNull=True,
@@ -374,12 +763,52 @@ def main():
                 readable_output=readable_output
             )
             return_results(results)
-        else:
-            msg = f'Unknown command {demisto.command()}'
-            demisto.error(msg)
+        elif command == 'cov-mgsec-comment-aro':
+            r = comment_aro_command()
+            if r:
+                readable_output = tableToMarkdown('ARO', r, removeNull=True,
+                                                  headerTransform=string_to_table_header)
+            else:
+                readable_output = 'Error commenting on ARO.'
+
+            results = CommandResults(
+                outputs_prefix='FESPortal.Org',
+                outputs_key_field='ID',
+                outputs=r,
+                readable_output=readable_output
+            )
+            return_results(results)
+        elif command == 'cov-mgsec-list-escalation-contacts':
+            return_results(list_escalation_contacts_command(portal_instance, args))
+        elif command == 'cov-mgsec-list-key-contacts':
+            return_results(list_organization_key_contacts_command(portal_instance, args))
+        elif command == 'cov-mgsec-list-language':
+            return_results(list_organization_language_command(portal_instance, args))
+        elif command == 'cov-mgsec-broker-ping':
+            return_results(ping_broker_command(broker_instance))
+        elif command == 'cov-mgsec-broker-list-org':
+            return_results(list_organizations_broker_command(broker_instance))
+        elif command == 'cov-mgsec-broker-endpoint-action-by-host':
+            return_results(endpoint_action_by_host_broker_command(broker_instance, args))
+        elif command == 'cov-mgsec-broker-endpoint-action-by-aro':
+            return_results(endpoint_action_by_aro_broker_command(broker_instance, args))
+        elif command == 'cov-mgsec-broker-cloud-action-by-aro':
+            return_results(cloud_action_by_aro_broker_command(broker_instance, args))
+    except HTTPError as e:
+        demisto.error(traceback.format_exc())
+        http_text = None
+        try:
+            http_text = e.response.text  # Try to extract a text response if it exists.
+        except AttributeError:
+            http_text = e.response
+        return_error_msg = (f'Failed to execute {command} command with HTTP response: {str(http_text)}.'
+                            f'\nStack trace: {traceback.format_exc()}')
     except Exception as e:
         demisto.error(traceback.format_exc())
-        return_error(f'Failed to execute {demisto.command()} command. Error: {str(e)}. {traceback.format_exc()}')
+        return_error_msg = f'Failed to execute {command} command. Error: {str(e)}.\nStack trace: {traceback.format_exc()}'
+
+    if return_error_msg:
+        return_error(return_error_msg)
 
 
 if __name__ in ('__main__', '__builtin__', 'builtins'):

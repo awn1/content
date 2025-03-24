@@ -5,7 +5,7 @@ Please configure only one of the following fields:
 
 ##### Cloud ID
 
-1. Go to your [Admin page](https://admin.atlassian.com/.
+1. Go to your [Admin page](https://admin.atlassian.com/).
 2. Click the **Products** tab on the top banner and choose the appropriate site under **Sites and Products** on the left side bar. Your Cloud ID will appear in the URL:
 `https://admin.atlassian.com/s/{cloud_id}/users`
 
@@ -71,10 +71,10 @@ The integration uses the *offline_access* scope, in order to retrieve refresh to
 
 1. Log in to Jira as a user with `Jira Administrator` permissions.
 2. Click the Jira Administration tab (the gear icon found in the top right corner) and click **Applications**.
-3. To create a new `Application link`, which will be used to integrate Cortex XSOAR with Jira:
-    a. Click **Application links** under `Integrations`, found on the left side menu.
-    b. Click **Create link** and choose **External application** with the **Incoming** direction.
-4. Fill in the required details as explained in the page and choose the permission **Write**.
+3. To create a new `Application link`, which will be used to integrate Cortex XSOAR with Jira:  
+    a. Click **Application links** under `Integrations`, found on the left side menu.  
+    b. Click **Create link** and choose **External application** with the **Incoming** direction.  
+4. Fill in the required details as explained in the page, by inserting a `Callback URL`, and choosing the permission `Write`.
 5. Once the link is created, you will be able to see `Client ID`, and the `Client secret`, which are required in the configuration screen. Copy these values and paste them into the respective fields in the configuration screen.
 
 ##### OnPrem Scopes

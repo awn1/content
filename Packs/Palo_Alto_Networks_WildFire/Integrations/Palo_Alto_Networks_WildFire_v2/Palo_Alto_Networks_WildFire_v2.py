@@ -4,7 +4,7 @@ import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
 import shutil
 from collections.abc import Callable
-
+from traceback import format_exc
 import tarfile
 import io
 import urllib3
@@ -1216,6 +1216,9 @@ def create_file_report(file_hash: str, reports, file_info, format_: str = 'xml',
     if file_info["malware"] == 'yes':
         dbot_score = 3
         tags = ['malware']
+    elif file_info["malware"] == 'grayware':
+        dbot_score = 2
+        tags = []
     else:
         dbot_score = 1
         tags = []
@@ -1409,7 +1412,22 @@ def wildfire_get_file_report(file_hash: str, args: dict):
             score=dbot_score_file,
             reliability=RELIABILITY)
         indicator = Common.File(dbot_score=dbot_score_object, md5=md5, sha256=sha256)
-        demisto.error(f'Report not found. Error: {exc}')
+        demisto.error(f'Report not found. Error: {str(exc)}')
+        relationships = None
+    except Exception as e:
+        entry_context['Status'] = str(e)
+        human_readable = str(e)
+        dbot_score_file = 0
+        json_res = ''
+        dbot_score_object = Common.DBotScore(
+            indicator=file_hash,
+            indicator_type=DBotScoreType.FILE,
+            integration_name=INTEGRATION_NAME,
+            score=dbot_score_file,
+            reliability=RELIABILITY,
+        )
+        indicator = Common.File(dbot_score=dbot_score_object, md5=md5, sha256=sha256)
+        demisto.error(f'Report error: {str(e)}')
         relationships = None
     finally:
         try:
@@ -1418,8 +1436,8 @@ def wildfire_get_file_report(file_hash: str, args: dict):
                                              readable_output=human_readable, indicator=indicator, raw_response=json_res,
                                              relationships=relationships)
             return command_results, entry_context.get('Status')
-        except Exception:
-            raise DemistoException('Error while trying to get the report from the API.')
+        except Exception as e:
+            raise DemistoException(f'Error while trying to get the report from the API: {str(e)} - {format_exc()}')
 
 
 def wildfire_get_report_command(args: dict):
@@ -1563,11 +1581,8 @@ def main():  # pragma: no cover
         # get the source of the credentials to ensure the correct agent is set for all API calls
         # other = ngfw or wf api based keys that are 32 chars long and require no agent
         # pcc and prismaaccessapi are 64 char long and require the correct agent= value in the api call
-        if not token and platform == 'x2':
-            # Note: We don't want to get the token from the license if we're on the standard XSOAR platform.
-            # The main reason is it has a strict API limit.
-            # Therefore, we only get the token from in X2 (from the config), even though it is
-            # available in the license from version 6.5 of XSOAR
+        if not token:
+            # Added support for all platforms from version 2.1.42.
             with contextlib.suppress(Exception):
                 token = demisto.getLicenseCustomField("WildFire-Reports.token")
 

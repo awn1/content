@@ -38,7 +38,10 @@
         "FreshworksFreshservice Change Request",
         "Graph Security Alert",
         "CrowdStrike Falcon IDP Detection",
-        "Cyberint Incident"
+        "Cyberint Incident",
+        "CrowdStrike Falcon Mobile Detection",
+        "CrowdStrike Falcon On-Demand Scans Detection",
+        "CrowdStrike Falcon OFP Detection"
     ],
     "breachScript": "",
     "caseInsensitive": true,
@@ -71,7 +74,8 @@
     "sla": 0,
     "system": false,
     "systemAssociatedTypes": [
-        "Prisma Cloud - VM Alert Prioritization"
+        "Prisma Cloud - VM Alert Prioritization",
+        "CrowdStrike Falcon OFP Detection"
     ],
     "threshold": 72,
     "toServerVersion": "",

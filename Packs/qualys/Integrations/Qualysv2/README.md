@@ -1,4 +1,4 @@
-Qualys Vulnerability Management lets you create, run, fetch and manage reports, launch and manage vulnerability and compliance scans, and manage the host assets you want to scan for vulnerabilities and compliance.
+Qualys VMDR lets you create, run, fetch and manage reports, launch and manage vulnerability and compliance scans, and manage the host assets you want to scan for vulnerabilities and compliance.
 This integration was integrated and tested with version 2.0 of QualysVulnerabilityManagement
 
 ## Changes compared to V1
@@ -34,10 +34,10 @@ This integration was integrated and tested with version 2.0 of QualysVulnerabili
 29. qualys-host-list - Added new parameters, changed existing parameters, changed outputs.
 30. qualys-virtual-host-list - Added new parameters, changed outputs.
 31. qualys-scheduled-report-list - Added new parameters, changed existing parameters, changed outputs.
-33. qualys-report-template-list - Added new parameters, changed outputs.
-34. qualys-report-launch-map - changed existing parameters
-35. qualys-ip-restricted-manage - New command.
-36. qualys-purge-scan-host-data - New command.
+32. qualys-report-template-list - Added new parameters, changed outputs.
+33. qualys-report-launch-map - Changed existing parameters.
+34. qualys-ip-restricted-manage - New command.
+35. qualys-purge-scan-host-data - New command.
 
 # Playbooks
 1. Vulnerability Management - Qualys (Job) - migrated to work with this new version
@@ -52,30 +52,44 @@ This integration was integrated and tested with version 2.0 of QualysVulnerabili
 10. New playbook - qualys-report-launch-host-based-findings-and-fetch.yml
 11. New playbook - qualys-report-launch-compliance-policy-and-fetch.yml
 
-
-## Configure Qualys v2 on Cortex XSOAR
+## Configure Qualys VMDR in Cortex
 
 1. Navigate to **Settings** > **Integrations** > **Servers & Services**.
-2. Search for Qualys v2.
+2. Search for Qualys VMDR.
 3. Click **Add instance** to create and configure a new integration instance.
 
-    | **Parameter** | **Required** |
-    | --- | --- |
-    | Server URL | True |
-    | Username | True |
-    | Password | True |
-    | Trust any certificate (not secure) | False |
-    | Use system proxy settings | False |
+    | **Name** | **Description** | **Required** |
+    | --- | --- |--- |
+    | Server URL | When using asset-tag commands, the official documentation recommends that the SERVER URL parameter should be in the following format: `https://qualysapi.<tenant>.apps.qualys.com/<end-point>`. | True |
+    | Username | | True |
+    | Trust any certificate (not secure) | | False |
+    | Use system proxy settings | | False |
+    | Fetch Events | | False |
+    | Event first fetch time | Available on Cortex XSIAM only. If "First event fetch time" is set for a long time ago, it may cause performance issues. | False |
+    | Event Fetch Limit | Available in Cortex XSIAM only. Maximum number of events to fetch per fetch iteration. | False |
+    | Events Fetch Interval | Available in Cortex XSIAM only. | False |
+    | Fetch Assets and Vulnerabilities | Available in Cortex XSIAM only. Whether to fetch host list detections (assets) and vulnerabilites. | False |
+    | Assets and Vulnerabilities Fetch Interval | Available in Cortex XSIAM only. The fetch interval for assets and vulnerabilities. It is recommended to set it to 24 hours. Interval lower then 1 hour is not supported. Default is 1 day. | False |
+    | Fetch Vulnerabilities Behavior | Available in Cortex XSIAM only. Default is Fetch by last modified date. | False |
 
 4. Click **Test** to validate the URLs, token, and connection.
 
+## Notes
+
+When configuring the integration instance, selecting the "Fetch by last modified date" option in the *Fetch Vulnerabilities Behavior* dropdown fetches all assets and vulnerabilities from the last 90 days.
+
+To fetch only vulnerabilities by unique QIDs relevant to the assets regardless of the vulnerability modified time, choose the "Fetch by unique QIDs of assets" option.
+
 ## Asset Tag Commands
-There are several API endpoints on the Qualys API that can be used in the QualysV2 integration configuration as the `SERVER URL` parameter.
-When using `asset-tag` commands, the [official documentation](https://www.qualys.com/docs/qualys-asset-management-tagging-api-v2-user-guide.pdf) recommends that the `SERVER URL` parameter should be in the following format: `https://qualysapi.<tenant>.apps.qualys.com/<end-point>`.
+
+The API endpoints in the Qualys API that can be used depend on the value of the *Server URL* parameter in the integration instance configuration.
+When using `asset-tag` commands, the [official documentation](https://www.qualys.com/docs/qualys-asset-management-tagging-api-v2-user-guide.pdf) recommends that the *Server URL* parameter be in the following format: `https://qualysapi.<tenant>.apps.qualys.com/<end-point>`.
 
 ## Commands
-You can execute these commands from the Cortex XSOAR CLI, as part of an automation, or in a playbook.
+
+You can execute these commands from the CLI, as part of an automation, or in a playbook.
 After you successfully execute a command, a DBot message appears in the War Room with the command details.
+
 ### qualys-ip-list
 ***
 View a list of IP addresses in the user account.
@@ -21500,6 +21514,8 @@ Get a list of hosts with the hosts latest vulnerability data. The list is based 
 | Qualys.HostDetections.DETECTION_LIST.DETECTION.LAST_PROCESSED_DATETIME | Date | Date detection was last processed. | 
 | Qualys.HostDetections.DETECTION_LIST.DETECTION.PORT | String | Detection port. | 
 | Qualys.HostDetections.DETECTION_LIST.DETECTION.PROTOCOL | String | Detection protocol. | 
+| Qualys.HostDetections.DETECTION_LIST.DETECTION.QDS | Object | Detection score. | 
+| Qualys.HostDetections.DETECTION_LIST.DETECTION.QDS_FACTORS | Object | Factors affecting detection score. |
 
 #### Command example
 ```!qualys-host-list-detection truncation_limit=2```
@@ -21521,6 +21537,22 @@ Get a list of hosts with the hosts latest vulnerability data. The list is based 
                             "LAST_UPDATE_DATETIME": "2018-10-25T19:13:37Z",
                             "PORT": "3389",
                             "PROTOCOL": "tcp",
+                            "QDS": {
+                                "#text": "25",
+                                "@severity": "LOW"
+                            },
+                            "QDS_FACTORS": {
+                                "QDS_FACTOR": [
+                                    {
+                                        "#text": "No_Patch",
+                                        "@name": "RTI"
+                                    },
+                                    {
+                                        "#text": "2.6",
+                                        "@name": "CVSS"
+                                    },
+                                ]
+                            },
                             "QID": "38170",
                             "RESULTS": "Certificate #0 CN=WIN-2IDQKTU63RC (WIN-2IDQKTU63RC) doesn&apos;t resolve",
                             "SEVERITY": "2",
@@ -21911,3 +21943,197 @@ There is no context output for this command.
 #### Human Readable Output
 
 >Asset tag deleted.
+
+### qualys-update-vmware-record
+
+***
+Update Vmware records for authenticated scans of hosts running on Vmware.
+
+#### Base Command
+
+`qualys-update-vmware-record`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| ids | A comma-separated list of record IDs to update. Specify record IDs and/or ID ranges. | Required | 
+| add_ips | A comma-separated list of IPs and/or ranges to add to the IPs list for this record. | Required | 
+
+#### Context Output
+
+There is no context output for this command.
+
+#### Command Example
+```!qualys-update-vmware-record ids=123 add_ips=5.2.8.9```
+
+#### Human Readable Output
+
+>Successfully Updated
+
+### qualys-update-vcenter-record
+
+***
+Update vCenter records for authenticated scans of hosts running on vCenter.
+
+#### Base Command
+
+`qualys-update-vcenter-record`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| ids | A comma-separated list of record IDs to update. Specify record IDs and/or ID ranges. | Required | 
+| add_ips | A comma-separated list of IPs and/or ranges to add to the IPs list for this record. | Required | 
+
+#### Context Output
+
+There is no context output for this command.
+
+#### Command Example
+```!qualys-update-vmware-record ids=123 add_ips=5.2.8.9```
+
+#### Human Readable Output
+
+>Successfully Updated
+
+### qualys-vcenter-esxi-mapped-record-list
+
+***
+List VCenter ESXi mapping records.
+
+#### Base Command
+
+`qualys-vcenter-esxi-mapped-record-list`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| limit | Specify a positive numeric value to limit the amount of results in the requested list. | Optional | 
+
+#### Context Output
+
+| **Path** | **Type** | **Description** |
+| --- | --- | --- |
+| Qualys.VcenterToEsxi.ESXI_IP | unknown | The IP address of the ESXi server. | 
+| Qualys.VcenterToEsxi.MAPPING_DATA_SOURCE | unknown | The source of this mapping record. | 
+| Qualys.VcenterToEsxi.VCENTER_IP | unknown | The IP address of the vCenter. | 
+
+#### Command Example
+```!qualys-vcenter-esxi-mapped-record-list```
+
+#### Context Example
+```json
+{
+    "Qualys": {
+        "VcenterToEsxi": {
+            "ESXI_IP": "1.1.1.1",
+            "MAPPING_DATA_SOURCE": "File",
+            "VCENTER_IP": "1.1.1.3"
+        }
+    }
+}
+```
+
+#### Human Readable Output
+
+>### Vcenter ESXI IP List
+>|ESXI_IP|MAPPING_DATA_SOURCE|VCENTER_IP|
+>|---|---|---|
+>| 1.1.1.1 | FILE | 1.1.1.3 |
+
+### qualys-vcenter-esxi-mapped-record-import
+
+***
+Import vCenter - ESXi mapping records.
+
+#### Base Command
+
+`qualys-vcenter-esxi-mapped-record-import`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| csv_data | The CSV data file containing the vCenter - ESXi mapping records that you want to import. | Required | 
+
+#### Context Output
+
+There is no context output for this command.
+
+#### Command Example
+```!qualys-vcenter-esxi-mapped-record-import csv_data=`vCenter IP,ESXi IP 1.1.1.1,1.1.1.2```
+
+#### Human Readable Output
+
+>Successfully imported 1 record
+
+### qualys-vcenter-esxi-mapped-record-purge
+
+***
+Purge vCenter - ESXi mapping records.
+
+#### Base Command
+
+`qualys-vcenter-esxi-mapped-record-purge`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| csv_data | The CSV data file containing the vCenter - ESXi mapping records that you want to purge. | Required | 
+
+#### Context Output
+
+There is no context output for this command.
+
+#### Command Example
+```!qualys-vcenter-esxi-mapped-record-purge csv_data=`vCenter IP,ESXi IP 1.1.1.1,1.1.1.2```
+
+#### Human Readable Output
+
+>Successfully purged 1 record
+
+
+### qualys-get-events
+***
+Manual command to fetch events from Qualys and display them.
+
+
+#### Base Command
+
+`qualys-get-events`
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| should_push_events | If true, the command will create events, otherwise it will only display them. Default is false. | Required | 
+| limit | Date to return results from.                                                                    | Optional | 
+| since_datetime | Date to return results from.                                                                    | Optional | 
+| offset | Offset which events to return.                                                                  | Optional | 
+
+
+#### Context Output
+
+There is no context output for this command.
+
+### qualys-get-assets
+***
+Manual command to fetch assets from Qualys and display them.
+
+
+#### Base Command
+
+`qualys-get-assets`
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| should_push_assets | If true, the command will create assets, otherwise it will only display the amount of available assets. Default is false. | Required |
+
+
+#### Context Output
+
+There is no context output for this command.

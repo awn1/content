@@ -21,7 +21,7 @@ def load_mock_response(file_name: str) -> str:
     Returns:
         str: Mock file content.
     """
-    with open(f'test_data/{file_name}', mode='r', encoding='utf-8') as mock_file:
+    with open(f'test_data/{file_name}', encoding='utf-8') as mock_file:
         return mock_file.read()
 
 
@@ -200,8 +200,8 @@ def test_convert_kusto_response_to_dict():
     kusto_format_response = KustoResponseDataSetV1(mock_response)
     dict_kusto = convert_kusto_response_to_dict(kusto_format_response, page=1, limit=1)
     assert len(dict_kusto) == 1
-    assert type(dict_kusto[0]['StartTime']) == str
-    assert type(dict_kusto[0]['EndTime']) == str
+    assert type(dict_kusto[0]['StartTime']) is str
+    assert type(dict_kusto[0]['EndTime']) is str
 
 
 def test_format_header_for_list_commands():
@@ -264,7 +264,7 @@ def test_validate_list_command_arguments():
 
 @pytest.mark.parametrize('auth_type, expected_results', [
     ('Device Code', "Please enable the integration and run `!azure-data-explorer-auth-start`"),
-    ('Authorization Code', "When using user auth flow configuration,")])
+    ('Authorization Code', "When using user auth flow configuration, ")])
 def test_test_module_command(mocker, auth_type, expected_results):
     """
         Given:
@@ -301,9 +301,10 @@ def test_generate_login_url(mocker):
     redirect_uri = 'redirect_uri'
     tenant_id = 'tenant_id'
     client_id = 'client_id'
+    cluster_url = 'https://help.kusto.windows.net'
     mocked_params = {
         'redirect_uri': redirect_uri,
-        'cluster_url': 'https://help.kusto.windows.net',
+        'cluster_url': cluster_url,
         'self_deployed': 'True',
         'tenant_id': tenant_id,
         'client_id': client_id,
@@ -320,7 +321,7 @@ def test_generate_login_url(mocker):
     # assert
     expected_url = f'[login URL](https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize?' \
                    'response_type=code' \
-                   '&scope=offline_access%20https://management.azure.com/.default' \
+                   f'&scope=offline_access%20{cluster_url}/.default' \
                    f'&client_id={client_id}&redirect_uri={redirect_uri})'
     res = AzureDataExplorer.return_results.call_args[0][0].readable_output
     assert expected_url in res

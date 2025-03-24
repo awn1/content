@@ -1,0 +1,216 @@
+category: Analytics & SIEM
+sectionOrder:
+- Connect
+- Collect
+commonfields:
+  id: CTM360_CyberBlindspot
+  version: -1
+configuration:
+- additionalinfo: "Choose the direction to mirror the incident: Incoming (from CyberBlindspot to Cortex XSOAR), Outgoing (from Cortex XSOAR to CyberBlindspot), or Incoming and Outgoing (from/to Cortex XSOAR and CyberBlindspot)."
+  defaultvalue: Incoming And Outgoing
+  display: Incident Mirroring Direction
+  name: mirror_direction
+  options:
+  - None
+  - Incoming
+  - Outgoing
+  - Incoming And Outgoing
+  type: 15
+  hidden:
+  - marketplacev2
+  required: false
+  section: Collect
+- defaultvalue: Incidents
+  display: Module To Use
+  additionalinfo: "Choose the module you want to use: Incidents, Compromised Cards, Breached Credentials, and Domain/Subdomain Infringements."
+  name: module_to_use
+  required: false
+  type: 15
+  options:
+  - Incidents
+  - Compromised Cards
+  - Breached Credentials
+  - Domain Infringement
+  - Subdomain Infringement
+  section: Collect
+  hidden:
+  - marketplacev2
+- additionalinfo: The time the incidents should be fetched starting from.
+  name: first_fetch
+  required: false
+  type: 0
+  defaultvalue: 7 days
+  display: First fetch (<number> <time unit>, e.g., 12 hours. Default is `7 days`)
+  section: Collect
+  advanced: true
+- name: api_key
+  type: 9
+  required: true
+  additionalinfo: The CTM360 CyberBlindspot API Key to use for fetching data.
+  displaypassword: API Key
+  hiddenusername: true
+  section: Connect
+- display: Maximum Number of Incidents per Fetch
+  name: max_fetch
+  type: 0
+  required: true
+  defaultvalue: "25"
+  additionalinfo: Default is 25. Maximum is 200.
+  section: Collect
+  advanced: true
+- display: Fetch incidents
+  name: isFetch
+  type: 8
+  required: false
+  section: Collect
+- display: Trust any certificate (not secure)
+  name: insecure
+  type: 8
+  required: false
+  section: Connect
+  advanced: true
+- display: Use system proxy settings
+  name: proxy
+  type: 8
+  required: false
+  section: Connect
+  advanced: true
+- display: Incident type
+  defaultvalue: CyberBlindspot Incident
+  name: incidentType
+  type: 13
+  required: false
+  section: Connect
+defaultmapperin: 'CTM360-CyberBlindspot - Incoming Mapper'
+description: 'Take action on incidents derived from CTM360 CBS threat intelligence that is directly linked to your organization.'
+display: CTM360 CyberBlindspot
+name: CTM360_CyberBlindspot
+script:
+  commands:
+  - name: ctm360-cbs-incident-list
+    description: Get the list of incidents from CBS.
+    arguments:
+    - description: Select "From" date to fetch incidents starting from it.
+      name: dateFrom
+      required: false
+    - description: Select "To" date to fetch incidents up to it.
+      name: dateTo
+      required: false
+    - description: Set number of results to fetch.
+      name: maxHits
+      required: false
+    - description: Set the order of the results.
+      name: order
+      required: false
+    outputs:
+    - contextPath: CyberBlindspot.IncidentList
+      description: List of all CBS incidents.
+  - name: ctm360-cbs-incident-close
+    description: Close a CBS incident.
+    arguments:
+    - name: ticketId
+      description: '"Ticket ID" of the incident to close.'
+      required: true
+  - name: ctm360-cbs-incident-request-takedown
+    description: Request a takedown of the asset where the incident was found.
+    arguments:
+    - name: ticketId
+      description: '"Ticket ID" of the incident to request takedown.'
+      required: true
+  - name: get-mapping-fields
+    description: Returns the list of fields for an incident type.
+    arguments: []
+  - name: ctm360-cbs-incident-details
+    description: Fetch details of a single incident from the CyberBlindspot platform.
+    arguments:
+    - description: '"Ticket ID" of the incident to close.'
+      name: ticketId
+      required: true
+    outputs:
+    - contextPath: CyberBlindspot.RemoteIncident.id
+      description: Unique ID for the incident record.
+    - contextPath: CyberBlindspot.RemoteIncident.brand
+      description: The organization the incident is associated with.
+    - contextPath: CyberBlindspot.RemoteIncident.coa
+      description: The course of action to take.
+    - contextPath: CyberBlindspot.RemoteIncident.class
+      description: The classification of the incident on remote server.
+    - contextPath: CyberBlindspot.RemoteIncident.status
+      description: The current status of the incident on remote server.
+    - contextPath: CyberBlindspot.RemoteIncident.severity
+      description: The severity of the incident.
+    - contextPath: CyberBlindspot.RemoteIncident.subject
+      description: Asset or title of incident.
+    - contextPath: CyberBlindspot.RemoteIncident.type
+      description: Incident type on remote server.
+    - contextPath: CyberBlindspot.RemoteIncident.remarks
+      description: Remarks about the incident.
+    - contextPath: CyberBlindspot.RemoteIncident.created_date
+      description: The creation date of the incident (legacy).
+    - contextPath: CyberBlindspot.RemoteIncident.updated_date
+      description: The date the incident last got updated (legacy).
+    - contextPath: CyberBlindspot.RemoteIncident.first_seen
+      description: The creation date of the incident.
+    - contextPath: CyberBlindspot.RemoteIncident.last_seen
+      description: The date the incident last got updated.
+    - contextPath: CyberBlindspot.RemoteIncident.timestamp
+      description: The timestamp of when the record was created.
+    - contextPath: CyberBlindspot.RemoteIncident.card_number
+      description: The compromised card's number.
+    - contextPath: CyberBlindspot.RemoteIncident.cvv
+      description: The compromised card's Card Verification Value (CVV).
+    - contextPath: CyberBlindspot.RemoteIncident.expiry_month
+      description: The compromised card's expiration month.
+    - contextPath: CyberBlindspot.RemoteIncident.expiry_year
+      description: The compromised card's expiration year.
+    - contextPath: CyberBlindspot.RemoteIncident.breach_source
+      description: The source of the breached data.
+    - contextPath: CyberBlindspot.RemoteIncident.domain
+      description: The domain related to the breached data.
+    - contextPath: CyberBlindspot.RemoteIncident.email
+      description: Email found in the breached data.
+    - contextPath: CyberBlindspot.RemoteIncident.username
+      description: Username found in the breached data.
+    - contextPath: CyberBlindspot.RemoteIncident.password
+      description: Password found in the breached data.
+    - contextPath: CyberBlindspot.RemoteIncident.executive_name
+      description: Executive member's name related to the breached data.
+    - contextPath: CyberBlindspot.RemoteIncident.confirmation_time
+      description: The time of infringement confirmation.
+    - contextPath: CyberBlindspot.RemoteIncident.risks
+      description: The potential difficulties carried by the infringement.
+    - contextPath: CyberBlindspot.RemoteIncident.incident_status
+      description: The status of the infringement incident.
+  - name: get-remote-data
+    arguments:
+    - description: The incident ID.
+      name: id
+      required: true
+    - description: Retrieves entries that were created after lastUpdate.
+      name: lastUpdate
+      required: true
+    description: Gets remote data from a remote incident. This method does not update the current incident, and should be used for debugging purposes.
+  - name: get-modified-remote-data
+    arguments:
+    - description: A date string in local time representing the last time the incident was updated. The incident is only returned if it was modified after the last update time.
+      name: lastUpdate
+      required: true
+    description: Gets the list of incidents that were modified since the last update time. Note that this method is here for debugging purposes. The get-modified-remote-data command is used as part of a Mirroring feature, which is available in Cortex XSOAR from version 6.1.
+  - name: update-remote-system
+    arguments:
+    - description: Remote ID of incident to update in the remote system.
+      name: remoteId
+      required: true
+    description: Updates the remote system with local changes.
+  isfetch: true
+  runonce: false
+  ismappable: true
+  isremotesyncin: true
+  isremotesyncout: true
+  script: '-'
+  type: python
+  subtype: python3
+  dockerimage: demisto/python3:3.12.8.1983910
+fromversion: 6.10.0
+tests:
+- No tests (auto formatted)

@@ -128,7 +128,7 @@ def test_build_ticket_contains_id_in_headers():
     """
     from RTIR import build_ticket
     ticket = build_ticket(['ThisIsAID: ofNotID'])
-    assert {} == ticket
+    assert ticket == {}
 
 
 RAW_ATTACHMENTS_LIST = """
@@ -284,3 +284,49 @@ def test_add_comment_fail(mocker):
     with pytest.raises(DemistoException) as e:
         add_comment()
     assert str(e.value) == 'Failed to add comment'
+
+
+def test_edit_ticket(mocker):
+    """
+    Test failure in edit a ticket if no fields was given.
+
+    Given:
+    - ticket id
+
+    When:
+    - editing a ticket
+
+    Then:
+    - Ensure the command fails with an error message.
+    """
+    from RTIR import edit_ticket
+    mocker.patch.object(demisto, 'args', return_value={'ticket-id': '1234'})
+    try:
+        edit_ticket()
+    except Exception as ex:
+        assert ex.message == 'No arguments were given to edit the ticket.'
+
+
+def test_create_ticket_409_failure(mocker):
+    args = {
+        'queue': 'test',
+        'subject': 'Test Ticket',
+        'requestor': 'test@example.com',
+        'priority': 'High',
+        'text': 'This is a test ticket',
+    }
+
+    mock_response = DotDict({
+        'status_code': 200,
+        'text': 'RT/5.0.3 409 Syntax Error\nTicket creation failed'
+    })
+
+    mocker.patch.object(demisto, 'args', return_value=args)
+    mocker.patch('RTIR.create_ticket_request', return_value=mock_response)
+
+    from RTIR import create_ticket
+    with pytest.raises(DemistoException) as e:
+        create_ticket()
+
+    assert "Ticket creation failed" in str(e.value)
+    assert "RT/5.0.3 409 Syntax Error" in str(e.value)

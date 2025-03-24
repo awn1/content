@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
 
@@ -7,7 +8,6 @@ import json as JSON
 import time
 from urllib.parse import urlparse
 
-import urllib3
 import requests
 from requests.utils import quote  # type: ignore
 
@@ -17,15 +17,14 @@ try:
 except ImportError:
     from queue import Queue  # type: ignore
 
-# disable insecure warnings
-urllib3.disable_warnings()
-
 '''GLOBAL VARS'''
 BLACKLISTED_URL_ERROR_MESSAGES = [
     'The submitted domain is on our blacklist. For your own safety we did not perform this scan...',
     'The submitted domain is on our blacklist, we will not scan it.'
 ]
 BRAND = 'urlscan.io'
+DEFAULT_LIMIT = 20
+MAX_WORKERS = 5
 
 """ RELATIONSHIP TYPE"""
 RELATIONSHIP_TYPE = {
@@ -46,7 +45,7 @@ RELATIONSHIP_TYPE = {
 
 class Client:
     def __init__(self, api_key='', user_agent='', scan_visibility=None, threshold=None, use_ssl=False,
-                 reliability=DBotScoreReliability.C):
+                 reliability=DBotScoreReliability.C, country=None):
         self.base_url = 'https://urlscan.io/'
         self.base_api_url = 'https://urlscan.io/api/v1/'
         self.api_key = api_key
@@ -55,6 +54,7 @@ class Client:
         self.scan_visibility = scan_visibility
         self.use_ssl = use_ssl
         self.reliability = reliability
+        self.country = country
 
 
 '''HELPER FUNCTIONS'''
@@ -104,8 +104,7 @@ def http_request(client, method, url_suffix, json=None, retries=0):
     if method == 'POST':
         headers.update({'Content-Type': 'application/json'})
     demisto.debug(
-        'requesting https request with method: {}, url: {}, data: {}'.format(method, client.base_api_url + url_suffix,
-                                                                             json))
+        f'requesting https request with method: {method}, url: {client.base_api_url + url_suffix}, data: {json}')
     r = requests.request(
         method,
         client.base_api_url + url_suffix,
@@ -116,31 +115,22 @@ def http_request(client, method, url_suffix, json=None, retries=0):
 
     rate_limit_remaining = int(r.headers.get('X-Rate-Limit-Remaining', 99))
     rate_limit_reset_after = int(r.headers.get('X-Rate-Limit-Reset-After', 60))
-    limit_action = r.headers.get('X-Rate-Limit-Action', 'search')
-    limit_window = r.headers.get('X-Rate-Limit-Window', 'minute')
+
     if rate_limit_remaining < 10:
         return_warning('Your available rate limit remaining is {} and is about to be exhausted. '
                        'The rate limit will reset at {}'.format(str(rate_limit_remaining),
                                                                 r.headers.get("X-Rate-Limit-Reset")))
     if r.status_code != 200:
         if r.status_code == 429:
-            if ScheduledCommand.supports_polling():
-                return {}, ErrorTypes.QUOTA_ERROR, rate_limit_reset_after
-            if retries <= 0:
-                # Error in API call to URLScan.io [429] - Too Many Requests
-                return_error(f'You have exceeded your {limit_action} limit for this {limit_window}. The rate limit will'
-                             f' reset in {rate_limit_reset_after} seconds')
-            else:
-                time.sleep(rate_limit_reset_after)  # pylint: disable=sleep-exists
-                return http_request(method, url_suffix, json, rate_limit_reset_after, retries - 1)
+            return {}, ErrorTypes.QUOTA_ERROR, rate_limit_reset_after
 
         response_json = r.json()
-        error_description = response_json.get('description')
+        error_description = response_json.get('description') or response_json.get('message')
         should_continue_on_blacklisted_urls = argToBoolean(demisto.args().get('continue_on_blacklisted_urls', False))
         if should_continue_on_blacklisted_urls and error_description in BLACKLISTED_URL_ERROR_MESSAGES:
             response_json['url_is_blacklisted'] = True
             requested_url = JSON.loads(json)['url']
-            blacklisted_message = 'The URL {} is blacklisted, no results will be returned for it.'.format(requested_url)
+            blacklisted_message = f'The URL {requested_url} is blacklisted, no results will be returned for it.'
             demisto.results(blacklisted_message)
             return response_json, ErrorTypes.GENERAL_ERROR, None
 
@@ -173,13 +163,13 @@ def schedule_and_report(command_results, items_to_schedule, execution_metrics, r
 
 def get_result_page(client):
     uuid = demisto.args().get('uuid')
-    uri = client.base_api_url + 'result/{}'.format(uuid)
+    uri = client.base_api_url + f'result/{uuid}'
     return uri
 
 
 def polling(client, uuid):
     TIMEOUT = int(demisto.args().get('timeout', 60))
-    uri = client.base_api_url + 'result/{}'.format(uuid)
+    uri = client.base_api_url + f'result/{uuid}'
 
     headers = {'API-Key': client.api_key}
     if client.user_agent:
@@ -209,7 +199,7 @@ def is_truthy(val):
 def poll(target, step, args=(), kwargs=None, timeout=60,
          check_success=is_truthy, step_function=step_constant,
          ignore_exceptions=(), collect_values=None, **k):
-    kwargs = kwargs or dict()
+    kwargs = kwargs or {}
     values = collect_values or Queue()
 
     max_time = time.time() + timeout
@@ -217,13 +207,13 @@ def poll(target, step, args=(), kwargs=None, timeout=60,
     # According to the doc - The most efficient approach would be to wait at least 10 seconds before starting to poll
     time.sleep(10)
     while True:
-        demisto.debug('Number of Polling attempts: {}'.format(tries))
+        demisto.debug(f'Number of Polling attempts: {tries}')
         try:
             val = target(*args, **kwargs)
             last_item = val
         except ignore_exceptions as e:
             last_item = e
-            demisto.debug('Polling request failed with exception {}'.format(str(e)))
+            demisto.debug(f'Polling request failed with exception {str(e)}')
         else:
             if check_success(val):
                 return val
@@ -262,6 +252,9 @@ def urlscan_submit_url(client, url):
         submission_dict['customagent'] = demisto.args().get('useragent')
     elif demisto.params().get('useragent'):
         submission_dict['customagent'] = demisto.params().get('useragent')
+
+    if client.country:
+        submission_dict['country'] = client.country.split(' ')[0]
 
     sub_json = json.dumps(submission_dict)
     retries = int(demisto.args().get('retries', 0))
@@ -309,16 +302,16 @@ def create_list_relationships(scans_dict, url, reliability):
     return relationships_list
 
 
-def format_results(client, uuid, use_url_as_name):
+def format_results(client, uuid, use_url_as_name, scan_lists_attempts=True):
     # Scan Lists sometimes returns empty
     num_of_attempts = 0
     relationships = []
     response, _, _ = urlscan_submit_request(client, uuid)
     scan_lists = response.get('lists')
-    while scan_lists is None:
+    while scan_lists is None and scan_lists_attempts:
         try:
             num_of_attempts += 1
-            demisto.debug('Attempting to get scan lists {} times'.format(num_of_attempts))
+            demisto.debug(f'Attempting to get scan lists {num_of_attempts} times')
             response, _, _ = urlscan_submit_request(client, uuid)
             scan_lists = response.get('lists')
         except Exception:
@@ -343,7 +336,7 @@ def format_results(client, uuid, use_url_as_name):
 
     feed_related_indicators = []
 
-    cont['ResultPage'] = client.base_url + 'result/{}'.format(uuid)
+    cont['ResultPage'] = client.base_url + f'result/{uuid}'
 
     LIMIT = int(demisto.args().get('limit', 20))
     if 'certificates' in scan_lists:
@@ -356,6 +349,9 @@ def format_results(client, uuid, use_url_as_name):
             cert_ec.append(ec_info)
         CERT_HEADERS = ['Subject Name', 'Issuer', 'Validity']
         cont['Certificates'] = cert_ec
+    else:
+        CERT_HEADERS = []
+        demisto.debug(f"certificates isn't in {scan_lists=}. {CERT_HEADERS=}")
     url_cont['Data'] = url_query
     if 'urls' in scan_lists:
         url_cont['Data'] = demisto.args().get('url')
@@ -404,10 +400,9 @@ def format_results(client, uuid, use_url_as_name):
     if 'requests' in scan_data:
         redirected_urls = []
         for o in scan_data['requests']:
-            if 'redirectResponse' in o['request']:
-                if 'url' in o['request']['redirectResponse']:
-                    url = o['request']['redirectResponse']['url']
-                    redirected_urls.append(url)
+            if 'redirectResponse' in o['request'] and 'url' in o['request']['redirectResponse']:
+                url = o['request']['redirectResponse']['url']
+                redirected_urls.append(url)
         cont['RedirectedURLs'] = redirected_urls
     if 'countries' in scan_lists:
         countries = scan_lists['countries']
@@ -468,22 +463,26 @@ def format_results(client, uuid, use_url_as_name):
     processors_data = scan_meta['processors']
     if 'download' in processors_data and len(scan_meta['processors']['download']['data']) > 0:
         meta_data = processors_data['download']['data'][0]
-        sha256 = meta_data['sha256']
-        filename = meta_data['filename']
-        filesize = meta_data['filesize']
-        filetype = meta_data['mimeType']
-        human_readable['File']['Hash'] = sha256
-        cont['File']['Hash'] = sha256
-        file_context['SHA256'] = sha256
-        human_readable['File']['Name'] = filename
-        cont['File']['FileName'] = filename
-        file_context['Name'] = filename
-        human_readable['File']['Size'] = filesize
-        cont['File']['FileSize'] = filesize
-        file_context['Size'] = filesize
-        human_readable['File']['Type'] = filetype
-        cont['File']['FileType'] = filetype
-        file_context['Type'] = filetype
+        sha256 = meta_data.get('sha256')
+        filename = meta_data.get('filename')
+        filesize = meta_data.get('filesize')
+        filetype = meta_data.get('mimeType')
+        if sha256:
+            human_readable['File']['Hash'] = sha256
+            cont['File']['Hash'] = sha256
+            file_context['SHA256'] = sha256
+        if filename:
+            human_readable['File']['Name'] = filename
+            cont['File']['FileName'] = filename
+            file_context['Name'] = filename
+        if filesize:
+            human_readable['File']['Size'] = filesize
+            cont['File']['FileSize'] = filesize
+            file_context['Size'] = filesize
+        if filetype:
+            human_readable['File']['Type'] = filetype
+            cont['File']['FileType'] = filetype
+            file_context['Type'] = filetype
         file_context['Hostname'] = demisto.args().get('url')
     if feed_related_indicators:
         related_indicators = []
@@ -507,7 +506,7 @@ def format_results(client, uuid, use_url_as_name):
             screenshot_name = cont['EffectiveURL'].replace('http://', '').replace('https://', '').replace('/', '_')
         else:
             screenshot_name = 'screenshot'
-        stored_img = fileResult('{}.png'.format(screenshot_name), response_img.content)
+        stored_img = fileResult(f'{screenshot_name}.png', response_img.content)
 
     dbot_score = Common.DBotScore(indicator=dbot_score.get('Indicator'), indicator_type=dbot_score.get('Type'),
                                   integration_name=BRAND, score=dbot_score.get('Score'),
@@ -517,7 +516,7 @@ def format_results(client, uuid, use_url_as_name):
                      feed_related_indicators=url_cont.get('FeedRelatedIndicators'))
 
     command_result = CommandResults(
-        readable_output=tableToMarkdown('{} - Scan Results'.format(url_query), human_readable),
+        readable_output=tableToMarkdown(f'{url_query} - Scan Results', human_readable),
         outputs=outputs,
         indicator=url,
         raw_response=response,
@@ -554,7 +553,7 @@ def format_results(client, uuid, use_url_as_name):
 
 
 def urlscan_submit_request(client, uuid):
-    response, metrics, _ = http_request(client, 'GET', 'result/{}'.format(uuid))
+    response, metrics, _ = http_request(client, 'GET', f'result/{uuid}')
     return response, metrics, _
 
 
@@ -571,37 +570,82 @@ def urlscan_submit_command(client):
     rate_limit_reset_after: int = 60
 
     urls = argToList(demisto.args().get('url'))
-    for url in urls:
-        demisto.args()['url'] = url
-        response, metrics, rate_limit_reset_after = urlscan_submit_url(client, url)
-        if response.get('url_is_blacklisted') or response.get('is_error'):
-            execution_metrics.general_error += 1
-            if response.get('is_error'):
-                schedule_and_report(command_results=command_results, items_to_schedule=items_to_schedule,
-                                    execution_metrics=execution_metrics, rate_limit_reset_after=rate_limit_reset_after)
-                return_results(results=command_results)
-                return_error(response.get('error_string'))
-            continue
-        if metrics == ErrorTypes.QUOTA_ERROR:
-            if not is_scheduled_command_retry():
-                execution_metrics.quota_error += 1
-            items_to_schedule.append(url)
-            continue
-        uuid = response.get('uuid')
-        use_url_as_name = True if demisto.args()['use_url_as_name'] == 'true' else False
-        get_urlscan_submit_results_polling(client, uuid, use_url_as_name)
-        execution_metrics.success += 1
+    if is_time_sensitive():
+        args = ((client, url, command_results, execution_metrics) for url in urls)
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            executor.map(lambda p: urlscan_search_only(*p), args)
+    else:
+        for url in urls:
+            demisto.args()['url'] = url
+            response, metrics, rate_limit_reset_after = urlscan_submit_url(client, url)
+            if response.get('url_is_blacklisted') or response.get('is_error'):
+                execution_metrics.general_error += 1
+                if response.get('is_error'):
+                    schedule_and_report(command_results=command_results, items_to_schedule=items_to_schedule,
+                                        execution_metrics=execution_metrics, rate_limit_reset_after=rate_limit_reset_after)
+                    return_results(results=command_results)
+                    return_error(response.get('error_string'))
+                continue
+            if metrics == ErrorTypes.QUOTA_ERROR:
+                if not is_scheduled_command_retry():
+                    execution_metrics.quota_error += 1
+                items_to_schedule.append(url)
+                continue
+            uuid = response.get('uuid')
+            use_url_as_name = demisto.args()['use_url_as_name'] == 'true'
+            get_urlscan_submit_results_polling(client, uuid, use_url_as_name)
+            execution_metrics.success += 1
     schedule_and_report(command_results=command_results, items_to_schedule=items_to_schedule,
                         execution_metrics=execution_metrics, rate_limit_reset_after=rate_limit_reset_after)
     return command_results
 
 
-def urlscan_search(client, search_type, query):
+def urlscan_search_only(client: Client, url: str, command_results: list, execution_metrics: ExecutionMetrics):
+    demisto.args()["url"] = url
+    response = urlscan_search(client, "page.url", quote(url, safe=""), size=1000)
+    if response.get("is_error"):
+        execution_metrics.general_error += 1
+        error_message = f"The search for the url '{url}' returned an error:\n{response.get('error_string', '')}"
+        command_results.append(
+            CommandResults(
+                entry_type=EntryType.ERROR,
+                readable_output=error_message,
+                raw_response=error_message,
+            )
+        )
+        return
+
+    found_result = False
+    for result in response.get("results", []):
+        page = result.get("page", {})
+        if page.get("url").rstrip("/") == url.rstrip("/"):
+            format_results(
+                client,
+                result["task"]["uuid"],
+                use_url_as_name=False,
+                scan_lists_attempts=False,
+            )
+            execution_metrics.success += 1
+            found_result = True
+            break
+    if not found_result:
+        no_results_message = f"No results found for {url}"
+        demisto.debug(no_results_message)
+        command_results.append(
+            CommandResults(
+                readable_output=no_results_message, raw_response=no_results_message
+            )
+        )
+    return
+
+
+def urlscan_search(client, search_type, query, size=None):
 
     if search_type == 'advanced':
         r, _, _ = http_request(client, 'GET', 'search/?q=' + query)
     else:
-        r, _, _ = http_request(client, 'GET', 'search/?q=' + search_type + ':"' + query + '"')
+        url_suffix = 'search/?q=' + search_type + ':"' + query + '"' + (f'&size={size}' if size else '')
+        r, _, _ = http_request(client, 'GET', url_suffix)
 
     return r
 
@@ -612,7 +656,7 @@ def cert_format(x):
     info = {
         'Subject Name': x['subjectName'],
         'Issuer': x['issuer'],
-        'Validity': "{} - {}".format(valid_to, valid_from)
+        'Validity': f"{valid_to} - {valid_from}"
     }
     ec_info = {
         'SubjectName': x['subjectName'],
@@ -624,7 +668,7 @@ def cert_format(x):
 
 
 def urlscan_search_command(client):
-    LIMIT = int(demisto.args().get('limit'))
+    LIMIT = int(demisto.args().get('limit', DEFAULT_LIMIT))
     HUMAN_READBALE_HEADERS = ['URL', 'Domain', 'IP', 'ASN', 'Scan ID', 'Scan Date']
     raw_query = demisto.args().get('searchParameter', '')
     search_type = demisto.args().get('searchType', '')
@@ -646,7 +690,7 @@ def urlscan_search_command(client):
     r = urlscan_search(client, search_type, query)
 
     if r['total'] == 0:
-        demisto.results('No results found for {}'.format(raw_query))
+        demisto.results(f'No results found for {raw_query}')
         return
     if r['total'] > 0:
         demisto.results('{} results found for {}'.format(r['total'], raw_query))
@@ -706,23 +750,27 @@ def urlscan_search_command(client):
         if 'files' in res_dict:
             HUMAN_READBALE_HEADERS = ['URL', 'Domain', 'IP', 'ASN', 'Scan ID', 'Scan Date', 'File']
             files = res_dict['files'][0]
-            sha256 = files['sha256']
-            filename = files['filename']
-            filesize = files['filesize']
-            filetype = files['mimeType']
+            sha256 = files.get('sha256')
+            filename = files.get('filename')
+            filesize = files.get('filesize')
+            filetype = files.get('mimeType')
             url = res_tasks['url']
-            human_readable['File']['Hash'] = sha256
-            cont['Hash'] = sha256
-            file_context['SHA256'] = sha256
-            human_readable['File']['Name'] = filename
-            cont['FileName'] = filename
-            file_context['File']['Name'] = filename
-            human_readable['File']['Size'] = filesize
-            cont['FileSize'] = filesize
-            file_context['Size'] = filesize
-            human_readable['File']['Type'] = filetype
-            cont['FileType'] = filetype
-            file_context['File']['Type'] = filetype
+            if sha256:
+                human_readable['File']['Hash'] = sha256
+                cont['Hash'] = sha256
+                file_context['SHA256'] = sha256
+            if filename:
+                human_readable['File']['Name'] = filename
+                cont['FileName'] = filename
+                file_context['File']['Name'] = filename
+            if filesize:
+                human_readable['File']['Size'] = filesize
+                cont['FileSize'] = filesize
+                file_context['Size'] = filesize
+            if filetype:
+                human_readable['File']['Type'] = filetype
+                cont['FileType'] = filetype
+                file_context['File']['Type'] = filetype
             file_context['File']['Hostname'] = url
 
         ec[outputPaths['file']] = file_context
@@ -745,7 +793,7 @@ def urlscan_search_command(client):
         'Type': entryTypes['note'],
         'ContentsFormat': formats['markdown'],
         'Contents': r,
-        'HumanReadable': tableToMarkdown('URLScan.io query results for {}'.format(raw_query), hr_md,
+        'HumanReadable': tableToMarkdown(f'URLScan.io query results for {raw_query}', hr_md,
                                          HUMAN_READBALE_HEADERS, removeNull=True),
         'EntryContext': ec
     })
@@ -778,7 +826,7 @@ def format_http_transaction_list(client):
         'URLScan(val.URL && val.URL == obj.URL)': context,
     }
 
-    human_readable = tableToMarkdown('{} - http transaction list'.format(url), url_list, ['URLs'], metadata=metadata)
+    human_readable = tableToMarkdown(f'{url} - http transaction list', url_list, ['URLs'], metadata=metadata)
     return_outputs(human_readable, ec, response)
 
 
@@ -796,6 +844,7 @@ def main():
     use_ssl = not params.get('insecure', False)
     reliability = params.get('integrationReliability')
     reliability = reliability if reliability else DBotScoreReliability.C
+    country = params.get('country', '')
 
     if DBotScoreReliability.is_valid_type(reliability):
         reliability = DBotScoreReliability.get_dbot_score_reliability_from_str(reliability)
@@ -806,12 +855,16 @@ def main():
     instance_name = demisto.callingContext.get('context', {}).get('IntegrationInstance')
     client = Client(
         api_key=api_key,
-        user_agent='xsoar-{}/urlscan-{}'.format(demisto_version, instance_name),
+        user_agent=f'xsoar-{demisto_version}/urlscan-{instance_name}',
         scan_visibility=scan_visibility,
         threshold=threshold,
         use_ssl=use_ssl,
-        reliability=reliability
+        reliability=reliability,
+        country=country
     )
+
+    demisto.debug(f'Command being called is {demisto.command()}')
+    demisto.debug(f'Is time sensitive: {is_time_sensitive()}')
 
     try:
         handle_proxy()

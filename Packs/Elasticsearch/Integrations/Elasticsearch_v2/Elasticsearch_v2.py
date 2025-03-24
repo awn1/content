@@ -16,25 +16,33 @@ import urllib3
 urllib3.disable_warnings()
 warnings.filterwarnings(action="ignore", message='.*using SSL with verify_certs=False is insecure.')
 
+ELASTICSEARCH_V8 = 'Elasticsearch_v8'
+OPEN_SEARCH = 'OpenSearch'
 ELASTIC_SEARCH_CLIENT = demisto.params().get('client_type')
-if ELASTIC_SEARCH_CLIENT == 'OpenSearch':
+if ELASTIC_SEARCH_CLIENT == OPEN_SEARCH:
     from opensearchpy import OpenSearch as Elasticsearch, RequestsHttpConnection, NotFoundError
     from opensearch_dsl import Search
     from opensearch_dsl.query import QueryString
-else:
-    from elasticsearch import Elasticsearch, RequestsHttpConnection, NotFoundError
+elif ELASTIC_SEARCH_CLIENT == ELASTICSEARCH_V8:
+    from elasticsearch import Elasticsearch, NotFoundError  # type: ignore[assignment]
     from elasticsearch_dsl import Search
     from elasticsearch_dsl.query import QueryString
+    from elastic_transport import RequestsHttpNode
+else:  # Elasticsearch (<= v7)
+    from elasticsearch7 import Elasticsearch, RequestsHttpConnection, NotFoundError  # type: ignore[assignment]
+    from elasticsearch_dsl import Search
+    from elasticsearch_dsl.query import QueryString
+
 
 ES_DEFAULT_DATETIME_FORMAT = 'yyyy-MM-dd HH:mm:ss.SSSSSS'
 PYTHON_DEFAULT_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 API_KEY_PREFIX = '_api_key_id:'
 SERVER = demisto.params().get('url', '').rstrip('/')
-USERNAME = demisto.params().get('credentials', {}).get('identifier')
-PASSWORD = demisto.params().get('credentials', {}).get('password')
+USERNAME: str = demisto.params().get('credentials', {}).get('identifier')
+PASSWORD: str = demisto.params().get('credentials', {}).get('password')
 API_KEY_ID = USERNAME[len(API_KEY_PREFIX):] if USERNAME and USERNAME.startswith(API_KEY_PREFIX) else None
 if API_KEY_ID:
-    USERNAME = None
+    USERNAME = ""
     API_KEY = (API_KEY_ID, PASSWORD)
 PROXY = demisto.params().get('proxy')
 HTTP_ERRORS = {
@@ -64,6 +72,28 @@ MAP_LABELS = param.get('map_labels', True)
 FETCH_QUERY = RAW_QUERY or FETCH_QUERY_PARM
 
 
+def get_value_by_dot_notation(dictionary, key):
+    """
+    Get dictionary value by key using dot notation.
+
+    Args:
+        dictionary (dict): The dictionary to search within.
+        key (str): The key in dot notation.
+
+    Returns:
+        The value corresponding to the key if found, otherwise None.
+    """
+    value = dictionary
+    demisto.debug('Trying to get value by dot notation')
+    for k in key.split('.'):
+        if isinstance(value, dict):
+            value = value.get(k)
+        else:
+            demisto.debug(f'Last value is not a dict, returning None. {value=}')
+            return None
+    return value
+
+
 def convert_date_to_timestamp(date):
     """converts datetime to the relevant timestamp format.
 
@@ -73,6 +103,7 @@ def convert_date_to_timestamp(date):
     Returns:
         (num | str): The formatted timestamp
     """
+    demisto.debug(f'Converting date to timestamp: {date}')
     # this theoretically shouldn't happen but just in case
     if str(date).isdigit():
         return int(date)
@@ -96,12 +127,14 @@ def timestamp_to_date(timestamp_string):
     Returns:
         (datetime).represented by the timestamp in the format '%Y-%m-%d %H:%M:%S.%f'
     """
+    timestamp_number: float
     # find timestamp in form of more than seconds since epoch: 1572164838000
     if TIME_METHOD == 'Timestamp-Milliseconds':
         timestamp_number = float(int(timestamp_string) / 1000)
 
     # find timestamp in form of seconds since epoch: 1572164838
-    elif TIME_METHOD == 'Timestamp-Seconds':
+    else:  # TIME_METHOD == 'Timestamp-Seconds':
+        demisto.debug(f"{TIME_METHOD=}. Should be Timestamp-Seconds.")
         timestamp_number = float(timestamp_string)
 
     # convert timestamp (a floating point number representing time since epoch) to datetime
@@ -123,22 +156,43 @@ def get_api_key_header_val(api_key):
 
 def elasticsearch_builder(proxies):
     """Builds an Elasticsearch obj with the necessary credentials, proxy settings and secure connection."""
-    connection_args = {
+
+    connection_args: Dict[str, Union[bool, int, str, list, tuple[str, str], RequestsHttpConnection]] = {
         "hosts": [SERVER],
-        "connection_class": RequestsHttpConnection,
-        "proxies": proxies,
         "verify_certs": INSECURE,
         "timeout": TIMEOUT,
     }
+    demisto.debug(f'Building Elasticsearch client with args: {connection_args}')
+    if ELASTIC_SEARCH_CLIENT != ELASTICSEARCH_V8:
+        # Adding the proxy related parameters to the Elasticsearch client v7 and below or OpenSearch (BC)
+        connection_args["connection_class"] = RequestsHttpConnection  # type: ignore[assignment]
+        connection_args["proxies"] = proxies
+
+    else:
+        # Adding the proxy related parameter to the Elasticsearch client v8
+        # Reference- https://github.com/elastic/elastic-transport-python/issues/53#issuecomment-1447903214
+        class CustomHttpNode(RequestsHttpNode):  # pylint: disable=E0601
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.session.proxies = proxies
+        connection_args['node_class'] = CustomHttpNode  # type: ignore[assignment]
+
     if API_KEY_ID:
         connection_args["api_key"] = API_KEY
-    elif USERNAME:
-        connection_args["http_auth"] = (USERNAME, PASSWORD)
 
-    es = Elasticsearch(**connection_args)
+    elif USERNAME:
+        if ELASTIC_SEARCH_CLIENT == ELASTICSEARCH_V8:
+            connection_args["basic_auth"] = (USERNAME, PASSWORD)
+        else:  # Elasticsearch version v7 and below or OpenSearch (BC)
+            connection_args["http_auth"] = (USERNAME, PASSWORD)
+
+    es = Elasticsearch(**connection_args)  # type: ignore[arg-type]
     # this should be passed as api_key via Elasticsearch init, but this code ensures it'll be set correctly
     if API_KEY_ID and hasattr(es, 'transport'):
-        es.transport.get_connection().session.headers['authorization'] = get_api_key_header_val(API_KEY)
+        # In some versions of the ES library, the transport object does not have a get_session func
+        if hasattr(es.transport, 'get_connection'):
+            es.transport.get_connection().session.headers['authorization'] = get_api_key_header_val(  # type: ignore[attr-defined]
+                API_KEY)
 
     return es
 
@@ -267,6 +321,7 @@ def search_command(proxies):
         time_range_dict = get_time_range(time_range_start=timestamp_range_start, time_range_end=timestamp_range_end,
                                          time_field=timestamp_field,
                                          )
+    demisto.debug(f'Executing search with index={index}, query={query}, query_dsl={query_dsl}')
 
     if query_dsl:
         response = execute_raw_query(es, query_dsl, index, size, base_page)
@@ -288,8 +343,14 @@ def search_command(proxies):
         if sort_field is not None:
             search = search.sort({sort_field: {'order': sort_order}})
 
-        response = search.execute().to_dict()
+        if ELASTIC_SEARCH_CLIENT in [ELASTICSEARCH_V8, OPEN_SEARCH]:
+            response = search.execute().to_dict()
 
+        else:  # Elasticsearch v7 and below
+            # maintain BC by using the ES client directly (avoid using the elasticsearch_dsl library here)
+            response = es.search(index=search._index, body=search.to_dict(), **search._params)
+
+    demisto.debug(f'Search response: {response}')
     total_dict, total_results = get_total_results(response)
     search_context, meta_headers, hit_tables, hit_headers = results_to_context(index, query_dsl or query, base_page,
                                                                                size, total_dict, response)
@@ -324,7 +385,7 @@ def test_query_to_fetch_incident_index(es):
     """Test executing query in fetch index.
 
     Notes:
-        if is_fetch it ticked, this function runs a generay query to Elasticsearch just to make sure we get a response
+        if is_fetch it ticked, this function runs a general query to Elasticsearch just to make sure we get a response
         from the FETCH_INDEX.
 
     Args:
@@ -333,7 +394,15 @@ def test_query_to_fetch_incident_index(es):
     try:
         query = QueryString(query='*')
         search = Search(using=es, index=FETCH_INDEX).query(query)[0:1]
-        response = search.execute().to_dict()
+
+        if ELASTIC_SEARCH_CLIENT == ELASTICSEARCH_V8:
+            response = search.execute().to_dict()
+
+        else:  # Elasticsearch v7 and below or OpenSearch
+            # maintain BC by using the ES client directly (avoid using the elasticsearch_dsl library here)
+            response = es.search(index=search._index, body=search.to_dict(), **search._params)
+
+        demisto.debug(f'Test query to fetch incident index response: {response}')
         _, total_results = get_total_results(response)
 
     except NotFoundError as e:
@@ -349,12 +418,20 @@ def test_general_query(es):
     try:
         query = QueryString(query='*')
         search = Search(using=es, index='*').query(query)[0:1]
-        response = search.execute().to_dict()
+
+        if ELASTIC_SEARCH_CLIENT in [ELASTICSEARCH_V8, OPEN_SEARCH]:
+            response = search.execute().to_dict()
+
+        else:  # Elasticsearch v7 and below
+            # maintain BC by using the ES client directly (avoid using the elasticsearch_dsl library here)
+            response = es.search(index=search._index, body=search.to_dict(), **search._params)
+
+        demisto.debug(f'Test general query response: {response}')
         get_total_results(response)
 
     except NotFoundError as e:
-        return_error("Failed executing general search command - please check the Server URL and port number "
-                     "and the supplied credentials.\nError message: {}.".format(str(e)))
+        return_error(f"Failed executing general search command - please check the Server URL and port number "
+                     f"and the supplied credentials.\nError message: {str(e)}.")
 
 
 def test_time_field_query(es):
@@ -371,7 +448,15 @@ def test_time_field_query(es):
     """
     query = QueryString(query=TIME_FIELD + ':*')
     search = Search(using=es, index=FETCH_INDEX).query(query)[0:1]
-    response = search.execute().to_dict()
+
+    if ELASTIC_SEARCH_CLIENT in [ELASTICSEARCH_V8, OPEN_SEARCH]:
+        response = search.execute().to_dict()
+
+    else:  # Elasticsearch v7 and below
+        # maintain BC by using the ES client directly (avoid using the elasticsearch_dsl library here)
+        response = es.search(index=search._index, body=search.to_dict(), **search._params)
+
+    demisto.debug(f'Test time field query response: {response}')
     _, total_results = get_total_results(response)
 
     if total_results == 0:
@@ -396,7 +481,15 @@ def test_fetch_query(es):
     """
     query = QueryString(query=str(TIME_FIELD) + ":* AND " + FETCH_QUERY)
     search = Search(using=es, index=FETCH_INDEX).query(query)[0:1]
-    response = search.execute().to_dict()
+
+    if ELASTIC_SEARCH_CLIENT in [ELASTICSEARCH_V8, OPEN_SEARCH]:
+        response = search.execute().to_dict()
+
+    else:  # Elasticsearch v7 and below
+        # maintain BC by using the ES client directly (avoid using the elasticsearch_dsl library here)
+        response = es.search(index=search._index, body=search.to_dict(), **search._params)
+
+    demisto.debug(f'Test fetch query response: {response}')
     _, total_results = get_total_results(response)
 
     if total_results > 0:
@@ -433,7 +526,7 @@ def test_timestamp_format(timestamp):
             return_error(f"Fetched timestamp is not in milliseconds since epoch.\nFetched: {timestamp}")
 
 
-def test_func(proxies):
+def test_connectivity_auth(proxies):
     headers = {
         'Content-Type': "application/json"
     }
@@ -455,15 +548,61 @@ def test_func(proxies):
                 if HTTP_ERRORS.get(res.status_code) is not None:
                     # if it is a known http error - get the message form the preset messages
                     return_error("Failed to connect. "
-                                 "The following error occurred: {}".format(HTTP_ERRORS.get(res.status_code)))
+                                 f"The following error occurred: {HTTP_ERRORS.get(res.status_code)}")
 
                 else:
                     # if it is unknown error - get the message from the error itself
                     return_error(f"Failed to connect. The following error occurred: {e}")
 
+        elif res.status_code == 200:
+            verify_es_server_version(res.json())
+
     except requests.exceptions.RequestException as e:
         return_error("Failed to connect. Check Server URL field and port number.\nError message: " + str(e))
 
+
+def verify_es_server_version(res):
+    """
+    Gets the requests.get raw response, extracts the elasticsearch server version,
+    and verifies that the client type parameter is configured accordingly.
+    Raises exceptions for server version miss configuration issues.
+
+    Args:
+        res(dict): requests.models.Response object including information regarding the elasticsearch server.
+    """
+    es_server_version = res.get('version', {}).get('number', '')
+    demisto.debug(f"Elasticsearch server version is: {es_server_version}")
+    if es_server_version:
+        major_version = es_server_version.split('.')[0]
+        if major_version:
+            if int(major_version) >= 8 and ELASTIC_SEARCH_CLIENT not in [ELASTICSEARCH_V8, OPEN_SEARCH]:
+                raise ValueError(f'Configuration Error: Your Elasticsearch server is version {es_server_version}. '
+                                 f'Please ensure that the client type is set to {ELASTICSEARCH_V8} or {OPEN_SEARCH}. '
+                                 f'For more information please see the integration documentation.')
+            elif int(major_version) <= 7 and ELASTIC_SEARCH_CLIENT not in [OPEN_SEARCH, 'Elasticsearch']:
+                raise ValueError(f'Configuration Error: Your Elasticsearch server is version {es_server_version}. '
+                                 f'Please ensure that the client type is set to Elasticsearch or {OPEN_SEARCH}. '
+                                 f'For more information please see the integration documentation.')
+
+
+def test_func(proxies):
+    """
+      Tests API connectivity to the Elasticsearch server.
+      Tests the existence of all necessary fields for fetch.
+
+      Due to load considerations, the test module doesn't check the validity of the fetch-incident - to test that the fetch works
+      as excepted the user should run the es-integration-health-check command.
+
+    """
+    test_connectivity_auth(proxies)
+    if demisto.params().get('isFetch'):
+        # check the existence of all necessary fields for fetch
+        fetch_params_check()
+    demisto.results('ok')
+
+
+def integration_health_check(proxies):
+    test_connectivity_auth(proxies)
     # build general Elasticsearch class
     es = elasticsearch_builder(proxies)
 
@@ -495,8 +634,10 @@ def test_func(proxies):
                 response = temp
 
             # get the value in the time field
-            hit_date = str(response.get('hits', {}).get('hits')[0].get('_source').get(str(TIME_FIELD)))
+            source = response.get('hits', {}).get('hits')[0].get('_source', {})
+            hit_date = str(get_value_by_dot_notation(source, str(TIME_FIELD)))
 
+            demisto.debug(f'Hit date received: {hit_date}')
             # if not a timestamp test the conversion to datetime object
             if 'Timestamp' not in TIME_METHOD:
                 parse(str(hit_date))
@@ -512,8 +653,7 @@ def test_func(proxies):
     else:
         # check that we can reach any indexes in the supplied server URL
         test_general_query(es)
-
-    demisto.results('ok')
+    return "Testing was successful."
 
 
 def incident_label_maker(source):
@@ -548,27 +688,32 @@ def results_to_incidents_timestamp(response, last_fetch):
     current_fetch = last_fetch
     incidents = []
     for hit in response.get('hits', {}).get('hits'):
-        if hit.get('_source') is not None and hit.get('_source').get(str(TIME_FIELD)) is not None:
-            # if timestamp convert to iso format date and save the timestamp
-            hit_date = timestamp_to_date(str(hit.get('_source')[str(TIME_FIELD)]))
-            hit_timestamp = int(hit.get('_source')[str(TIME_FIELD)])
+        source = hit.get('_source')
+        if source is not None:
+            time_field_value = get_value_by_dot_notation(source, str(TIME_FIELD))
 
-            if hit_timestamp > last_fetch:
-                last_fetch = hit_timestamp
+            if time_field_value is not None:
+                # if timestamp convert to iso format date and save the timestamp
+                hit_date = timestamp_to_date(str(time_field_value))
+                hit_timestamp = int(time_field_value)
 
-            # avoid duplication due to weak time query
-            if hit_timestamp > current_fetch:
-                inc = {
-                    'name': 'Elasticsearch: Index: ' + str(hit.get('_index')) + ", ID: " + str(hit.get('_id')),
-                    'rawJSON': json.dumps(hit),
-                    'occurred': hit_date.isoformat() + 'Z',
-                    'dbotMirrorId': hit.get('_id')
-                }
+                if hit_timestamp > last_fetch:
+                    last_fetch = hit_timestamp
 
-                if MAP_LABELS:
-                    inc['labels'] = incident_label_maker(hit.get('_source'))
+                # avoid duplication due to weak time query
+                if hit_timestamp > current_fetch:
+                    inc = {
+                        'name': 'Elasticsearch: Index: ' + str(hit.get('_index')) + ", ID: " + str(hit.get('_id')),
+                        'rawJSON': json.dumps(hit),
+                        'occurred': hit_date.isoformat() + 'Z',
+                    }
+                    if hit.get('_id'):
+                        inc['dbotMirrorId'] = hit.get('_id')
 
-                incidents.append(inc)
+                    if MAP_LABELS:
+                        inc['labels'] = incident_label_maker(hit.get('_source'))
+
+                    incidents.append(inc)
 
     return incidents, last_fetch
 
@@ -591,30 +736,34 @@ def results_to_incidents_datetime(response, last_fetch):
     incidents = []
 
     for hit in response.get('hits', {}).get('hits'):
-        if hit.get('_source') is not None and hit.get('_source').get(str(TIME_FIELD)) is not None:
-            hit_date = parse(str(hit.get('_source')[str(TIME_FIELD)]))
-            hit_timestamp = int(hit_date.timestamp() * 1000)
+        source = hit.get('_source')
+        if source is not None:
+            time_field_value = get_value_by_dot_notation(source, str(TIME_FIELD))
+            if time_field_value is not None:
+                hit_date = parse(str(time_field_value))
+                hit_timestamp = int(hit_date.timestamp() * 1000)
 
-            if hit_timestamp > last_fetch_timestamp:
-                last_fetch = hit_date
-                last_fetch_timestamp = hit_timestamp
+                if hit_timestamp > last_fetch_timestamp:
+                    last_fetch = hit_date
+                    last_fetch_timestamp = hit_timestamp
 
-            # avoid duplication due to weak time query
-            if hit_timestamp > current_fetch:
-                inc = {
-                    'name': 'Elasticsearch: Index: ' + str(hit.get('_index')) + ", ID: " + str(hit.get('_id')),
-                    'rawJSON': json.dumps(hit),
-                    # parse function returns iso format sometimes as YYYY-MM-DDThh:mm:ss+00:00
-                    # and sometimes as YYYY-MM-DDThh:mm:ss
-                    # we want to return format: YYYY-MM-DDThh:mm:ssZ in our incidents
-                    'occurred': format_to_iso(hit_date.isoformat()),
-                    'dbotMirrorId': hit.get('_id')
-                }
+                # avoid duplication due to weak time query
+                if hit_timestamp > current_fetch:
+                    inc = {
+                        'name': 'Elasticsearch: Index: ' + str(hit.get('_index')) + ", ID: " + str(hit.get('_id')),
+                        'rawJSON': json.dumps(hit),
+                        # parse function returns iso format sometimes as YYYY-MM-DDThh:mm:ss+00:00
+                        # and sometimes as YYYY-MM-DDThh:mm:ss
+                        # we want to return format: YYYY-MM-DDThh:mm:ssZ in our incidents
+                        'occurred': format_to_iso(hit_date.isoformat()),
+                    }
+                    if hit.get('_id'):
+                        inc['dbotMirrorId'] = hit.get('_id')
 
-                if MAP_LABELS:
-                    inc['labels'] = incident_label_maker(hit.get('_source'))
+                    if MAP_LABELS:
+                        inc['labels'] = incident_label_maker(hit.get('_source'))
 
-                incidents.append(inc)
+                    incidents.append(inc)
 
     return incidents, last_fetch.isoformat()  # type:ignore[union-attr]
 
@@ -669,6 +818,7 @@ def get_time_range(last_fetch: Union[str, None] = None, time_range_start=FETCH_T
     else:
         start_time = last_fetch
 
+    demisto.debug(f'Time range start time: {start_time}')
     if start_time:
         range_dict['gt'] = start_time
 
@@ -680,6 +830,7 @@ def get_time_range(last_fetch: Union[str, None] = None, time_range_start=FETCH_T
     if TIME_METHOD == 'Simple-Date':
         range_dict['format'] = ES_DEFAULT_DATETIME_FORMAT
 
+    demisto.debug(f'Time range dictionary created: {range_dict}')
     return {'range': {time_field: range_dict}}
 
 
@@ -687,7 +838,7 @@ def execute_raw_query(es, raw_query, index=None, size=None, page=None):
     try:
         raw_query = json.loads(raw_query)
         if raw_query.get('query'):
-            demisto.debug('query provided already has a query field. Sending as is')
+            demisto.debug('Query provided already has a query field. Sending as is.')
             body = raw_query
         else:
             body = {'query': raw_query}
@@ -696,7 +847,18 @@ def execute_raw_query(es, raw_query, index=None, size=None, page=None):
         demisto.info(f"unable to convert raw query to dictionary, use it as a string\n{e}")
 
     requested_index = index or FETCH_INDEX
-    return es.search(index=requested_index, body=body, size=size, from_=page)
+
+    if ELASTIC_SEARCH_CLIENT in [ELASTICSEARCH_V8]:
+        search = Search(using=es, index=requested_index).query(body.get('query'))
+        if size and isinstance(page, int):
+            search = search[page:page + size]
+        response = search.execute().to_dict()
+
+    else:  # Elasticsearch v7 and below or OpenSearch
+        response = es.search(index=requested_index, body=body, size=size, from_=page)
+
+    demisto.debug(f'Raw query response: {response}')
+    return response
 
 
 def fetch_incidents(proxies):
@@ -713,7 +875,15 @@ def fetch_incidents(proxies):
         # Elastic search can use epoch timestamps (in milliseconds) as date representation regardless of date format.
         search = Search(using=es, index=FETCH_INDEX).filter(time_range_dict)
         search = search.sort({TIME_FIELD: {'order': 'asc'}})[0:FETCH_SIZE].query(query)
-        response = search.execute().to_dict()
+
+        if ELASTIC_SEARCH_CLIENT in [ELASTICSEARCH_V8, OPEN_SEARCH]:
+            response = search.execute().to_dict()
+
+        else:  # Elasticsearch v7 and below
+            # maintain BC by using the ES client directly (avoid using the elasticsearch_dsl library here)
+            response = es.search(index=search._index, body=search.to_dict(), **search._params)
+
+    demisto.debug(f'Fetch incidents response: {response}')
     _, total_results = get_total_results(response)
 
     incidents = []  # type: List
@@ -727,7 +897,7 @@ def fetch_incidents(proxies):
             incidents, last_fetch = results_to_incidents_datetime(response, last_fetch or FETCH_TIME)
             demisto.setLastRun({'time': str(last_fetch)})
 
-        demisto.info(f'extracted {len(incidents)} incidents')
+        demisto.info(f'Extracted {len(incidents)} incidents.')
     demisto.incidents(incidents)
 
 
@@ -822,6 +992,7 @@ def search_eql_command(args, proxies):
                           timestamp_field=timestamp_field, event_category_field=event_category_field,
                           filter=query_filter)
 
+    demisto.debug(f'EQL search body: {body}')
     response = es.eql.search(index=index, body=body)
 
     total_dict, _ = get_total_results(response)
@@ -847,11 +1018,22 @@ def index_document(args, proxies):
     doc = args.get('document')
     doc_id = args.get('id', '')
     es = elasticsearch_builder(proxies)
-    # Because of using elasticsearch lib <8 'document' param is called 'body'
-    if doc_id:
-        response = es.index(index=index, id=doc_id, body=doc)
-    else:
-        response = es.index(index=index, body=doc)
+
+    demisto.debug(f'Indexing document in index {index} with ID {doc_id}')
+    if ELASTIC_SEARCH_CLIENT == ELASTICSEARCH_V8:
+        if doc_id:
+            response = es.index(index=index, id=doc_id, document=doc)  # pylint: disable=E1123,E1120
+        else:
+            response = es.index(index=index, document=doc)  # pylint: disable=E1123,E1120
+
+    else:  # Elasticsearch version v7 or below, OpenSearch (BC)
+        # In elasticsearch lib <8 'document' param is called 'body'
+        if doc_id:
+            response = es.index(index=index, id=doc_id, body=doc)
+        else:
+            response = es.index(index=index, body=doc)
+
+    demisto.debug(f'Index document response: {response}')
     return response
 
 
@@ -876,18 +1058,84 @@ def index_document_command(args, proxies):
         removeNull=True,
         headers=headers
     )
-    return CommandResults(
+
+    if ELASTIC_SEARCH_CLIENT == ELASTICSEARCH_V8:
+        resp = resp.body
+
+    result = CommandResults(
         readable_output=readable_output,
         outputs_prefix='Elasticsearch.Index',
         outputs=index_context,
         raw_response=resp,
         outputs_key_field='id'
     )
+    return result
 
 
-def main():
+def get_indices_statistics(client):
+    """
+    Returns raw statistics and information of all the Elasticsearch indices.
+    Args:
+        client : The Elasticsearch client
+
+    Returns:
+        dict: raw statistics and information of all the Elasticsearch indices.
+    """
+    stats = client.indices.stats()
+    raw_indices_data = stats.get('indices')
+
+    return raw_indices_data
+
+
+def get_indices_statistics_command(args, proxies):
+    """
+    Returns statistics and information of the Elasticsearch indices.
+
+    return: A List with Elasticsearch indices info and statistics.
+    API reference: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html
+    """
+    limit = arg_to_number(args.get('limit', 50))
+    all_results = argToBoolean(args.get('all_results', False))
+    indices = []
+    es = elasticsearch_builder(proxies)
+
+    demisto.debug('Retrieving indices statistics')
+    # Fetch the statistics for all indices
+    raw_indices_data = get_indices_statistics(es)
+    for index, index_data in raw_indices_data.items():
+        index_stats = {'Name': index,
+                       'Status': index_data.get('status', ''),
+                       'Health': index_data.get('health', ''),
+                       'UUID': index_data.get('uuid', ''),
+                       'Documents Count': index_data.get('total', {}).get('docs', {}).get('count', ''),
+                       'Documents Deleted': index_data.get('total', {}).get('docs', {}).get('deleted', '')
+                       }
+        indices.append(index_stats)
+
+    if not all_results:
+        indices = indices[:limit]
+
+    readable_output = tableToMarkdown(
+        name="Indices Statistics:",
+        t=indices,
+        removeNull=True,
+        headers=[str(k) for k in indices[0]]
+    )
+
+    result = CommandResults(
+        readable_output=readable_output,
+        outputs_prefix='Elasticsearch.IndexStatistics',
+        outputs=indices,
+        outputs_key_field='UUID',
+        raw_response=raw_indices_data
+    )
+    return result
+
+
+def main():  # pragma: no cover
     proxies = handle_proxy()
     proxies = proxies if proxies else None
+    args = demisto.args()
     try:
         LOG(f'command is {demisto.command()}')
         if demisto.command() == 'test-module':
@@ -899,18 +1147,24 @@ def main():
         elif demisto.command() == 'get-mapping-fields':
             return_results(get_mapping_fields_command())
         elif demisto.command() == 'es-eql-search':
-            return_results(search_eql_command(demisto.args(), proxies))
+            return_results(search_eql_command(args, proxies))
         elif demisto.command() == 'es-index':
-            return_results(index_document_command(demisto.args(), proxies))
+            return_results(index_document_command(args, proxies))
+        elif demisto.command() == 'es-integration-health-check':
+            return_results(integration_health_check(proxies))
+        elif demisto.command() == 'es-get-indices-statistics':
+            return_results(get_indices_statistics_command(args, proxies))
+
     except Exception as e:
         if 'The client noticed that the server is not a supported distribution of Elasticsearch' in str(e):
-            return_error('Failed executing {}. Seems that the client does not support the server\'s distribution, '
-                         'Please try using the Open Search client in the instance configuration.'
-                         '\nError message: {}'.format(demisto.command(), str(e)), error=e)
+            return_error(f'Failed executing {demisto.command()}. Seems that the client does not support the server\'s '
+                         f'distribution, Please try using the Open Search client in the instance configuration.'
+                         f'\nError message: {str(e)}', error=str(e))
         if 'failed to parse date field' in str(e):
-            return_error(f'Failed to execute the {demisto.command()} command. Make sure the `Time field type` is correctly set.',
-                         error=e)
-        return_error(f"Failed executing {demisto.command()}.\nError message: {e}", error=e)
+            return_error(
+                f'Failed to execute the {demisto.command()} command. Make sure the `Time field type` is correctly set.',
+                error=str(e))
+        return_error(f"Failed executing {demisto.command()}.\nError message: {e}", error=str(e))
 
 
 if __name__ in ('__main__', 'builtin', 'builtins'):

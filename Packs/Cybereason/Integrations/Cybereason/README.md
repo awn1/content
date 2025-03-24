@@ -1,29 +1,51 @@
 Endpoint detection and response to manage and query malops, connections and processes.
 This integration was integrated and tested with version 21.2 of Cybereason
 
-## Configure Cybereason on Cortex XSOAR
+## Configure Cybereason in Cortex
 
-1. Navigate to **Settings** > **Integrations** > **Servers & Services**.
-2. Search for Cybereason.
-3. Click **Add instance** to create and configure a new integration instance.
 
-    | **Parameter** | **Required** |
-    | --- | --- |
-    | Server URL (e.g. <https://192.168.0.1>) | True |
-    | Credentials | False |
-    | Password | False |
-    | Trust any certificate (not secure) | False |
-    | Use system proxy settings | False |
-    | Fetch incidents | False |
-    | Incident type | False |
-    | First fetch timestamp (&lt;number&gt; &lt;time unit&gt;, e.g., 12 hours, 7 days, 3 months, 1 year) | False |
-    | Fetch by "MALOP CREATION TIME" or by "MALOP UPDATE TIME" (Fetching by Malop update time might create duplicates of Malops as incidents) | False |
+| **Parameter** | **Required** |
+| --- | --- |
+| Server URL (e.g. <https://192.168.0.1>) | True |
+| Credentials | False |
+| Password | False |
+| Trust any certificate (not secure) | False |
+| Use system proxy settings | False |
+| Fetch incidents | False |
+| Incident type | False |
+| First fetch timestamp (&lt;number&gt; &lt;time unit&gt;, e.g., 12 hours, 7 days, 3 months, 1 year) | False |
+| Fetch by "MALOP CREATION TIME" or by "MALOP UPDATE TIME" (Fetching by Malop update time might create duplicates of Malops as incidents) | False |
 
-4. Click **Test** to validate the URLs, token, and connection.
+
+## Cybereason MalOp to XSOAR Incident Map
+
+This involves the mapping of response fields to XSOAR incidents, enhancing the ability to manage and track security incidents effectively.
+
+### Overview
+
+1. **Incident Mapping:** The integration maps specific response fields to corresponding incident fields within XSOAR, ensuring that all relevant information is captured accurately.
+2. **Custom Fields:** In addition to standard incident fields, custom fields have been introduced to accommodate unique data requirements specific to our workflow. These fields provide flexibility and enhance the granularity of the incident information.
+- `malopcreationtime`
+- `malopupdatetime`
+- `maloprootcauseelementname`
+- `maloprootcauseelementtype`
+- `malopseverity`
+- `malopdetectiontype`
+- `malopedr`
+- `malopurl`
+- `malopgroup`
+
+These custom fields provide flexibility and enhance the granularity of the incident information.
+
+### Usage
+
+1. **Configure Custom Fields:** Ensure that all custom fields are properly set up in XSOAR before running the fetch function.
+2. **Enable Fetch Incidents:**  Functionality responsible to fetch Malops.
+3. **Monitor Incidents:** Once the MalOps are converted, they will appear as incidents in XSOAR, allowing for effective incident management.
 
 ## Commands
 
-You can execute these commands from the Cortex XSOAR CLI, as part of an automation, or in a playbook.
+You can execute these commands from the CLI, as part of an automation, or in a playbook.
 After you successfully execute a command, a DBot message appears in the War Room with the command details.
 
 ### cybereason-query-processes
@@ -1611,3 +1633,126 @@ Get the results related to machines.
     "GroupName": "example-group-name"
 }
 ```
+
+#### Base Command
+
+`cybereason-query-malop-management`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| malopGuid | malopGuid of the Cybereason Malop. | Required | 
+
+
+#### Context Output
+
+| **Path** | **Type** | **Description** |
+| --- | --- | --- |
+| Cybereason.Malops.GUID | string | The unique globally unique identifier \(guid\) for the Malop. | 
+| Cybereason.Malops.CreationTime | string | The time reported as when the malicious behavior began on the system. This is not the time that the Malop was first detected by Cybereason. |
+| Cybereason.Malops.Link | string | Link to the Malop on Cybereason. | 
+| Cybereason.Malops.LastUpdatedTime | string | Last updated time of malop | 
+| Cybereason.Malops.InvolvedHash | string | List of file hashes involved in this Malop | 
+| Cybereason.Malops.Status | string | Malop managemant status | 
+
+#### Command example
+
+```!cybereason-query-malop-management malopGuid=<malop-guid>```
+
+#### Context Example
+
+```json
+{
+    "GUID": "malop-guid",
+    "Link": "malop-url",
+    "CreationTime": 1686720403740,
+    "LastUpdateTime": 1686720403743,
+    "Status": "Pending",
+    "InvolvedHash": "involed-hash"
+}
+```
+
+#### Base Command
+
+`cybereason_process_attack_tree_command`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| malopGuid | malopGuid of the Cybereason Malop | Required | 
+
+
+#### Context Output
+
+| **Path** | **Type** | **Description** |
+| --- | --- | --- |
+|Cybereason.Process.ProcessID | string | Cybereason Process ID |
+|Cybereason.Process.URL | string | Attack tree url for a given Process |
+
+#### Command example
+
+```!cybereason-process-attack-tree processGuid=<process-guid>```
+
+#### Context Example
+
+```json
+{
+    "Process": [
+        {
+        "ProcessID": "<process-id>",
+        "URL": "<url>"
+        },
+        {
+        "ProcessID": "<process-id>",
+        "URL": "<url>"
+        } 
+    ]
+}
+```
+
+
+### cybereason-update-malop-investigation-status
+
+***
+Updates malop investigation status.
+
+#### Base Command
+
+`cybereason-update-malop-investigation-status`
+
+#### Input
+
+| **Argument Name** | **Description** | **Required** |
+| --- | --- | --- |
+| malopGuid | Malop GUID to update its investigation status. | Required | 
+| investigationStatus | Investigation status to update. Possible values are: Pending, Reopened, Under Investigation, On Hold, Closed. | Required | 
+
+#### Context Output
+
+| **Path** | **Type** | **Description** |
+| --- | --- | --- |
+| Cybereason.Malops.GUID | string | Malop GUID. | 
+| Cybereason.Malops.InvestigationStatus | string | Malop investigation status: Pending, Reopened, Under Investigation, On Hold, Closed. | 
+
+#### Command example
+
+```!cybereason-update-malop-investigation-status malopGuid=<malop_guid> investigationStatus="Under Investigation"```
+
+#### Context Example
+
+```json
+{
+    "Cybereason": {
+        "Malops": {
+            "GUID": "<malop_guid>",
+            "InvestigationStatus": "Under Investigation"
+        }
+    }
+}
+```
+
+#### Human Readable Output
+
+> Successfully updated malop <malop_guid> to investigation status "Under Investigation"!

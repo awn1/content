@@ -1,10 +1,11 @@
-import json
+import io
 
 from CommonServerPython import *  # noqa # pylint: disable=unused-wildcard-import
 from CommonServerUserPython import *  # noqa
 
 import traceback
-from typing import Dict, Any, Tuple
+import csv
+from typing import Any
 
 # Disable insecure warnings
 import urllib3
@@ -28,12 +29,24 @@ CategoryToIncidentType = {
 ''' CLIENT CLASS '''
 
 
+def csv2json(csv_data: str):
+    """ Converts data from csv to json
+    Args:
+        csv_data: data in csv format
+    Returns:
+        the same data in json formal
+    """
+    reader = csv.DictReader(io.StringIO(csv_data))
+    json_data = list(reader)
+    return json_data
+
+
 class Client(BaseClient):
     def test(self):
         self.incident_query(1, (arg_to_datetime('3 days') or datetime.now() - timedelta(days=3)).strftime(DATE_FORMAT))
 
     def incident_query(self, limit: Optional[int], start_time: str = '', end_time: str = '', actor_ids: list[str] = None,
-                       service_names: list[str] = None, categories: list[str] = None) -> Dict[str, Any]:
+                       service_names: list[str] = None, categories: list[str] = None) -> dict[str, Any]:
         url_suffix = '/external/api/v1/queryIncidents'
         params = {'limit': limit or 50}
         data = assign_params(
@@ -47,23 +60,28 @@ class Client(BaseClient):
         )
         return self._http_request('POST', url_suffix, params=params, json_data=data, raise_on_status=True)
 
-    def status_update(self, incident_ids: List, status: str) -> Dict[str, str]:
+    def status_update(self, incident_ids: List, status: str) -> dict[str, str]:
         url_suffix = '/external/api/v1/modifyIncidents'
         data = [
             {'incidentId': incident_id, "changeRequests": {"WORKFLOW_STATUS": status}} for incident_id in incident_ids
         ]
         return self._http_request('POST', url_suffix, json_data=data, raise_on_status=True)
 
-    def anomaly_activity_list(self, incident_id: Optional[int]) -> Dict[str, str]:
+    def anomaly_activity_list(self, incident_id: Optional[int]) -> Optional[bytes]:
         url_suffix = '/external/api/v1/queryActivities'
         data = {"incident_id": incident_id}
-        return self._http_request('POST', url_suffix, json_data=data)
+        results = self._http_request('POST', url_suffix, json_data=data, resp_type='response')
+        demisto.debug(f'This is the results from the activity list: {results}')
 
-    def policy_dictionary_list(self) -> List[Dict]:
+        activities = results.content
+        demisto.debug(f'This is the content from the activity list: {activities}')
+        return activities
+
+    def policy_dictionary_list(self) -> List[dict]:
         url_suffix = '/dlp/dictionary'
         return self._http_request('GET', url_suffix, raise_on_status=True)
 
-    def policy_dictionary_update(self, dict_id: Optional[int], name: str, content: str) -> Dict[str, str]:
+    def policy_dictionary_update(self, dict_id: Optional[int], name: str, content: str) -> dict[str, str]:
         url_suffix = '/dlp/dictionary'
         data = {
             "id": dict_id,
@@ -76,7 +94,7 @@ class Client(BaseClient):
 ''' HELPER FUNCTIONS '''
 
 
-def calculate_offset_and_limit(**kwargs) -> Tuple[int, int]:
+def calculate_offset_and_limit(**kwargs) -> tuple[int, int]:
     if limit := arg_to_number(kwargs.get('limit')):  # 'limit' is stronger than pagination ('page', and 'page_size').
         return 0, limit
     if (page := arg_to_number(kwargs.get('page'))) and (page_size := arg_to_number(kwargs.get('page_size'))):
@@ -133,14 +151,13 @@ def test_module(client: Client) -> str:
     return message
 
 
-def fetch_incidents(client: Client, params: dict) -> Tuple[dict, list]:
+def fetch_incidents(client: Client, params: dict) -> tuple[dict, list]:
     last_run = demisto.getLastRun()
     xsoar_incidents = []
 
     limit = arg_to_number(params.get('max_fetch', 50))
     if not (start_time := last_run.get('start_time')):  # in the first interval.
-        default_first_time = datetime.now() - timedelta(days=3)
-        start_time = (arg_to_datetime(params.get('first_fetch')) or default_first_time).strftime(DATE_FORMAT)
+        start_time = (arg_to_datetime(params.get('first_fetch', '3 days'))).strftime(DATE_FORMAT)  # type: ignore[union-attr]
 
     result = client.incident_query(limit, start_time)
 
@@ -173,7 +190,7 @@ def fetch_incidents(client: Client, params: dict) -> Tuple[dict, list]:
     return last_run, xsoar_incidents
 
 
-def incident_query_command(client: Client, args: Dict) -> CommandResults:
+def incident_query_command(client: Client, args: dict) -> CommandResults:
     limit = arg_to_number(args.get('limit', 50))
     start_time = (arg_to_datetime(args.get('start_time')) or datetime.now() - timedelta(days=3)).strftime(DATE_FORMAT)
     end_time = (arg_to_datetime(args.get('end_time')) or datetime.now()).strftime(DATE_FORMAT)
@@ -227,7 +244,7 @@ def incident_query_command(client: Client, args: Dict) -> CommandResults:
         )
 
 
-def status_update_command(client: Client, args: Dict) -> CommandResults:
+def status_update_command(client: Client, args: dict) -> CommandResults:
     incident_ids = argToList(args.get('incident_ids'))
     status = str(args.get('status'))
 
@@ -240,21 +257,26 @@ def status_update_command(client: Client, args: Dict) -> CommandResults:
     )
 
 
-def anomaly_activity_list_command(client: Client, args: Dict) -> CommandResults:
+def anomaly_activity_list_command(client: Client, args: dict) -> CommandResults:
     anomaly_id = arg_to_number(args.get('anomaly_id'))
 
     result = client.anomaly_activity_list(anomaly_id)
+    if not result:
+        return CommandResults(
+            readable_output="No activities found for anomaly ID " + str(anomaly_id))
+
+    anomaly_results = csv2json(result.decode('utf-8'))
 
     return CommandResults(
         outputs=result,
         outputs_prefix='SkyhighSecurity.Dictionaries',
         outputs_key_field='ID',
-        readable_output=tableToMarkdown('', result),
+        readable_output=tableToMarkdown('Anomaly Activity List', anomaly_results),
         raw_response=result
     )
 
 
-def policy_dictionary_list_command(client: Client, args: Dict) -> CommandResults:
+def policy_dictionary_list_command(client: Client, args: dict) -> CommandResults:
     offset, limit = calculate_offset_and_limit(**args)
     names = argToList(args.get('name'))
 
@@ -285,7 +307,7 @@ def policy_dictionary_list_command(client: Client, args: Dict) -> CommandResults
     )
 
 
-def policy_dictionary_update_command(client: Client, args: Dict) -> CommandResults:
+def policy_dictionary_update_command(client: Client, args: dict) -> CommandResults:
     dict_id = arg_to_number(args.get('dictionary_id'))
     name = str(args.get('name'))
     content = str(args.get('content'))
@@ -318,7 +340,7 @@ def main() -> None:
     demisto.debug(f'Command being called is {command}')
 
     try:
-        commands: Dict = {
+        commands: dict = {
             'skyhigh-security-incident-query': incident_query_command,
             'skyhigh-security-incident-status-update': status_update_command,
             'skyhigh-security-anomaly-activity-list': anomaly_activity_list_command,

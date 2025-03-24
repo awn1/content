@@ -1,3 +1,4 @@
+import uuid
 import demistomock as demisto
 from CommonServerPython import *
 from CommonServerUserPython import *
@@ -43,6 +44,7 @@ SCOPES = ['https://www.googleapis.com/auth/admin.directory.user.readonly']
 PROXY = demisto.params().get('proxy')
 DISABLE_SSL = demisto.params().get('insecure', False)
 FETCH_TIME = demisto.params().get('fetch_time', '1 days')
+LEGACY_NAME = argToBoolean(demisto.params().get('legacy_name', False))
 
 SEND_AS_SMTP_FIELDS = ['host', 'port', 'username', 'password', 'securitymode']
 DATE_FORMAT = '%Y-%m-%d'  # sample - 2020-08-23
@@ -183,9 +185,19 @@ def parse_mail_parts(parts):
 
         else:
             if part['body'].get('attachmentId') is not None:
+                attachmentName = part['filename']
+                content_id = ""
+                is_inline = False
+                for header in part.get('headers', []):
+                    if header.get('name') == 'Content-ID':
+                        content_id = header.get('value').strip("<>")
+                    if header.get('name') == 'Content-Disposition':
+                        is_inline = 'inline' in header.get('value').strip('<>')
+                if is_inline and content_id and content_id != "None" and not LEGACY_NAME:
+                    attachmentName = f"{content_id}-attachmentName-{attachmentName}"
                 attachments.append({
                     'ID': part['body']['attachmentId'],
-                    'Name': part['filename']
+                    'Name': attachmentName,
                 })
 
     return body, html, attachments
@@ -281,6 +293,7 @@ def get_occurred_date(email_data: dict) -> Tuple[datetime, bool]:
         Tuple[datetime, bool]: occurred datetime, can be used for incrementing search date
     """
     headers = demisto.get(email_data, 'payload.headers')
+    output = None
     if not headers or not isinstance(headers, list):
         demisto.error(f"couldn't get headers for msg (shouldn't happen): {email_data}")
     else:
@@ -292,18 +305,28 @@ def get_occurred_date(email_data: dict) -> Tuple[datetime, bool]:
                 if val:
                     res = get_date_from_email_header(val)
                     if res:
-                        demisto.debug(f"Using occurred date: {res} from header: {name} value: {val}")
-                        return res, True
+                        output = datetime.fromtimestamp(res.timestamp(), tz=timezone.utc)
+                        demisto.debug(f"The timing from header: {name} value: {val} the result: {res}, the UTC time is {output}")
+                        break
     internalDate = email_data.get('internalDate')
-    demisto.info(f"couldn't extract occurred date from headers trying internalDate: {internalDate}")
+    demisto.info(f"trying internalDate: {internalDate}")
     if internalDate and internalDate != '0':
         # intenalDate timestamp has 13 digits, but epoch-timestamp counts the seconds since Jan 1st 1970
         # (which is currently less than 13 digits) thus a need to cut the timestamp down to size.
         timestamp_len = len(str(int(time.time())))
-        if len(str(internalDate)) > timestamp_len:
+        if len(str(internalDate)) >= timestamp_len:
             internalDate = (str(internalDate)[:timestamp_len])
-        return datetime.fromtimestamp(int(internalDate), tz=timezone.utc), True
-        # we didn't get a date from anywhere
+            internalDate_dt = datetime.fromtimestamp(int(internalDate), tz=timezone.utc)
+            demisto.debug(f"{internalDate=} {internalDate_dt=}")
+            if output and internalDate_dt:
+                # check which time is earlier, return it
+                output = internalDate_dt if internalDate_dt < output else output
+            elif internalDate_dt and not output:
+                output = internalDate_dt
+    if output:
+        demisto.debug(f"The final occurred time is {output}")
+        return output, True
+    # we didn't get a date from anywhere
     demisto.info("Failed finding date from internal or headers. Using 'datetime.now()'")
     return datetime.now(tz=timezone.utc), False
 
@@ -340,11 +363,7 @@ def get_email_context(email_data, mailbox):
     body = demisto.get(email_data, 'payload.body.data')
     body = body.encode('ascii') if body is not None else ''
     parsed_body = base64.urlsafe_b64decode(body)
-    base_time = email_data.get('internalDate')
-    if not base_time or not get_date_from_email_header(base_time):
-        # we have an invalid date. use the occurred in rfc 2822
-        demisto.debug(f'Using Date base time from occurred: {occurred} instead of date header: [{base_time}]')
-        base_time = format_datetime(occurred)
+    demisto.debug(f"get_email_context {body=} {parsed_body=}")
 
     context_gmail = {
         'Type': 'Gmail',
@@ -367,7 +386,7 @@ def get_email_context(email_data, mailbox):
         # only for incident
         'Cc': headers.get('cc', []),
         'Bcc': headers.get('bcc', []),
-        'Date': base_time,
+        'Date': format_datetime(occurred),
         'Html': None,
     }
 
@@ -387,7 +406,7 @@ def get_email_context(email_data, mailbox):
 
         'CC': headers.get('cc', []),
         'BCC': headers.get('bcc', []),
-        'Date': base_time,
+        'Date': format_datetime(occurred),
         'Body/HTML': None,
     }
 
@@ -396,10 +415,12 @@ def get_email_context(email_data, mailbox):
         context_gmail['Body'] = html_to_text(context_gmail['Body'])
         context_email['Body/HTML'] = context_gmail['Html']
         context_email['Body/Text'] = context_gmail['Body']
+        demisto.debug(f"In text/html {context_gmail['Body']=}")
 
     if 'multipart' in context_gmail['Format']:  # type: ignore
         context_gmail['Body'], context_gmail['Html'], context_gmail['Attachments'] = parse_mail_parts(
             email_data.get('payload', {}).get('parts', []))
+        demisto.debug(f"In multipart {context_gmail['Body']=}")
         context_gmail['Attachment Names'] = ', '.join(
             [attachment['Name'] for attachment in context_gmail['Attachments']])  # type: ignore
         context_email['Body/Text'], context_email['Body/HTML'], context_email['Attachments'] = parse_mail_parts(
@@ -1535,12 +1556,11 @@ def get_attachments(user_id, _id):
         'messageId': _id,
     }
     files = []
-    for attachment in result['Attachments']:
+    for attachment in result.get('Attachments', []):
         command_args['id'] = attachment['ID']
         result = service.users().messages().attachments().get(**command_args).execute()
         file_data = base64.urlsafe_b64decode(result['data'].encode('ascii'))
         files.append((attachment['Name'], file_data))
-
     return files
 
 
@@ -1910,20 +1930,22 @@ def handle_html(htmlBody):
         re.finditer(  # pylint: disable=E1101
             r'<img.+?src=\"(data:(image\/.+?);base64,([a-zA-Z0-9+/=\r\n]+?))\"',
             htmlBody,
-            re.I  # pylint: disable=E1101
+            re.I | re.S  # pylint: disable=E1101
         )
     ):
         maintype, subtype = m.group(2).split('/', 1)
         name = f"image{i}.{subtype}"
-        att = {
+        cid = (f'{name}@{str(uuid.uuid4())[:8]}_{str(uuid.uuid4())[:8]}')
+        attachment = {
             'maintype': maintype,
             'subtype': subtype,
-            'data': base64.b64decode(m.group(3)),
+            'data': b64_decode(m.group(3)),
             'name': name,
-            'cid': name
+            'cid': cid,
+            'ID': cid
         }
-        attachments.append(att)
-        cleanBody += htmlBody[lastIndex:m.start(1)] + 'cid:' + att['cid']
+        attachments.append(attachment)
+        cleanBody += htmlBody[lastIndex:m.start(1)] + 'cid:' + attachment['cid']
         lastIndex = m.end() - 1
 
     cleanBody += htmlBody[lastIndex:]
@@ -2037,7 +2059,7 @@ def attachment_handler(message, attachments):
             msg_txt = MIMEText(att['data'], att['subtype'], 'utf-8')
             if att['cid'] is not None:
                 msg_txt.add_header('Content-Disposition', 'inline', filename=att['name'])
-                msg_txt.add_header('Content-ID', '<' + att['name'] + '>')
+                msg_txt.add_header('Content-ID', '<' + att['cid'] + '>')
 
             else:
                 msg_txt.add_header('Content-Disposition', 'attachment', filename=att['name'])
@@ -2047,7 +2069,9 @@ def attachment_handler(message, attachments):
             msg_img = MIMEImage(att['data'], att['subtype'])
             if att['cid'] is not None:
                 msg_img.add_header('Content-Disposition', 'inline', filename=att['name'])
-                msg_img.add_header('Content-ID', '<' + att['name'] + '>')
+                msg_img.add_header('Content-ID', '<' + att['cid'] + '>')
+                if att.get('ID'):
+                    msg_img.add_header('X-Attachment-Id', att['ID'])
 
             else:
                 msg_img.add_header('Content-Disposition', 'attachment', filename=att['name'])
@@ -2057,7 +2081,7 @@ def attachment_handler(message, attachments):
             msg_aud = MIMEAudio(att['data'], att['subtype'])
             if att['cid'] is not None:
                 msg_aud.add_header('Content-Disposition', 'inline', filename=att['name'])
-                msg_aud.add_header('Content-ID', '<' + att['name'] + '>')
+                msg_aud.add_header('Content-ID', '<' + att['cid'] + '>')
 
             else:
                 msg_aud.add_header('Content-Disposition', 'attachment', filename=att['name'])
@@ -2067,7 +2091,7 @@ def attachment_handler(message, attachments):
             msg_app = MIMEApplication(att['data'], att['subtype'])
             if att['cid'] is not None:
                 msg_app.add_header('Content-Disposition', 'inline', filename=att['name'])
-                msg_app.add_header('Content-ID', '<' + att['name'] + '>')
+                msg_app.add_header('Content-ID', '<' + att['cid'] + '>')
             else:
                 msg_app.add_header('Content-Disposition', 'attachment', filename=att['name'])
             message.attach(msg_app)
@@ -2077,16 +2101,16 @@ def attachment_handler(message, attachments):
             msg_base.set_payload(att['data'])
             if att['cid'] is not None:
                 msg_base.add_header('Content-Disposition', 'inline', filename=att['name'])
-                msg_base.add_header('Content-ID', '<' + att['name'] + '>')
+                msg_base.add_header('Content-ID', '<' + att['cid'] + '>')
 
             else:
                 msg_base.add_header('Content-Disposition', 'attachment', filename=att['name'])
             message.attach(msg_base)
 
 
-def send_mail(emailto, emailfrom, subject, body, entry_ids, cc, bcc, htmlBody, replyTo, file_names, attach_cid,
-              transientFile, transientFileContent, transientFileCID, manualAttachObj, additional_headers,
-              templateParams, inReplyTo=None, references=None, force_handle_htmlBody=False):
+def send_mail(emailto, emailfrom, subject, body, entry_ids, cc, bcc, htmlBody, replyTo, file_names,
+              attach_cid, transientFile, transientFileContent, transientFileCID, manualAttachObj, additional_headers,
+              templateParams, sender_display_name, inReplyTo=None, references=None, force_handle_htmlBody=False):
     if templateParams:
         templateParams = template_params(templateParams)
         if body:
@@ -2119,9 +2143,12 @@ def send_mail(emailto, emailfrom, subject, body, entry_ids, cc, bcc, htmlBody, r
     message['to'] = header(','.join(emailto))
     message['cc'] = header(','.join(cc))
     message['bcc'] = header(','.join(bcc))
-    message['from'] = header(emailfrom)
     message['subject'] = header(subject)
     message['reply-to'] = header(replyTo)
+    if sender_display_name:
+        message['from'] = header(sender_display_name + f' <{emailfrom}>')
+    else:
+        message['from'] = header(emailfrom)
 
     # The following headers are being used for the reply-mail command.
     if inReplyTo:
@@ -2199,10 +2226,11 @@ def mail_command(args, subject_prefix='', in_reply_to=None, references=None):
     template_param = args.get('templateParams')
     render_body = argToBoolean(args.get('renderBody', False))
     body_type = args.get('bodyType', 'Text').lower()
+    sender_display_name = args.get('senderDisplayName')
 
-    result = send_mail(email_to, email_from, subject, body, entry_ids, cc, bcc, html_body, reply_to, attach_names,
-                       attach_cids, transient_file, transient_file_content, transient_file_cid, manual_attach_obj,
-                       additional_headers, template_param, in_reply_to, references, force_handle_htmlBody)
+    result = send_mail(email_to, email_from, subject, body, entry_ids, cc, bcc, html_body, reply_to,
+                       attach_names, attach_cids, transient_file, transient_file_content, transient_file_cid, manual_attach_obj,
+                       additional_headers, template_param, sender_display_name, in_reply_to, references, force_handle_htmlBody)
     rendering_body = html_body if body_type == "html" else body
 
     send_mail_result = sent_mail_to_entry('Email sent:', [result], email_to, email_from, cc, bcc, rendering_body,
@@ -2213,15 +2241,13 @@ def mail_command(args, subject_prefix='', in_reply_to=None, references=None):
             content_format=EntryFormat.HTML,
             raw_response=html_body,
         )
-
         return [send_mail_result, html_result]
-
     return send_mail_result
 
 
 def reply_mail_command():
     args = demisto.args()
-    in_reply_to = argToList(args.get('in_reply_to'))
+    in_reply_to = argToList(args.get('inReplyTo'))
     references = argToList(args.get('references'))
 
     return mail_command(args, 'Re: ', in_reply_to, references)
@@ -2625,7 +2651,7 @@ def fetch_incidents():
             ignore_list_used = True
             ignore_ids.append(msg_id)
         # update last run only if we trust the occurred timestamp
-        if is_valid_date and occurred > next_last_fetch:
+        if is_valid_date and occurred >= next_last_fetch:
             next_last_fetch = occurred + timedelta(seconds=1)
 
         # avoid duplication due to weak time query

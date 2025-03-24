@@ -11,6 +11,15 @@ from MicrosoftApiModule import *  # noqa: E402
 urllib3.disable_warnings()  # pylint: disable=no-member
 DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 
+REQUIRED_PERMISSIONS = (
+    'offline_access',  # allows device-flow login
+    'IdentityRiskEvent.Read.All',
+    'IdentityRiskyUser.ReadWrite.All',
+    'RoleManagement.ReadWrite.Directory',
+    'Policy.ReadWrite.ConditionalAccess',
+    'Policy.Read.All'
+)
+
 
 class Client:  # pragma: no cover
     def __init__(self, app_id: str, verify: bool, proxy: bool,
@@ -44,7 +53,7 @@ class Client:  # pragma: no cover
             "command_prefix": "msgraph-identity",
         }
         if not client_credentials:
-            args["scope"] = 'offline_access RoleManagement.ReadWrite.Directory'
+            args["scope"] = ' '.join(REQUIRED_PERMISSIONS)
             args["token_retrieval_url"] = 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token'
         self.ms_client = MicrosoftClient(**args)  # type: ignore
 
@@ -400,24 +409,28 @@ def list_role_members_command(ms_client: Client, args: dict) -> CommandResults: 
     except ValueError:
         raise DemistoException(f'Limit must be an integer, not "{limit_str}"')
     role_id = args.get('role_id')
-    if results := ms_client.get_role_members(role_id, limit):  # type: ignore
-        ids = [member['id'] for member in results]
-        context = {
-            'role_id': role_id,
-            'user_id': ids
-        }
-        return CommandResults(
-            'MSGraphIdentity.RoleMember',
-            'role_id',
-            outputs=context,
-            raw_response=results,
-            readable_output=tableToMarkdown(
-                f'Role \'{role_id}\' members:',
-                context
+    try:
+        if results := ms_client.get_role_members(role_id, limit):  # type: ignore
+            ids = [member['id'] for member in results]
+            context = {
+                'role_id': role_id,
+                'user_id': ids
+            }
+            return CommandResults(
+                'MSGraphIdentity.RoleMember',
+                'role_id',
+                outputs=context,
+                raw_response=results,
+                readable_output=tableToMarkdown(
+                    f'Role \'{role_id}\' members:',
+                    context
+                )
             )
-        )
-    else:
-        return CommandResults(readable_output=f"No members found in {role_id}")
+        else:
+            return CommandResults(readable_output=f"No members found in {role_id}")
+    except Exception as e:
+        demisto.debug(f"Role ID: {role_id} was not found or invalid - {e}")
+        return CommandResults(readable_output=f"Role ID: {role_id}, was not found or invalid")
 
 
 def activate_directory_role_command(ms_client: Client, args: dict) -> CommandResults:  # pragma: no cover
@@ -937,5 +950,5 @@ def main():  # pragma: no cover
 
 ''' ENTRY POINT '''
 
-if __name__ in ('__main__', '__builtin__', 'builtins'):
+if __name__ in ('__main__', '__builtin__', 'builtins'):  # pragma: no cover
     main()

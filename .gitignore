@@ -21,8 +21,8 @@ CommonServerUserPython.py
 CommonServerPowerShell.ps1
 demistomock.py
 demistomock.ps1
-!Tests/demistomock/demistomock.py
-!Tests/demistomock/demistomock.ps1
+Tests/demistomock/demistomock.py
+Tests/demistomock/demistomock.ps1
 Tests/filter_file.txt
 Tests/filter_file_old.txt
 Tests/id_set.json
@@ -84,6 +84,7 @@ Packs/Whois/Integrations/Whois/test_data/microsocks
 .pre-commit-config-content.yaml
 .report.json
 .report_pytest.xml
+report_pytest.xml
 .report_mypy.xml
 coverage.xml
 Packs/**/Integrations/**/.pytest.ini
@@ -100,3 +101,8 @@ demisto_sdk_debug.log.*
 
 # Ignore Modeling Rules test conf
 Packs/**/ModelingRules/**/**/*_testdata.json
+
+# Build files
+.cache/
+.npm/
+pipeline_jobs_folder/

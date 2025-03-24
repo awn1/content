@@ -1,3 +1,5 @@
+import json
+
 import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
 import urllib.parse
@@ -52,9 +54,9 @@ class PrismaCloudComputeClient(BaseClient):
             super().__init__(base_url, True, proxy, ok_codes, headers, auth)
             self._verify = verify
 
-    def _http_request(self, method, url_suffix, full_url=None, headers=None,
+    def _http_request(self, method, url_suffix, full_url=None, headers=None,  # type: ignore[override]
                       auth=None, json_data=None, params=None, data=None, files=None,
-                      timeout=10, resp_type='json', ok_codes=None, **kwargs):
+                      timeout=30, resp_type='json', ok_codes=None, **kwargs):
         """
         Extends the _http_request method of BaseClient.
         If self._project is available, a 'project=projectID' query param is automatically added to all requests.
@@ -506,13 +508,15 @@ class PrismaCloudComputeClient(BaseClient):
         """
         return self._http_request(method="PUT", url_suffix="trust/data", json_data=data, resp_type="response", ok_codes=(200,))
 
-    def get_container_scan_results(self, params: Optional[dict] = None) -> List[dict]:
+    def get_container_scan_results(self, params: Optional[dict] = None, all_results: bool = False) -> List[dict]:
         """
         Sends a request to get container scan results information.
 
         Returns:
             list[dict]: container scan results information.
         """
+        if all_results:
+            return self._get_all_results(url_suffix="/containers", params=params)
         return self._http_request(method="GET", url_suffix="containers", params=params)
 
     def get_hosts_info(self, params: Optional[dict] = None) -> List[dict]:
@@ -532,6 +536,24 @@ class PrismaCloudComputeClient(BaseClient):
             list[dict]: runtime container audit events information.
         """
         return self._http_request(method="GET", url_suffix="audits/runtime/container", params=params)
+
+    def archive_audit_incident(self, incident_id: str, data: Optional[str] = None) -> dict:
+        """
+        Sends a request to archive audit incident.
+
+        Returns:
+            list[dict]: runtime container audit events information.
+        """
+        suffix = f'audits/incidents/acknowledge/{incident_id}'
+        return self._http_request(method="patch", url_suffix=suffix, data=data, resp_type="response")
+
+    def get_runtime_host_audit_events(self, all_results: bool = False, params: Optional[dict] = None) -> List[dict]:
+        if all_results:
+            return self._get_all_results(url_suffix="audits/runtime/host", params=params)
+        return self._http_request(method="GET", url_suffix="audits/runtime/host", params=params)
+
+    def get_runtime_container_policy(self) -> dict:
+        return self._http_request(method="GET", url_suffix="policies/runtime/container")
 
 
 def format_context(context):
@@ -1247,6 +1269,40 @@ def add_custom_ip_feeds(client: PrismaCloudComputeClient, args: dict) -> Command
     client.add_custom_ip_feeds(feeds=combined_feeds)
 
     return CommandResults(readable_output="Successfully updated the custom IP feeds")
+
+
+def remove_custom_ip_feeds(client: PrismaCloudComputeClient, args: dict) -> CommandResults:
+    """
+    Remove a list of IPs from the system's block list.
+    Implements the command 'prisma-cloud-compute-custom-feeds-ip-remove'
+
+    Args:
+        client (PrismaCloudComputeClient): prisma-cloud-compute client.
+        args (dict): prisma-cloud-compute-custom-feeds-ip-remove command arguments.
+
+    Returns:
+        CommandResults: command-results object.
+    """
+    # Cast to sets for faster operations and to remove duplicates
+    current_ip_feeds = set((client.get_custom_ip_feeds() or {}).get('feed') or [])
+    ips = set(argToList(arg=args.pop('ip')))
+    ips_to_remove = ips & current_ip_feeds
+    ignored_ips = ips - ips_to_remove
+
+    if not ips_to_remove:
+        return CommandResults(readable_output=f'Could not find {ignored_ips} in the custom IP feeds.')
+
+    filtered_feeds = list(current_ip_feeds - ips_to_remove)
+
+    client.add_custom_ip_feeds(feeds=filtered_feeds)
+
+    if ignored_ips:
+        hr = f'''Successfully removed {ips_to_remove} from the custom IP feeds.
+        Could not find {ignored_ips} in the custom IP feeds.'''
+    else:
+        hr = f'Successfully removed {ips_to_remove} from the custom IP feeds'
+
+    return CommandResults(readable_output=hr)
 
 
 def get_custom_malware_feeds(client: PrismaCloudComputeClient, args: dict) -> CommandResults:
@@ -2202,6 +2258,7 @@ def get_ci_scan_results_list(client: PrismaCloudComputeClient, args: dict) -> Co
         params["from"] = parse_date_string_format(_from, "%Y-%m-%dT%H:%M:%SZ")
 
     if ci_scan_results := client.get_ci_scan_results(all_results=all_results, params=params):
+        table = ""
         if not verbose:
             ci_scan_results = reduce_ci_scan_results(ci_scan_results)
             if all_results:
@@ -2336,6 +2393,7 @@ def get_container_scan_results(client: PrismaCloudComputeClient, args: dict) -> 
     compliance_ids = argToList(args.get("compliance_ids"))
     agentless = args.get("agentless")
     search = args.get("search")
+    all_results = argToBoolean(args.get("all_results", "false"))
 
     params = assign_params(
         offset=offset, limit=limit, collections=collections, accountIDs=account_ids, clusters=clusters, namespaces=namespaces,
@@ -2343,7 +2401,7 @@ def get_container_scan_results(client: PrismaCloudComputeClient, args: dict) -> 
         hostname=hostname, complianceIDs=compliance_ids, agentless=agentless, search=search
     )
 
-    if container_scan_results := client.get_container_scan_results(params=params):
+    if container_scan_results := client.get_container_scan_results(params=params, all_results=all_results):
         table = tableToMarkdown(
             name="Container Scan Information",
             t=[
@@ -2501,6 +2559,136 @@ def get_runtime_container_audit_events(client: PrismaCloudComputeClient, args: d
     )
 
 
+def archive_audit_incident_command(client: PrismaCloudComputeClient, args: dict) -> str:
+    """
+        Archives or Unarchives the audit incident according to the provided incident ID
+
+        Args:
+            client (PrismaCloudComputeClient): prisma-cloud-compute client.
+            args (dict):prisma-cloud-archive-audit-incident command arguments.
+
+        Returns:
+            string: A string that indicates success or failure
+    """
+    incident_id = args.get("incident_id") or ""
+    data = {'acknowledged': args.get('action') == 'archive'}
+    client.archive_audit_incident(incident_id=incident_id, data=json.dumps(data))
+    return f'Incident {incident_id} was successfully {"archived" if args.get("action") == "archive" else "unarchived"}'
+
+
+def get_host_audit_list_command(client: PrismaCloudComputeClient, args: dict) -> CommandResults:
+    """
+        Retrieves the runtime host audit events.
+
+        Args:
+            client (PrismaCloudComputeClient): prisma-cloud-compute client.
+            args (dict):prisma-cloud-compute-runtime-host-audit-events-list command arguments.
+
+        Returns:
+            CommandResults: command-results object.
+    """
+    limit, offset = parse_limit_and_offset_values(
+        limit=args.get("limit", "50"), offset=args.get("offset", "0")
+    )
+    clusters = argToList(args.get("clusters"))
+    namespaces = argToList(args.get("namespaces"))
+    audit_id = argToList(args.get("audit_id"))
+    profile_id = argToList(args.get("profile_id"))
+    image_name = argToList(args.get("image_name"))
+    container = argToList(args.get("container"))
+    container_id = argToList(args.get("container_id"))
+    _type = argToList(args.get("type"))
+    effect = argToList(args.get("effect"))
+    user = argToList(args.get("user"))
+    _os = argToList(args.get("os"))
+    app = argToList(args.get("app"))
+    hostname = argToList(args.get("hostname"))
+    _time = args.get("time")
+    attack_type = argToList(args.get("attack_type"))
+    severity = args.get("severity")
+    message = args.get("message")
+    all_results = argToBoolean(args.get("all_results", "false"))
+
+    params = assign_params(
+        offset=offset, limit=limit, clusters=clusters, namespaces=namespaces, id=audit_id, profileID=profile_id,
+        imageName=image_name, container=container, containerID=container_id, type=_type, effect=effect,
+        user=user, time=_time, os=_os, app=app, hostname=hostname, attack_type=attack_type, severity=severity, message=message,
+    )
+    if runtime_host_audit_events := client.get_runtime_host_audit_events(all_results=all_results, params=params):
+        table = tableToMarkdown(
+            name="Runtime Host Audit Events Information",
+            t=[
+                {
+                    "ID": audit_events.get("_id", None),
+                    "Hostname": audit_events.get("hostname", None),
+                    "User": audit_events.get("user", None),
+                    "Type": audit_events.get("type", None),
+                    "AttackType": audit_events.get("attackType", None),
+                    "Message": audit_events.get("msg", None),
+                    "Severity": audit_events.get("severity", None),
+                    "Effect": audit_events.get("effect", None)
+                } for audit_events in runtime_host_audit_events
+            ],
+            headers=["ID", "Hostname", "User", "Type", "AttackType", "Message", "Severity", "Effect"],
+            removeNull=True,
+        )
+    else:
+        table = "No results found."
+
+    return CommandResults(
+        outputs_prefix="PrismaCloudCompute.RuntimeHostAuditEvents",
+        outputs_key_field="_id",
+        outputs=runtime_host_audit_events,
+        readable_output=table,
+        raw_response=runtime_host_audit_events
+    )
+
+
+def get_container_policy_list_command(client: PrismaCloudComputeClient, args: dict) -> CommandResults:
+    """
+        Retrieves the runtime policy for containers protected by Defender. A policy consists of ordered rules
+
+        Args:
+            client (PrismaCloudComputeClient): prisma-cloud-compute client.
+            args (dict):prisma-cloud-compute-runtime-container-policy-list command arguments.
+
+        Returns:
+            CommandResults: command-results object.
+    """
+    limit, offset = parse_limit_and_offset_values(
+        limit=args.get("limit", "50"), offset=args.get("offset", "0")
+    )
+    all_results = argToBoolean(args.get("all_results", "false"))
+
+    if runtime_container_policy_events := client.get_runtime_container_policy():
+        runtime_rules = runtime_container_policy_events.get("rules") or []
+        if len(runtime_rules) > limit and not all_results:
+            runtime_rules = runtime_rules[offset * limit:offset * limit + limit]
+
+        table = tableToMarkdown(
+            name="Runtime Container Policy Events Information",
+            t=[
+                {
+                    "Name": audit_events.get("name", None),
+                    "Owner": audit_events.get("owner", None),
+                    "Modified": audit_events.get("modified", None),
+                } for audit_events in runtime_rules
+            ],
+            headers=["Name", "Owner", "Modified"],
+            removeNull=True,
+        )
+    else:
+        table = "No results found."
+
+    return CommandResults(
+        outputs_prefix="PrismaCloudCompute.Policies.RuntimeContainerPolicy",
+        outputs_key_field="_id",
+        outputs=runtime_rules,
+        readable_output=table,
+        raw_response=runtime_rules
+    )
+
+
 def main():
     """
     PARSE AND VALIDATE INTEGRATION PARAMS
@@ -2560,6 +2748,8 @@ def main():
             return_results(results=get_profile_host_forensic_list(client=client, args=demisto.args()))
         elif requested_command == 'prisma-cloud-compute-custom-feeds-ip-add':
             return_results(results=add_custom_ip_feeds(client=client, args=demisto.args()))
+        elif requested_command == 'prisma-cloud-compute-custom-feeds-ip-remove':
+            return_results(results=remove_custom_ip_feeds(client=client, args=demisto.args()))
         elif requested_command == 'prisma-cloud-compute-console-version-info':
             return_results(results=get_console_version(client=client))
         elif requested_command == 'prisma-cloud-compute-custom-feeds-ip-list':
@@ -2614,6 +2804,12 @@ def main():
             return_results(results=get_hosts_info(client=client, args=demisto.args()))
         elif requested_command == "prisma-cloud-compute-runtime-container-audit-events-list":
             return_results(results=get_runtime_container_audit_events(client=client, args=demisto.args()))
+        elif requested_command == "prisma-cloud-compute-archive-audit-incident":
+            return_results(results=archive_audit_incident_command(client=client, args=demisto.args()))
+        elif requested_command == "prisma-cloud-compute-runtime-host-audit-events-list":
+            return_results(results=get_host_audit_list_command(client=client, args=demisto.args()))
+        elif requested_command == "prisma-cloud-compute-runtime-container-policy-list":
+            return_results(results=get_container_policy_list_command(client=client, args=demisto.args()))
     # Log exceptions
     except Exception as e:
         return_error(f'Failed to execute {requested_command} command. Error: {str(e)}')

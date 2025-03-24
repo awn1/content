@@ -1723,6 +1723,26 @@ def test_get_container_scan_results_command(requests_mock):
     assert get_container_scan_results(client, args).raw_response == response
 
 
+def test_get_container_scan_results_command_with_all_results(mocker):
+    """
+    Given:
+        - A Prisma Cloud Compute client instance.
+        - Arguments indicating that all container scan results should be retrieved.
+
+    When:
+        - Calling the `get_container_scan_results` function with all_results param = True.
+
+    Then:
+        - Verify that the `_get_all_results` method of `PrismaCloudComputeClient` is called.
+    """
+    from PaloAltoNetworks_PrismaCloudCompute import get_container_scan_results, PrismaCloudComputeClient
+    mock_helper = mocker.patch.object(PrismaCloudComputeClient, "_get_all_results")
+    client = PrismaCloudComputeClient(base_url=BASE_URL, verify='False', project='', auth=('test', 'test'))
+    args = {"all_results": "true"}
+    get_container_scan_results(client, args)
+    mock_helper.assert_called_once()
+
+
 def test_get_hosts_info_command(requests_mock):
     """
     Given:
@@ -1769,3 +1789,119 @@ def test_get_runtime_container_audit_events_command(requests_mock):
     args = {}
 
     assert get_runtime_container_audit_events(client, args).raw_response == response
+
+
+@pytest.mark.parametrize(
+    # Write and define the expected
+    "action, response",
+    [
+        ("archive", "Incident 1111 was successfully archived"),
+        ("unarchive", "Incident 1111 was successfully unarchived")
+    ]
+)
+def test_archive_audit_incident_command(mocker, action, response):
+    """
+    Given:
+        - An app client object
+        - Relevant arguments
+            - first case - action is 'archive'
+            - second case - action is 'unarchive'
+    When:
+        - Calling 'prisma-cloud-archive-audit-incident' command
+    Then:
+        - Ensure the outputs of the archive action are as expected
+            - first case: "incident was successfully archived"
+            - second case:  "incident was successfully unarchived"
+    """
+
+    from PaloAltoNetworks_PrismaCloudCompute import archive_audit_incident_command, PrismaCloudComputeClient
+
+    mock_incident_id = '1111'
+
+    client = PrismaCloudComputeClient(base_url=BASE_URL, verify='False', project='', auth=('test', 'test'))
+    args = {"incident_id": mock_incident_id, "action": action}
+    mocker.patch.object(client, 'archive_audit_incident', return_value=response)
+    res = archive_audit_incident_command(client, args)
+    assert res == response
+
+
+def test_get_host_audit_list_command(requests_mock):
+    """
+    Given:
+        - An app client object
+        - Relevant arguments
+    When:
+        - Calling 'prisma-cloud-compute-runtime-container-policy-list' command
+    Then:
+        - Ensure the outputs of requesting runtime container audit events equals the raw_response object which is mocked
+    """
+
+    from PaloAltoNetworks_PrismaCloudCompute import get_container_policy_list_command, PrismaCloudComputeClient
+
+    with open("test_data/get_container_policy_list_results.json") as f:
+        result = json.load(f)
+    with open("test_data/get_container_policy_list_response.json") as f:
+        response = json.load(f)
+
+    requests_mock.get(url=BASE_URL + '/policies/runtime/container', json=response)
+
+    client = PrismaCloudComputeClient(base_url=BASE_URL, verify='False', project='', auth=('test', 'test'))
+    args = {}
+
+    assert get_container_policy_list_command(client, args).raw_response == result
+
+
+def test_runtime_host_audit_events_command(requests_mock):
+    """
+    Given:
+        - An app client object
+        - Relevant arguments
+    When:
+        - Calling 'prisma-cloud-compute-runtime-container-policy-list' command
+    Then:
+        - Ensure the outputs of requesting the runtime policy for containers protected by Defender equals the raw_response
+        object which is mocked
+    """
+
+    from PaloAltoNetworks_PrismaCloudCompute import get_host_audit_list_command, PrismaCloudComputeClient
+
+    with open("test_data/get_host_audit_list_events.json") as f:
+        response = json.load(f)
+
+    requests_mock.get(url=BASE_URL + '/audits/runtime/host', json=response)
+
+    client = PrismaCloudComputeClient(base_url=BASE_URL, verify='False', project='', auth=('test', 'test'))
+    args = {}
+
+    assert get_host_audit_list_command(client, args).raw_response == response
+
+
+@pytest.mark.parametrize('initial_ips, ips_arg, expected', [
+    (['1.1.1.1', '2.2.2.2', '3.3.3.3'], '2.2.2.2', ['1.1.1.1', '3.3.3.3']),
+    (['1.1.1.1', '2.2.2.2', '3.3.3.3'], '4.4.4.4, 2.2.2.2', ['1.1.1.1', '3.3.3.3']),
+    (['1.1.1.1', '2.2.2.2', '3.3.3.3'], '1.1.1.1, 2.2.2.2, 3.3.3.3', []),
+    (['1.1.1.1', '2.2.2.2', '3.3.3.3'], '4.4.4.4', None),
+    ([], '1.1.1.1, 2.2.2.2', None),
+])
+def test_remove_custom_ip_feeds(client, requests_mock, initial_ips, ips_arg, expected):
+    """
+    Given:
+        - An app client object.
+        - List of ips to remove.
+    When:
+        - Calling 'prisma-cloud-compute-custom-ip-feeds-remove' command.
+    Then:
+        - Ensure the call to update the feed has the expected ips removed.
+    """
+
+    from PaloAltoNetworks_PrismaCloudCompute import remove_custom_ip_feeds
+
+    requests_mock.get(url=f'{BASE_URL}/feeds/custom/ips', json={'feed': initial_ips})
+    custom_ip_put_mock = requests_mock.put(url=f'{BASE_URL}/feeds/custom/ips')
+
+    remove_custom_ip_feeds(client, args={'ip': ips_arg})
+
+    if expected is None:  # Nothing to remove, api should not be called
+        assert custom_ip_put_mock.called is False
+    else:
+        assert set(custom_ip_put_mock.last_request.json()['feed']) == set(expected)

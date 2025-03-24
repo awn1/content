@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from freezegun import freeze_time
 from JSONFeedApiModule import Client, fetch_indicators_command, jmespath, get_no_update_value
 from CommonServerPython import *
@@ -131,7 +133,7 @@ def test_json_feed_with_config_mapping():
 
 FLAT_LIST_OF_INDICATORS = '''{
     "hooks": [
-    "1.1.1.1",
+    "1.1.1.1:8080",
     "2.2.2.2",
     "3.3.3.3"
     ]
@@ -143,7 +145,8 @@ def test_list_of_indicators_with_no_json_object():
         'Github': {
             'url': 'https://api.github.com/meta',
             'extractor': "hooks",
-            'indicator': None
+            'indicator': None,
+            'remove_ports': "true"
         }
     }
 
@@ -157,11 +160,51 @@ def test_list_of_indicators_with_no_json_object():
         )
 
         indicators, _ = fetch_indicators_command(client=client, indicator_type=None, feedTags=['test'],
-                                                 auto_detect=True)
+                                                 auto_detect=True, remove_ports=True)
         assert len(indicators) == 3
         assert indicators[0].get('value') == '1.1.1.1'
         assert indicators[0].get('type') == 'IP'
         assert indicators[1].get('rawJSON') == {'indicator': '2.2.2.2'}
+
+
+def test_fetch_indicators_with_exclude_enrichment():
+    """
+    Given:
+        - Exclude enrichment parameter is used
+    When:
+        - Calling the fetch_indicators_command
+    Then:
+        - The indicators should include the enrichmentExcluded field if exclude is True.
+    """
+
+    feed_name_to_config = {
+        'Github': {
+            'url': 'https://api.github.com/meta',
+            'extractor': "hooks",
+            'indicator': None,
+            'remove_ports': "true"
+        }
+    }
+
+    with requests_mock.Mocker() as m:
+        m.get('https://api.github.com/meta', json=json.loads(FLAT_LIST_OF_INDICATORS))
+
+        client = Client(
+            url='https://api.github.com/meta',
+            feed_name_to_config=feed_name_to_config,
+            insecure=True
+        )
+
+        indicators, _ = fetch_indicators_command(client=client, indicator_type=None, feedTags=['test'],
+                                                 auto_detect=True, remove_ports=True, enrichment_excluded=True)
+
+        assert len(indicators) == 3
+        assert indicators[0].get('value') == '1.1.1.1'
+        assert indicators[0].get('type') == 'IP'
+        assert indicators[1].get('rawJSON') == {'indicator': '2.2.2.2'}
+
+        for ind in indicators:
+            assert ind['enrichmentExcluded']
 
 
 def test_post_of_indicators_with_no_json_object():
@@ -169,7 +212,8 @@ def test_post_of_indicators_with_no_json_object():
         'Github': {
             'url': 'https://api.github.com/meta',
             'extractor': "hooks",
-            'indicator': None
+            'indicator': None,
+            'remove_ports': "false"
         }
     }
 
@@ -186,7 +230,7 @@ def test_post_of_indicators_with_no_json_object():
         indicators, _ = fetch_indicators_command(client=client, indicator_type=None, feedTags=['test'], auto_detect=True)
         assert matcher.last_request.text == 'test=1'
         assert len(indicators) == 3
-        assert indicators[0].get('value') == '1.1.1.1'
+        assert indicators[0].get('value') == '1.1.1.1:8080'
         assert indicators[0].get('type') == 'IP'
         assert indicators[1].get('rawJSON') == {'indicator': '2.2.2.2'}
 
@@ -232,6 +276,7 @@ def test_get_no_update_value(mocker):
         headers = {'Last-Modified': 'Fri, 30 Jul 2021 00:24:13 GMT',  # guardrails-disable-line
                    'ETag': 'd309ab6e51ed310cf869dab0dfd0d34b'}  # guardrails-disable-line
         status_code = 200
+
     no_update = get_no_update_value(MockResponse(), 'feed_name')
     assert not no_update
     assert demisto.debug.call_args[0][0] == 'New indicators fetched - the Last-Modified value has been updated,' \
@@ -319,9 +364,10 @@ def test_get_no_update_value_without_headers(mocker):
     class MockResponse:
         headers = {}
         status_code = 200
+
     no_update = get_no_update_value(MockResponse(), 'feed_name')
     assert not no_update
-    assert demisto.debug.call_args[0][0] == 'Last-Modified and Etag headers are not exists,' \
+    assert demisto.debug.call_args[0][0] == 'Last-Modified and Etag headers are not exists, ' \
                                             'createIndicators will be executed with noUpdate=False.'
 
 
@@ -402,7 +448,7 @@ def test_json_feed_with_config_mapping_with_aws_feed_no_update(mocker):
     mocker.patch.object(demisto, 'getLastRun', return_value=mock_last_run)
 
     with requests_mock.Mocker() as m:
-        m.get('https://ip-ranges.amazonaws.com/ip-ranges.json', json=ip_ranges, status_code=304,)
+        m.get('https://ip-ranges.amazonaws.com/ip-ranges.json', json=ip_ranges, status_code=304, )
 
         client = Client(
             url='https://ip-ranges.amazonaws.com/ip-ranges.json',
@@ -414,6 +460,53 @@ def test_json_feed_with_config_mapping_with_aws_feed_no_update(mocker):
         fetch_indicators_command(client=client, indicator_type='CIDR', feedTags=['test'], auto_detect=False)
         assert demisto.debug.call_args[0][0] == 'No new indicators fetched, createIndicators will be executed with noUpdate=True.'
         assert last_run.call_count == 0
+
+
+@pytest.mark.parametrize('remove_ports, expected_result', [
+    (True, "192.168.1.1"),
+    (False, "192.168.1.1:443")
+])
+def test_remove_ports_threatfox(mocker, remove_ports, expected_result):
+    """
+    Given
+    - Fetch indicators command calling a server with type IPv4 indicators with ports.
+
+    When
+    - Running fetch indicators command
+
+    Then
+    - Ports are either included or removed based on the `remove_ports` parameter.
+    """
+    with open('test_data/threatfox_recent.json') as iocs:
+        iocs = json.load(iocs)
+
+    mocker.patch.object(demisto, 'debug')
+
+    feed_name_to_config = {
+        'THREATFOX': {
+            'url': 'https://threatfox.abuse.ch/export/json/recent/',
+            'extractor': "*[0].ioc_value",
+            'indicator_type': FeedIndicatorType.IP,
+        }
+    }
+    mocker.patch('CommonServerPython.is_demisto_version_ge', return_value=True)
+    mocker.patch('JSONFeedApiModule.is_demisto_version_ge', return_value=True)
+
+    with requests_mock.Mocker() as m:
+        m.get('https://threatfox.abuse.ch/export/json/recent/', json=iocs, status_code=200)
+
+        client = Client(
+            url='https://threatfox.abuse.ch/export/json/recent/',
+            feed_name_to_config=feed_name_to_config,
+            insecure=True
+        )
+
+        indicators = fetch_indicators_command(client=client,
+                                              indicator_type='IP',
+                                              auto_detect=True,
+                                              remove_ports=remove_ports,
+                                              feedTags=["ThreatFox"])
+        assert indicators[0][0]["value"] == expected_result
 
 
 def test_json_feed_with_config_mapping_with_aws_feed_with_update(mocker):
@@ -467,7 +560,7 @@ def test_json_feed_with_config_mapping_with_aws_feed_with_update(mocker):
 
         fetch_indicators_command(client=client, indicator_type='CIDR', feedTags=['test'], auto_detect=False)
         assert demisto.debug.call_args[0][0] == 'New indicators fetched - the Last-Modified value has been updated,' \
-            ' createIndicators will be executed with noUpdate=False.'
+                                                ' createIndicators will be executed with noUpdate=False.'
         assert "AMAZON$$CIDR" in last_run.call_args[0][0]
 
 
@@ -502,3 +595,58 @@ def test_build_iterator__with_and_without_passed_time_threshold(mocker, has_pass
 
     client.build_iterator(feed={}, feed_name="https://api.github.com/meta")
     assert mock_session.call_args[1].get('headers') == expected_result
+
+
+def test_feed_main_enrichment_excluded(mocker):
+    """
+        Given: params with tlp_color set to RED and enrichmentExcluded set to False
+        When: Calling feed_main
+        Then: validate enrichment_excluded is set to True
+    """
+    from JSONFeedApiModule import feed_main
+
+    params = {
+        'tlp_color': 'RED',
+        'enrichmentExcluded': False
+    }
+    feed_name = 'test_feed'
+    prefix = 'test_prefix'
+
+    with patch('JSONFeedApiModule.Client') as client_mock:
+        client_instance = mocker.Mock()
+        client_mock.return_value = client_instance
+        fetch_indicators_command_mock = mocker.patch('JSONFeedApiModule.fetch_indicators_command', return_value=([], []))
+        mocker.patch('JSONFeedApiModule.is_xsiam_or_xsoar_saas', return_value=True)
+        mocker.patch.object(demisto, 'command', return_value='fetch-indicators')
+
+        # Call the function under test
+        feed_main(params, feed_name, prefix)
+
+        # Assertion - verify that enrichment_excluded is set to True
+        assert fetch_indicators_command_mock.call_args.kwargs['enrichment_excluded'] is True
+
+
+def test_build_iterator__result_is_none(mocker):
+    """
+      Given
+          - A mock response of the JSONFeedApiModule.jmespath.search function with no indicators (response = None)
+      When
+          - Running the build_iterator method.
+      Then
+          - Verify that the returned result is an empty list and that a debug log of "no results found" is added.
+
+    """
+    feed_name = 'mock_feed_name'
+    mocker.patch.object(demisto, 'debug')
+    mocker.patch('CommonServerPython.get_demisto_version', return_value={"version": "6.2.0"})
+    mocker.patch('JSONFeedApiModule.jmespath.search', return_value=None)
+
+    with requests_mock.Mocker() as m:
+        m.get('https://api.github.com/meta', status_code=200, json="{'test':'1'}")
+
+        client = Client(
+            url='https://api.github.com/meta'
+        )
+        result, _ = client.build_iterator(feed={'url': 'https://api.github.com/meta'}, feed_name=feed_name)
+        assert result == []
+        assert "No results found - retrieved data is: {'test':'1'}" in demisto.debug.call_args[0][0]

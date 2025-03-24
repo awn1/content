@@ -1,8 +1,8 @@
 import demistomock as demisto
-import json
 import pytest
 from CommonServerPython import *  # noqa: F401
 from requests import Response
+from MicrosoftTeams import GraphPermissions as Perms
 
 entryTypes['warning'] = 11
 
@@ -53,6 +53,7 @@ team_members: list = [
         'givenName': 'Bruce',
         'surname': 'Willis',
         'userPrincipalName': 'bwillis@email.com',
+        'email': 'bwillis@email.com',
         'tenantId': tenant_id
     },
     {
@@ -114,6 +115,11 @@ CLIENT_CREDENTIALS_FLOW = 'Client Credentials'
 AUTHORIZATION_CODE_FLOW = 'Authorization Code'
 ONEONONE_CHAT_ID = "19:09ddc990-3821-4ceb-8019-24d39998f93e_48d31887-5fad-4d73-a9f5-3c356e68a038@unq.gbl.spaces"
 GROUP_CHAT_ID = "19:2da4c29f6d7041eca70b638b43d45437@thread.v2"
+
+
+def util_load_json(path: str):
+    with open(path, encoding='utf-8') as f:
+        return json.loads(f.read())
 
 
 @pytest.fixture(autouse=True)
@@ -464,10 +470,23 @@ def test_send_message_raising_errors(mocker, args, result):
     assert str(e.value) == result
 
 
-def test_send_message_with_user(mocker, requests_mock):
+@pytest.mark.parametrize('message', ['MESSAGE', '891f1e9d-b8c3-4e24-bfbb-c44bcca4d586',
+                                     'testing 891f1e9d-b8c3-4e24-bfbb-c44bcca4d586 testing'])
+def test_send_message_with_user(mocker, requests_mock, message):
+    """
+    Given:
+        - a message as a basic string and a  message that contains GUID.
+    When:
+        - running send message function.
+    Then:
+        - The message is sent successfully in both cases.
+    """
     # verify message is sent properly given user to send to
     from MicrosoftTeams import send_message
     mocker.patch.object(demisto, 'results')
+
+    expected = util_load_json('test_data/send_message/expected_generic.json')
+    raw = util_load_json('test_data/send_message/raw_generic.json')
 
     mocker.patch("MicrosoftTeams.BOT_ID", new=bot_id)
     mocker.patch.object(
@@ -475,7 +494,7 @@ def test_send_message_with_user(mocker, requests_mock):
         'args',
         return_value={
             'team_member': 'Denzel Washington',
-            'message': 'MESSAGE'
+            'message': message
         }
     )
     requests_mock.post(
@@ -486,7 +505,7 @@ def test_send_message_with_user(mocker, requests_mock):
     )
     requests_mock.post(
         f'{service_url}/v3/conversations/conversation-id/activities',
-        json={}
+        json=raw
     )
     expected_create_personal_conversation_data: dict = {
         'bot': {
@@ -506,7 +525,7 @@ def test_send_message_with_user(mocker, requests_mock):
     assert requests_mock.request_history[0].json() == expected_create_personal_conversation_data
     results = demisto.results.call_args[0]
     assert len(results) == 1
-    assert results[0] == 'Message was sent successfully.'
+    assert results[0] == expected
 
 
 def test_send_message_with_channel(mocker, requests_mock):
@@ -514,6 +533,9 @@ def test_send_message_with_channel(mocker, requests_mock):
     from MicrosoftTeams import send_message
     mocker.patch.object(demisto, 'results')
     mocker.patch('MicrosoftTeams.get_channel_type', return_value='standard')
+
+    expected = util_load_json('test_data/send_message/expected_generic.json')
+    raw = util_load_json('test_data/send_message/raw_generic.json')
 
     mocker.patch.object(
         demisto,
@@ -532,12 +554,12 @@ def test_send_message_with_channel(mocker, requests_mock):
     )
     requests_mock.post(
         f"{service_url}/v3/conversations/{mirrored_channels[0]['channel_id']}/activities",
-        json={}
+        json=raw
     )
     send_message()
     results = demisto.results.call_args[0]
     assert len(results) == 1
-    assert results[0] == 'Message was sent successfully.'
+    assert results[0] == expected
 
 
 def test_send_message_with_entitlement(mocker, requests_mock):
@@ -545,12 +567,16 @@ def test_send_message_with_entitlement(mocker, requests_mock):
     from MicrosoftTeams import send_message
     mocker.patch.object(demisto, 'results')
 
+    expected = util_load_json('test_data/send_message/expected_generic.json')
+    raw = util_load_json('test_data/send_message/raw_generic.json')
+
     message: dict = {
         'message_text': 'is this really working?',
         'options': ['yes', 'no', 'maybe'],
         'entitlement': '4404dae8-2d45-46bd-85fa-64779c12abe8',
         'investigation_id': '72',
-        'task_id': '23'
+        'task_id': '23',
+        'form_type': 'predefined-options'
     }
     mocker.patch.object(
         demisto,
@@ -565,7 +591,7 @@ def test_send_message_with_entitlement(mocker, requests_mock):
         json={'id': 'conversation-id'})
     requests_mock.post(
         f'{service_url}/v3/conversations/conversation-id/activities',
-        json={}
+        json=raw
     )
     expected_ask_user_message: dict = {
         'attachments': [{
@@ -605,7 +631,8 @@ def test_send_message_with_entitlement(mocker, requests_mock):
                 ],
                 'body': [{
                     'text': 'is this really working?',
-                    'type': 'TextBlock'
+                    'type': 'TextBlock',
+                    'wrap': True
                 }],
                 'type': 'AdaptiveCard',
                 'msteams': {
@@ -623,13 +650,16 @@ def test_send_message_with_entitlement(mocker, requests_mock):
     assert requests_mock.request_history[1].json() == expected_ask_user_message
     results = demisto.results.call_args[0]
     assert len(results) == 1
-    assert results[0] == 'Message was sent successfully.'
+    assert results[0] == expected
 
 
 def test_send_message_with_adaptive_card(mocker, requests_mock):
     # verify adaptive card sent successfully
     from MicrosoftTeams import send_message
     mocker.patch.object(demisto, 'results')
+
+    expected = util_load_json('test_data/send_message/expected_generic.json')
+    raw = util_load_json('test_data/send_message/raw_generic.json')
 
     adaptive_card: dict = {
         "contentType": "application/vnd.microsoft.card.adaptive",
@@ -656,27 +686,26 @@ def test_send_message_with_adaptive_card(mocker, requests_mock):
             'adaptive_card': json.dumps(adaptive_card)
         }
     )
-    expected_conversation: dict = {
-        'type': 'message',
-        'attachments': [adaptive_card]
-    }
     requests_mock.post(
         f'{service_url}/v3/conversations',
         json={'id': 'conversation-id'})
     requests_mock.post(
         f'{service_url}/v3/conversations/conversation-id/activities',
-        json={}
+        json=raw
     )
     send_message()
-    assert requests_mock.request_history[1].json() == expected_conversation
     results = demisto.results.call_args[0]
     assert len(results) == 1
-    assert results[0] == 'Message was sent successfully.'
+    assert results[0] == expected
 
 
 def test_sending_message_using_email_address(mocker, requests_mock):
     from MicrosoftTeams import send_message
     mocker.patch.object(demisto, 'results')
+
+    expected = util_load_json('test_data/send_message/expected_generic.json')
+    raw = util_load_json('test_data/send_message/raw_generic.json')
+
     # verify message is sent properly given email with uppercase letters to send to
     mocker.patch("MicrosoftTeams.BOT_ID", new=bot_id)
     mocker.patch.object(
@@ -695,7 +724,7 @@ def test_sending_message_using_email_address(mocker, requests_mock):
     )
     requests_mock.post(
         f'{service_url}/v3/conversations/conversation-id/activities',
-        json={}
+        json=raw
     )
     expected_create_personal_conversation_data: dict = {
         'bot': {
@@ -715,7 +744,7 @@ def test_sending_message_using_email_address(mocker, requests_mock):
     assert requests_mock.request_history[0].json() == expected_create_personal_conversation_data
     results = demisto.results.call_args[0]
     assert len(results) == 1
-    assert results[0] == 'Message was sent successfully.'
+    assert results[0] == expected
 
 
 def test_send_message_server_notifications_incident_opened(mocker, requests_mock):
@@ -733,6 +762,9 @@ def test_send_message_server_notifications_incident_opened(mocker, requests_mock
     from MicrosoftTeams import send_message
     mocker.patch.object(demisto, 'results')
     mocker.patch('MicrosoftTeams.get_channel_type', return_value='standard')
+
+    expected = util_load_json('test_data/send_message/expected_generic.json')
+    raw = util_load_json('test_data/send_message/raw_generic.json')
 
     mocker.patch.object(
         demisto,
@@ -768,12 +800,13 @@ def test_send_message_server_notifications_incident_opened(mocker, requests_mock
     )
     requests_mock.post(
         f'{service_url}/v3/conversations/19:67pd3966e74g45f28d0c65f1689132bb@thread.skype/activities',
-        json={}
+        json=raw
     )
+
     send_message()
     results = demisto.results.call_args[0]
     assert len(results) == 1
-    assert results[0] == 'Message was sent successfully.'
+    assert results[0] == expected
 
 
 def test_send_message_server_notifications_incident_changed(mocker, requests_mock):
@@ -791,6 +824,9 @@ def test_send_message_server_notifications_incident_changed(mocker, requests_moc
     from MicrosoftTeams import send_message
     mocker.patch.object(demisto, 'results')
     mocker.patch('MicrosoftTeams.get_channel_type', return_value='standard')
+
+    expected = util_load_json('test_data/send_message/expected_generic.json')
+    raw = util_load_json('test_data/send_message/raw_generic.json')
 
     mocker.patch.object(
         demisto,
@@ -826,12 +862,12 @@ def test_send_message_server_notifications_incident_changed(mocker, requests_moc
     )
     requests_mock.post(
         f'{service_url}/v3/conversations/19:67pd3966e74g45f28d0c65f1689132bb@thread.skype/activities',
-        json={}
+        json=raw
     )
     send_message()
     results = demisto.results.call_args[0]
     assert len(results) == 1
-    assert results[0] == 'Message was sent successfully.'
+    assert results[0] == expected
 
 
 def test_get_channel_id(requests_mock):
@@ -984,6 +1020,12 @@ def test_is_investigation_mirrored():
      "[https://xsoar.pan.dev](https://xsoar.pan.dev)"),
     ("Link: https://xsoar.pan.dev/page?parametized=true",
      "Link: [https://xsoar.pan.dev/page?parametized=true](https://xsoar.pan.dev/page?parametized=true)"),
+    ("This is a link https://paloaltonetworks.com/. This is a [Custom URL](https://paloaltonetworks.com/)",
+     "This is a link [https://paloaltonetworks.com/.](https://paloaltonetworks.com/.) This is a [Custom URL]("
+     "https://paloaltonetworks.com/)"),
+    ("This is a [Custom URL](https://paloaltonetworks.com/), This is a link https://paloaltonetworks.com/",
+     "This is a [Custom URL](https://paloaltonetworks.com/), "
+     "This is a link [https://paloaltonetworks.com/](https://paloaltonetworks.com/)"),
 ])
 def test_urlify_hyperlinks(message: str, expected_result: str):
     from MicrosoftTeams import urlify_hyperlinks
@@ -1008,7 +1050,7 @@ def test_get_team_aad_id(mocker, requests_mock):
         'value': [
             {
                 'id': '02bd9fd6-8f93-4758-87c3-1fb73740a315',
-                'displayName': 'MyGreatTeam',
+                'displayName': 'MyGreat #Team',
                 'groupTypes': [
                     'Unified'
                 ],
@@ -1044,11 +1086,11 @@ def test_get_team_aad_id(mocker, requests_mock):
         get_team_aad_id('The-B-Team')
     assert str(e.value) == 'Could not find requested team.'
 
-    url_b = f"{BASE_URL}?$filter=displayName eq 'MyGreatTeam' and resourceProvisioningOptions/Any(x:x eq 'Team')"
+    url_b = f"{BASE_URL}?$filter=displayName eq 'MyGreat%20%23Team' and resourceProvisioningOptions/Any(x:x eq 'Team')"
     requests_mock.get(url_b, json=json_response)
 
     # verify team ID for team which is not in integration context
-    assert get_team_aad_id('MyGreatTeam') == '02bd9fd6-8f93-4758-87c3-1fb73740a315'
+    assert get_team_aad_id('MyGreat #Team') == '02bd9fd6-8f93-4758-87c3-1fb73740a315'
 
 
 def test_get_team_member():
@@ -1056,7 +1098,8 @@ def test_get_team_member():
     user_id: str = '29:1KZccCJRTxlPdHnwcKfxHAtYvPLIyHgkSLhFSnGXLGVFlnltovdZPmZAduPKQP6NrGqOcde7FXAF7uTZ_8FQOqg'
     team_member: dict = {
         'username': 'Bruce Willis',
-        'user_email': 'bwillis@email.com'
+        'user_email': 'bwillis@email.com',
+        'user_principal_name': 'bwillis@email.com',
     }
     assert get_team_member(integration_context, user_id) == team_member
     with pytest.raises(ValueError) as e:
@@ -1446,7 +1489,8 @@ def test_direct_message_handler(mocker, requests_mock):
             'type': 'Phishing',
             'rawJSON': '{"from": {"id": '
                        '"29:1KZccCJRTxlPdHnwcKfxHAtYvPLIyHgkSLhFSnGXLGVFlnltovdZPmZAduPKQP6NrGqOcde7FXAF7uTZ_8FQOqg", '
-                       '"username": "Bruce Willis", "user_email": "bwillis@email.com"}}'
+                       '"username": "Bruce Willis", "user_email": "bwillis@email.com", '
+                       '"user_principal_name": "bwillis@email.com"}}'
         }
     ]
     expected_assigned_user = 'nice-demisto-id'
@@ -2026,7 +2070,7 @@ def test_chat_add_user_command(mocker, chat, member, expected_exit, expected_war
     get_user_mock = mocker.patch('MicrosoftTeams.get_user', side_effect=mocked_get_user)
     add_user_to_chat_mock = mocker.patch('MicrosoftTeams.add_user_to_chat')
 
-    if expected_warning == ValueError:
+    if expected_warning is ValueError:
         with pytest.raises(ValueError) as e:
             chat_add_user_command()
         assert str(e.value) == expected_result
@@ -2099,7 +2143,7 @@ def test_chat_list_command(mocker, requests_mock, args, expected_response, expec
     return_results = mocker.patch('MicrosoftTeams.return_results')
     mocker.patch.object(demisto, 'args', return_value=args)
 
-    if expected_response == ValueError:
+    if expected_response is ValueError:
         with pytest.raises(ValueError) as e:
             chat_list_command()
         assert str(e.value) == "Retrieve a single chat does not support the 'filter' ODate query parameter."
@@ -2251,10 +2295,10 @@ def test_generate_login_url(mocker):
     mocked_params = {
         'REDIRECT_URI': redirect_uri,
         'AUTH_TYPE': 'Authorization Code',
-        'TENANT_ID': tenant_id,
         'BOT_ID': client_id
     }
     mocker.patch.dict(MicrosoftTeams.__dict__, MicrosoftTeams.__dict__ | mocked_params)
+    mocker.patch.object(MicrosoftTeams, "get_integration_context", return_value={'tenant_id': 'tenant_id'})
     mocker.patch.object(MicrosoftTeams, 'return_results')
     mocker.patch.object(MicrosoftTeams, 'support_multithreading')
     mocker.patch.object(demisto, 'command', return_value='microsoft-teams-generate-login-url')
@@ -2340,3 +2384,555 @@ def test_handle_teams_proxy_and_ssl(mocker, is_xsoar_8, expected_result):
 
     proxies, use_ssl = ms_teams.handle_teams_proxy_and_ssl()
     assert (proxies, use_ssl) == expected_result
+
+
+DUMMY_ASK_MESSAGE = {"message_text": "message", "options": [
+    "option"], "entitlement": "id", "investigation_id": "inv_id", "task_id": "task", "form_type": "form"}
+
+
+@pytest.mark.parametrize('message, result', [
+    (json.dumps(DUMMY_ASK_MESSAGE), True),
+    (json.dumps(DUMMY_ASK_MESSAGE | {"extra_key": "extra"}), False),
+    ("non json message", False)
+])
+def test_is_teams_ask_message(message, result):
+    """
+    Given:
+        - input message string
+    When:
+        - Running is_teams_ask_message.
+    Then:
+        - Assert only ask_teams messages return True
+    If the test fails, please update the first message param in the test to have the same keys as MS_TEAMS_ASK_MESSAGE_KEYS
+     constant in MicrosoftTeams.
+    """
+    from MicrosoftTeams import is_teams_ask_message
+
+    assert is_teams_ask_message(message) == result
+
+
+def test_add_data_to_actions_simple_card():
+    from MicrosoftTeams import add_data_to_actions
+    card_json = {
+        "type": "Action.Submit",
+        "title": "Submit"
+    }
+    data_value = {"key": "value"}
+    add_data_to_actions(card_json, data_value)
+    assert card_json["data"] == data_value
+
+
+def test_add_data_to_actions_nested_card():
+    from MicrosoftTeams import add_data_to_actions
+    card_json = {
+        "type": "AdaptiveCard",
+        "actions": [
+            {
+                "type": "Action.Submit",
+                "title": "Submit 1"
+            },
+            {
+                "type": "Action.Execute",
+                "title": "Execute 1"
+            }
+        ]
+    }
+    data_value = {"key": "value"}
+    add_data_to_actions(card_json, data_value)
+    assert card_json["actions"][0]["data"] == data_value
+    assert card_json["actions"][1]["data"] == data_value
+
+
+def test_add_data_to_actions_show_card():
+    from MicrosoftTeams import add_data_to_actions
+    card_json = {
+        "type": "Action.ShowCard",
+        "title": "Show Card",
+        "card": {
+            "type": "AdaptiveCard",
+            "actions": [
+                {
+                    "type": "Action.Submit",
+                    "title": "Nested Submit"
+                }
+            ]
+        }
+    }
+    data_value = {"key": "value"}
+    add_data_to_actions(card_json, data_value)
+    assert card_json["card"]["actions"][0]["data"] == data_value
+
+
+def test_add_data_to_actions_mixed_types():
+    from MicrosoftTeams import add_data_to_actions
+    card_json = [
+        {
+            "type": "Action.Submit",
+            "title": "Submit"
+        },
+        {
+            "type": "TextBlock",
+            "text": "Some text"
+        },
+        {
+            "type": "Action.Execute",
+            "title": "Execute"
+        }
+    ]
+    data_value = {"key": "value"}
+    add_data_to_actions(card_json, data_value)
+    assert card_json[0]["data"] == data_value
+    assert "data" not in card_json[1]
+    assert card_json[2]["data"] == data_value
+
+
+def test_add_data_to_actions_empty_input():
+    from MicrosoftTeams import add_data_to_actions
+    card_json = {}
+    data_value = {"key": "value"}
+    add_data_to_actions(card_json, data_value)
+    assert card_json == {}
+
+
+def test_add_data_to_actions_non_dict_data():
+    from MicrosoftTeams import add_data_to_actions
+    card_json = {
+        "type": "Action.Submit",
+        "title": "Submit"
+    }
+    data_value = "string_data"
+    add_data_to_actions(card_json, data_value)
+    assert card_json["data"] == data_value
+
+
+@pytest.mark.parametrize('token, decoded_token, auth_type, expected_hr', [
+    ('dummy_token',
+     {'aud': 'url', 'exp': '1111', 'roles': ['AppCatalog.Read.All', 'Group.ReadWrite.All', 'User.Read.All']},
+     'Client Credentials',
+     'The current API permissions in the Teams application are'),
+    ('dummy_token',
+     {'aud': 'url', 'exp': '1111', 'roles': []},
+     'Client Credentials',
+     'No permissions obtained for the used graph access token.'),
+    ('dummy_token',
+     {'aud': 'url', 'exp': '1111', 'scp': 'AppCatalog.Read.All Group.ReadWrite.All User.Read.All'},
+     'Authorization Code',
+     'The current API permissions in the Teams application are'),
+    ('dummy_token',
+     {'aud': 'url', 'exp': '1111', 'scp': ''},
+     'Authorization Code',
+     'No permissions obtained for the used graph access token.'),
+    ('',
+     {'roles': []},
+     'Client Credentials',
+     'Graph access token is not set.')
+], ids=["Test token permissions list command - client credentials auth flow",
+        "Test token permissions list command - client credentials auth flow - no permissions set",
+        "Test token permissions list command - auth code auth flow",
+        "Test token permissions list command - client auth code flow - no permissions set",
+        "Test token permissions list command - missing token"
+        ])
+def test_token_permissions_list_command(mocker, token, decoded_token, auth_type, expected_hr):
+    """
+    Tests the 'token_permissions_list_command' logic:
+    For client credentials auth flow, the API permissions are found under the 'roles' key in the decoded token data,
+    while for the auth code flow they are found under the 'scp' key.
+    This test checks that we extract the API permissions from the graph access token successfully for both auth types.
+
+    Given:
+        1. A dummy token, mocked response of the jet.decode func with API permissions roles under the 'roles' key -
+           (auth type is client credentials).
+        2. A dummy token, mocked response of the jet.decode func without API permissions roles under the 'roles' key -
+           (auth type is client credentials).
+        3. A dummy token, mocked response of the jet.decode func with API permissions roles under the 'scp' key -
+           (auth type is Authorization Code).
+        4. A dummy token, mocked response of the jet.decode func without API permissions roles under the 'scp' key -
+           (auth type is Authorization Code).
+        5. Missing token.
+    When:
+        - Running the token_permissions_list_command.
+    Then:
+        Verify that the human readable output is as expected:
+        1. API permissions list.
+        2. No permissions obtained for the used graph access token.
+        3. API permissions list.
+        4. No permissions obtained for the used graph access token.
+        5. Graph access token is not set.
+    """
+    from MicrosoftTeams import token_permissions_list_command
+    import MicrosoftTeams
+    mocker.patch('MicrosoftTeams.get_graph_access_token', return_value=token)
+    mocker.patch('MicrosoftTeams.AUTH_TYPE', new=auth_type)
+    mocker.patch('jwt.decode', return_value=decoded_token)
+    results = mocker.patch.object(MicrosoftTeams, 'return_results')
+
+    token_permissions_list_command()
+
+    assert expected_hr in results.call_args[0][0].readable_output
+
+
+@pytest.mark.parametrize('xsoar_server, is_xsoar_on_prem, is_xsiam, expected_hr', [
+    ('https://dns-test.name:443', True, False, 'https://dns-test.name:443/instance/execute/teams'),
+    ('https://viso-test-dummy.crtx-qa-ttt.ss.paloaltonetworks.com', False, False,
+     'https://ext-viso-test-dummy.crtx-qa-ttt.ss.paloaltonetworks.com/xsoar/instance/execute/teams'),
+    ('http://viso-test-dummy.crtx-qa-ttt.ss.paloaltonetworks.com', False, False,
+     'http://ext-viso-test-dummy.crtx-qa-ttt.ss.paloaltonetworks.com/xsoar/instance/execute/teams'),
+    ('https://viso-test-dummy.xdr-qa-ttt.ss.paloaltonetworks.com', False, True,
+     'https://ext-viso-test-dummy.crtx-qa-ttt.ss.paloaltonetworks.com/xsoar/instance/execute/teams'),
+    ('http://viso-test-dummy.xdr.qa-ttt.ss.paloaltonetworks.com', False, True,
+     'http://ext-viso-test-dummy.crtx.qa-ttt.ss.paloaltonetworks.com/xsoar/instance/execute/teams'),
+    ('http://viso-test-dummy.crtx-qa-ttt.ss.paloaltonetworks.com', False, True,
+     'http://ext-viso-test-dummy.crtx-qa-ttt.ss.paloaltonetworks.com/xsoar/instance/execute/teams'),
+],
+    ids=["Test xsoar 6 server url",
+         "Test xsoar 8 server url (with https:// prefix)",
+         "Test xsoar 8 server url (with http:// prefix)",
+         "Test xsiam server url (with https:// prefix)",
+         "Test xsiam server url (with http:// prefix)",
+         "Test xsiam server url without the 'xdr' string in the dns name"
+         ])
+def test_create_messaging_endpoint_command(mocker, xsoar_server, is_xsoar_on_prem, is_xsiam, expected_hr):
+    """
+    Tests the 'create_messaging_endpoint_command' logic.
+
+    Given:
+        1. An xsoar 6 server url.
+        2. An xsoar 8 server url (with https:// prefix).
+        3. An xsoar 8 server url (with http:// prefix).
+        4. An xsiam server url (with https:// prefix).
+        5. An xsiam server url (with http:// prefix).
+        6. An xsiam server url without the 'xdr' string in the dns name.
+
+    When:
+        - Running the create_messaging_endpoint_command.
+    Then:
+        Verify that the messaging endpoint was created as expected:
+        1. The 'instance/execute/teams' suffix was added.
+        2. The 'ext' prefix was added to the dns name, and the 'xsoar/instance/execute/teams' suffix was added.
+        3. The 'ext' prefix was added to the dns name, and the 'xsoar/instance/execute/teams' suffix was added.
+        4. The 'ext' prefix was added to the dns name, the 'xdr' was replaced with 'crtx' and the 'xsoar/instance/execute/teams'
+           suffix was added.
+        5. The 'ext' prefix was added to the dns name, the 'xdr' was replaced with 'crtx' and the 'xsoar/instance/execute/teams'
+           suffix was added.
+        6. The 'ext' prefix was added to the dns name, and the 'xsoar/instance/execute/teams' suffix was added.
+    """
+    from MicrosoftTeams import create_messaging_endpoint_command
+    import MicrosoftTeams
+    mocker.patch.object(demisto, 'demistoUrls', return_value={'server': xsoar_server})
+    mocker.patch.object(demisto, 'integrationInstance', return_value="teams")
+    mocker.patch.object(demisto, 'args', return_value={'engine_url': ''})
+    mocker.patch('MicrosoftTeams.is_xsoar_on_prem', return_value=is_xsoar_on_prem)
+    mocker.patch('MicrosoftTeams.is_xsiam', return_value=is_xsiam)
+    mocker.patch('MicrosoftTeams.is_using_engine', return_value=False)
+    results = mocker.patch.object(MicrosoftTeams, 'return_results')
+
+    create_messaging_endpoint_command()
+
+    assert expected_hr in results.call_args[0][0].readable_output
+
+
+@pytest.mark.parametrize('engine_url, is_xsoar_on_prem, is_xsiam, expected_hr', [
+    ('https://my-engine.com:333', True, False, 'https://my-engine.com:333'),
+    ('https://my-engine.com:333', False, False, 'https://my-engine.com:333'),
+    ('https://my-engine.com:333', False, True, 'https://my-engine.com:333'),
+    ('https://1.1.1.1:333', False, True, 'https://1.1.1.1:333')
+],
+    ids=["Test xsoar 6 engine url",
+         "Test xsoar 8 engine url",
+         "Test xsiam engine url",
+         "Test xsoar engine url - with IP",
+         ])
+def test_create_messaging_endpoint_command_for_xsoar_engine(mocker, engine_url, is_xsoar_on_prem, is_xsiam, expected_hr):
+    """
+    Tests the 'create_messaging_endpoint_command' logic when the user uses an xsoar engine.
+
+    Given:
+      - An xsoar engine url.
+
+    When:
+        - Running the create_messaging_endpoint_command on:
+            1. xsoar 6
+            2. xsoar 8
+            3. xsiam
+        4. The engine url include an IP and not a DNS name.
+    Then:
+        Verify that the messaging endpoint was created as expected - only the engine url and port (without any suffix).
+    """
+    from MicrosoftTeams import create_messaging_endpoint_command
+    import MicrosoftTeams
+    mocker.patch.object(demisto, 'demistoUrls', return_value={'server': 'https://test-server.com:443'})
+    mocker.patch.object(demisto, 'integrationInstance', return_value="teams")
+    mocker.patch.object(demisto, 'args', return_value={'engine_url': engine_url})
+    mocker.patch('MicrosoftTeams.is_xsoar_on_prem', return_value=is_xsoar_on_prem)
+    mocker.patch('MicrosoftTeams.is_xsiam', return_value=is_xsiam)
+    mocker.patch('MicrosoftTeams.is_using_engine', return_value=True)
+    results = mocker.patch.object(MicrosoftTeams, 'return_results')
+
+    create_messaging_endpoint_command()
+
+    assert expected_hr in results.call_args[0][0].readable_output
+
+
+@pytest.mark.parametrize('engine_url', [
+    ('https://my-engine.com'),
+    ('my-engine.com:333'),
+    ('https://my engine.com:433'),
+],
+    ids=["Test engine url without a port",
+         "Test engine url without an http or https prefix",
+         "Test engine url with spaces in the dns name",
+         ])
+def test_create_messaging_endpoint_command_invalid_xsoar_engine(mocker, engine_url):
+    """
+    Tests the 'create_messaging_endpoint_command' logic when the user uses an xsoar engine, and provides an invalid engine url.
+
+    Given:
+      - An invalid engine URL:
+        1. without a port.
+        2. without an http:// or https:// prefix
+        3. with a space in the dns name
+
+    When:
+        - Running the create_messaging_endpoint_command.
+
+    Then:
+        Verify that a valueError exception is raised with the error description.
+    """
+    from MicrosoftTeams import create_messaging_endpoint_command
+    import MicrosoftTeams
+    mocker.patch.object(demisto, 'demistoUrls', return_value={'server': 'https://test-server.com:443'})
+    mocker.patch.object(demisto, 'integrationInstance', return_value="teams")
+    mocker.patch.object(demisto, 'args', return_value={'engine_url': engine_url})
+    mocker.patch('MicrosoftTeams.is_using_engine', return_value=True)
+    mocker.patch.object(MicrosoftTeams, 'return_results')
+
+    with pytest.raises(ValueError) as e:
+        create_messaging_endpoint_command()
+    assert 'Invalid engine URL -' in str(e.value)
+
+
+def test_switch_auth_type_to_client_credentials(mocker):
+    """
+    Tests the 'auth_type_switch_handling' logic when the user switched the auth type in the instance parameters from Auth Code
+    Flow to the Client Credentials Flow.
+
+    Given:
+        - Auth type instance parameter is now 'Client Credentials'.
+
+    When:
+        - Running the 'auth_type_switch_handling' function.
+
+    Then:
+        - Verify that the integration context was updated as follows:
+            1. current_auth_type =  'Client Credentials'.
+            2. graph token related values were deleted.
+        - Verify that the debug logs are as expected.
+    """
+    from MicrosoftTeams import auth_type_switch_handling
+    mocker.patch('MicrosoftTeams.get_integration_context', return_value={'current_auth_type': 'Authorization Code',
+                                                                         'current_refresh_token': 'test_refresh_token',
+                                                                         'graph_access_token': 'test_graph_token',
+                                                                         'graph_valid_until': 'test_valid_until'})
+    set_integration_context_mocker = mocker.patch('MicrosoftTeams.set_integration_context', return_value={})
+    debug_log_mocker = mocker.patch.object(demisto, 'debug')
+    mocker.patch('MicrosoftTeams.AUTH_TYPE', new='Client Credentials')
+
+    auth_type_switch_handling()
+
+    assert set_integration_context_mocker.call_count == 2
+    assert set_integration_context_mocker.call_args[0][0] == {
+        'current_auth_type': 'Client Credentials', 'current_refresh_token': '',
+        'graph_access_token': '', 'graph_valid_until': ''}
+    assert 'Setting the current_auth_type in the integration context to Client Credentials' in debug_log_mocker.call_args[0][0]
+    assert debug_log_mocker.call_count == 4
+
+
+def test_switch_auth_type_to_authorization_code_flow(mocker):
+    """
+    Tests the 'auth_type_switch_handling' logic when the user switched the auth type in the instance parameters from the
+    Client Credentials Flow to the Auth Code Flow.
+
+    Given:
+        - Auth type instance parameter is now 'Authorization Code'.
+
+    When:
+        - Running the 'auth_type_switch_handling' function.
+
+    Then:
+        - Verify that the integration context was updated as follows:
+            1. current_auth_type = 'Authorization Code'.
+            2. graph token related values were deleted.
+        - Verify that the debug logs are as expected.
+    """
+    from MicrosoftTeams import auth_type_switch_handling
+    mocker.patch('MicrosoftTeams.get_integration_context', return_value={'current_auth_type': 'Client Credentials',
+                                                                         'current_refresh_token': 'test_refresh_token',
+                                                                         'graph_access_token': 'test_graph_token',
+                                                                         'graph_valid_until': 'test_valid_until'})
+    set_integration_context_mocker = mocker.patch('MicrosoftTeams.set_integration_context', return_value={})
+    debug_log_mocker = mocker.patch.object(demisto, 'debug')
+    mocker.patch('MicrosoftTeams.AUTH_TYPE', new='Authorization Code')
+
+    auth_type_switch_handling()
+
+    assert set_integration_context_mocker.call_count == 2
+    assert set_integration_context_mocker.call_args[0][0] == {
+        'current_auth_type': 'Authorization Code', 'current_refresh_token': '',
+        'graph_access_token': '', 'graph_valid_until': ''}
+    assert 'Setting the current_auth_type in the integration context to Authorization Code' in debug_log_mocker.call_args[0][0]
+    assert debug_log_mocker.call_count == 4
+
+
+def test_auth_type_handling_for_first_run_of_the_instance(mocker):
+    """
+    Tests the 'auth_type_switch_handling' logic in the first run of the integration instance/
+
+    Given:
+        - Auth type instance parameter is now 'Authorization Code'.
+
+    When:
+        - Running the 'auth_type_switch_handling' function.
+
+    Then:
+        - Verify that the integration context was updated as follows:
+            1. current_auth_type = 'Authorization Code'.
+        - Verify that the debug logs are as expected.
+    """
+    from MicrosoftTeams import auth_type_switch_handling
+    mocker.patch('MicrosoftTeams.get_integration_context', return_value={})
+    set_integration_context_mocker = mocker.patch('MicrosoftTeams.set_integration_context', return_value={})
+    debug_log_mocker = mocker.patch.object(demisto, 'debug')
+    mocker.patch('MicrosoftTeams.AUTH_TYPE', new='Authorization Code')
+
+    auth_type_switch_handling()
+
+    assert set_integration_context_mocker.call_count == 1
+    assert set_integration_context_mocker.call_args[0][0] == {'current_auth_type': 'Authorization Code'}
+    assert 'This is the first run of the integration instance' in debug_log_mocker.call_args[0][0]
+    assert debug_log_mocker.call_count == 1
+
+
+def test_message_update(mocker, requests_mock):
+    """
+    Given:
+        - a message as a basic string and a  message that contains GUID.
+    When:
+        - running send message function.
+    Then:
+        - The message is sent successfully in both cases.
+    """
+    from MicrosoftTeams import message_update_command
+    mocker.patch.object(demisto, 'results')
+    mocker.patch('MicrosoftTeams.get_channel_type', return_value='standard')
+
+    expected = util_load_json('test_data/send_message/expected_generic.json')
+    raw = util_load_json('test_data/send_message/raw_generic.json')
+
+    activity_id: str = '1730232813350'
+    conversation_id: str = '19:2cbad0d78c624400ef83a5750534448g@thread.skype'
+    mocker.patch("MicrosoftTeams.BOT_ID", new=bot_id)
+    mocker.patch.object(
+        demisto,
+        'args',
+        return_value={
+            'message_id': activity_id,
+            'team': team_name,
+            'channel': 'incident-10',
+            'message': "Updated message",
+            'format_as_card': False
+        }
+    )
+
+    requests_mock.put(
+        f'{service_url}/v3/conversations/{conversation_id}/activities/{activity_id}',
+        json={'id': activity_id}
+    )
+
+    requests_mock.post(
+        f"{service_url}/v3/conversations/{mirrored_channels[0]['channel_id']}/activities",
+        json=raw
+    )
+    message_update_command()
+    results = demisto.results.call_args[0]
+    assert len(results) == 1
+    assert results[0] == expected
+
+
+@pytest.mark.parametrize('permissions, expected_out', [
+    ([Perms.GROUP_READWRITE_ALL.value], {
+        Perms.GROUP_READWRITE_ALL, Perms.GROUP_READ_ALL, Perms.GROUPMEMBER_READ_ALL,
+        Perms.CHANNEL_CREATE, Perms.CHANNEL_READBASIC_ALL, Perms.CHANNEL_DELETE_ALL}),
+    ([Perms.CHAT_READWRITE.value, Perms.USER_READ_ALL.value, 'UnknownPerm.Read'], {
+        Perms.CHAT_READWRITE, Perms.CHAT_READ, Perms.CHAT_READBASIC, Perms.CHAT_CREATE,
+        Perms.CHATMESSAGE_SEND, Perms.USER_READ_ALL, Perms.USER_READ, 'UnknownPerm.Read'}),
+])
+def test_expand_permissions_list(permissions, expected_out):
+    """
+    Given:
+        - A list of Microsoft Graph permissions.
+    When:
+        - The `expand_permission_list` function is called.
+    Then:
+        - The permission list is expanded to include relevant related permissions.
+    """
+    from MicrosoftTeams import expand_permission_list
+
+    expanded_permissions = expand_permission_list(permissions)
+
+    assert expanded_permissions == expected_out
+
+
+@pytest.mark.parametrize('command, expected_missing', [
+    ('microsoft-teams-create-channel', {Perms.CHANNEL_CREATE, Perms.GROUPMEMBER_READ_ALL}),
+    ('microsoft-teams-message-send-to-chat', {Perms.CHAT_CREATE, Perms.APPCATALOG_READ_ALL,
+                                              Perms.TEAMSAPPINSTALLATION_READWRITESELFFORCHAT})
+])
+def test_insufficient_permissions_handler(mocker, command, expected_missing):
+    """
+    Given:
+        - Microsoft Graph API returns a 403 Forbidden error due to insufficient permissions.
+    When:
+        - The `handle_insufficient_permissions` function is called.
+    Then:
+        - Verify that the function determines the missing permissions as expected.
+    """
+    from MicrosoftTeams import insufficient_permissions_error_handler, create_missing_permissions_section
+
+    mock_permissions = [Perms.USER_READ_ALL.value, Perms.CHATMESSAGE_SEND.value]
+
+    mocker.patch.object(demisto, 'command', return_value=command)
+    mocker.patch('MicrosoftTeams.get_token_permissions', return_value=mock_permissions)
+    mocker.patch('MicrosoftTeams.get_integration_context', return_value={'graph_access_token': 'mock_token'})
+    missing_permissions_mock = mocker.patch('MicrosoftTeams.create_missing_permissions_section',
+                                            side_effect=create_missing_permissions_section)
+
+    error_msg = insufficient_permissions_error_handler()
+
+    assert error_msg
+    assert set(missing_permissions_mock.call_args[0][0]) == expected_missing
+
+
+def test_commands_required_includes_all_commands():
+    """
+    A list of required permissions should be added to COMMANDS_REQUIRED_PERMISSIONS
+    whenever a new command is added.
+
+    Given:
+        - COMMANDS_REQUIRED_PERMISSIONS dict.
+    When:
+        - An integration command is defined in the yml.
+    Then:
+        - A permissions required entry exists in the dict for the command.
+    """
+    from MicrosoftTeams import COMMANDS_REQUIRED_PERMISSIONS
+    import yaml
+
+    try:
+        with open('MicrosoftTeams.yml') as f:
+            yml = yaml.safe_load(f)
+
+    except FileNotFoundError:
+        pytest.skip('yml file is unavailable for testing in this environment')
+
+    for command in yml['script']['commands']:
+        assert command['name'] in COMMANDS_REQUIRED_PERMISSIONS
