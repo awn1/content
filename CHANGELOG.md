@@ -3,9 +3,8 @@
 ### Features
 
 - Since the max ttl was reduced to 144, the TTL_EXPIRED_DAYS_DEFAULT was lowered to 3 days.
-- Updated the demisto-sdk version 1.36.3 in Infra.
-  Remove graph-update step from `install-packs-on-cloud-instances`
 - Updated the demisto-sdk version 1.36.4 in Infra.
+- Removed graph-update step from `install-packs-on-cloud-instances`
 
 ### Bugfixes
 
