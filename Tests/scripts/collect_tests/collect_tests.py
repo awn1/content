@@ -57,6 +57,7 @@ from Tests.scripts.collect_tests.utils import (
     hotfix_detect_old_script_yml,
 )
 from Tests.scripts.collect_tests.version_range import VersionRange
+from Tests.scripts.common import is_tpb_part_of_nightly, string_to_bool
 from Tests.scripts.utils.test_use_case_utils import TestUseCaseDataExtractor
 
 
@@ -286,6 +287,12 @@ class CollectionResult:
                     )
             if skip_reason := conf.skipped_tests.get(test):  # type: ignore[union-attr]
                 raise SkippedTestException(test, skip_place="conf.json (skipped_tests)", skip_reason=skip_reason)
+            if string_to_bool(os.getenv("IS_AUD_FLOW", "false")) and not is_tpb_part_of_nightly(
+                test, conf, test_playbook.pack_id
+            ):
+                raise SkippedTestException(
+                    test, skip_place="conf.json", skip_reason="Running in AUD flow and tpb is not part of nightly."
+                )
 
     @staticmethod
     def __empty_result() -> "CollectionResult":
@@ -1537,7 +1544,7 @@ class NightlyTestCollector(BranchTestCollector, ABC):
         result = []
         for playbook in self.id_set.test_playbooks:
             try:
-                if not (playbook.pack_id in self.conf.nightly_packs or playbook.id_ in self.conf.non_api_tests):
+                if not is_tpb_part_of_nightly(playbook.id_, self.conf, playbook.pack_id):
                     raise NonNightlyPackInNightlyBuildException(playbook.pack_id)
                 self._validate_id_set_item_compatibility(playbook, is_integration=False)
                 result.append(
