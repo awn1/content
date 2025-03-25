@@ -232,6 +232,10 @@ validate-content-conf:
       if [ -n "${INSTANCE_TESTS}" ]; then
         echo "Skipping - not running in INSTANCE_TESTS build"
       else
+        if [[ "$CI_COMMIT_BRANCH" =~ ^AUD-demisto/.* ]]; then
+          echo "in Docker auto update branch, setting aud_flow to True."
+          IS_AUD_FLOW=true
+        fi
         python3 ./Tests/scripts/collect_tests/collect_tests.py -n "${IS_NIGHTLY}" --native-nightly "${IS_NATIVE_NIGHTLY}" --sdk-nightly "${DEMISTO_SDK_NIGHTLY}" --marketplace "$MARKETPLACE_VERSION" --service_account $GCS_MARKET_KEY --graph true --override_all_packs $OVERRIDE_ALL_PACKS -up "${PACKS_TO_UPLOAD}"
       fi
     - section_end "Collect Tests"

@@ -60,6 +60,12 @@ variables:
   INSTALL_POETRY: "true"
   DOCKER_IO: "docker.io" # defined in the project level CI/CD variables
   RESET_CORE_PACK_VERSION: "true"
+  IS_AUD_FLOW:
+    description: "Whether we are running in Auto update docker flow or not."
+    value: "false"
+    options:
+      - "true"
+      - "false"
   DRY_RUN:
     description: "Whether to deploy the files into the dev buckets (true) or the proud ones (false).
      Used in ovverride-corepacks and deploy-auto-upgrade-packs flows. Default value is false."

@@ -11,14 +11,12 @@ from typing import Any, cast
 import gitlab
 import requests
 from dateutil import parser
-from demisto_sdk.commands.common.constants import MarketplaceVersions
 from gitlab import Gitlab
 from gitlab.v4.objects import ProjectJob, ProjectPipeline
 from gitlab.v4.objects.commits import ProjectCommit
 from jira import Issue
 from junitparser import JUnitXml, TestSuite
 
-from Tests.scripts.collect_tests.constants import CONF_FILE, TPB_DEPENDENCIES_FILE, XSOAR_ON_PREM, XSOAR_SAAS
 from Tests.scripts.collect_tests.test_conf import TestConf
 from Tests.scripts.utils import logging_wrapper as logging
 
@@ -202,9 +200,6 @@ def calculate_results_table(
     with_skipped: bool = False,
     multiline_headers: bool = True,
     transpose: bool = False,
-    fail_only_nightly_tests: bool = False,
-    artifacts_path: Path | None = None,
-    product_type: str | None = None,
 ) -> tuple[list[str], list[list[Any]], JUnitXml, int]:
     # Importing pandas here to avoid importing it when not needed.
     import pandas as pd  # type: ignore
@@ -228,22 +223,6 @@ def calculate_results_table(
     tabulate_data = [headers]
     total_row: list[Any] = [""] * fixed_headers_length + [TestSuiteStatistics(no_color) for _ in range(len(server_versions_list))]
     total_errors = 0
-    server_mapping_dict: dict = {}
-    if product_type and fail_only_nightly_tests and product_type == "XSOAR" and artifacts_path:
-        server_mapping_dict[XSOAR_ON_PREM] = {}
-        server_mapping_dict[XSOAR_SAAS] = {}
-        server_mapping_dict[XSOAR_ON_PREM]["config"] = TestConf(
-            artifacts_path / XSOAR_ON_PREM / CONF_FILE, MarketplaceVersions.XSOAR
-        )
-        server_mapping_dict[XSOAR_SAAS]["config"] = TestConf(
-            artifacts_path / XSOAR_SAAS / CONF_FILE, MarketplaceVersions.XSOAR_SAAS
-        )
-        server_mapping_dict[XSOAR_ON_PREM]["tpb_dependencies"] = get_json_data(
-            artifacts_path / XSOAR_ON_PREM / TPB_DEPENDENCIES_FILE
-        )
-        server_mapping_dict[XSOAR_SAAS]["tpb_dependencies"] = get_json_data(artifacts_path / XSOAR_SAAS / TPB_DEPENDENCIES_FILE)
-    else:
-        fail_only_nightly_tests = False
     for result, result_test_suites in results.items():
         row: list[Any] = []
         if not without_jira:
@@ -272,18 +251,9 @@ def calculate_results_table(
                         test_suite.tests,
                     )
                 )
+                errors_count += test_suite.errors + test_suite.failures
                 if test_suite.skipped and test_suite.failures == 0 and test_suite.errors == 0:
                     skipped_count += 1
-                if fail_only_nightly_tests:
-                    server_mapping_field = XSOAR_SAAS if server_version == "XSOAR SAAS" else XSOAR_ON_PREM
-                    if not is_tpb_part_of_nightly(
-                        test_suite.name,
-                        server_mapping_dict[server_mapping_field]["config"],
-                        server_mapping_dict[server_mapping_field]["tpb_dependencies"],
-                    ):
-                        logging.info(f"playbook {test_suite.name} is not part of nightly, won't fail build.")
-                        continue
-                errors_count += test_suite.errors + test_suite.failures
             else:
                 row.append(NOT_AVAILABLE)
 
@@ -314,29 +284,18 @@ def calculate_results_table(
     return column_align, tabulate_data, xml, total_errors
 
 
-def get_json_data(path: Path) -> dict:
-    try:
-        with open(path) as json_file:
-            file_data = json.load(json_file)
-    except Exception as e:
-        logging.info(f"Couldn't open {path!s}, reason is: {e!s}")
-        file_data = {}
-    return file_data
-
-
-def is_tpb_part_of_nightly(playbook: str, config: TestConf, tpb_dependencies_packs: dict) -> bool:
+def is_tpb_part_of_nightly(playbook: str, config: TestConf, pack_id: str) -> bool:
     """Return whether the given playbook id is one that should run in nightly or not.
 
     Args:
         playbook (str): The playbook id.
         config (TestConf): The conf.json object.
-        tpb_dependencies_packs (dict): The tpb_dependencies_packs.json file content.
+        pack_id (str): The pack id of the tpb's pack.
 
     Returns:
         bool: whether the given playbook id is one that should run in nightly or not.
     """
-    pack = tpb_dependencies_packs.get(playbook, {}).get("pack", "")
-    return pack in config.nightly_packs or playbook in config.non_api_tests
+    return pack_id in config.nightly_packs or playbook in config.non_api_tests
 
 
 def get_all_failed_results(results: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
