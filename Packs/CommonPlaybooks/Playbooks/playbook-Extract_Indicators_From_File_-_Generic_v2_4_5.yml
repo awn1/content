@@ -1,6 +1,6 @@
-id: Extract Indicators From File - Generic v2
+id: Extract Indicators From File - Generic v2 dev
 version: -1
-name: Extract Indicators From File - Generic v2
+name: Extract Indicators From File - Generic v2 dev
 description: |-
   This playbook extracts indicators from a file.
   Supported file types:
@@ -2294,6 +2294,8 @@ tasks:
       iscommand: false
       brand: ""
     nexttasks:
+      '#error#':
+      - "30"
       "no":
       - "8"
       "yes":
@@ -2321,7 +2323,8 @@ tasks:
                   simple: pdf
           accessor: EntryID
     separatecontext: false
-    continueonerrortype: ""
+    continueonerror: true
+    continueonerrortype: errorPath
     view: |-
       {
         "position": {
@@ -2336,6 +2339,42 @@ tasks:
     quietmode: 0
     isoversize: false
     isautoswitchedtoquietmode: false
+  "30":
+    id: "30"
+    taskid: 0e494d51-fd16-4b35-991e-9ce2a2566ca3
+    type: regular
+    task:
+      id: 0e494d51-fd16-4b35-991e-9ce2a2566ca3
+      version: -1
+      name: Print
+      description: Prints text to war room (Markdown supported)
+      scriptName: Print
+      type: regular
+      iscommand: false
+      brand: ""
+    nexttasks:
+      '#none#':
+      - "19"
+    scriptarguments:
+      value:
+        simple: Make sure your files are valid
+    separatecontext: false
+    continueonerrortype: ""
+    view: |-
+      {
+        "position": {
+          "x": 640,
+          "y": 890
+        }
+      }
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+system: true
 view: |-
   {
     "linkLabelsPosition": {
@@ -2346,7 +2385,7 @@ view: |-
       "21_10_#default#": 0.1,
       "23_10_#default#": 0.14,
       "23_22_yes": 0.43,
-      "29_19_yes": 0.13,
+      "29_19_yes": 0.25,
       "29_8_no": 0.57,
       "5_10_#default#": 0.33,
       "5_6_yes": 0.36,
@@ -2357,8 +2396,8 @@ view: |-
     },
     "paper": {
       "dimensions": {
-        "height": 1815,
-        "width": 3995,
+        "height": 1810,
+        "width": 3996,
         "x": -975,
         "y": -10
       }
