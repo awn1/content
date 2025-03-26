@@ -1,3 +1,18 @@
+# Content Infrastructure 0.0.36 (2025-03-26)
+
+### Features
+
+- Enhance Upload Flow with an upload to the new platform marketplace step. ([CIAC-12739](https://jira-dc.paloaltonetworks.com/browse/CIAC-12739))
+
+### Improved Documentation
+
+- More detailed description to Infra release process.
+
+### Misc
+
+- [12697](https://jira-dc.paloaltonetworks.com/browse/12697)
+
+
 # Content Infrastructure 0.0.35 (2025-03-24)
 
 ### Features
