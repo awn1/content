@@ -458,7 +458,7 @@ class Server:
         # get changed yaml files (filter only added and modified files)
         git_util = GitUtil()
         if str2bool(os.getenv("IS_NIGHTLY")) or os.getenv("IFRA_ENV_TYPE") == "Bucket-Upload":
-            prev_ver = get_last_commit_from_index(self.build.service_account, MarketplaceVersions(self.build.marketplace_name))
+            prev_ver = get_last_commit_from_index(MarketplaceVersions(self.build.marketplace_name))
         else:
             prev_ver = "origin/master"
 

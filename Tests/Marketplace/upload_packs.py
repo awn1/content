@@ -15,6 +15,7 @@ import prettytable
 import requests
 from demisto_sdk.commands.common.tools import open_id_set_file, str2bool
 from demisto_sdk.commands.content_graph.interface.neo4j.neo4j_graph import Neo4jContentGraphInterface
+from google.cloud.storage.bucket import Bucket
 from requests import Response
 
 from Tests.Marketplace.marketplace_constants import (
@@ -141,7 +142,7 @@ def download_and_extract_pack(
 
 
 def download_and_extract_index(
-    storage_bucket: Any, extract_destination_path: str, storage_base_path: str
+    storage_bucket: Bucket, extract_destination_path: str, storage_base_path: str
 ) -> tuple[str, Any, int]:
     """Downloads and extracts index zip from cloud storage.
 
@@ -157,6 +158,7 @@ def download_and_extract_index(
     """
     logging.debug("Start of download_and_extract_index")
     index_storage_path = os.path.join(storage_base_path, f"{GCPConfig.INDEX_NAME}.zip")
+    logging.info(f"Downloading index file from: {index_storage_path}")
     download_index_path = os.path.join(extract_destination_path, f"{GCPConfig.INDEX_NAME}.zip")
 
     index_blob = storage_bucket.blob(index_storage_path)
@@ -173,7 +175,7 @@ def download_and_extract_index(
 
     index_blob.reload()
     index_generation = index_blob.generation
-
+    logging.info(f"download_and_extract_index retrieved {index_generation=}")
     index_blob.download_to_filename(download_index_path, if_generation_match=index_generation)
 
     if os.path.exists(download_index_path):
@@ -209,6 +211,9 @@ def update_index_folder(index_folder_path: str, pack: Pack, pack_versions_to_kee
     index_pack_path = os.path.join(index_folder_path, pack.name)
     pack_versions_to_keep = pack_versions_to_keep or []
 
+    pack_version_metadata_path = os.path.join(index_pack_path, f"metadata-{pack.current_version}.json")
+    pack_metadata_path = os.path.join(index_pack_path, "metadata.json")
+
     try:
         # skipping index update in case pack is hidden
         if pack.hidden:
@@ -233,16 +238,14 @@ def update_index_folder(index_folder_path: str, pack: Pack, pack_versions_to_kee
             logging.debug(f"Created '{pack.name}' pack folder in {GCPConfig.INDEX_NAME}")
 
         if not pack.is_modified:
-            json_write(os.path.join(index_pack_path, "metadata.json"), pack.update_metadata, update=True)
+            json_write(pack_metadata_path, pack.update_metadata, update=True)
 
-            if os.path.exists(os.path.join(index_pack_path, f"metadata-{pack.current_version}.json")):
-                json_write(
-                    os.path.join(index_pack_path, f"metadata-{pack.current_version}.json"), pack.update_metadata, update=True
-                )
+            if os.path.exists(pack_version_metadata_path):
+                json_write(pack_version_metadata_path, pack.update_metadata, update=True)
             else:
                 shutil.copy(
-                    os.path.join(index_pack_path, "metadata.json"),
-                    os.path.join(index_pack_path, f"metadata-{pack.current_version}.json"),
+                    pack_metadata_path,
+                    pack_version_metadata_path,
                 )
             if os.path.exists(os.path.join(pack.path, Pack.VERSION_CONFIG)):
                 shutil.copy(os.path.join(pack.path, Pack.VERSION_CONFIG), index_pack_path)
@@ -258,7 +261,7 @@ def update_index_folder(index_folder_path: str, pack: Pack, pack_versions_to_kee
             logging.debug(f"Copying pack's {d.name} file to pack '{pack.name}' index folder")
             shutil.copy(d.path, index_pack_path)
             if pack.current_version and d.name == Pack.METADATA:
-                shutil.copy(d.path, os.path.join(index_pack_path, f"metadata-{pack.current_version}.json"))
+                shutil.copy(d.path, pack_version_metadata_path)
         logging.debug(f"Finished updating index for pack '{pack.name}'")
         task_status = True
     except Exception as e:
@@ -268,7 +271,7 @@ def update_index_folder(index_folder_path: str, pack: Pack, pack_versions_to_kee
 
 
 def clean_non_existing_packs(
-    index_folder_path: str, storage_bucket: Any, storage_base_path: str, content_packs: list[Pack], marketplace: str = "xsoar"
+    index_folder_path: str, storage_bucket: Bucket, storage_base_path: str, content_packs: list[Pack], marketplace: str = "xsoar"
 ) -> bool:
     """Detects packs that are not part of content repo or from private packs bucket.
 
@@ -415,96 +418,183 @@ def upload_index_to_storage(
         shutil.rmtree(index_folder_path)
 
 
+def process_legacy_pack(
+    pack: os.DirEntry,
+    metadata: dict[str, Any],
+    storage_bucket: Bucket,
+    storage_base_path: str,
+    corepacks_file: str,
+    core_packs_public_urls: list[str],
+    bucket_core_packs: list[str],
+) -> None:
+    pack_current_version = metadata.get("currentVersion", Pack.PACK_INITIAL_VERSION)
+    core_pack_relative_path = os.path.join(pack.name, pack_current_version, f"{pack.name}.zip")
+    core_pack_storage_path = os.path.join(storage_base_path, core_pack_relative_path)
+
+    if not storage_bucket.blob(core_pack_storage_path).exists():
+        logging.critical(f"{pack.name} pack does not exist under {core_pack_storage_path} path")
+        sys.exit(1)
+
+    core_pack_public_url = (
+        os.path.join(GCPConfig.GCS_PUBLIC_URL, storage_bucket.name, core_pack_storage_path)
+        if corepacks_file == GCPConfig.CORE_PACK_FILE_NAME
+        # versioned core pack file, using relative paths.
+        else core_pack_relative_path
+    )
+
+    core_packs_public_urls.append(core_pack_public_url)
+    bucket_core_packs.append(pack.name)
+
+
+def process_pack(
+    pack: os.DirEntry,
+    index_folder_path: str,
+    storage_bucket: Bucket,
+    storage_base_path: str,
+    marketplace: str,
+    corepacks_file: str,
+    platform_corepacks_entries: list[dict[str, Any]],
+    core_packs_public_urls: list[str],
+    bucket_core_packs: list[str],
+    packs_missing_metadata: set[str],
+    required_platform_core_packs_data: set[dict] = set(),
+) -> None:
+    pack_metadata_path = os.path.join(index_folder_path, pack.name, Pack.METADATA)
+    logging.info(f"Processing pack: {pack.name}")
+    logging.debug(f"{pack_metadata_path=}")
+
+    if not os.path.exists(pack_metadata_path):
+        logging.critical(f"{pack.name} pack {Pack.METADATA} is missing in {GCPConfig.INDEX_NAME}")
+        packs_missing_metadata.add(pack.name)
+        return
+
+    with open(pack_metadata_path) as metadata_file:
+        metadata = json.load(metadata_file)
+
+    if marketplace == "platform" and (
+        platform_core_pack_entry := next((entry for entry in required_platform_core_packs_data if entry["id"] == pack.name), None)
+    ):
+        platform_core_pack_entry["version"] = metadata["currentVersion"]
+        platform_corepacks_entries.append(platform_core_pack_entry)
+
+    else:
+        process_legacy_pack(
+            pack, metadata, storage_bucket, storage_base_path, corepacks_file, core_packs_public_urls, bucket_core_packs
+        )
+
+
+def construct_core_packs_data(
+    marketplace: str, platform_corepacks_entries: list[dict[str, Any]], core_packs_public_urls: list[str], build_number: str
+) -> dict[str, Any]:
+    if marketplace == "platform":
+        return {"packs": platform_corepacks_entries}
+    else:
+        return {
+            "corePacks": core_packs_public_urls,
+            "upgradeCorePacks": GCPConfig.get_core_packs_to_upgrade(marketplace),
+            "buildNumber": build_number,
+        }
+
+
+def validate_core_packs(
+    packs_missing_metadata: set[str], required_core_packs: list[str | dict], bucket_core_packs: list[str]
+) -> None:
+    if packs_missing_metadata:
+        logging.critical(
+            f"Missing {Pack.METADATA} in {len(packs_missing_metadata)} packs: {','.join(sorted(packs_missing_metadata))}"
+        )
+        sys.exit(1)
+
+    required_pack_ids = {pack["id"] if isinstance(pack, dict) else pack for pack in required_core_packs}
+    bucket_pack_ids = set(bucket_core_packs)
+
+    missing_core_packs = required_pack_ids - bucket_pack_ids
+    unexpected_core_packs = bucket_pack_ids - required_pack_ids
+
+    if missing_core_packs:
+        logging.critical(f"Missing {len(missing_core_packs)} packs: {','.join(sorted(missing_core_packs))}")
+    if unexpected_core_packs:
+        logging.critical(f"Unexpected {len(unexpected_core_packs)} packs in bucket: {','.join(sorted(unexpected_core_packs))}")
+    if missing_core_packs or unexpected_core_packs:
+        sys.exit(1)
+
+
+def process_core_packs(
+    index_folder_path: str,
+    required_core_packs: list[str | dict],
+    storage_bucket: Bucket,
+    storage_base_path: str,
+    marketplace: str,
+    corepacks_file: str,
+    build_number: str,
+) -> dict[str, Any]:
+    platform_corepacks_entries: list[dict[str, Any]] = []
+
+    core_packs_public_urls: list[str] = []
+    bucket_core_packs: list[str] = list()
+    packs_missing_metadata: set[str] = set()
+
+    required_core_pack_names = [pack_name if isinstance(pack_name, str) else pack_name["id"] for pack_name in required_core_packs]
+    for pack in os.scandir(index_folder_path):
+        if pack.is_dir() and pack.name in required_core_pack_names:
+            process_pack(
+                pack,
+                index_folder_path,
+                storage_bucket,
+                storage_base_path,
+                marketplace,
+                corepacks_file,
+                platform_corepacks_entries,
+                core_packs_public_urls,
+                bucket_core_packs,
+                packs_missing_metadata,
+            )
+
+    validate_core_packs(packs_missing_metadata, required_core_packs, bucket_core_packs)
+
+    return construct_core_packs_data(marketplace, platform_corepacks_entries, core_packs_public_urls, build_number)
+
+
 def create_corepacks_config(
-    storage_bucket: Any,
+    storage_bucket: Bucket,
     build_number: str,
     index_folder_path: str,
     artifacts_dir: str,
     storage_base_path: str,
     marketplace: str = "xsoar",
-):
-    """Create corepacks.json file and stores it in the artifacts dir. This file contains all of the server's core
-    packs, under the key corepacks, and specifies which core packs should be upgraded upon XSOAR upgrade, under the key
-    upgradeCorePacks.
-
-
-     Args:
-        storage_bucket (google.cloud.storage.bucket.Bucket): gcs bucket where core packs config is uploaded.
-        build_number (str): circleCI build number.
-        index_folder_path (str): The index folder path.
-        artifacts_dir (str): The CI artifacts directory to upload the corepacks.json to.
-        storage_base_path (str): the source path of the core packs in the target bucket.
-        marketplace (str): the marketplace type of the bucket. possible options: xsoar, marketplace_v2 or xpanse
-
+) -> None:
     """
-    required_core_packs = GCPConfig.get_core_packs(marketplace)
-    corepacks_files_names = [GCPConfig.CORE_PACK_FILE_NAME]
-    corepacks_files_names.extend(GCPConfig.get_core_packs_unlocked_files(marketplace))
+    Create corepacks.json file and store it in the artifacts directory.
+
+    For XSOAR/XSIAM/XPANSE marketplaces:
+        This file contains all of the server's core packs, under the key corepacks,
+        and specifies which core packs should be upgraded upon XSOAR upgrade, under the key upgradeCorePacks.
+    For Platform marketplace:
+        This file contains a list of core packs with their respective IDs, current versions, and product-types
+        for which they serve as "core pack".
+
+    Args:
+        storage_bucket: GCS bucket where core packs config is uploaded.
+        build_number: CircleCI build number.
+        index_folder_path: The index folder path.
+        artifacts_dir: The CI artifacts directory to upload the corepacks.json to.
+        storage_base_path: The source path of the core packs in the target bucket.
+        marketplace: The marketplace type of the bucket. Possible options: xsoar, marketplace_v2, xpanse, or platform.
+    """
+    logging.info(f"Creating corepacks config for {marketplace=} | {storage_bucket=} | {storage_base_path=}")
+
+    required_core_packs: list = list(GCPConfig.get_core_packs(marketplace))
+    corepacks_files_names = [GCPConfig.CORE_PACK_FILE_NAME] + GCPConfig.get_core_packs_unlocked_files(marketplace)
     logging.debug(f"Updating the following corepacks files: {corepacks_files_names}")
+
     for corepacks_file in corepacks_files_names:
-        logging.debug(f"Creating corepacks file {corepacks_file}.")
-        core_packs_public_urls = []
-        bucket_core_packs = set()
-        packs_missing_metadata = set()
-        for pack in os.scandir(index_folder_path):
-            if pack.is_dir() and pack.name in required_core_packs:
-                pack_metadata_path = os.path.join(index_folder_path, pack.name, Pack.METADATA)
-
-                if not os.path.exists(pack_metadata_path):
-                    logging.critical(f"{pack.name} pack {Pack.METADATA} is missing in {GCPConfig.INDEX_NAME}")
-                    packs_missing_metadata.add(pack.name)
-                    continue
-
-                with open(pack_metadata_path) as metadata_file:
-                    metadata = json.load(metadata_file)
-
-                pack_current_version = metadata.get("currentVersion", Pack.PACK_INITIAL_VERSION)
-                core_pack_relative_path = os.path.join(pack.name, pack_current_version, f"{pack.name}.zip")
-                core_pack_storage_path = os.path.join(storage_base_path, core_pack_relative_path)
-
-                if not storage_bucket.blob(core_pack_storage_path).exists():
-                    logging.critical(f"{pack.name} pack does not exist under {core_pack_storage_path} path")
-                    sys.exit(1)
-
-                if corepacks_file == GCPConfig.CORE_PACK_FILE_NAME:
-                    core_pack_public_url = os.path.join(GCPConfig.GCS_PUBLIC_URL, storage_bucket.name, core_pack_storage_path)
-                else:  # versioned core pack file
-                    core_pack_public_url = core_pack_relative_path  # Use relative paths in versioned core pack files
-
-                core_packs_public_urls.append(core_pack_public_url)
-                bucket_core_packs.add(pack.name)
-
-        if packs_missing_metadata:
-            logging.critical(
-                f"Missing {Pack.METADATA} in {len(packs_missing_metadata)} packs: "
-                f"{','.join(sorted(packs_missing_metadata))}, exiting..."
-            )
-            sys.exit(1)
-
-        missing_core_packs = set(required_core_packs).difference(bucket_core_packs)
-        unexpected_core_packs = set(bucket_core_packs).difference(required_core_packs)
-
-        if missing_core_packs:
-            logging.critical(
-                f"Missing {len(missing_core_packs)} packs (expected in core_packs configuration, but not found in bucket): "
-                f"{','.join(sorted(missing_core_packs))}, exiting..."
-            )
-        if unexpected_core_packs:
-            logging.critical(
-                f"Unexpected {len(missing_core_packs)} packs in bucket (not in the core_packs configuration): "
-                f"{','.join(sorted(unexpected_core_packs))}, exiting..."
-            )
-        if missing_core_packs or unexpected_core_packs:
-            sys.exit(1)
+        core_packs_data = process_core_packs(
+            index_folder_path, required_core_packs, storage_bucket, storage_base_path, marketplace, corepacks_file, build_number
+        )
 
         corepacks_json_path = os.path.join(artifacts_dir, corepacks_file)
-        core_packs_data = {
-            "corePacks": core_packs_public_urls,
-            "upgradeCorePacks": GCPConfig.get_core_packs_to_upgrade(marketplace),
-            "buildNumber": build_number,
-        }
         json_write(corepacks_json_path, core_packs_data)
-        logging.success(f"Finished copying {corepacks_file} to artifacts.")
+        logging.success(f"Finished creating {corepacks_file} at {corepacks_json_path}.")
 
 
 def _build_summary_table(packs_input_list: list, include_pack_status: bool = False) -> Any:
@@ -1004,6 +1094,7 @@ def main():
     index_folder_path, index_blob, index_generation = download_and_extract_index(
         storage_bucket, extract_destination_path, storage_base_path
     )
+    logging.debug(f"upload_packs {index_folder_path=} | {storage_bucket=} | {storage_base_path=} | {index_generation=}")
     extract_packs_artifacts(packs_artifacts_path, extract_destination_path)
 
     # content repo client and current/previous commits initialized
@@ -1132,12 +1223,10 @@ def main():
             continue
 
         pack.status = PackStatus.SUCCESS.name  # type: ignore[misc]
-
     # upload core packs json to bucket
     create_corepacks_config(
         storage_bucket, build_number, index_folder_path, os.path.dirname(packs_artifacts_path), storage_base_path, marketplace
     )
-
     prepare_index_json(
         index_folder_path=index_folder_path,
         build_number=build_number,

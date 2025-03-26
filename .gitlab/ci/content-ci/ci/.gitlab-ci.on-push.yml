@@ -145,6 +145,99 @@ validate-content-conf:
     fi
   - section_end "Check if bypass.url Label in the PR"
 
+.start-content-graph: &start-content-graph
+    - section_start "Create or update content graph" --collapsed
+    - gcloud auth configure-docker --quiet ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
+    - |
+        echo "set DEMISTO_SDK_GRAPH_FORCE_CREATE to true to create graph from scratch"
+        export DEMISTO_SDK_GRAPH_FORCE_CREATE=true
+        echo "DEMISTO_SDK_GRAPH_FORCE_CREATE was set to true to create graph from scratch"
+        echo $DEMISTO_SDK_GRAPH_FORCE_CREATE
+    - echo "Staging the repo to include the private packs in the graph"
+    - git add Packs
+    - echo "Updating the content graph"
+    - mkdir "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_graph"
+    - demisto-sdk graph update -g --marketplace "${MARKETPLACE_VERSION}" --output-path "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_graph"
+    - echo "Successfully updated content graph"
+
+    - section_end "Create or update content graph"
+
+.create-content-artifacts: &create-content-artifacts
+  - section_start "Create Content Artifacts and Update Conf" --collapsed
+  - export DEMISTO_SDK_MARKETPLACE=$MARKETPLACE_VERSION  # This is done because the demisto-sdk uses this environment variable.
+  - |
+    if [[ $MARKETPLACE_VERSION == "xsoar" || $MARKETPLACE_VERSION == "xsoar_saas" || $MARKETPLACE_VERSION == "platform" ]];  # later the non xsoar will be edited to remove xsoar naming.
+    then
+      echo "Starting to create artifacts with zip for ${DEMISTO_SDK_MARKETPLACE}"
+      python Tests/scripts/create_artifacts_graph/create_artifacts.py --marketplace "$MARKETPLACE_VERSION" --artifacts-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs" --dependencies-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json" --packs-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs.json" --bucket-upload "${BUCKET_UPLOAD}"
+    else
+      echo "Starting to create artifacts without zip."
+      python Tests/scripts/create_artifacts_graph/create_artifacts.py --marketplace "$MARKETPLACE_VERSION" --artifacts-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs" --dependencies-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json" --packs-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs.json" --bucket-upload "${BUCKET_UPLOAD}" --no-zip
+    fi
+  - section_end "Create Content Artifacts and Update Conf"
+
+.find-dependency-changes: &find-dependency-changes
+  - section_start "Find dependencies changes" --collapsed
+  - |
+    if [[ "${BUCKET_UPLOAD}" == "false" ]] || [[ "${TEST_UPLOAD}" == "false" ]]; then
+      source ./Tests/scripts/get_previous_master_sha.sh
+      if [[ -z $PREVIOUS_MASTER_SHA ]]; then
+        echo "WARNING: failed to detect previous master SHA, skipping find dependencies changes"
+      else
+        echo "Finding pack dependencies diff against $PREVIOUS_MASTER_SHA"
+        python Tests/scripts/find_pack_dependencies_changes.py --gitlab-token $GITLAB_API_TOKEN --master-sha $PREVIOUS_MASTER_SHA --job-name $CI_JOB_NAME --artifacts-folder "$ARTIFACTS_FOLDER_SERVER_TYPE"
+      fi
+    else
+      echo "Test upload flow - skipping find dependencies changes"
+    fi
+  - section_end "Find dependencies changes"
+
+.zip-xpanse-and-xsiam-packs: &zip-xpanse-and-xsiam-packs
+  - section_start "Zip Xspanse and Xsiam" --collapsed
+  - |
+    if [[ $MARKETPLACE_VERSION == "marketplacev2" ||  $MARKETPLACE_VERSION == "xpanse" ]];
+    then
+      pushd "${ARTIFACTS_FOLDER_SERVER_TYPE}"
+      pushd content_packs; zip -r ../content_packs.zip * 1> /dev/null; popd
+      rm -rf content_packs
+      popd
+    fi
+  - section_end "Zip Xspanse and Xsiam"
+
+.collect-tests: &collect-tests
+  - section_start "Collect Tests" --collapsed
+  - |
+    if [ -n "${INSTANCE_TESTS}" ]; then
+      echo "Skipping - not running in INSTANCE_TESTS build"
+    else
+
+      if [[ "$CI_COMMIT_BRANCH" =~ ^AUD-demisto/.* ]]; then
+        echo "in Docker auto update branch, setting aud_flow to True."
+        IS_AUD_FLOW=true
+      fi
+
+      python3 ./Tests/scripts/collect_tests/collect_tests.py -n "${IS_NIGHTLY}" --native-nightly "${IS_NATIVE_NIGHTLY}" --sdk-nightly "${DEMISTO_SDK_NIGHTLY}" --marketplace "$MARKETPLACE_VERSION" --service_account $GCS_MARKET_KEY --graph true --override_all_packs $OVERRIDE_ALL_PACKS -up "${PACKS_TO_UPLOAD}"
+    fi
+  - section_end "Collect Tests"
+
+.create-xsoar-instances: &create-xsoar-instances
+  - section_start "Create Instances for XSOAR"
+  - |
+    if [[ ${MARKETPLACE_VERSION} = "xsoar" ]]; then
+      echo "Creating Instances, only for XSOAR."
+      if [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]]; then
+        echo "Creating Xsoar Instances for SDK nightly- changing the filter_envs json."
+        jq '.' <<< '{"Server 6.11": false, "Server 6.12": false, "Server Master": true}' > "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json"
+      fi
+      if [[ "${IS_NATIVE_NIGHTLY}" == "true" ]]; then
+        echo "Creating Xsoar Instances for Native nightly- changing the filter_envs json."
+        jq '.' <<< '{"Server 6.11": false, "Server 6.12": false, "Server Master": false}' > "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json"
+      fi
+      python3 ./gcp/create_instance.py --env-type "${IFRA_ENV_TYPE}" --outfile "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json" --filter-envs "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json" --creds "${CONTENT_BUILD_GCP}" --zone "${GCP_ZONE}" --instances-config "${CI_PROJECT_DIR}/config/instances_config.json"
+    fi
+  - section_end "Create Instances for XSOAR"
+
+
 .generic-prepare-testing-bucket:
   tags:
     - gce
@@ -169,78 +262,23 @@ validate-content-conf:
   stage: prepare-testing-bucket
   script:
     - !reference [.create-release-notes-and-common-docs]
-    - section_start "Create or update content graph" --collapsed
-    - gcloud auth configure-docker --quiet ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
-    - |
-        echo "set DEMISTO_SDK_GRAPH_FORCE_CREATE to true to create graph from scratch"
-        export DEMISTO_SDK_GRAPH_FORCE_CREATE=true
-        echo "DEMISTO_SDK_GRAPH_FORCE_CREATE was set to true to create graph from scratch"
-        echo $DEMISTO_SDK_GRAPH_FORCE_CREATE
-    - echo "Staging the repo to include the private packs in the graph"
-    - git add Packs
-    - echo "Updating the content graph"
-    - mkdir "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_graph"
-    - demisto-sdk graph update -g --marketplace "${MARKETPLACE_VERSION}" --output-path "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_graph"
-    - echo "Successfully updated content graph"
 
-    - section_end "Create or update content graph"
+    - *start-content-graph
 
-    - section_start "Create Content Artifacts and Update Conf" --collapsed
-    - export DEMISTO_SDK_MARKETPLACE=$MARKETPLACE_VERSION  # This is done because the demisto-sdk uses this environment variable.
-    - |
-      if [[ $MARKETPLACE_VERSION == "xsoar" || $MARKETPLACE_VERSION == "xsoar_saas" ]];  # later the non xsoar will be edited to remove xsoar naming.
-      then
-        echo "Starting to create artifacts with zip for XSOAR."
-        python Tests/scripts/create_artifacts_graph/create_artifacts.py --marketplace "$MARKETPLACE_VERSION" --artifacts-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs" --dependencies-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json" --packs-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs.json" --bucket-upload "${BUCKET_UPLOAD}"
-      else
-        echo "Starting to create artifacts without zip."
-        python Tests/scripts/create_artifacts_graph/create_artifacts.py --marketplace "$MARKETPLACE_VERSION" --artifacts-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs" --dependencies-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json" --packs-output "${ARTIFACTS_FOLDER_SERVER_TYPE}/packs.json" --bucket-upload "${BUCKET_UPLOAD}" --no-zip
-      fi
-
-    - section_end "Create Content Artifacts and Update Conf"
+    - *create-content-artifacts
 
     - section_start "Copy conf.json To Server Type Artifacts Folder"
     - cp "./Tests/conf.json" "${ARTIFACTS_FOLDER_SERVER_TYPE}/conf.json"
     - section_end "Copy conf.json To Server Type Artifacts Folder"
 
-    - section_start "Find dependencies changes" --collapsed
-    - |
-      if [[ "${BUCKET_UPLOAD}" == "false" ]] || [[ "${TEST_UPLOAD}" == "false" ]]; then
-        source ./Tests/scripts/get_previous_master_sha.sh
-        if [[ -z $PREVIOUS_MASTER_SHA ]]; then
-          echo "WARNING: failed to detect previous master SHA, skipping find dependencies changes"
-        else
-          echo "Finding pack dependencies diff against $PREVIOUS_MASTER_SHA"
-          python Tests/scripts/find_pack_dependencies_changes.py --gitlab-token $GITLAB_API_TOKEN --master-sha $PREVIOUS_MASTER_SHA --job-name $CI_JOB_NAME --artifacts-folder "$ARTIFACTS_FOLDER_SERVER_TYPE"
-        fi
-      else
-        echo "Test upload flow - skipping find dependencies changes"
-      fi
-    - section_end "Find dependencies changes"
-    - section_start "Zip Xspanse and Xsiam" --collapsed
-    - |
-      if [[ $MARKETPLACE_VERSION == "marketplacev2" ||  $MARKETPLACE_VERSION == "xpanse" ]];
-      then
-        pushd "${ARTIFACTS_FOLDER_SERVER_TYPE}"
-        pushd content_packs; zip -r ../content_packs.zip * 1> /dev/null; popd
-        rm -rf content_packs
-        popd
-      fi
-    - section_end "Zip Xspanse and Xsiam"
-    - section_start "Collect Tests" --collapsed
-    - |
-      if [ -n "${INSTANCE_TESTS}" ]; then
-        echo "Skipping - not running in INSTANCE_TESTS build"
-      else
-        if [[ "$CI_COMMIT_BRANCH" =~ ^AUD-demisto/.* ]]; then
-          echo "in Docker auto update branch, setting aud_flow to True."
-          IS_AUD_FLOW=true
-        fi
-        python3 ./Tests/scripts/collect_tests/collect_tests.py -n "${IS_NIGHTLY}" --native-nightly "${IS_NATIVE_NIGHTLY}" --sdk-nightly "${DEMISTO_SDK_NIGHTLY}" --marketplace "$MARKETPLACE_VERSION" --service_account $GCS_MARKET_KEY --graph true --override_all_packs $OVERRIDE_ALL_PACKS -up "${PACKS_TO_UPLOAD}"
-      fi
-    - section_end "Collect Tests"
+    - *find-dependency-changes
+
+    - *zip-xpanse-and-xsiam-packs
+
+    - *collect-tests
 
     - *check_bypass_url_label
+
     - |
       if [[ "${BUCKET_UPLOAD}" == "true" || "${IS_NIGHTLY}" == "true" ||
       -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.json" ||
@@ -263,24 +301,12 @@ validate-content-conf:
         echo "Skipping - Prepare Content Packs for Testing, Override and upload core packs versions, Validate core packs list versions."
       fi
 
-    - section_start "Create Instances for XSOAR"
-    - |
-      if [[ ${MARKETPLACE_VERSION} = "xsoar" ]]; then
-        echo "Creating Instances, only for XSOAR."
-        if [[ "${DEMISTO_SDK_NIGHTLY}" == "true" ]]; then
-          echo "Creating Xsoar Instances for SDK nightly- changing the filter_envs json."
-          jq '.' <<< '{"Server 6.11": false, "Server 6.12": false, "Server Master": true}' > "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json"
-        fi
-        if [[ "${IS_NATIVE_NIGHTLY}" == "true" ]]; then
-          echo "Creating Xsoar Instances for Native nightly- changing the filter_envs json."
-          jq '.' <<< '{"Server 6.11": false, "Server 6.12": false, "Server Master": false}' > "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json"
-        fi
-        python3 ./gcp/create_instance.py --env-type "${IFRA_ENV_TYPE}" --outfile "${ARTIFACTS_FOLDER_SERVER_TYPE}/env_results.json" --filter-envs "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_envs.json" --creds "${CONTENT_BUILD_GCP}" --zone "${GCP_ZONE}" --instances-config "${CI_PROJECT_DIR}/config/instances_config.json"
-      fi
-    - section_end "Create Instances for XSOAR"
+    - *create-xsoar-instances
+
     - section_start "Upload Artifacts to GCP" --collapsed
     - ./Tests/scripts/upload_artifacts.sh
     - section_end "Upload Artifacts to GCP"
+
     - echo "create instances done" > "${ARTIFACTS_FOLDER_SERVER_TYPE}/create_instances_done.txt"
     - job-done
 
@@ -323,7 +349,6 @@ xsoar-saas-prepare-testing-bucket:
         IFRA_ENV_TYPE: "Nightly"
     - if: '$IS_NATIVE_NIGHTLY == "true"'
 
-
 mpv2-prepare-testing-bucket:
   tags:
     - cortex-content-1738
@@ -355,6 +380,23 @@ xpanse-prepare-testing-bucket:
     PRODUCT_NAME: "Cortex XPANSE"
     MARKETPLACE_BUCKET: "$GCS_MARKET_XPANSE_BUCKET"
     GCS_BUILD_BUCKET: "$GCS_BUILD_XPANSE_BUCKET"
+  extends:
+    - .generic-prepare-testing-bucket
+
+platform-prepare-testing-bucket:
+  tags:
+    - cortex-content-1738
+  needs:
+    - cloning-repositories
+  variables:
+    PRODUCT_TYPE: "PLATFORM"
+    SERVER_TYPE: "PLATFORM"
+    ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_PLATFORM}"
+    ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_PLATFORM}/server_type_${SERVER_TYPE}"
+    MARKETPLACE_VERSION: "platform"
+    MARKETPLACE_BUCKET: "$GCS_MARKET_PLATFORM_BUCKET"
+    GCS_BUILD_BUCKET: "$GCS_BUILD_PLATFORM_BUCKET"
+    PRODUCT_NAME: "Cortex Platform"
   extends:
     - .generic-prepare-testing-bucket
 
