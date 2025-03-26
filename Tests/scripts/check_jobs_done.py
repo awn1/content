@@ -50,6 +50,7 @@ SDK_NIGHTLY_JOBS = [
     "demisto-sdk-nightly:xsoar-prepare-testing-bucket",
     "demisto-sdk-nightly:xpanse-prepare-testing-bucket",
     "demisto-sdk-nightly:xsoar-saas-prepare-testing-bucket",
+    "demisto-sdk-nightly:platform-prepare-testing-bucket",
     "demisto-sdk-nightly:run-end-to-end-tests-general",
     "demisto-sdk-nightly:run-end-to-end-tests-xsoar",
 ]
@@ -62,6 +63,7 @@ BUCKET_UPLOAD_JOBS = [
     "upload-id-set-bucket",
     "xpanse-prepare-testing-bucket-upload-flow",
     "xsoar-prepare-testing-bucket-upload-flow",
+    "platform-prepare-testing-bucket-upload-flow",
     "install-packs-in-server6_11",
     "install-packs-in-server6_12",
     "install-packs-in-server-master",
@@ -70,6 +72,7 @@ BUCKET_UPLOAD_JOBS = [
     "upload-packs-to-marketplace",
     "upload-packs-to-marketplace-v2",
     "upload-packs-to-xpanse-marketplace",
+    "upload-packs-to-platform-marketplace",
     "upload-content-graph-data-to-bigquery",
 ]
 
@@ -81,6 +84,7 @@ CONTENT_COMMON_JOBS = [
     "xpanse-prepare-testing-bucket",
     "xsoar-prepare-testing-bucket",
     "xsoar-saas-prepare-testing-bucket",
+    "platform-prepare-testing-bucket",
     "xsiam_server_ga",
     "xsoar_ng_server_ga",
     "tests_xsoar_server: [Server 6.11]",

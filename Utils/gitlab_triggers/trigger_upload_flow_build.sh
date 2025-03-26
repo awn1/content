@@ -20,6 +20,7 @@ if [ "$#" -lt "1" ]; then
   [-gb2, --bucket_v2]         The name of the bucket to upload the marketplace v2 packs to. Default is marketplace-v2-dist-dev.
   [-gb3, --bucket_xpanse]     The name of the bucket to upload the xpanse marketplace packs to. Default is xpanse-dist-dev.
   [-gb4, --bucket_xsoar_saas] The name of th bucket to upload the xsoar_saas marketplace packs to. Default is marketplace-saas-dist-dev.
+  [-gb5, --bucket_platform] The name of th bucket to upload the platform marketplace packs to. Default is marketplace-cortex-content-build/content-dev.
   [-f, --force]               Whether to trigger the force upload flow.
   [-p, --packs]               CSV list of pack IDs. Mandatory when the --force flag is on.
   [-oa, --override-all]       If given, will override all packs during this upload flow.
@@ -34,6 +35,7 @@ _bucket="marketplace-dist-dev"
 _bucket_v2="marketplace-v2-dist-dev"
 _bucket_xpanse="xpanse-dist-dev"
 _bucket_xsoar_saas="marketplace-saas-dist-dev"
+_bucket_platform="marketplace-cortex-content-build/content-dev"
 _force="false"
 _slack_channel="dmst-bucket-upload"
 _override_all_pack="false"
@@ -75,6 +77,12 @@ while [[ "$#" -gt 0 ]]; do
 
   -gb4 | --bucket_xsoar_saas)
     _bucket_xsoar_saas="$2"
+    shift
+    shift
+    ;;
+
+  -gb5 | --bucket_platform)
+    _bucket_platform="$2"
     shift
     shift
     ;;
@@ -138,6 +146,7 @@ curl -k -v --request POST \
   --form "variables[GCS_MARKET_V2_BUCKET]=${_bucket_v2}" \
   --form "variables[GCS_MARKET_XPANSE_BUCKET]=${_bucket_xpanse}" \
   --form "variables[GCS_MARKET_XSOAR_SAAS_BUCKET]=${_bucket_xsoar_saas}" \
+  --form "variables[GCS_MARKET_PLATFORM_BUCKET]=${_bucket_platform}" \
   --form "variables[IFRA_ENV_TYPE]=Bucket-Upload" \
   --form "variables[TEST_UPLOAD]=false" \
   --form "variables[INFRA_BRANCH]=${_infra_branch}" \

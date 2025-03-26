@@ -165,6 +165,39 @@ cloning-repositories-upload-flow:
     fi
   - section_end "Upload Packs To Marketplace Storage"
 
+.upload_packs_to_the_marketplace_platform: &upload_packs_to_the_marketplace_platform
+  - section_start "Upload Packs To Marketplace Storage"
+  - |
+    if [[ "$CI_COMMIT_BRANCH" == "master" ]] ||  [[ "$GCS_MARKET_PLATFORM_BUCKET" != "$GCS_PRODUCTION_PLATFORM_BUCKET" ]]; then
+      EXTRACT_FOLDER=$(mktemp -d)
+      PACK_ARTIFACTS="${ARTIFACTS_FOLDER_SERVER_TYPE}/content_packs.zip"
+      PACKS_DEPENDENCIES="${ARTIFACTS_FOLDER_SERVER_TYPE}/packs_dependencies.json"
+      CI_COMMIT_BRANCH=${CI_COMMIT_BRANCH:-unknown}
+      GCS_BUILD_BUCKET="marketplace-cortex-content-build/content-dev"
+      if [[ -z $STORAGE_BASE_PATH ]]; then
+        if [[ "$GCS_MARKET_PLATFORM_BUCKET" == "$GCS_PRODUCTION_PLATFORM_BUCKET" ]]; then
+          STORAGE_BASE_PATH="content"
+        else
+          STORAGE_BASE_PATH="upload-flow/builds/$CI_COMMIT_BRANCH/$CI_PIPELINE_ID/content"
+        fi
+        echo "Set storage base path to $STORAGE_BASE_PATH"
+      fi
+
+      python3 ./Tests/Marketplace/copy_and_upload_packs.py -a "${PACK_ARTIFACTS}" -e $EXTRACT_FOLDER -pb "$GCS_MARKET_PLATFORM_BUCKET" -bb "$GCS_BUILD_BUCKET" -s $GCS_MARKET_KEY -n $CI_PIPELINE_ID -c $CI_COMMIT_BRANCH -pbp "$STORAGE_BASE_PATH/packs" --marketplace "platform" --artifacts-folder-server-type "${ARTIFACTS_FOLDER_SERVER_TYPE}"
+
+      core_packs_files_count=$(find "${ARTIFACTS_FOLDER_SERVER_TYPE}" -name "corepacks*.json" | wc -l)
+      if [ "${core_packs_files_count}" -eq 0 ]; then
+        echo "No core packs files were found, skipping uploading."
+      else
+        echo "Uploading ${core_packs_files_count} core packs files."
+        # Copy core packs files from the artifacts folder to the build bucket:
+        find "${ARTIFACTS_FOLDER_SERVER_TYPE}" -name "corepacks*.json" -exec gsutil cp -z json "{}" "gs://$GCS_MARKET_PLATFORM_BUCKET/$STORAGE_BASE_PATH/packs" \;
+        echo "Successfully uploaded core packs files."
+      fi
+    fi
+  - section_end "Upload Packs To Marketplace Storage"
+
+
 .upload_content_graph: &upload_content_graph
   - section_start "Upload content graph GraphML to GCP" --collapsed
   - |
@@ -242,6 +275,7 @@ jobs-done-check-upload-flow:
     - xpanse-prepare-testing-bucket-upload-flow
     - xsoar-prepare-testing-bucket-upload-flow
     - xsoar-saas-prepare-testing-bucket-upload-flow
+    - platform-prepare-testing-bucket-upload-flow
     - install-packs-in-server6_11
     - install-packs-in-server6_12
     - install-packs-in-server-master
@@ -252,6 +286,7 @@ jobs-done-check-upload-flow:
     - upload-packs-to-marketplace-v2
     - upload-packs-to-xpanse-marketplace
     - upload-packs-to-xsoar-saas-marketplace
+    - upload-packs-to-platform-marketplace
     - run-validations-upload-flow
     - upload-content-graph-data-to-bigquery
   tags:
@@ -317,6 +352,19 @@ xpanse-prepare-testing-bucket-upload-flow:
     - if: '$BUCKET_UPLOAD == "true"'
     - if: '$FORCE_BUCKET_UPLOAD == "true"'
 
+platform-prepare-testing-bucket-upload-flow:
+  needs:
+    - cloning-repositories-upload-flow
+  extends:
+    - platform-prepare-testing-bucket
+  variables:
+    IFRA_ENV_TYPE: "Bucket-Upload"
+    ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_PLATFORM}"
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /pull\/[0-9]+/'
+      when: never
+    - if: '$BUCKET_UPLOAD == "true"'
+    - if: '$FORCE_BUCKET_UPLOAD == "true"'
 
 .install_packs_in_xsoar_server:
   tags:
@@ -737,10 +785,60 @@ upload-packs-to-xsoar-saas-marketplace:
     - *upload_packs_results_upload
     - job-done
 
+upload-packs-to-platform-marketplace:
+  tags:
+    - $BUILD_JOB_TAG
+  needs: ["run-pre-commit-upload-flow", "platform-prepare-testing-bucket-upload-flow", "run-validations-upload-flow"]
+  stage: upload-to-marketplace
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - ${CI_PROJECT_DIR}/artifacts/*
+      - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
+    when: always
+  variables:
+    MARKETPLACE_VERSION: "platform"
+    INSTANCE_ROLE: "platform"
+    PRODUCT_TYPE: "PLATFORM"
+    SERVER_TYPE: "PLATFORM"
+    ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_PLATFORM}"
+    ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_PLATFORM}/server_type_${SERVER_TYPE}"
+    INSTANCE_CREATED: "true"
+    SSH_TUNNEL_TIMEOUT: 10
+    TIME_TO_LIVE: ""  # set to no TTL, shutdown immediately
+  extends:
+    - .bucket-upload-rule
+    - .default-job-settings
+  script:
+    - !reference [.check_user_permissions]
+    - *upload_packs_to_the_marketplace_platform
+    - *upload_failed_to_upload_packs
+    - section_start "Download packs from GCP"
+    - |
+      if [[ "${GCS_MARKET_PLATFORM_BUCKET}" == "${GCS_INTERNAL_PRODUCTION_PLATFORM_BUCKET}" ]] && [[ -z "${STORAGE_BASE_PATH}" ]]; then
+        STORAGE_BASE_PATH="content"
+      fi
+
+      if [[ "${GCS_MARKET_PLATFORM_BUCKET} != "${GCS_INTERNAL_PRODUCTION_PLATFORM_BUCKET}" ]] && [[ -z "${STORAGE_BASE_PATH}" ]]; then
+        STORAGE_BASE_PATH="upload-flow/builds/${CI_COMMIT_BRANCH}/${CI_PIPELINE_ID}/content"
+      fi
+
+      PACKS_SRC="gs://${GCS_MARKET_PLATFORM_BUCKET}/${STORAGE_BASE_PATH}/packs"
+      ZIP_FOLDER=$(mktemp -d)
+      gsutil -m -q cp -r "${PACKS_SRC}" "${ZIP_FOLDER}""
+      echo "successfully downloaded index.zip"
+    - section_end "Download packs from GCP"
+    - *upload_content_graph
+    - *upload_dependencies_file
+    - section_start "Zip Content Packs From GCS"
+    - python3 ./Tests/Marketplace/zip_packs.py -z $ZIP_FOLDER -a $ARTIFACTS_FOLDER -s $GCS_MARKET_KEY
+    - section_end "Zip Content Packs From GCS"
+    - *upload_packs_results_upload
+    - job-done
 
 upload-content-graph-data-to-bigquery:
   stage: upload-content-graph-data-to-bigquery
-  needs: ["upload-packs-to-marketplace", "upload-packs-to-marketplace-v2", "upload-packs-to-xpanse-marketplace", "upload-packs-to-xsoar-saas-marketplace"]
+  needs: ["upload-packs-to-marketplace", "upload-packs-to-marketplace-v2", "upload-packs-to-xpanse-marketplace", "upload-packs-to-xsoar-saas-marketplace", "upload-packs-to-platform-marketplace"]
   tags:
     - cortex-content-1738
   extends:
@@ -818,6 +916,21 @@ xsoar-saas-force-pack-upload:
   rules:
     - if: '$FORCE_BUCKET_UPLOAD == "true"'
 
+platform-force-pack-upload:
+  needs: [ "platform-prepare-testing-bucket-upload-flow" ]
+  variables:
+    SERVER_TYPE: "PLATFORM"
+    ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_PLATFORM}"
+    ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_PLATFORM}/server_type_${SERVER_TYPE}"
+    GCS_MARKET_BUCKET_TO_UPLOAD: "${GCS_MARKET_PLATFORM_BUCKET}"
+    MARKETPLACE: "platform"
+    GCS_CURRENT_PRODUCTION_BUCKET: "${GCS_PRODUCTION_PLATFORM_BUCKET}"
+    GCS_BUILD_BUCKET: "${GCS_BUILD_PLATFORM_BUCKET}"
+  extends: .force-pack-upload
+  rules:
+    - if: '$FORCE_BUCKET_UPLOAD == "true"'
+
+
 .force-pack-upload:
   tags:
     - $BUILD_JOB_TAG
@@ -851,7 +964,6 @@ fan-in-bucket-upload:
     - .bucket-upload-rule-always
   script:
     - echo "fan in"
-
 
 slack-notify-bucket-upload:
   extends:
@@ -941,7 +1053,9 @@ upload-id-set-bucket:
         echo "Syncing gs://marketplace-xpanse-dev"
         gsutil -m -q rsync -r gs://xpanse-dist gs://marketplace-xpanse-dev
 
-        ./Tests/scripts/validate_synced_buckets.sh "dev"
+        ./Tests/scripts/validate_synced_buckets.sh \
+          --origin-bucket-list="${GCS_MARKET_XSOAR_SAAS_BUCKET} ${GCS_MARKET_V2_BUCKET} ${GCS_MARKET_XPANSE_BUCKET}" \
+          --prod-bucket-list="${MARKETPLACE_XSOAR_PROD}-dev ${MARKETPLACE_V2_PROD}-dev ${MARKETPLACE_XPANSE_PROD}-dev"
 
         gcloud auth activate-service-account --key-file="$GCS_XSOAR_CONTENT_PROD_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
 
@@ -952,7 +1066,10 @@ upload-id-set-bucket:
         echo "Syncing gs://marketplace-xpanse-prod-us"
         gsutil -m -q rsync -r gs://xpanse-dist gs://marketplace-xpanse-prod-us
 
-        ./Tests/scripts/validate_synced_buckets.sh "prod-us"
+
+        ./Tests/scripts/validate_synced_buckets.sh \
+          --origin-bucket-list="${GCS_MARKET_XSOAR_SAAS_BUCKET} ${GCS_MARKET_V2_BUCKET} ${GCS_MARKET_XPANSE_BUCKET}" \
+          --prod-bucket-list="${MARKETPLACE_XSOAR_PROD}-prod-us ${MARKETPLACE_V2_PROD}-prod-us ${MARKETPLACE_XPANSE_PROD}-prod-us"
 
         echo "Bucket prod-us sync completed"
       fi
@@ -966,7 +1083,6 @@ upload-id-set-bucket:
     - poetry run python3 -u ./Tests/scripts/trigger_jenkins_job.py --url $JENKINS_SYNC_BUCKETS_JOB_URL --username $JENKINS_USER --token $JENKINS_TOKEN
     - section_end "Trigger sync for all buckets"
     - job-done
-
 
 sync-buckets-between-projects:
   extends: .sync-buckets-between-projects
@@ -987,6 +1103,8 @@ sync-buckets-between-projects:
       artifacts: false
     - job: xsoar-saas-prepare-testing-bucket-upload-flow
       artifacts: false
+    - job: sync-platform-buckets-between-projects
+      artifacts: false
     - job: cloning-repositories-upload-flow
       artifacts: true
 
@@ -994,4 +1112,52 @@ force-upload-sync-buckets-between-projects:
   rules:
     - if: '$FORCE_BUCKET_UPLOAD == "true"'
   extends: .sync-buckets-between-projects
-  needs: ["xsoar-force-pack-upload", "marketplace-v2-force-pack-upload", "xpanse-force-pack-upload", "xsoar-saas-force-pack-upload"]
+  needs: ["xsoar-force-pack-upload", "marketplace-v2-force-pack-upload", "xpanse-force-pack-upload", "xsoar-saas-force-pack-upload", "force-upload-sync-platform-buckets-between-projects"]
+
+
+.sync-platform-buckets-between-projects:
+  # syncs bucket from xdr-xsoar-content-dev-01 project to xdr-xsoar-content-prod-us-01 project
+  tags:
+    - cortex-content-prod-1738
+  extends:
+    - .bucket-upload-rule
+    - .default-job-settings
+  stage: sync-buckets
+  script:
+    - section_start "Sync platform buckets between projects" --collapsed
+    - |
+      if [[ "${TEST_UPLOAD}" == "true" ]] || [[ "${DRY_RUN}" == "true" ]]; then
+        echo -n "skipped" >> ${ARTIFACTS_FOLDER}/logs/trigger_sync_all_buckets_status_code.log
+        echo "Skipping syncing buckets in test upload-flow and test override core packs."
+        job-done
+        exit 0
+      fi
+
+    - |
+        # Sync platform buckets
+        echo "Synching gs://marketplace-cortex-content-prod-us"
+        gsutil -m -q rsync -r "gs://${GCS_INTERNAL_PRODUCTION_PLATFORM_BUCKET}" "gs://${GCS_EXTERNAL_PLATFORM_BUCKET_PROD_US}"
+
+        ./Tests/scripts/validate_synced_buckets.sh \
+          --origin-bucket-list="${GCS_INTERNAL_PRODUCTION_PLATFORM_BUCKET}" \
+          --prod-bucket-list="${GCS_EXTERNAL_PLATFORM_BUCKET_PROD_US}"
+
+        echo "Platform bucket prod-us sync completed"
+    - section_end "Sync platform buckets between projects"
+
+
+sync-platform-buckets-between-projects:
+  extends: .sync-buckets-between-projects
+  needs:
+    - job: upload-packs-to-platform-marketplace
+      artifacts: false
+    - job: platform-prepare-testing-bucket-upload-flow
+      artifacts: false
+    - job: cloning-repositories-upload-flow
+      artifacts: true
+
+force-upload-sync-platform-buckets-between-projects:
+  rules:
+    - if: '$FORCE_BUCKET_UPLOAD == "true"'
+  extends: .sync-platform-buckets-between-projects
+  needs: ["platform-force-pack-upload"]

@@ -16,12 +16,13 @@ BASE_PACK_DEPENDENCY_DICT = {
 }
 
 SIEM_RULES_OBJECTS = ["ParsingRule", "ModelingRule", "CorrelationRule", "XDRCTemplate", "AssetsModelingRule"]
+PLATFORM_MP = "platform"
 XSIAM_MP = "marketplacev2"
 XSOAR_MP = "xsoar"
 XPANSE_MP = "xpanse"
 XSOAR_SAAS_MP = "xsoar_saas"
 XSOAR_ON_PREM_MP = "xsoar_on_prem"
-AUTHORIZED_MARKETPLACES = [XSIAM_MP, XPANSE_MP, XSOAR_SAAS_MP]
+AUTHORIZED_MARKETPLACES = [PLATFORM_MP, XSIAM_MP, XPANSE_MP, XSOAR_SAAS_MP]
 XSIAM_START_TAG = "<~XSIAM>"
 XSIAM_END_TAG = "</~XSIAM>"
 XSOAR_START_TAG = "<~XSOAR>"
@@ -39,6 +40,7 @@ MARKETPLACE_VERSION_TO_DEV_BUCKET_NAME = {
     MarketplaceVersions.MarketplaceV2.value: "marketplace-v2-dist-dev",
     MarketplaceVersions.XPANSE.value: "xpanse-dist-dev",
     MarketplaceVersions.XSOAR_SAAS.value: "marketplace-saas-dist-dev",
+    MarketplaceVersions.PLATFORM.value: "marketplace-cortex-content-build/content-dev",
 }
 
 TAGS_BY_MP = {
@@ -104,6 +106,7 @@ class GCPConfig:
         "marketplacev2": "marketplace-ci-build-v2-dev",
         "xpanse": "marketplace-ci-build-xpanse-dev",
         "xsoar_saas": "marketplace-ci-build-xsoar-saas-dev",
+        "platform": "marketplace-cortex-content-build",
     }
     BASE_PACK = "Base"  # base pack name
     INDEX_NAME = "index"  # main index folder name
@@ -113,6 +116,11 @@ class GCPConfig:
     BUILD_BUCKET_PACKS_ROOT_PATH = "content/builds/{branch}/{build}/{marketplace}/content/packs"
     CONTENT_STATUS = "content_status"
 
+    XSOAR_CORE_PACKS_LIST_JSON_PATH = "core_packs_list.json"
+    XSIAM_CORE_PACKS_LIST_JSON_PATH = "core_packs_mpv2_list.json"
+    XPANSE_CORE_PACKS_LIST_JSON_PATH = "core_packs_xpanse_list.json"
+    PLATFORM_CORE_PACKS_LIST_JSON_PATH = "core_packs_platform_list.json"
+
     @staticmethod
     def get_core_pack_files(file_name: str) -> tuple[list, list]:
         path = Path(__file__).resolve().parent.parent.parent / "Config" / file_name
@@ -121,9 +129,18 @@ class GCPConfig:
         packs_list = json.load(path.open())
         return packs_list.get("core_packs_list"), packs_list.get("update_core_packs_list")
 
-    CORE_PACKS_LIST, CORE_PACKS_LIST_TO_UPDATE = get_core_pack_files("core_packs_list.json")
-    CORE_PACKS_MPV2_LIST, CORE_PACKS_MPV2_LIST_TO_UPDATE = get_core_pack_files("core_packs_mpv2_list.json")
-    CORE_PACKS_XPANSE_LIST, CORE_PACKS_XPANSE_LIST_TO_UPDATE = get_core_pack_files("core_packs_xpanse_list.json")
+    @staticmethod
+    def get_platform_core_packs_data(file_name: str) -> list[dict]:
+        path = Path(__file__).resolve().parent.parent.parent / "Config" / file_name
+        if not path.exists():
+            return list()
+        packs_list = json.load(path.open())
+        return packs_list.get("packs")
+
+    CORE_PACKS_LIST, CORE_PACKS_LIST_TO_UPDATE = get_core_pack_files(XSOAR_CORE_PACKS_LIST_JSON_PATH)
+    CORE_PACKS_MPV2_LIST, CORE_PACKS_MPV2_LIST_TO_UPDATE = get_core_pack_files(XSIAM_CORE_PACKS_LIST_JSON_PATH)
+    CORE_PACKS_XPANSE_LIST, CORE_PACKS_XPANSE_LIST_TO_UPDATE = get_core_pack_files(XPANSE_CORE_PACKS_LIST_JSON_PATH)
+    PLATFORM_CORE_PACKS_DATA: list[dict] = get_platform_core_packs_data(PLATFORM_CORE_PACKS_LIST_JSON_PATH)
 
     server_versions_metadata = Path(__file__).resolve().parent / VERSIONS_METADATA_FILE
     corepacks_override_file = Path(__file__).resolve().parent.parent.parent / "Config" / COREPACKS_OVERRIDE_FILE
@@ -145,6 +162,7 @@ class GCPConfig:
             "xsoar": cls.CORE_PACKS_LIST,
             "marketplacev2": cls.CORE_PACKS_MPV2_LIST,
             "xpanse": cls.CORE_PACKS_XPANSE_LIST,
+            "platform": cls.PLATFORM_CORE_PACKS_DATA,
         }
         return mapping.get(marketplace, GCPConfig.CORE_PACKS_LIST)
 
@@ -154,6 +172,7 @@ class GCPConfig:
             "xsoar": cls.CORE_PACKS_LIST_TO_UPDATE,
             "marketplacev2": cls.CORE_PACKS_MPV2_LIST_TO_UPDATE,
             "xpanse": cls.CORE_PACKS_XPANSE_LIST_TO_UPDATE,
+            "platform": [],  # Platform corepacks list does not feature this.
         }
         return mapping.get(marketplace, GCPConfig.CORE_PACKS_LIST_TO_UPDATE)
 
@@ -243,6 +262,7 @@ class Metadata:
     DISABLE_MONTHLY = "disableMonthly"
     MODULES = "modules"
     DEFAULT_DATA_SOURCE = "defaultDataSource"
+    SUPPORTED_MODULES = "supportedModules"
 
 
 class PackFolders(enum.Enum):

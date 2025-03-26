@@ -159,6 +159,7 @@ class Pack:
         self._has_fetch = False
         self._default_data_source = {}  # initialized in load_pack_metadata function
         self._single_integration = True  # pack assumed to have a single integration until processing a 2nd integration
+        self._supported_modules = []
 
         # Dependencies attributes - these contain only packs that are a part of this marketplace
         self._first_level_dependencies = {}  # initialized in set_pack_dependencies function
@@ -383,6 +384,14 @@ class Pack:
     @property
     def marketplaces(self):
         return self._marketplaces
+
+    @property
+    def supported_modules(self):
+        return self._supported_modules
+
+    @supported_modules.setter
+    def supported_modules(self, supported_modules_value):
+        self._supported_modules = supported_modules_value
 
     @property
     def all_levels_dependencies(self):
@@ -1897,6 +1906,7 @@ class Pack:
             self._tags = set(pack_metadata.get(Metadata.TAGS) or [])
             self._dependencies = pack_metadata.get(Metadata.DEPENDENCIES, {})
             self._certification = pack_metadata.get(Metadata.CERTIFICATION, "")
+            self.supported_modules = pack_metadata.get(Metadata.SUPPORTED_MODULES, [])
 
             if "xsoar" in self.marketplaces:
                 self.marketplaces.append("xsoar_saas")
@@ -3604,6 +3614,8 @@ def get_recent_commits_data(
         str: last commit hash of head.
         str: previous commit depending on the flow the script is running
     """
+    logging.debug(f"get_recent_commits_data {index_folder_path=}, {is_bucket_upload_flow=}")
+
     return content_repo.head.commit.hexsha, get_previous_commit(
         content_repo, index_folder_path, is_bucket_upload_flow, circle_branch
     )
@@ -3651,6 +3663,7 @@ def get_last_upload_commit_hash(content_repo, index_folder_path):
     """
 
     inner_index_json_path = os.path.join(index_folder_path, f"{GCPConfig.INDEX_NAME}.json")
+    logging.debug(f"get_last_upload_commit_hash {inner_index_json_path=}")
     if not os.path.exists(inner_index_json_path):
         logging.critical(f"{GCPConfig.INDEX_NAME}.json not found in {GCPConfig.INDEX_NAME} folder")
         sys.exit(1)
@@ -3777,20 +3790,30 @@ def underscore_file_name_to_dotted_version(file_name: str) -> str:
     return os.path.splitext(file_name)[0].replace("_", ".")
 
 
-def get_last_commit_from_index(service_account, marketplace=MarketplaceVersions.XSOAR):
+def get_last_commit_from_index(marketplace=MarketplaceVersions.XSOAR):
     """Downloading index.json from GCP and extract last upload commit.
 
     Args:
         marketplace: the marketplace to extract from
-        service_account: service account to connect to GCP
 
     Returns: last upload commit.
 
     """
-    production_bucket_name = MarketplaceVersionToMarketplaceName.get(marketplace)
-    storage_client = init_storage_client(service_account)
+    logging.info(f"get_last_commit_from_index for {marketplace=}")
+    production_bucket_name = MarketplaceVersionToMarketplaceName.get(marketplace, None)
+    logging.info(f"{production_bucket_name=}")
+    storage_client = init_storage_client()
+
     storage_bucket = storage_client.bucket(production_bucket_name)
     index_storage_path = os.path.join("content/packs/", f"{GCPConfig.INDEX_NAME}.json")
+
+    # Platform marketplace is using a sub-directory within the bucket,
+    # to separate content for April Platform version and July Platform version. CIAC-13208.
+    if marketplace == MarketplaceVersions.PLATFORM:
+        index_storage_path = os.path.join("april-content/", index_storage_path)
+
+    logging.debug(f"get_last_commit_from_index {index_storage_path=}")
+
     index_blob = storage_bucket.blob(index_storage_path)
     index_string = index_blob.download_as_string()
     index_json = json.loads(index_string)

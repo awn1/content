@@ -2,13 +2,18 @@ variables:
   ARTIFACTORY_ENABLED: "true"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   DONT_CACHE_LAST_RESPONSE: "true"
+
   GCS_MARKET_BUCKET: "marketplace-dist"
   GCS_MARKET_V2_BUCKET: "marketplace-v2-dist"
   GCS_MARKET_XPANSE_BUCKET: "xpanse-dist"
   GCS_MARKET_XSOAR_SAAS_BUCKET: "marketplace-saas-dist"
+  GCS_MARKET_PLATFORM_BUCKET: "marketplace-cortex-content-dev/april-content"  # Platform Internal production bucket. April version CIAC-13208.
+
   GCS_MARKET_BUCKET_DEV: "marketplace-dist-dev"
   GCS_MARKET_V2_BUCKET_DEV: "marketplace-v2-dist-dev"
   GCS_MARKET_XSOAR_SAAS_BUCKET_DEV: "marketplace-saas-dist-dev"
+  GCS_MARKET_PLATFORM_BUCKET_DEV: "marketplace-cortex-content-build/content-dev"
+
   STORAGE_BASE_PATH: ""
   SLACK_CHANNEL: "dmst-build-test"
   SLACK_PARENT_PIPELINE_ID: ""  # empty string, no parent pipeline.
@@ -19,6 +24,8 @@ variables:
   ARTIFACTS_FOLDER_XSOAR: "${CI_PROJECT_DIR}/artifacts/xsoar"  # Used for both XSOAR on-prem and XSOAR SaaS
   ARTIFACTS_FOLDER_MPV2: "${CI_PROJECT_DIR}/artifacts/marketplacev2"
   ARTIFACTS_FOLDER_XPANSE: "${CI_PROJECT_DIR}/artifacts/xpanse"
+  ARTIFACTS_FOLDER_PLATFORM: "${CI_PROJECT_DIR}/artifacts/platform"
+
   JIRA_ISSUE_UNRESOLVED_TRANSITION_NAME: "Backlog"
   JIRA_PROJECT_ID: "CIAC"
   JIRA_VERIFY_SSL: "True"
@@ -35,10 +42,16 @@ variables:
   GCS_BUILD_V2_BUCKET: "marketplace-ci-build-v2-dev"
   GCS_BUILD_XPANSE_BUCKET: "marketplace-ci-build-xpanse-dev"
   GCS_BUILD_XSOAR_SAAS_BUCKET: "marketplace-ci-build-xsoar-saas-dev"
+  GCS_BUILD_PLATFORM_BUCKET: "marketplace-cortex-content-build"
+
   GCS_PRODUCTION_BUCKET: "marketplace-dist"
   GCS_PRODUCTION_V2_BUCKET: "marketplace-v2-dist"
   GCS_PRODUCTION_XPANSE_BUCKET: "xpanse-dist"
   GCS_PRODUCTION_XSOAR_SAAS_BUCKET: "marketplace-saas-dist"
+  GCS_INTERNAL_PRODUCTION_PLATFORM_BUCKET: "marketplace-cortex-content-dev/april-content" # Platform Internal production bucket. April version CIAC-13208.
+
+  GCS_EXTERNAL_PLATFORM_BUCKET_PROD_US: "marketplace-cortex-content-prod-us/april-content"
+
   DEMISTO_CONNECTION_POOL_MAXSIZE: "180" # see this issue for more info https://github.com/demisto/etc/issues/36886
   DEMISTO_SDK_NIGHTLY: "false"
   IS_NIGHTLY: "false"
@@ -68,7 +81,7 @@ variables:
       - "false"
   DRY_RUN:
     description: "Whether to deploy the files into the dev buckets (true) or the proud ones (false).
-     Used in ovverride-corepacks and deploy-auto-upgrade-packs flows. Default value is false."
+     Used in override-corepacks and deploy-auto-upgrade-packs flows. Default value is false."
     value: "false"
     options:
       - "true"

@@ -28,12 +28,14 @@ ALWAYS_INSTALLED_PACKS_MAPPING = {
     MarketplaceVersions.XSOAR_SAAS: ALWAYS_INSTALLED_PACKS_XSOAR,
     MarketplaceVersions.MarketplaceV2: ALWAYS_INSTALLED_PACKS_MARKETPLACE_V2,
     MarketplaceVersions.XPANSE: ALWAYS_INSTALLED_PACKS_XPANSE,
+    MarketplaceVersions.PLATFORM: ALWAYS_INSTALLED_PACKS_XSOAR,  # TODO - review when adding install-platform
 }
 
 DEFAULT_MARKETPLACES_WHEN_MISSING: tuple[MarketplaceVersions, ...] = (
     MarketplaceVersions.XSOAR,
     MarketplaceVersions.XSOAR_SAAS,
     MarketplaceVersions.MarketplaceV2,
+    MarketplaceVersions.PLATFORM,
 )
 
 SKIPPED_CONTENT_ITEMS__NOT_UNDER_PACK: set[str] = {

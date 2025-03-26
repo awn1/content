@@ -197,6 +197,32 @@ demisto-sdk-nightly:xsoar-prepare-testing-bucket:
     - !reference [.generic-prepare-testing-bucket, script]
     - job-done
 
+demisto-sdk-nightly:platform-prepare-testing-bucket:
+  needs:
+    - demisto-sdk-nightly:cloning-repositories
+  tags:
+    - cortex-content-1738
+  extends:
+    - .default-job-settings
+    - .sdk-nightly-schedule-rule
+  variables:
+    IFRA_ENV_TYPE: "Server Master"
+    PRODUCT_TYPE: "Platform"
+    SERVER_TYPE: "Platform"
+    ARTIFACTS_FOLDER: "${ARTIFACTS_FOLDER_PLATFORM}"
+    ARTIFACTS_FOLDER_SERVER_TYPE: "${ARTIFACTS_FOLDER_PLATFORM}/server_type_${SERVER_TYPE}"
+    MARKETPLACE_VERSION: "platform"
+    MARKETPLACE_BUCKET: "$GCS_MARKET_PLATFORM_BUCKET"
+    GCS_BUILD_BUCKET: "$GCS_BUILD_PLATFORM_BUCKET"
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
+  cache:
+    policy: pull-push
+  stage: prepare-testing-bucket
+  script:
+    - !reference [.generic-prepare-testing-bucket, script]
+    - job-done
+
 demisto-sdk-nightly:mpv2-prepare-testing-bucket:
   needs:
     - demisto-sdk-nightly:cloning-repositories
@@ -539,6 +565,7 @@ demisto-sdk-nightly:jobs-done-check:
     - demisto-sdk-nightly:xsoar-prepare-testing-bucket
     - demisto-sdk-nightly:xpanse-prepare-testing-bucket
     - demisto-sdk-nightly:xsoar-saas-prepare-testing-bucket
+    - demisto-sdk-nightly:platform-prepare-testing-bucket
     - demisto-sdk-nightly:run-end-to-end-tests-general
     - demisto-sdk-nightly:run-end-to-end-tests-xsoar
   variables:
