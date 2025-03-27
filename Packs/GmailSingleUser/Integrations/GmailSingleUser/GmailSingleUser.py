@@ -769,6 +769,7 @@ class Client:
         Due to security implications, we support only images here
         We might not have Beautiful Soup so just do regex search
         """
+        demisto.debug(f"handling html body: {htmlBody}")
         attachments = []
         cleanBody = ""
         lastIndex = 0
@@ -791,6 +792,8 @@ class Client:
             lastIndex = m.end() - 1
 
         cleanBody += htmlBody[lastIndex:]
+        demisto.debug(f"handled attachments images html, attachments: {attachments}")
+        demisto.debug(f"html body without images, clean body: {cleanBody}")
         return cleanBody, attachments
 
     def collect_inline_attachments(self, attach_cids):
@@ -897,6 +900,10 @@ class Client:
                         msg_img.add_header("X-Attachment-Id", att["ID"])
                 else:
                     msg_img.add_header("Content-Disposition", "attachment", filename=att["name"])
+                try:
+                    demisto.debug(f"msg_img _headers: {msg_img._headers}")
+                except Exception:
+                    demisto.debug("felid to debug msg_img _headers")
                 message.attach(msg_img)
 
             elif att["maintype"] == "audio":
@@ -1018,6 +1025,8 @@ class Client:
             transientAttachments = self.transient_attachments(transientFile, transientFileContent, transientFileCID)
 
             attachments = attachments + htmlAttachments + transientAttachments + inlineAttachments + manual_attachments
+
+            demisto.debug(f"total attachments: {attachments}")
             self.attachment_handler(message, attachments)
 
         if additional_headers is not None and len(additional_headers) > 0:
@@ -1027,7 +1036,7 @@ class Client:
         encoded_message = base64.urlsafe_b64encode(message.as_bytes())
         command_args = {"raw": encoded_message.decode()}
         emailfrom = emailfrom or EMAIL
-
+        demisto.debug(f"final encoded message: {encoded_message}")
         return self.send_email_request(email_from=emailfrom, body=command_args)
 
     def send_email_request(self, email_from: str, body: dict) -> dict:
@@ -1147,6 +1156,7 @@ def mail_command(client: Client, args: dict, email_from, send_as, subject_prefix
 
 def send_mail_command(client: Client):
     args = demisto.args()
+    demisto.debug(f"command as been called 'send email' with args: {args}")
     return mail_command(client, args, EMAIL, SEND_AS or EMAIL)
 
 
