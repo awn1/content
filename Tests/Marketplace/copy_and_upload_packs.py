@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from zipfile import ZipFile
 
+from demisto_sdk.commands.common.constants import MarketplaceVersions
 from google.cloud.storage import Blob, Bucket
 
 from Tests.Marketplace.marketplace_constants import (
@@ -432,6 +433,9 @@ def options_handler():
 def main():
     install_logging("Copy_and_Upload_Packs.log", logger=logging)
     options = options_handler()
+
+    logging.debug(f"Parsed arguments: {options}")
+
     packs_artifacts_path = options.artifacts_path
     extract_destination_path = options.extract_path
     production_bucket_name = options.production_bucket_name
@@ -444,6 +448,13 @@ def main():
 
     # Google cloud storage client initialized
     storage_client = init_storage_client()
+
+    # Platform buckets utilize a default base folder (e.g. 'april-content/', 'content-dev/')
+    # for storage, therefore needs to be treated accordingly.)
+    if marketplace == MarketplaceVersions.PLATFORM.value:
+        production_bucket_name, _, default_folder = production_bucket_name.partition("/")
+        production_base_path = f"{default_folder}/{production_base_path}" if default_folder else production_base_path
+
     production_bucket = storage_client.bucket(production_bucket_name)
     build_bucket = storage_client.bucket(build_bucket_name)
 
@@ -604,8 +615,9 @@ def main():
         build_bucket_base_path,
     )
 
-    # upload id_set.json to bucket
-    copy_id_set(production_bucket, build_bucket, production_base_path, build_bucket_base_path)
+    if marketplace != MarketplaceVersions.PLATFORM.value:
+        # upload id_set.json to bucket
+        copy_id_set(production_bucket, build_bucket, production_base_path, build_bucket_base_path)
 
     # get the lists of packs divided by their status
     successful_packs, successful_uploaded_dependencies_zip_packs, skipped_packs, failed_packs = get_packs_summary(packs_list)

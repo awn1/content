@@ -501,6 +501,7 @@ def validate_bucket(service_account, storage_base_path, bucket_name, versions_di
     """
     Creates the GCP and BucketVerifier objects and runs the bucket validations.
     """
+    bucket_name = bucket_name.split('/')[0] # Keeping only bucket name out of possible bucket path that was provided for platform bucket.
     gcp = GCP(service_account, bucket_name, storage_base_path)
     bucket_verifier = BucketVerifier(gcp, bucket_name, versions_dict, items_dict)
     bucket_verifier.run_validations()
