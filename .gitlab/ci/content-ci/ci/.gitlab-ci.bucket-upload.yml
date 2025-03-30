@@ -848,9 +848,10 @@ upload-content-graph-data-to-bigquery:
     XSOAR_CONTENT_BUILD_PROJECT: "xdr-xsoar-content-dev-01"
     MP_ANALYTICS_DATASET_ID: "marketplace_analytics"
     CONTENT_ITEMS_METADATA_TABLE_ID: "content_items_data"
+    CONTENT_GRAPH_ZIP: "${ARTIFACTS_FOLDER}/xsoar/server_type_XSOAR/content_graph/xsoar.zip"
   script:
     - section_start "Load graph from artifacts"
-    - demisto-sdk graph update -i "${ARTIFACTS_FOLDER}/content_graph/xsoar.zip"
+    - demisto-sdk graph update -i "${CONTENT_GRAPH_ZIP}"
     - section_end "Load graph from artifacts"
 
     - section_start "Upload data from content graph to bigquery"
