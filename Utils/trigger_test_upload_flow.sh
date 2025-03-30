@@ -103,7 +103,7 @@ while [[ "$#" -gt 0 ]]; do
     if [ "$(echo "$2" | tr '[:upper:]' '[:lower:]')" == "marketplace-cortex-content-dev" ]; then
       echo "Only test buckets are allowed to use. Using marketplace-cortex-content-build/content-dev instead."
     else
-      _bucket_xsoar_saas=$2
+      _bucket_platform=$2
     fi
     shift
     shift

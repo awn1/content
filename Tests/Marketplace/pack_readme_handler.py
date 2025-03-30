@@ -156,6 +156,8 @@ def copy_markdown_images(
                     continue
 
                 for image_name in pc_uploaded_markdown_images:
+                    if not image_name:
+                        continue
                     logging.debug(f"copying image {image_name}")
                     build_bucket_markdown_image_path = os.path.join(
                         build_bucket_base_path,

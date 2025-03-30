@@ -38,6 +38,7 @@ variables:
   FEATURE_BRANCH_NAME: "v4.5.0"
   IFRA_ENV_TYPE: "Content-Env"
   GET_SOURCES_ATTEMPTS: 3  # see https://docs.gitlab.com/ee/ci/runners/configure_runners.html#job-stages-attempts
+
   GCS_BUILD_BUCKET: "marketplace-ci-build-xsoar-dev"
   GCS_BUILD_V2_BUCKET: "marketplace-ci-build-v2-dev"
   GCS_BUILD_XPANSE_BUCKET: "marketplace-ci-build-xpanse-dev"

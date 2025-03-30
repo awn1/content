@@ -553,6 +553,7 @@ jobs-done-check-nightly:
     - xpanse-prepare-testing-bucket
     - xsoar-prepare-testing-bucket
     - xsoar-saas-prepare-testing-bucket
+    - platform-prepare-testing-bucket
     - xsiam_server_ga
     - xsoar_ng_server_ga
     - tests_xsoar_server
@@ -601,6 +602,7 @@ jobs-done-check-on-push:
     - xpanse-prepare-testing-bucket
     - xsoar-prepare-testing-bucket
     - xsoar-saas-prepare-testing-bucket
+    - platform-prepare-testing-bucket
     - xsiam_server_ga
     - tests_xsoar_server
     - xsoar_ng_server_ga
@@ -645,6 +647,7 @@ jobs-done-check-on-merge:
     - xpanse-prepare-testing-bucket
     - xsoar-prepare-testing-bucket
     - xsoar-saas-prepare-testing-bucket
+    - platform-prepare-testing-bucket
     - xsiam_server_ga
     - tests_xsoar_server
     - xsoar_ng_server_ga
@@ -931,7 +934,7 @@ test-upload-flow:
     - if: '$PACKWISE == "true"'
       when: never
   variables:
-    ALL_BUCKETS: "$GCS_MARKET_BUCKET_DEV,$GCS_MARKET_V2_BUCKET_DEV,$GCS_MARKET_XSOAR_SAAS_BUCKET_DEV"
+    ALL_BUCKETS: "${GCS_MARKET_BUCKET_DEV},${GCS_MARKET_V2_BUCKET_DEV},${GCS_MARKET_XSOAR_SAAS_BUCKET_DEV}"
   stage: unittests-and-validations
   script:
     - section_start "Checks Whether to Trigger a Test Upload"
