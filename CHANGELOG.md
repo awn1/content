@@ -1,3 +1,13 @@
+# Content Infrastructure 0.0.37 (2025-03-31)
+
+### Bugfixes
+
+- Add `platform-prepare-testing-bucket` to `on-push`, `on-merge`, `on-nightly` `checks-job-done`.
+- Fix content-graph path in artifacts for upload-to-bigquery step.
+- Fix for platform marketplace buckets sync job.
+- Fixing the usage of platform prod bucket variable.
+
+
 # Content Infrastructure 0.0.36 (2025-03-26)
 
 ### Features
