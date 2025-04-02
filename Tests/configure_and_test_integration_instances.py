@@ -86,7 +86,7 @@ SERVER_HOST_PLACEHOLDER = "%%SERVER_HOST%%"
 
 # -------------------------------------- Helper methods ----------------------------------------------
 def get_custom_user_agent(build_number):
-    return f"demisto-py/dev (Build:{build_number})"
+    return f"content-build/dev (Build:{build_number})"
 
 
 def filepath_to_integration_name(integration_file_path):

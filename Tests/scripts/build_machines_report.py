@@ -33,7 +33,12 @@ from Tests.scripts.graph_lock_machine import (
     create_lock_duration_graph,
 )
 from Tests.scripts.infra.resources.constants import AUTOMATION_GCP_PROJECT, COMMENT_FIELD_NAME, GSM_SERVICE_ACCOUNT
-from Tests.scripts.utils.slack import get_conversations_members_slack, get_messages_from_slack, get_slack_usernames_from_ids
+from Tests.scripts.utils.slack import (
+    get_conversations_members_slack,
+    get_messages_from_slack,
+    get_slack_usernames_from_ids,
+    tag_user,
+)
 
 urllib3.disable_warnings(InsecureRequestWarning)
 warnings.filterwarnings("ignore", _default._CLOUD_SDK_CREDENTIALS_WARNING)
@@ -66,6 +71,8 @@ NOT_AVAILABLE = "N/A"
 VISO_API_URL: str | None = os.getenv("VISO_API_URL")
 VISO_API_KEY = os.getenv("VISO_API_KEY")
 WITHOUT_VISO = os.getenv("WITHOUT_VISO")
+WITHOUT_STATISTICS = os.getenv("WITHOUT_STATISTICS")
+WITHOUT_MISSING_NAME_MAPPING = os.getenv("WITHOUT_MISSING_NAME_MAPPING")
 WAIT_IN_LINE_CHANNEL_ID: str = os.environ["WAIT_IN_LINE_CHANNEL_ID"]
 CONTENT_TENANTS_GROUP_OWNER = os.getenv("CONTENT_TENANTS_GROUP_OWNER")
 TTL_EXPIRED_DAYS_DEFAULT = 3  # since the max ttl for a disposable tenant is 144 hours, we want to warn 3 days before it expires
@@ -93,6 +100,7 @@ PRODUCT_TYPE_TO_SERVER_TYPE: dict[str | None, str] = {
 IGNORED_FLOW_TYPES = [
     "build-test-xsiam",  # Research team machines.
 ]
+STOP_STATUS_STARTED = "started"
 
 
 def create_column(
@@ -143,6 +151,7 @@ def generate_columns(without_viso: bool) -> list[dict]:
         create_column(False, "api_key_ttl", "API Key TTL", True, False, True, False),
         create_column(True, "owner", "Owner", True, False, True, True),
         create_column(True, "tenant_status", "Tenant Status", True, False, True, True),
+        create_column(True, "stop_status", "Stop Status", True, False, True, True),
         create_column(False, "build_machine", "Build Machine", True, False, True, True),
         create_column(False, "comment", "Comment", True, False, False, False),
         create_column(True, "disposable", "Disposable", True, False, True, True),
@@ -207,8 +216,16 @@ def options_handler() -> argparse.Namespace:
         "-ws",
         "--without-statistics",
         type=string_to_bool,
-        default=False,
+        default=WITHOUT_STATISTICS,
         help="Don't generate statistics.",
+        required=False,
+    )
+    parser.add_argument(
+        "-wmm",
+        "--without-missing-name-mapping",
+        type=string_to_bool,
+        default=WITHOUT_MISSING_NAME_MAPPING,
+        help="Don't report missing names from mapping.",
         required=False,
     )
     return parser.parse_args()
@@ -297,12 +314,22 @@ def generate_expired_cell(
     )
 
 
-def tenant_status_has_error(status: str) -> bool:
+def status_has_error(status: str) -> bool:
     return "error" in status.lower()
 
 
 def generate_tenant_status_cell(status: str) -> dict:
-    return generate_cell(status, status, "error" if tenant_status_has_error(status) else "ok")
+    has_error = status_has_error(status)
+    return generate_cell(status, status, "error" if has_error else "ok", invalid=has_error)
+
+
+def stop_status_has_error(status: str) -> bool:
+    return "error" in status.lower() or STOP_STATUS_STARTED != status.lower()
+
+
+def generate_stop_status_status_cell(status: str) -> dict:
+    has_error = stop_status_has_error(status)
+    return generate_cell(status, status, "error" if has_error else "ok", invalid=has_error)
 
 
 def get_record_for_tenant(tenant, current_date: datetime):
@@ -319,6 +346,7 @@ def get_record_for_tenant(tenant, current_date: datetime):
         "owner": generate_cell(tenant["owner"]),
         "disposable": generate_cell(tenant["disposable"]),
         "tenant_status": generate_tenant_status_cell(tenant["status"]),
+        "stop_status": generate_stop_status_status_cell(tenant["stop_status"]),
         "viso_version": generate_cell(tenant["viso_version"]),
         "ttl": generate_ttl_cell(get_datetime_from_epoch(tenant["ttl"]), current_date),
         "slack_link": slack_link_cell,
@@ -446,17 +474,19 @@ def generate_records(
         logging.info(f"Processing tenant: {key} from the configuration")
         # ui_url is in the format of https://<host>/ we need just the host.
         host = value.get("ui_url").replace("https://", "").replace("/", "")
-        client_type = SERVER_TYPE_TO_CLIENT_TYPE[value["server_type"]]
+        client_type = SERVER_TYPE_TO_CLIENT_TYPE.get(value.get("server_type"))
+        lcaas_id = key.split("-")[-1]
+        lcaas_ids.add(lcaas_id)
         record = {
             "host": generate_cell(generate_html_link(host, value.get("ui_url")), value.get("ui_url")),
             "ui_url": generate_cell_dict_key(value, "ui_url"),
             "machine_name": generate_cell(key),
             "enabled": generate_cell_dict_key(value, "enabled"),
             "flow_type": generate_cell_dict_key(value, "flow_type"),
-            "platform_type": generate_cell(client_type.PLATFORM_TYPE),
-            "lcaas_id": generate_cell_dict_key(value, "lcaas_id"),
+            "platform_type": generate_cell(client_type.PLATFORM_TYPE if client_type is not None else NOT_AVAILABLE),
+            "lcaas_id": generate_cell(lcaas_id),
             "version": generate_cell_dict_key(value, "version"),
-            # Assume any machine in the json config is a build machine.
+            # Assume any machine in the JSON config is a build machine.
             "build_machine": generate_cell_dict_key(value, "build_machine", True),
             "agent_host_name": generate_agent_cell_dict_key(value, "agent_host_name"),
             "agent_host_ip": generate_agent_cell_dict_key(value, "agent_host_ip"),
@@ -465,55 +495,62 @@ def generate_records(
             "connectable": generate_cell(False),
         }
         if not without_viso:
-            # The below fields are populated from the tenants data from Viso, we populate empty data for them.
+            # The below fields are populated from the tenants' data from Viso, we populate empty data for them.
             record |= {
                 "owner": generate_cell(NOT_AVAILABLE),
                 "disposable": generate_cell(NOT_AVAILABLE),
                 "tenant_status": generate_cell(NOT_AVAILABLE),
+                "stop_status": generate_cell(NOT_AVAILABLE),
                 "viso_version": generate_cell(NOT_AVAILABLE),
                 "ttl": generate_cell(NOT_AVAILABLE, "", generate_expired_class()),
                 "slack_link": generate_cell(build_link_to_channel(XDR_UPGRADE_CHANNEL_ID_DEV)),
             }
-        lcaas_ids.add(key.split("-")[-1])
-        if client := get_client(xsoar_admin_user, client_type, host, key, AUTOMATION_GCP_PROJECT):
+        if not without_viso and (tenant := tenants.get(lcaas_id)):
+            record |= get_record_for_tenant(tenant, current_date)
+            record["flow_type"] = generate_cell(value.get("flow_type", tag_user(tenant["owner"])))
+
+        stop_status = get_record_display(record, "stop_status")
+        if (
+            stop_status == STOP_STATUS_STARTED
+            and client_type is not None
+            and (client := get_client(xsoar_admin_user, client_type, host, key, AUTOMATION_GCP_PROJECT))
+        ):
             if (versions := get_version_info(client)) is not None:
                 record |= generate_record_from_version_info(
-                    versions, flow_type=get_record_display(record, "flow_type"), platform_type=client_type.PLATFORM_TYPE
+                    versions,
+                    flow_type=get_record_display(record, "flow_type"),  # flow type and platform type are passed for CSS styling.
+                    platform_type=client_type.PLATFORM_TYPE,
                 )
-                lcaas_id = versions["lcaas_id"]
-                lcaas_ids.add(lcaas_id)
-                if not without_viso:
-                    tenant = tenants.get(lcaas_id)
-                    if tenant:
-                        record |= get_record_for_tenant(tenant, current_date)
             record |= get_licenses_cells(client, current_date)
             record["api_key_ttl"] = get_api_key_ttl_cell(client, current_date, token_map)
-
         records.append(record)
 
     # Going over machines which aren't listed within the infra configuration files.
     for tenant in tenants.values():
-        if tenant["lcaas_id"] not in lcaas_ids:
-            logging.info(f"Processing tenant: {tenant['lcaas_id']} which isn't in the configuration")
-            host_url = tenant.get("fqdn")
-            ui_url = f"https://{host_url}"
-            client_type = SERVER_TYPE_TO_CLIENT_TYPE.get(PRODUCT_TYPE_TO_SERVER_TYPE.get(tenant["product_type"]))
-            platform_type = client_type.PLATFORM_TYPE if client_type is not None else tenant["product_type"]
-            record = {
-                "host": generate_cell(generate_html_link(host_url, ui_url), host_url),
-                "ui_url": generate_cell(ui_url),
-                "machine_name": generate_cell(tenant["lcaas_id"]),
-                "enabled": generate_cell(False),
-                "flow_type": generate_cell(NOT_AVAILABLE, ""),
-                "platform_type": generate_cell(platform_type),
-                "lcaas_id": generate_cell(tenant["lcaas_id"]),
-                "version": generate_cell(NOT_AVAILABLE, ""),
-                "agent_host_name": generate_cell(NOT_AVAILABLE, ""),
-                "agent_host_ip": generate_cell(NOT_AVAILABLE, ""),
-                "connectable": generate_cell(False),
-                "build_machine": generate_cell(False),
-                "comment": generate_cell(""),
-            }
+        if tenant["lcaas_id"] in lcaas_ids:
+            continue
+        logging.info(f"Processing tenant: {tenant['lcaas_id']} which isn't in the configuration")
+        host_url = tenant.get("fqdn")
+        ui_url = f"https://{host_url}"
+        client_type = SERVER_TYPE_TO_CLIENT_TYPE.get(PRODUCT_TYPE_TO_SERVER_TYPE.get(tenant["product_type"]))
+        platform_type = client_type.PLATFORM_TYPE if client_type is not None else tenant["product_type"]
+        record = {
+            "host": generate_cell(generate_html_link(host_url, ui_url), host_url),
+            "ui_url": generate_cell(ui_url),
+            "machine_name": generate_cell(tenant["lcaas_id"]),
+            "enabled": generate_cell(False),
+            "flow_type": generate_cell(tag_user(tenant["owner"])),
+            "platform_type": generate_cell(platform_type),
+            "lcaas_id": generate_cell(tenant["lcaas_id"]),
+            "version": generate_cell(NOT_AVAILABLE, ""),
+            "agent_host_name": generate_cell(NOT_AVAILABLE, ""),
+            "agent_host_ip": generate_cell(NOT_AVAILABLE, ""),
+            "connectable": generate_cell(False),
+            "build_machine": generate_cell(False),
+            "comment": generate_cell(""),
+        }
+        record |= get_record_for_tenant(tenant, current_date)
+        if tenant["stop_status"] == STOP_STATUS_STARTED:
             if client_type is not None and (
                 client := get_client(
                     xsoar_admin_user, client_type, host_url, f"qa2-test-{tenant['lcaas_id']}", AUTOMATION_GCP_PROJECT
@@ -521,12 +558,9 @@ def generate_records(
             ):
                 if (versions := get_version_info(client)) is not None:
                     record |= generate_record_from_version_info(versions, platform_type=client_type.PLATFORM_TYPE)
-                    if tenant := tenants.get(tenant["lcaas_id"]):
-                        record |= get_record_for_tenant(tenant, current_date)
                 record |= get_licenses_cells(client, current_date)
                 record["api_key_ttl"] = get_api_key_ttl_cell(client, current_date, token_map)
-            record |= get_record_for_tenant(tenant, current_date)
-            records.append(record)
+        records.append(record)
 
     return records
 
@@ -559,7 +593,7 @@ def get_licenses_cells(client: XsoarClient, current_date: datetime) -> dict:
                     min_date = value
 
             if min_date is not None:
-                # Aggregate the licenses expiration dates to a single cell.
+                # Aggregate the licenses' expiration dates to a single cell.
                 records["license"] = generate_expired_cell(min_date, current_date, LICENSE_EXPIRED_DAYS, field_type="license")
                 return records
 
@@ -594,6 +628,7 @@ def extract_full_version(version_string: str) -> Version | None:
 def generate_report(
     client: WebClient,
     without_viso: bool,
+    without_missing_name_mapping: bool,
     name_mapping: dict,
     records: list,
     tenants: dict,
@@ -609,6 +644,8 @@ def generate_report(
     columns_filterable = [i for i, c in enumerate(columns) if c["filterable"]]
     disabled_machines_count = set()
     non_connectable_machines_count = set()
+    tenant_status_invalid_state_count = set()
+    stop_status_invalid_state_count = set()
     ttl_expired_count = set()
     invalid_api_key_ttl_count = set()
     licenses_expired_count = set()
@@ -632,6 +669,10 @@ def generate_report(
                 ttl_expired_count.add(machine_name)
             if record.get("api_key_ttl", {}).get("invalid") or record.get("api_key_ttl", {}).get("expired"):
                 invalid_api_key_ttl_count.add(machine_name)
+            if record.get("tenant_status", {}).get("invalid"):
+                tenant_status_invalid_state_count.add(machine_name)
+            if record.get("stop_status", {}).get("invalid"):
+                stop_status_invalid_state_count.add(machine_name)
             for value in record.values():
                 if value.get("field_type") == "license" and value.get("expired"):
                     licenses_expired_count.add(machine_name)
@@ -673,10 +714,11 @@ def generate_report(
                 "fallback": title,
                 "fields": [
                     {
-                        "title": "Machine Name(s)",
-                        "value": ", ".join(non_connectable_machines_count),
-                        "short": True,
+                        "title": f"Machine Name(s){'' if i == 0 else ' - Continued'}",
+                        "value": chunk,
+                        "short": False,
                     }
+                    for i, chunk in enumerate(join_list_by_delimiter_in_chunks(non_connectable_machines_count))
                 ],
             }
         )
@@ -689,10 +731,11 @@ def generate_report(
                 "fallback": title,
                 "fields": [
                     {
-                        "title": "Machine Name(s)",
-                        "value": ", ".join(disabled_machines_count),
-                        "short": True,
+                        "title": f"Machine Name(s){'' if i == 0 else ' - Continued'}",
+                        "value": chunk,
+                        "short": False,
                     }
+                    for i, chunk in enumerate(join_list_by_delimiter_in_chunks(disabled_machines_count))
                 ],
             }
         )
@@ -705,10 +748,11 @@ def generate_report(
                 "fallback": title,
                 "fields": [
                     {
-                        "title": "Machine Name(s)",
-                        "value": ", ".join(ttl_expired_count),
-                        "short": True,
+                        "title": f"Machine Name(s){'' if i == 0 else ' - Continued'}",
+                        "value": chunk,
+                        "short": False,
                     }
+                    for i, chunk in enumerate(join_list_by_delimiter_in_chunks(ttl_expired_count))
                 ],
             }
         )
@@ -729,6 +773,43 @@ def generate_report(
                 ],
             }
         )
+
+    if tenant_status_invalid_state_count:
+        title = f"Build Machines - With Invalid Tenant Status:{len(tenant_status_invalid_state_count)}"
+        slack_msg_append.append(
+            {
+                "color": "danger",
+                "title": title,
+                "fallback": title,
+                "fields": [
+                    {
+                        "title": f"Machine Name(s){'' if i == 0 else ' - Continued'}",
+                        "value": chunk,
+                        "short": False,
+                    }
+                    for i, chunk in enumerate(join_list_by_delimiter_in_chunks(tenant_status_invalid_state_count))
+                ],
+            }
+        )
+
+    if stop_status_invalid_state_count:
+        title = f"Build Machines - With Invalid Stop Status:{len(stop_status_invalid_state_count)}"
+        slack_msg_append.append(
+            {
+                "color": "danger",
+                "title": title,
+                "fallback": title,
+                "fields": [
+                    {
+                        "title": f"Machine Name(s){'' if i == 0 else ' - Continued'}",
+                        "value": chunk,
+                        "short": False,
+                    }
+                    for i, chunk in enumerate(join_list_by_delimiter_in_chunks(stop_status_invalid_state_count))
+                ],
+            }
+        )
+
     if keys_without_tenant:
         title = f"Build Machines - API Keys Without Tenant:{len(keys_without_tenant)}"
         slack_msg_append.append(
@@ -755,10 +836,11 @@ def generate_report(
                 "fallback": title,
                 "fields": [
                     {
-                        "title": "Machine Name(s)",
-                        "value": ", ".join(licenses_expired_count),
-                        "short": True,
+                        "title": f"Machine Name(s){'' if i == 0 else ' - Continued'}",
+                        "value": chunk,
+                        "short": False,
                     }
+                    for i, chunk in enumerate(join_list_by_delimiter_in_chunks(licenses_expired_count))
                 ],
             }
         )
@@ -819,7 +901,7 @@ def generate_report(
                     )
                 # We assume here that the version with the highest version is the preferred version.
                 for index, version in enumerate(sorted(versions_list, reverse=True)):
-                    css_class = generate_version_cell_css_class(version, platform_type, flow_type, with_prefix=True)
+                    css_class = generate_version_cell_css_class(str(version), platform_type, flow_type, with_prefix=True)
                     css_classes[css_class] = {"color": "green" if index == 0 else "red", "font_weight": "bold"}
 
         if platform_type_to_flow_type_to_server_versions_fields:
@@ -852,7 +934,7 @@ def generate_report(
             }
         )
 
-    if missing_users_in_mapping := get_missing_users_in_mapping(client, name_mapping):
+    if not without_missing_name_mapping and (missing_users_in_mapping := get_missing_users_in_mapping(client, name_mapping)):
         title = "Missing users in the name mapping"
         slack_msg_append.append(
             {
@@ -973,7 +1055,7 @@ def main() -> None:
                 keys_without_tenant = remove_keys_without_tenant(
                     {f"qa2-test-{tenant['lcaas_id']['display']}" for tenant in records}
                 )
-            # Save the records to a json file for future use and debugging.
+            # Save the records to a JSON file for future use and debugging.
             with open(output_path / RECORDS_FILE_NAME, "w") as f:
                 json.dump(records, f, indent=4, default=str, sort_keys=True)
 
@@ -996,7 +1078,14 @@ def main() -> None:
 
         logging.info(f"Creating report for {current_date_str}")
         columns, columns_filterable, managers, css_classes, slack_msg_append_report = generate_report(
-            client, args.without_viso, name_mapping, records, tenants, tokens_count, keys_without_tenant
+            client,
+            args.without_viso,
+            args.without_missing_name_mapping,
+            name_mapping,
+            records,
+            tenants,
+            tokens_count,
+            keys_without_tenant,
         )
         slack_msg_append.extend(slack_msg_append_report)
 

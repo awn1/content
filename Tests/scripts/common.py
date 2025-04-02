@@ -290,7 +290,7 @@ def is_tpb_part_of_nightly(playbook: str, config: TestConf, pack_id: str) -> boo
     Args:
         playbook (str): The playbook id.
         config (TestConf): The conf.json object.
-        pack_id (str): The pack id of the tpb's pack.
+        pack_id (str): The pack id of the TPB pack.
 
     Returns:
         bool: whether the given playbook id is one that should run in nightly or not.
@@ -329,8 +329,8 @@ def get_pipelines_and_commits(gitlab_client: Gitlab, project_id, look_back_hours
     """
     project = gitlab_client.projects.get(project_id)
 
-    # Calculate the timestamp for look_back_hours ago
-    time_threshold = (datetime.utcnow() - timedelta(hours=look_back_hours)).isoformat()
+    # Calculated the timestamp for look_back_hours ago
+    time_threshold = (datetime.now(tz=timezone.utc) - timedelta(hours=look_back_hours)).isoformat()
 
     commits = project.commits.list(all=True, since=time_threshold, order_by="updated_at", sort="asc")
     pipelines = project.pipelines.list(
@@ -381,12 +381,12 @@ def are_entities_in_order(entity_a: ProjectPipeline | ProjectJob, entity_b: Proj
 
 def is_pivot(current_entity: ProjectPipeline | ProjectJob, entity_to_compare: ProjectPipeline | ProjectJob) -> bool | None:
     """
-    Is the current entity status a pivot from the previous entity status.
+    Determine if the current entity status a pivot from the previous entity status.
     Args:
         current_entity: The current entity object (pipeline or job).
         entity_to_compare: An entity object (pipeline or job) to compare to.
     Returns:
-        True if the status changed from success to failed.
+        True if the status changed from success to fail.
         False if the status changed from failed to success.
         None if the status didn't change or the entities are not in order of creation.
     """
@@ -513,13 +513,13 @@ def get_reviewer(pr_url: str) -> str | None:
 
 def get_slack_user_name(name: str | None, default: str | None, name_mapping_path: str) -> str:
     """
-    Get the slack username for a given GitHub name.
+    Get the Slack username for a given GitHub name.
     Args:
         default: The default name to return if the name is not found.
         name: The name to convert.
         name_mapping_path: The path to the name mapping file.
     Returns:
-        The slack username.
+        The Slack username.
     """
     with open(name_mapping_path) as name_mapping:
         mapping = json.load(name_mapping)
@@ -590,20 +590,20 @@ def create_shame_message(
 
 def slack_link(url: str, text: str) -> str:
     """
-    Create a slack link.
+    Create a Slack link.
     Args:
         url: The URL to link to.
         text: The text to display.
     Returns:
-        The slack link.
+        The Slack link.
     """
     return f"<{url}|{text}>"
 
 
 def was_message_already_sent(commit_index: int, list_of_commits: list, list_of_pipelines: list) -> bool:
     """
-    Check if a message was already sent for newer commits, this is possible if pipelines of later commits,
-    finished before the pipeline of the current commit.
+    Check if a message was already sent for newer commits, this is possible if pipelines of
+    later commits finished before the pipeline of the current commit.
     Args:
         commit_index: The index of the current commit.
         list_of_commits: A list of commits.
@@ -622,7 +622,7 @@ def was_message_already_sent(commit_index: int, list_of_commits: list, list_of_p
 
 def get_job_by_name(gitlab_client: gitlab.Gitlab, project_id: str, pipeline_id: int, job_name: str) -> ProjectJob | None:
     """
-    Retrieve a job within a given pipeline that match a specific job name. (Only one job is expected to match the name.)
+    Retrieve a job within a given pipeline that matches a specific job name (Only one job is expected to match the name).
     Args:
         gitlab_client - The GitLab client instance.
         project_id - The ID of the project.
@@ -809,7 +809,7 @@ def is_within_time_window(target_hours: int, target_minutes: int, window_minutes
 
     Args:
         target_hours - The starting hour (0-23) in UTC for the range window when the Slack message should be sent.
-        target_minutes- The starting minute (0-59) in UTC for the range window when the Slack message should be sent.
+        target_minutes - The starting minute (0-59) in UTC for the range window when the Slack message should be sent.
         window_minutes - The duration of the range window in minutes during which the Slack message can be sent.
 
     Returns:
@@ -847,7 +847,7 @@ def get_scheduled_pipelines_by_name(
         A list of GitLab pipelines that match the criteria.
     """
     project = gitlab_client.projects.get(project_id)
-    time_threshold = (datetime.utcnow() - timedelta(hours=look_back_hours)).isoformat()
+    time_threshold = (datetime.now(tz=timezone.utc) - timedelta(hours=look_back_hours)).isoformat()
 
     return project.pipelines.list(
         all=True,
