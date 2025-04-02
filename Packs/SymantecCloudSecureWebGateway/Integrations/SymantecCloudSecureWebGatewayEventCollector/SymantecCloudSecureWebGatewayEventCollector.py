@@ -18,9 +18,9 @@ disable_warnings()
 # CONSTANTS
 VENDOR = "symantec"
 PRODUCT = "swg"
-DEFAULT_FETCH_SLEEP = 30
+DEFAULT_FETCH_SLEEP = 60
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-MAX_CHUNK_SIZE_TO_READ = 1024 * 1024 * 150  # 150 MB
+MAX_CHUNK_SIZE_TO_READ = 1024 * 1024 * 500  # 250 MB
 MAX_CHUNK_SIZE_TO_WRITE = 200 * (10**6)  # ~200 MB
 TEST_MODULE_READ_CHUNK_SIZE = 2000  # 2 KB
 STATUS_DONE = "done"
@@ -85,7 +85,7 @@ class Client(BaseClient):
             base_url=base_url, verify=verify, proxy=proxy, headers=headers, timeout=180
         )
 
-        self.fetch_interval = get_fetch_interval(fetch_interval)
+        self.fetch_interval = DEFAULT_FETCH_SLEEP  # get_fetch_interval(fetch_interval)
 
     def get_logs(self, params: dict[str, Any]):
         """
@@ -101,6 +101,20 @@ class Client(BaseClient):
 
 
 """ HELPER FUNCTIONS """
+
+
+def sleep_until_next_hour():
+    now = datetime.now()
+    demisto.debug(f"{now=}")
+    if now.minute != 0:
+        demisto.debug(f"{now.minute=}")
+        next_hour = (now.replace(second=0, microsecond=0) + timedelta(hours=1)).replace(
+            minute=2
+        )
+        sleep_time = (next_hour - now).total_seconds()
+        demisto.debug(f"Sleeping for {int(sleep_time)} seconds until the next hour...")
+        time.sleep(sleep_time)
+    demisto.debug("It's the first minute of the hour, proceeding...")
 
 
 def get_fetch_interval(fetch_interval: str | None) -> int:
@@ -165,6 +179,7 @@ def get_status_and_token_from_file(file_path: Path) -> tuple[str, str]:
 
     # Getting the file size to read only its end for the `status` and `next_token`
     file_size = file_path.stat().st_size
+    demisto.debug(f"Size file - {file_size / (1024 * 1024):.4f} MB")
     read_size = 2000
     if file_size < read_size:  # In case the file is smaller than 2000 bytes
         read_size = file_size
@@ -493,7 +508,8 @@ def extract_logs_and_push_to_XSIAM(
                     events,
                     VENDOR,
                     PRODUCT,
-                    chunk_size=XSIAM_EVENT_CHUNK_SIZE_LIMIT // 2,
+                    chunk_size=XSIAM_EVENT_CHUNK_SIZE_LIMIT,
+                    multiple_threads=True
                 )
                 demisto.debug(f"len of the events is: {len(events)}")
         except Exception as e:
@@ -517,6 +533,7 @@ def get_events_command(
     # Make API call in streaming to fetch events and writing to a temporary file on the disk.
     status = STATUS_MORE
     while status != STATUS_DONE:
+        demisto.debug("START FETCH GET API")
         token_expired = last_run_model.token_expired
 
         # Set the fetch times, where the `end_time` is consistently set to the current time.
@@ -575,9 +592,39 @@ def get_events_command(
         # If status is "abort", deletes the tmp file
         # and continue the loop to fetch with the same parameters.
         if status == STATUS_ABORT:
+            demisto.debug(f"{status=}")
             tmp_file_path.unlink()
             continue
 
+        demisto.debug(f"{status=}")
+        last_run_model = LastRun(
+            start_date=str(start_date),
+            token=new_token
+        )
+        set_integration_context({"last_run":last_run_model._asdict()})
+        demisto.debug("END FETCH GET API")
+        demisto.debug("START Extract logs")
+        for part_logs in extract_logs_from_zip_file(tmp_file_path):
+            send_events_to_xsiam(
+                vendor=VENDOR,
+                product=PRODUCT,
+                events=[log.decode() for log in part_logs if not log.startswith(b"#")],
+                multiple_threads=True,
+                chunk_size=XSIAM_EVENT_CHUNK_SIZE_LIMIT
+            )
+        demisto.debug("END Extract logs")
+        if tmp_file_path.exists():
+            demisto.debug(f"Before unlink the file there is file: {tmp_file_path}")
+
+        tmp_file_path.unlink()
+        try:
+            if not tmp_file_path.exists():
+                demisto.debug(f"There is no file with name: {tmp_file_path}")
+            else:
+                demisto.debug(f"the file exists: {tmp_file_path}")
+        except Exception as e:
+            demisto.debug(f"Error is: {e}")
+        continue
         (
             time_of_last_fetched_event,
             new_events_suspected_duplicates,
@@ -641,9 +688,11 @@ def test_module(client: Client, fetch_interval: str | None) -> str:
 def perform_long_running_loop(client: Client):
     last_run_obj: LastRun
     while True:
+        time.sleep(360)
         # Used to calculate the duration of the fetch run.
         start_run = get_current_time_in_seconds()
         try:
+            demisto.debug("START FETCH")
             integration_context = get_integration_context()
             demisto.debug(f"Starting new fetch with {integration_context=}")
             integration_context = integration_context.get("last_run")
@@ -660,6 +709,7 @@ def perform_long_running_loop(client: Client):
         # Used to calculate the duration of the fetch run.
         end_run = get_current_time_in_seconds()
 
+        demisto.debug("END FETCH")
         # Calculation of the fetch runtime against `client.fetch_interval`
         # If the runtime is less than the `client.fetch_interval` time
         # then it will go to sleep for the time difference
@@ -708,3 +758,4 @@ def main() -> None:  # pragma: no cover
 
 if __name__ in ("__main__", "__builtin__", "builtins"):
     main()
+
