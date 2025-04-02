@@ -537,6 +537,7 @@ class XsoarClient(XsoarOnPremClient):
 
     def check_api_key_validity(self, cloud_machine_details: dict, secret_version: str):
         from SecretActions.add_build_machine import BUILD_MACHINE_GSM_API_KEY, BUILD_MACHINE_GSM_AUTH_ID
+        from Tests.configure_and_test_integration_instances import get_custom_user_agent
 
         required_api_fields = {BUILD_MACHINE_GSM_API_KEY, BUILD_MACHINE_GSM_AUTH_ID}
         if not required_api_fields.issubset(set(cloud_machine_details.keys())):
@@ -549,6 +550,7 @@ class XsoarClient(XsoarOnPremClient):
                 BUILD_MACHINE_GSM_AUTH_ID: str(cloud_machine_details[BUILD_MACHINE_GSM_AUTH_ID]),
                 "Authorization": cloud_machine_details[BUILD_MACHINE_GSM_API_KEY],
                 "Content-Type": "application/json",
+                "User-Agent": get_custom_user_agent(CI_PIPELINE_ID),
             }
             machine_health_response = requests.get(f"https://api-{self.xsoar_host_base}/xsoar/health", headers=headers)
             health_check_success = machine_health_response.ok
