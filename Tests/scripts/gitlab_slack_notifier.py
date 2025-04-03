@@ -46,6 +46,7 @@ from Tests.scripts.common import (
     get_blacklist_status_details,
     get_instance_directories,
     get_job_by_name,
+    get_previous_pipeline,
     get_properties_for_test_suite,
     get_scheduled_pipelines_by_name,
     get_slack_user_name,
@@ -991,74 +992,81 @@ def get_pipeline_slack_data(gitlab_client: Gitlab, pipeline_id: str, project_id:
 
 
 def should_send_blacklist_message(
-    gitlab_client: Gitlab, project_id: str, target_hours: int, target_minutes: int, window_minutes: int
+    current_pipeline_id: str, gitlab_client: Gitlab, project_id: str, target_hours: int, target_minutes: int, window_minutes: int
 ) -> tuple[bool, str]:
     """
-    Check if a message should be sent for the blacklist validation pipeline.
-    Conditions to send a message:
+    Determines whether a Slack notification should be sent for the blacklist validation pipeline.
+
+    A notification is triggered if:
     - The current time falls within a specified time window (default: ±10 minutes) around a target time (default: 6:00 UTC).
     - A change in secret detection: the previous job found secrets while the current one did not, or vice versa.
     - The blacklist scan artifacts have changed compared to the previous job, even if the job status remains the same
     (e.g., due to a newly discovered secret).
 
     Args:
+        current_pipeline_id (str): The ID of the pipeline that triggered the Slack notifier.
         gitlab_client (Gitlab): The Gitlab client.
         project_id (str): The project id.
         target_hours (int): The starting hour for sending the message.
         target_minutes (int): The starting minute for sending the message.
         window_minutes (int): The range window for sending the message.
     Returns:
-        tuple[bool, str]: A tuple of a boolean indicating if a message should be sent and a short message to append.
+        tuple[bool, str]: A boolean indicating whether to send a message, and the corresponding message string.
     """
+    # Retrieve recent blacklist validation pipelines
     last_pipelines = get_scheduled_pipelines_by_name(gitlab_client, project_id, BLACKLIST_VALIDATION_PIPELINE, LOOK_BACK_HOURS)
+
     if len(last_pipelines) < 2:
-        logging.info("Not enough pipelines to compare, quitting")
+        logging.info("Insufficient pipeline history for comparison. Exiting.")
         return False, ""
-    # Extract the last two Blacklist validation pipeline IDs
-    second_to_last_pipeline_id, last_pipeline_id = (pipeline.id for pipeline in last_pipelines[-2:])
 
-    # Fetch jobs for the 'blacklist-validation-job' in the last two pipelines
-    last_blacklist_job = get_job_by_name(gitlab_client, project_id, last_pipeline_id, BLACKLIST_VALIDATION_JOB)
-    second_to_last_blacklist_job = get_job_by_name(
-        gitlab_client, project_id, second_to_last_pipeline_id, BLACKLIST_VALIDATION_JOB
-    )
-    # Ensure both jobs have artifacts before comparing. If missing, log and return early.
-    if not (last_blacklist_job and second_to_last_blacklist_job):
-        logging.info("Failed to get jobs for the blacklist validation pipelines, quitting")
+    # Identify the pipeline preceding the current one
+    previous_pipeline_id = get_previous_pipeline(last_pipelines, current_pipeline_id)
+    if previous_pipeline_id is None:
+        logging.info(f"No previous pipeline found for ID {current_pipeline_id}. Exiting.")
         return False, ""
-    logging.info(
-        f"Comparing artifacts from last job {last_blacklist_job.id} and second to last job {second_to_last_blacklist_job.id}"
-    )
 
-    logging.info(f"Sleeping for {SECONDS_TO_SLEEP} seconds before requesting artifacts")
+    # Fetch the blacklist validation jobs for the current and previous pipelines
+    current_blacklist_job = get_job_by_name(gitlab_client, project_id, current_pipeline_id, BLACKLIST_VALIDATION_JOB)
+    previous_blacklist_job = get_job_by_name(gitlab_client, project_id, previous_pipeline_id, BLACKLIST_VALIDATION_JOB)
+
+    if not current_blacklist_job or not previous_blacklist_job:
+        logging.info("Could not retrieve blacklist validation jobs. Exiting.")
+        return False, ""
+
+    logging.info(f"Comparing artifacts from jobs {current_blacklist_job.id} and {previous_blacklist_job.id}")
+
+    # Pause before downloading artifacts to allow GitLab to finalize them
+    logging.info(f"Waiting {SECONDS_TO_SLEEP} seconds before fetching artifacts.")
     time.sleep(SECONDS_TO_SLEEP)
-    last_job_artifacts = download_and_read_artifact(
-        gitlab_client, project_id, last_blacklist_job.id, BLACKLIST_VALIDATION_ARTIFACTS_PATH
+
+    # Retrieve and compare job artifacts
+    current_artifacts = download_and_read_artifact(
+        gitlab_client, project_id, current_blacklist_job.id, BLACKLIST_VALIDATION_ARTIFACTS_PATH
     )
-    second_to_last_job_artifacts = download_and_read_artifact(
-        gitlab_client, project_id, second_to_last_blacklist_job.id, BLACKLIST_VALIDATION_ARTIFACTS_PATH
+    previous_artifacts = download_and_read_artifact(
+        gitlab_client, project_id, previous_blacklist_job.id, BLACKLIST_VALIDATION_ARTIFACTS_PATH
     )
 
+    # Check if the message should be sent within the time window
     if is_within_time_window(target_hours, target_minutes, window_minutes):
-        status_details = get_blacklist_status_details(last_job_artifacts)
+        status_details = get_blacklist_status_details(current_artifacts)
         return True, f"Daily Heartbeat - {status_details}"
-    logging.info("The current time is outside the time window — proceeding to check for a pivot or changes in found secrets.")
 
-    pivot = is_blacklist_pivot(last_job_artifacts, second_to_last_job_artifacts)
-    if pivot:
+    logging.info("Outside of the scheduled time window. Checking for secret pivots or artifact changes.")
+
+    # Check for significant changes in detected secrets
+    if is_blacklist_pivot(current_artifacts, previous_artifacts):
         return True, f"{SECRETS_FOUND}! :warning:"
-    if pivot is False:
+
+    if is_blacklist_pivot(current_artifacts, previous_artifacts) is False:
         return True, "Successfully fixed! :muscle:"
 
-    # Even if the color of the detected secrets has not changed, the set of secrets may have changed.
-    elif secrets_sha_has_changed(last_job_artifacts, second_to_last_job_artifacts):
+    if secrets_sha_has_changed(current_artifacts, previous_artifacts):
         return True, f"The set of detected secrets has changed! {SECRETS_FOUND} :warning:"
-    else:
-        logging.info(
-            "No message will be sent for the 'blacklist validation' pipeline."
-            "The status and the set of detected secrets have not changed."
-        )
-        return False, ""
+
+    logging.info("No significant changes detected. No notification will be sent.")
+    return False, ""
 
 
 def main():
@@ -1081,7 +1089,7 @@ def main():
     )
     if triggering_workflow == BLACKLIST_VALIDATION:
         should_send_message, custom_title = should_send_blacklist_message(
-            gitlab_client, project_id, options.target_hours, options.target_minutes, options.window_minutes
+            pipeline_id, gitlab_client, project_id, options.target_hours, options.target_minutes, options.window_minutes
         )
         # Send a thread message only if secrets have been found
         options.thread = BLACKLIST_VALIDATION_ARTIFACTS_PATH if SECRETS_FOUND in custom_title else None

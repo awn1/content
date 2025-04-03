@@ -517,8 +517,11 @@ def deterministic_hash_from_list(strings: list) -> str:
     Args:
         strings (list): The input list of strings.
     Returns:
-        str: The hexadecimal representation of the hash.
+        str: The hexadecimal representation of the hash, or "empty list" if the input is an empty list.
     """
+    if not strings:  # Check if the list is empty
+        return "empty list"
+
     # Remove duplicates and sort the list to ensure deterministic order
     unique_sorted_strings = sorted(set(strings))
     # Convert the sorted list to a single string
