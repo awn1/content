@@ -1,3 +1,15 @@
+# Content Infrastructure 0.0.38 (2025-04-03)
+
+### Features
+
+- stop/start tenants support in build machines report
+
+### Bugfixes
+
+- Fixing an issue where the Slack message mistakenly referenced a newer pipeline, causing a 404 error due to missing artifacts. ([CIAC-13237](https://jira-dc.paloaltonetworks.com/browse/CIAC-13237))
+- Fixed unlocked corepacks files generation.
+
+
 # Content Infrastructure 0.0.37 (2025-03-31)
 
 ### Bugfixes
