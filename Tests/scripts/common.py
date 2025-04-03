@@ -620,7 +620,7 @@ def was_message_already_sent(commit_index: int, list_of_commits: list, list_of_p
     return False
 
 
-def get_job_by_name(gitlab_client: gitlab.Gitlab, project_id: str, pipeline_id: int, job_name: str) -> ProjectJob | None:
+def get_job_by_name(gitlab_client: gitlab.Gitlab, project_id: str, pipeline_id: str, job_name: str) -> ProjectJob | None:
     """
     Retrieve a job within a given pipeline that matches a specific job name (Only one job is expected to match the name).
     Args:
@@ -694,8 +694,8 @@ def secrets_sha_has_changed(last_job_artifacts, second_to_last_job_artifacts) ->
         if not sha_last or not sha_prev:
             logging.warning("Missing SHA in one or both jobs.")
             return False
-
         logging.info(f"Last job SHA: {sha_last}, Previous job SHA: {sha_prev}")
+
     except json.JSONDecodeError:
         logging.exception("Failed to parse job artifacts: Invalid JSON")
         return False
@@ -871,3 +871,19 @@ def day_suffix(day: int) -> str:
         return str(day) + "rd"
     else:
         return str(day) + "th"
+
+
+def get_previous_pipeline(last_pipelines, given_pipeline_id) -> str | None:
+    """
+    Retrieve the ID of the pipeline that ran immediately before the given pipeline.
+    Args:
+        last_pipelines (list[ProjectPipeline]): A list of pipelines, sorted in ascending order.
+        given_pipeline_id (str): The ID of the pipeline for which to find the previous pipeline.
+
+    Returns:
+        str: The ID of the pipeline that ran immediately before the given pipeline, or None if there is no previous pipeline.
+    """
+    for i in range(1, len(last_pipelines)):
+        if last_pipelines[i].id == given_pipeline_id:
+            return last_pipelines[i - 1].id if i > 0 else None
+    return None

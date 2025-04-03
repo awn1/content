@@ -311,5 +311,7 @@ def test_should_send_blacklist_message(
     # Mock the blacklist status details
     mocker.patch.object(gitlab_slack_notifier, "get_blacklist_status_details", return_value="")
 
-    result = gitlab_slack_notifier.should_send_blacklist_message(gitlab_client, project_id, 1, 2, 3)
+    mocker.patch.object(gitlab_slack_notifier, "get_previous_pipeline", return_value="123")
+
+    result = gitlab_slack_notifier.should_send_blacklist_message(12345, gitlab_client, project_id, 1, 2, 3)
     assert result == expected_result
