@@ -460,6 +460,7 @@ install-packs-in-server-master:
 
 
 .install-packs-on-cloud-instances:
+  variables:
   tags:
      - $BUILD_JOB_TAG
   stage: run-instances

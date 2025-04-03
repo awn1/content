@@ -143,6 +143,7 @@ class GCPConfig:
     PLATFORM_CORE_PACKS_DATA: list[dict] = get_platform_core_packs_data(PLATFORM_CORE_PACKS_LIST_JSON_PATH)
 
     server_versions_metadata = Path(__file__).resolve().parent / VERSIONS_METADATA_FILE
+
     corepacks_override_file = Path(__file__).resolve().parent.parent.parent / "Config" / COREPACKS_OVERRIDE_FILE
 
     if server_versions_metadata.exists():

@@ -71,7 +71,8 @@ def get_last_corepacks_files_from_versions_metadata() -> tuple:
     Gets the last two names of the corepacks-x.x.x.json files from the build bucket.
     """
     core_packs_file_versions: dict[str, dict] = GCPConfig.core_packs_file_versions
-    sorted_versions_metadata_dict = dict(sorted(core_packs_file_versions.items()))
+    sorted_versions_metadata_dict = dict(sorted(core_packs_file_versions.items(), key=lambda version: Version(version[0])))
+    logging.debug(f"Sorted core packs file versions metadata: {sorted_versions_metadata_dict}")
     last_version = sorted_versions_metadata_dict[list(sorted_versions_metadata_dict.keys())[-1]].get("core_packs_file")
     penultimate_version = sorted_versions_metadata_dict[list(sorted_versions_metadata_dict.keys())[-2]].get("core_packs_file")
     logging.info(f"Validate the lists for {last_version=}, {penultimate_version=}")
