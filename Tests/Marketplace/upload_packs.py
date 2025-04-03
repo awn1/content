@@ -418,34 +418,6 @@ def upload_index_to_storage(
         shutil.rmtree(index_folder_path)
 
 
-def process_legacy_pack(
-    pack: os.DirEntry,
-    metadata: dict[str, Any],
-    storage_bucket: Bucket,
-    storage_base_path: str,
-    corepacks_file: str,
-    core_packs_public_urls: list[str],
-    bucket_core_packs: list[str],
-) -> None:
-    pack_current_version = metadata.get("currentVersion", Pack.PACK_INITIAL_VERSION)
-    core_pack_relative_path = os.path.join(pack.name, pack_current_version, f"{pack.name}.zip")
-    core_pack_storage_path = os.path.join(storage_base_path, core_pack_relative_path)
-
-    if not storage_bucket.blob(core_pack_storage_path).exists():
-        logging.critical(f"{pack.name} pack does not exist under {core_pack_storage_path} path")
-        sys.exit(1)
-
-    core_pack_public_url = (
-        os.path.join(GCPConfig.GCS_PUBLIC_URL, storage_bucket.name, core_pack_storage_path)
-        if corepacks_file == GCPConfig.CORE_PACK_FILE_NAME
-        # versioned core pack file, using relative paths.
-        else core_pack_relative_path
-    )
-
-    core_packs_public_urls.append(core_pack_public_url)
-    bucket_core_packs.append(pack.name)
-
-
 def process_pack(
     pack: os.DirEntry,
     index_folder_path: str,
@@ -457,7 +429,7 @@ def process_pack(
     core_packs_public_urls: list[str],
     bucket_core_packs: list[str],
     packs_missing_metadata: set[str],
-    required_platform_core_packs_data: set[dict] = set(),
+    required_platform_core_packs_data: list[dict[str, Any]],
 ) -> None:
     pack_metadata_path = os.path.join(index_folder_path, pack.name, Pack.METADATA)
     logging.info(f"Processing pack: {pack.name}")
@@ -471,16 +443,32 @@ def process_pack(
     with open(pack_metadata_path) as metadata_file:
         metadata = json.load(metadata_file)
 
-    if marketplace == "platform" and (
-        platform_core_pack_entry := next((entry for entry in required_platform_core_packs_data if entry["id"] == pack.name), None)
-    ):
-        platform_core_pack_entry["version"] = metadata["currentVersion"]
-        platform_corepacks_entries.append(platform_core_pack_entry)
+    pack_current_version = metadata.get("currentVersion", Pack.PACK_INITIAL_VERSION)
+    core_pack_relative_path = os.path.join(pack.name, pack_current_version, f"{pack.name}.zip")
+    core_pack_storage_path = os.path.join(storage_base_path, core_pack_relative_path)
 
-    else:
-        process_legacy_pack(
-            pack, metadata, storage_bucket, storage_base_path, corepacks_file, core_packs_public_urls, bucket_core_packs
+    if not storage_bucket.blob(core_pack_storage_path).exists():
+        logging.critical(f"{pack.name} pack does not exist under {core_pack_storage_path} path")
+        sys.exit(1)
+
+    if marketplace == "platform":  # Platform pack processing
+        for entry in required_platform_core_packs_data:
+            if entry["id"] == pack.name:
+                logging.debug(f"Updated {entry['id']} core pack version to: {pack_current_version}")
+                entry["version"] = pack_current_version
+                platform_corepacks_entries.append(entry)
+                break
+
+    else:  # Legacy pack processing
+        core_pack_public_url = (
+            os.path.join(GCPConfig.GCS_PUBLIC_URL, storage_bucket.name, core_pack_storage_path)
+            if corepacks_file == GCPConfig.CORE_PACK_FILE_NAME
+            # versioned core pack file, using relative paths.
+            else core_pack_relative_path
         )
+        core_packs_public_urls.append(core_pack_public_url)
+
+    bucket_core_packs.append(pack.name)
 
 
 def construct_core_packs_data(
@@ -507,7 +495,6 @@ def validate_core_packs(
 
     required_pack_ids = {pack["id"] if isinstance(pack, dict) else pack for pack in required_core_packs}
     bucket_pack_ids = set(bucket_core_packs)
-
     missing_core_packs = required_pack_ids - bucket_pack_ids
     unexpected_core_packs = bucket_pack_ids - required_pack_ids
 
@@ -534,7 +521,12 @@ def process_core_packs(
     bucket_core_packs: list[str] = list()
     packs_missing_metadata: set[str] = set()
 
-    required_core_pack_names = [pack_name if isinstance(pack_name, str) else pack_name["id"] for pack_name in required_core_packs]
+    required_core_pack_names: list[str] = [
+        pack_name if isinstance(pack_name, str) else pack_name["id"] for pack_name in required_core_packs
+    ]
+    platform_required_core_packs_data: list[dict[str, Any]] = [pack for pack in required_core_packs if isinstance(pack, dict)]
+
+    logging.info(f"Processing core packs: {required_core_pack_names}")
     for pack in os.scandir(index_folder_path):
         if pack.is_dir() and pack.name in required_core_pack_names:
             process_pack(
@@ -548,6 +540,7 @@ def process_core_packs(
                 core_packs_public_urls,
                 bucket_core_packs,
                 packs_missing_metadata,
+                platform_required_core_packs_data,
             )
 
     validate_core_packs(packs_missing_metadata, required_core_packs, bucket_core_packs)
@@ -585,7 +578,7 @@ def create_corepacks_config(
 
     required_core_packs: list = list(GCPConfig.get_core_packs(marketplace))
     corepacks_files_names = [GCPConfig.CORE_PACK_FILE_NAME] + GCPConfig.get_core_packs_unlocked_files(marketplace)
-    logging.debug(f"Updating the following corepacks files: {corepacks_files_names}")
+    logging.info(f"Updating the following corepacks files: {corepacks_files_names}")
 
     for corepacks_file in corepacks_files_names:
         core_packs_data = process_core_packs(
