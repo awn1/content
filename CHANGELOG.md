@@ -1,3 +1,11 @@
+# Content Infrastructure 0.0.39 (2025-04-06)
+
+### Features
+
+- Improved the execution of the validate command in the Upload flow.
+- Updated the demisto-sdk version 1.37.0 in Infra.
+
+
 # Content Infrastructure 0.0.38 (2025-04-03)
 
 ### Features
