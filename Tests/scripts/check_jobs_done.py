@@ -14,6 +14,9 @@ from Tests.scripts.common import (
     DEPLOY_AUTO_UPGRADE_PACKS,
     DOCKERFILES_PR,
     NATIVE_NIGHTLY,
+    RIT_MR,
+    RIT_PUBLISH,
+    RIT_RELEASE,
     SDK_NIGHTLY,
     WORKFLOW_TYPES,
 )
@@ -30,6 +33,28 @@ DOCKERFILES_PR_JOBS = [
     "scan_images",
     "test_ssl_connection",
     "parse_report",
+]
+
+RIT_MR_JOBS = [
+    "run-schema-validator",
+    "run-rit-executor",
+    "upload-to-internal-dev-bucket",
+]
+
+RIT_RELEASE_JOBS = [
+    "verify-settings-release",
+    "run-schema-validator",
+    "run-rit-executor",
+    "upload-to-internal-dev-bucket",
+    "release-tag",
+]
+
+
+RIT_PUBLISH_JOBS = [
+    "verify-settings-publish-version",
+    "copy-to-bucket",
+    "update-publish-logs",
+    "sync-prod-buckets",
 ]
 
 NATIVE_NIGHTLY_JOBS = [
@@ -134,6 +159,9 @@ JOBS_PER_TRIGGERING_WORKFLOW = {
     CONTENT_PR: CONTENT_PR_JOBS,
     CONTENT_MERGE: CONTENT_MERGE_JOBS,
     DEPLOY_AUTO_UPGRADE_PACKS: DEPLOY_AUTO_UPGRADE_PACKS_JOBS,
+    RIT_MR: RIT_MR_JOBS,
+    RIT_RELEASE: RIT_RELEASE_JOBS,
+    RIT_PUBLISH: RIT_PUBLISH_JOBS,
 }
 
 

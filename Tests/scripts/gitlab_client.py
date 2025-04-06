@@ -1,14 +1,23 @@
 import os
 import zipfile
+from distutils.util import strtobool
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any
 
 import requests
+import urllib3
+
+from Tests.scripts.utils import logging_wrapper as logging
+from Tests.scripts.utils.log_util import install_logging
+
+urllib3.disable_warnings()
 
 GITLAB_SERVER_URL = os.getenv("CI_SERVER_URL", "https://gitlab.xdr.pan.local")  # disable-secrets-detection
+GITLAB_SSL_VERIFY = bool(strtobool(os.getenv("GITLAB_SSL_VERIFY", "true")))
 API_BASE_URL = f"{GITLAB_SERVER_URL}/api/v4"
-PROJECT_ID = os.getenv("CI_PROJECT_ID", "1061")
+PROJECT_ID = os.getenv("CI_PROJECT_ID", "1061")  # default is Content
+install_logging("gitlab_client.log")
 
 
 class GitlabClient:
@@ -24,7 +33,7 @@ class GitlabClient:
         stream: bool = False,
     ) -> Any:
         url = f"{self.base_url}/{endpoint}"
-        response = requests.get(url, params, headers=self.headers, stream=stream)
+        response = requests.get(url, params, headers=self.headers, stream=stream, verify=GITLAB_SSL_VERIFY)
         response.raise_for_status()
         if to_json:
             return response.json()
@@ -109,3 +118,128 @@ class GitlabClient:
 
         except Exception as e:
             raise Exception(f"Could not extract {artifact_filepath.name} from any pipeline with SHA {commit_sha}:\n{e}")
+
+
+class GitlabMergeRequest(GitlabClient):
+    def __init__(
+        self,
+        gitlab_token: str,
+        sha1: str | None = None,
+        branch: str | None = None,
+        mr_number: int | None = None,
+        state: str = "opened",
+    ) -> None:
+        super().__init__(gitlab_token)
+        self.data = self.get_merge_request(sha1, branch, mr_number, state)
+
+    def get_merge_request(
+        self,
+        sha1: str | None = None,
+        branch: str | None = None,
+        mr_number: int | None = None,
+        state: str = "opened",
+    ) -> dict:
+        """Fetches merge request details by merge request number, branch, or sha1.
+
+        Args:
+            sha1 (str | None): The commit SHA associated with the merge request.
+            branch (str | None): The source branch of the merge request.
+            mr_number (int | None): The merge request number (MR ID).
+            state (str): The state of the merge request (e.g., 'opened', 'closed', 'merged'). Defaults to 'opened'.
+
+        Returns:
+            dict: The merge request details.
+        """
+        if not (sha1 or branch or mr_number):
+            raise ValueError("You must provide at least one of sha1, branch, or mr_number to fetch the merge request.")
+
+        if mr_number:
+            logging.info(f"Fetching merge request by MR number: {mr_number}")
+            endpoint = f"merge_requests/{mr_number}"
+            return self._get(endpoint, to_json=True)
+
+        # Search for merge requests using branch or sha1
+        logging.info(f"Searching for merge requests with branch='{branch}', sha1='{sha1}', state='{state}'")
+        endpoint = "merge_requests"
+        params = {"state": state}
+
+        if branch:
+            params["source_branch"] = branch
+        if sha1:
+            params["sha"] = sha1
+
+        res = self._get(endpoint, params=params, to_json=True)
+        logging.debug(f"Fetched merge request: {res}")
+        if not res:
+            logging.warning(f"No merge requests found for branch '{branch}', sha1='{sha1}', state='{state}'")
+        elif len(res) > 1:
+            logging.warning(
+                f"Multiple merge requests found for branch '{branch}', sha1='{sha1}', state='{state}', skipping search."
+            )
+        else:
+            return res[0]
+
+        return {}
+
+    def add_comment(self, comment: str) -> None:
+        """Adds a comment to the merge request.
+
+        Args:
+            comment (str): The comment text.
+        """
+        logging.info(f"Adding a comment to merge request #{self.data['iid']}")
+        endpoint = f"merge_requests/{self.data['iid']}/notes"
+        response = requests.post(
+            f"{self.base_url}/{endpoint}",
+            json={"body": comment},
+            headers=self.headers,
+        )
+        response.raise_for_status()
+
+    def edit_comment(self, comment_id: int, comment: str) -> None:
+        """Edits an existing comment on the merge request.
+
+        Args:
+            comment_id (int): The ID of the comment to edit.
+            comment (str): The updated comment text.
+        """
+        logging.info(f"Editing comment #{comment_id} on merge request #{self.data['iid']}")
+        endpoint = f"merge_requests/{self.data['iid']}/notes/{comment_id}"
+        response = requests.put(
+            f"{self.base_url}/{endpoint}",
+            json={"body": comment},
+            headers=self.headers,
+        )
+        response.raise_for_status()
+
+    def add_labels_to_mr(self, labels: list) -> None:
+        """Adds labels to a GitLab merge request.
+
+        Args:
+            labels (list): List of labels to add.
+        """
+        logging.info(f"Adding labels {labels} to merge request #{self.data['iid']}")
+        endpoint = f"merge_requests/{self.data['iid']}"
+        response = requests.put(
+            f"{self.base_url}/{endpoint}",
+            json={"labels": ",".join(labels)},
+            headers=self.headers,
+        )
+        response.raise_for_status()
+
+    def delete_label_from_mr(self, label: str) -> None:
+        """Removes a label from a GitLab merge request.
+
+        Args:
+            label (str): The label to remove.
+        """
+        logging.info(f"Removing label '{label}' from merge request #{self.data['iid']}")
+        current_labels = self.data.get("labels", [])
+        updated_labels = [lbl for lbl in current_labels if lbl != label]
+        endpoint = f"merge_requests/{self.data['iid']}"
+        response = requests.put(
+            f"{self.base_url}/{endpoint}",
+            json={"labels": ",".join(updated_labels)},
+            headers=self.headers,
+        )
+        response.raise_for_status()

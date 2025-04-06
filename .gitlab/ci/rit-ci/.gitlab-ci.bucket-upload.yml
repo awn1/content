@@ -1,0 +1,192 @@
+.publish-version-rule:
+  rules:
+    - if: '$PUBLISH == "true"'
+
+.publish-version-rule-always:
+  rules:
+    - if: '$PUBLISH == "true"'
+      when: always
+
+copy-to-bucket:
+  stage: Publish
+  tags:
+    - $JOB_TAG
+  extends:
+    - .publish-version-rule
+    - .default-job-settings
+  script:
+    - section_start "Upload Packs To Marketplace Storage"
+    - |
+      FILE_NAME=$(basename "${PATH_SRC_BUCKET}")
+      if [[ ! "${FILE_NAME}" =~ ^"${PLATFORM_VERSION}" ]]; then  # If filename does not start with PLATFORM_VERSION, add it
+        FILE_NAME="${PLATFORM_VERSION}_${FILE_NAME}"
+      fi
+      echo "Preparing to upload file: '${FILE_NAME}' to the bucket: '${DESTINATION_BUCKET}'"
+    - |
+      mapfile -t TENANT_ID_ARRAY <<< "${TENANT_IDS:-default}"
+      for TENANT_ID in "${TENANT_ID_ARRAY[@]}"; do
+        if [[ -n "${TENANT_ID}" ]]; then
+          echo "Starting process for Tenant ID: ${TENANT_ID}"
+          DEST_URL="${DESTINATION_BUCKET}/${PLATFORM_VERSION}/${TENANT_ID}/${FILE_NAME}"
+          gcloud storage cp "${PATH_SRC_BUCKET}" "gs://${DEST_URL}"
+          echo "Finished copying files to: https://console.cloud.google.com/storage/browser/${DEST_URL}"
+        fi
+      done
+    - section_end "Upload Packs To Marketplace Storage"
+    - job-done
+
+
+update-publish-logs:
+  stage: Publish
+  tags:
+    - cortex-content-1738
+  extends:
+    - .publish-version-rule
+    - .default-job-settings
+  needs:
+    - copy-to-bucket
+  script:
+    - !reference [ .create-artifacts-repositories-folder ]
+    - !reference [ .clone-content-test-conf-and-infra ]
+    - !reference [ .poetry-install ]
+    - section_start "Update Publish Logs file"
+    - mapfile -t TENANT_ID_ARRAY <<< "${TENANT_IDS:-default}"
+    - poetry run python3 -u ./rit_automations/update_publish_logs.py --tenants "${TENANT_ID_ARRAY[@]}" --gitlab-token "${GITLAB_STATUS_TOKEN}" --dest-bucket-name "${DESTINATION_BUCKET}"
+    - section_end "Update Publish Logs file"
+    - job-done
+
+
+verify-settings-publish-version:
+  tags:
+    - cortex-content-1738
+  stage: .pre
+  extends:
+    - .publish-version-rule-always
+    - .default-job-settings
+  script:
+    - !reference [ .check_user_permissions ]
+    - section_start "Validating input parameters"
+    - |
+      # Check if required parameters are provided and valid
+      if [[ -z "${TENANT_IDS}" ]] && [[ "${MERGE_CONFIRMED}" != "true" ]]; then
+        echo -e "${RED}Error: Please ensure all hotfix branches are merged into the release version.\nCheck the publish logs at: https://console.cloud.google.com/storage/browser/${GCS_INTERNAL_DEV_BUCKET}${NC}"
+        exit 1
+      fi
+
+    - |
+      if [[ -z "${DEST_BUCKET}" || -z "${PATH_SRC_BUCKET}" || -z "${PLATFORM_VERSION}" ]]; then
+        echo -e "${RED}Error: DEST_BUCKET, PATH_SRC_BUCKET, and PLATFORM_VERSION are required parameters.${NC}"
+        exit 1
+      fi
+
+      if [[ "${DEST_BUCKET}" != "dev" && "${DEST_BUCKET}" != "prod" ]]; then
+        echo -e "${RED}Error: DEST_BUCKET must be either 'dev' or 'prod', but got '${DEST_BUCKET}'.${NC}"
+        exit 1
+      fi
+
+      FILE_NAME=$(basename "${PATH_SRC_BUCKET}")
+      if [[ "${FILE_NAME}" =~ ^([0-9]+\.[0-9]+_)?([0-9]{14})_([a-f0-9]{8})_content\.zip$ ]]; then
+        if [[ "${FILE_NAME}" =~ ^([0-9]+\.[0-9]+) ]]; then  # Check if the filename starts with a version (x.y)
+          if [[ "${BASH_REMATCH[1]}" != "${PLATFORM_VERSION}" ]]; then  # Compare extracted version with PLATFORM_VERSION
+            echo -e "${RED}Error: FILE_NAME '${FILE_NAME}' has version '${BASH_REMATCH[1]}', but expected '${PLATFORM_VERSION}'${NC}"
+            exit 1
+          fi
+        fi
+      else
+        echo -e "${RED}Error: FILE_NAME '${FILE_NAME}' does not match the required format.\nExpected format: <platform_version (optional)>_<timestamp: yyyyMMddHHmmss>_<commit_hash>_content.zip${NC}"
+        exit 1
+      fi
+
+      if [[ ! "${PATH_SRC_BUCKET}" =~ \.zip$ ]] || [[ $(gsutil du "${PATH_SRC_BUCKET}" 2>/dev/null | awk '{print $1}') -le 0 ]]; then
+        echo -e "${RED}Error: Invalid, missing, or empty .zip file in GCS: $PATH_SRC_BUCKET${NC}"
+        exit 1
+      fi
+      echo "File is valid and ready for processing: $PATH_SRC_BUCKET"
+    - |
+      if [[ -n "${TENANT_IDS}" ]]; then
+        mapfile -t TENANT_ID_ARRAY <<< "${TENANT_IDS}"
+        for TENANT_ID in "${TENANT_ID_ARRAY[@]}"; do
+          if [[ -n "${TENANT_ID}" ]]; then
+            # Check tenant ID validity based on the pattern
+            if [[ "${DEST_BUCKET}" == "prod" && ! "${TENANT_ID}" =~ ^xdr-[a-zA-Z]{2}-[0-9]+$ ]]; then
+              echo -e "${RED}Error: Invalid TENANT_ID '${TENANT_ID}' for production. Must match pattern ^xdr-[a-zA-Z]{2}-\d+$.${NC}"
+              exit 1
+            elif [[ ! "${TENANT_ID}" =~ ^qa2-test-[0-9]+$ ]]; then
+              echo -e "${RED}Error: Invalid TENANT_ID '${TENANT_ID}' for non-production. Must match pattern ^qa2-test-\d+$.${NC}"
+              exit 1
+            fi
+          fi
+        done
+      fi
+
+    - echo -e "${GREEN}Validation passed successfully.${NC}"
+    - section_end "Validating input parameters"
+    - job-done
+
+
+.sync-prod-buckets:
+  tags:
+    - cortex-content-prod-1738
+  extends:
+    - .publish-version-rule
+    - .default-job-settings
+  stage: sync-buckets
+  script:
+    - |
+      if [[ "${DEST_BUCKET}" == "dev" ]]; then
+        echo "Skipping syncing buckets when publishing to dev bucket."
+        job-done
+        exit 0
+      fi
+    - !reference [ .create-artifacts-repositories-folder ]
+    - !reference [ .clone-content-test-conf-and-infra ]
+    - !reference [ .poetry-install ]
+    # The next step triggers a pipeline by the DevOps team that synchronizes between the `prod us` bucket and all the other buckets (gov, fr).
+    # If this step fails, a message will appear in the Slack channel `dmst-build`.
+    # If the step is successful, a message will appear in the thread under the upload message.
+    # Note: Failure of this step indicates an issue with triggering the pipeline, not with its process.
+    # For job status updates see xdr-content-sync channel.
+    - section_start "Trigger sync for all buckets" --collapsed
+    - poetry run python3 -u ./Tests/scripts/trigger_jenkins_job.py --url $JENKINS_SYNC_BUCKETS_JOB_URL --username $JENKINS_USER --token $JENKINS_TOKEN --root_folder $BUCKET_ROOT_FOLDER_NAME #TODO - CRTX-160162
+    - section_end "Trigger sync for all buckets"
+    - job-done
+
+
+sync-prod-buckets:
+  extends: .sync-prod-buckets
+  needs:
+    - job: copy-to-bucket
+      artifacts: false
+    - job: update-publish-logs
+      artifacts: false
+
+jobs-done-check-on-publish:
+  extends:
+    - .publish-version-rule
+    - .jobs-done-check
+  needs:
+    - verify-settings-publish-version
+    - copy-to-bucket
+    - update-publish-logs
+    - sync-prod-buckets
+
+slack-notify-publish:
+  extends:
+    - .publish-version-rule-always
+    - .trigger-slack-notification
+  variables:  # Passes the environment variable from the parent pipeline to the child which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
+    JOB_NAME: 'fan-in'
+    PROD_SLACK_CHANNEL: $PROD_SLACK_CHANNEL
+    SLACK_CHANNEL: $PROD_SLACK_CHANNEL
+    WORKFLOW: 'RIT Publish'
+    SLACK_JOB: 'true'
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
+    SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
+    SLACK_ALLOW_FAILURE: 'true'
+    CI_PROJECT_ID: $CI_PROJECT_ID
+    CI_SERVER_URL: $CI_SERVER_URL
+    CURRENT_BRANCH_NAME: "new-rit-ci-cd" # TODO
+    REPOSITORY_NAME: "cortex-content/prisma-collectors"
+    ARTIFACTS_FOLDER: $ARTIFACTS_FOLDER
+    SLACK_MSG_FILE: "${ARTIFACTS_FOLDER}/slack_publish_file.txt"

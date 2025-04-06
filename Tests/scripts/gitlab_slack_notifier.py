@@ -38,6 +38,7 @@ from Tests.scripts.common import (
     CONTENT_NIGHTLY,
     CONTENT_PR,
     DOCKERFILES_PR,
+    RIT_MR,
     SECRETS_FOUND,
     TEST_MODELING_RULES_REPORT_FILE_NAME,
     TEST_PLAYBOOKS_REPORT_FILE_NAME,
@@ -64,6 +65,7 @@ from Tests.scripts.generic_test_report import (
     read_test_objects_to_jira_mapping,
 )
 from Tests.scripts.github_client import GithubPullRequest
+from Tests.scripts.gitlab_client import GitlabMergeRequest
 from Tests.scripts.test_playbooks_report import TEST_PLAYBOOKS_TO_JIRA_TICKETS_CONVERTED, read_test_playbook_to_jira_mapping
 from Tests.scripts.utils.log_util import install_logging
 
@@ -90,10 +92,10 @@ SLACK_USERNAME = "Content GitlabCI"
 SLACK_WORKSPACE_NAME = os.getenv("SLACK_WORKSPACE_NAME", "")
 REPOSITORY_NAME = os.getenv("REPOSITORY_NAME", "demisto/content")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
-CI_COMMIT_BRANCH = os.getenv("CI_COMMIT_BRANCH", "")
+CI_COMMIT_BRANCH = os.getenv("CI_COMMIT_BRANCH", "") or os.getenv("CI_COMMIT_REF_NAME", "")
 CI_COMMIT_SHA = os.getenv("CI_COMMIT_SHA", "")
 CI_SERVER_HOST = os.getenv("CI_SERVER_HOST", "")
-DEFAULT_BRANCH = "master"
+DEFAULT_BRANCH = os.getenv("CI_DEFAULT_BRANCH", "master")
 SLACK_NOTIFY = "slack-notify"
 ALL_FAILURES_WERE_CONVERTED_TO_JIRA_TICKETS = " (All failures were converted to Jira tickets)"
 UPLOAD_BUCKETS = [
@@ -695,6 +697,7 @@ def construct_slack_msg(
     pipeline_url: str,
     pipeline_failed_jobs: list[ProjectPipelineJob],
     pull_request: GithubPullRequest | None,
+    merge_request: GitlabMergeRequest | None,
     file: str | None,
     attachments: str | None,
     thread: str | None,
@@ -720,6 +723,14 @@ def construct_slack_msg(
             }
         )
 
+    if merge_request:
+        content_fields.append(
+            {
+                "title": "Merge Request",
+                "value": slack_link(merge_request.data["web_url"], replace_escape_characters(merge_request.data["title"])),
+                "short": False,
+            }
+        )
     # report failing unit-tests
     triggering_workflow_lower = triggering_workflow.lower()
 
@@ -798,6 +809,11 @@ def construct_slack_msg(
         pr_number = pull_request.data["number"]
         pr_title = replace_escape_characters(pull_request.data["title"])
         title += f" (PR#{pr_number} - {pr_title})"
+
+    if merge_request:
+        mr_number = merge_request.data["iid"]
+        mr_title = replace_escape_characters(merge_request.data["title"])
+        title += f" (MR#{mr_number} - {mr_title})"
 
     # In case we have failed tests we override the color only in case all the pipeline jobs have passed.
     if has_failed_tests:
@@ -1097,31 +1113,46 @@ def main():
             return
 
     pull_request = None
+    merge_request = None
+
     if options.current_branch != DEFAULT_BRANCH:
         try:
             branch = options.current_branch
             if triggering_workflow == BUCKET_UPLOAD and BUCKET_UPLOAD_BRANCH_SUFFIX in branch:
                 branch = branch[: branch.find(BUCKET_UPLOAD_BRANCH_SUFFIX)]
-            logging.info(f"Searching for pull request for origin branch:{options.current_branch} and calculated branch:{branch}")
-            pull_request = GithubPullRequest(
-                options.github_token,
-                repository=options.repository,
-                branch=branch,
-                fail_on_error=True,
-                verify=False,
-            )
-            author = pull_request.data.get("user", {}).get("login")
-            if triggering_workflow in {CONTENT_NIGHTLY, CONTENT_PR, CONTENT_DOCS_PR, CONTENT_DOCS_NIGHTLY, DOCKERFILES_PR}:
-                # This feature is only supported for content nightly and content pr workflows.
+            logging.info(f"Searching for PR/MR for origin branch:{options.current_branch} and calculated branch:{branch}")
+            if "cortex-content" in options.repository:
+                merge_request = GitlabMergeRequest(
+                    ci_token,
+                    branch=branch,
+                )
+                author = merge_request.data.get("author", {}).get("username", "")
+                merge_request = merge_request if merge_request.data else None
+            else:
+                pull_request = GithubPullRequest(
+                    options.github_token,
+                    repository=options.repository,
+                    branch=branch,
+                    fail_on_error=True,
+                    verify=False,
+                )
+                author = pull_request.data.get("user", {}).get("login")
+                pull_request = pull_request if pull_request.data else None
+
+            if triggering_workflow in {
+                CONTENT_NIGHTLY,
+                CONTENT_PR,
+                CONTENT_DOCS_PR,
+                CONTENT_DOCS_NIGHTLY,
+                DOCKERFILES_PR,
+                RIT_MR,
+            }:
                 computed_slack_channel = f"@{get_slack_user_name(author, author, options.name_mapping_path)}"
+                logging.info(f"Sending slack message to channel {computed_slack_channel} for " f"Author:{author}")
             else:
                 logging.info(f"Not supporting custom Slack channel for {triggering_workflow} workflow")
-            logging.info(
-                f"Sending slack message to channel {computed_slack_channel} for "
-                f"Author:{author} of PR#{pull_request.data.get('number')}"
-            )
-        except Exception:
-            logging.error(f"Failed to get pull request data for branch {options.current_branch}")
+        except Exception as e:
+            logging.exception(f"Failed to get PR/MR data for branch {options.current_branch}: {e}")
     else:
         logging.info("Not a pull request build, skipping PR comment")
 
@@ -1131,12 +1162,14 @@ def main():
         pipeline_url,
         pipeline_failed_jobs,
         pull_request,
+        merge_request,
         options.file,
         options.attachments,
         options.thread,
         options.dry_run,
         custom_title,
     )
+
     slack_msg_output_file = ROOT_ARTIFACTS_FOLDER / SLACK_MESSAGE
     logging.info(f"Writing Slack message to {slack_msg_output_file}")
     write_json_to_file(slack_msg_data, slack_msg_output_file)

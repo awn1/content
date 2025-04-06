@@ -1,0 +1,317 @@
+.setup-network-certs: &setup-network-certs
+  - section_start "Setup network certs" --collapsed
+  - chmod 700 ${CERTIFICATE_SETUP_SCRIPT}
+  - source ${CERTIFICATE_SETUP_SCRIPT}
+  - section_end "Setup network certs"
+
+.create_artifacts_folder: &create_artifacts_folder
+  - section_start "Create Artifacts folder" --collapsed
+  - |
+    if [[ -n "${ARTIFACTS_FOLDER}" ]] && [[ ! -d "${ARTIFACTS_FOLDER}/logs" ]]; then
+      echo "Creating Artifacts folder: ${ARTIFACTS_FOLDER} and it's log folder"
+      mkdir -p -m 777 "${ARTIFACTS_FOLDER}/logs" # using the -p to create the logs folder as well.
+    fi
+  - section_end "Create Artifacts folder"
+
+
+.poetry-install:
+  - section_start "poetry-install" --collapsed
+  # Install Poetry
+  - curl -sSL https://install.python-poetry.org | python3 - --version "${POETRY_VERSION}"
+  - poetry --version
+  - poetry install
+  - section_end "poetry-install"
+
+
+.gitlab_ci_build_parameters: &gitlab_ci_build_parameters
+  - section_start "Gitlab CI Build Parameters" --collapsed
+  - set | grep -E "^CI_.*=|^GITLAB.*=|^WORKFLOW_PIPELINE_NAME=|^WORKFLOW=|^SLACK_CHANNEL=" | sort
+  - section_end "Gitlab CI Build Parameters"
+
+
+.install-go:
+    - section_start "Install go"
+    - echo "Installing go version ${GO_VERSION}"
+    - rm -rf /usr/local/go;
+    - curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz --output go${GO_VERSION}.linux-amd64.tar.gz;
+    - tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz;
+    - export PATH=$PATH:/usr/local/go/bin;
+    - go version
+    - section_end "Install go"
+    - section_start "Install go utilities"
+    # Install cortex-platform-sdk
+    - section_start "Install cortex-platform-sdk"
+    # Taken from https://gitlab.xdr.pan.local/xdr/development/gonzo/-/blob/dev/docs/Installation.md
+    - echo "Installing cortex-platform-sdk"
+    - git clone https://svc-xsoar-gitlab-mir:$GITLAB_STATUS_TOKEN@gitlab.xdr.pan.local/xdr/development/cortex-platform-sdk.git --single-branch --branch auth-script-run-on-startup /tmp/cortex-platform-sdk;
+    - /tmp/cortex-platform-sdk/golang/build-common/scripts/auth-helper/setup_go_auth.sh --setup-all;
+    - go env GOPROXY
+    # "go env GOPROXY" expected output: https://europe-west4-go.pkg.dev/xdr-shared-services-prod-eu-01/cortex-platform-go-private,https://proxy.golang.org,direct
+    - go env GONOSUMDB
+    # "go env GONOSUMDB" expected output: gitlab.xdr.pan.local/xdr/development/cortex-platform-sdk/*
+    - section_end "Install cortex-platform-sdk"
+
+    # Install gonzo RIT utilities
+    - section_start "Install RIT utilities"
+    - echo "Installing gonzo RIT utilities"
+    - git clone https://svc-xsoar-gitlab-mir:$GITLAB_STATUS_TOKEN@gitlab.xdr.pan.local/xdr/development/gonzo.git --single-branch --branch ${GONZO_BRANCH_NAME} /tmp/cortex-gonzo;
+    - section_end "Install RIT utilities"
+    - section_end "Install go utilities"
+
+
+.build-rit-schema-validator:
+    # Build rit-schema-validator
+    - ORIGINAL_DIR=$(pwd)
+    - section_start "Build rit-schema-validator"
+    - echo "Building rit-schema-validator"
+    - cd /tmp/cortex-gonzo/src/xdr.panw/collection/cloud-assets/cmd/rit-schema-validator
+    - go build
+    - section_end "Build rit-schema-validator"
+    - cd $ORIGINAL_DIR
+
+
+.build-rit-executor:
+  # Build rit-executor
+  - ORIGINAL_DIR=$(pwd)
+  - section_start "Build rit-executor"
+  - echo "Building rit-executor"
+  - cd /tmp/cortex-gonzo/src/xdr.panw/collection/cloud-assets/cmd/rit-executor
+  - go build
+  - section_end "Build rit-executor"
+  - cd $ORIGINAL_DIR
+
+.default-before-script:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - *setup-network-certs
+    - *gitlab_ci_build_parameters
+    - *create_artifacts_folder
+
+
+.default-job-settings:
+  interruptible: true
+  extends:
+    - .default-before-script
+
+.trigger-slack-notification:
+  stage: .post
+  trigger:
+    include:
+      - file: .gitlab/ci/rit-ci/.gitlab-ci.slack-notify.yml
+        ref: "new-rit-ci-cd" # TODO
+        project: "${CI_PROJECT_NAMESPACE}/infra"
+  inherit: # see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27775
+    variables: false
+
+
+.create-artifacts-repositories-folder:
+  - section_start "Create Artifacts Repositories Folder" --collapsed
+  - |
+    if [[ ! -d "${CI_PROJECT_DIR}/artifacts/repositories" ]]; then
+      echo "Creating repositories folder:${CI_PROJECT_DIR}/artifacts/repositories"
+      mkdir -p -m 777 "${CI_PROJECT_DIR}/artifacts/repositories" # using the -p to create the folder hierarchy.
+    fi
+  - section_end "Create Artifacts Repositories Folder"
+
+
+.check_user_permissions:
+  - section_start "Check User Permissions"
+  - |
+    if [[ "${PUBLISH}" == "true" && "${DEST_BUCKET}" == "prod" ]]; then
+        echo "Publish action to 'prod' bucket triggered, checking user permissions."
+        ALLOWED_USERS="${USERS_ALLOWED_TRIGGER_RELEASE}"
+        if [[ -z "$GITLAB_USER_NAME" ]] || [[ -z "$(echo $ALLOWED_USERS | grep -w "$GITLAB_USER_NAME")" ]]; then
+            echo -e "${RED}Error: User '$GITLAB_USER_NAME' is not allowed to trigger this flow, only one of:\n${ALLOWED_USERS}"
+            job-done
+            exit 1
+        else
+            echo "User '${GITLAB_USER_NAME}' is authorized to trigger this flow."
+        fi
+      fi
+  - section_end "Check User Permissions"
+
+
+.jobs-done-check:
+  stage: are-jobs-really-done
+  extends:
+    - .default-job-settings
+  script:
+    - !reference [ .create-artifacts-repositories-folder ]
+    - !reference [ .clone-content-test-conf-and-infra ]
+    - !reference [ .poetry-install ]
+    - poetry run python3 -u ./Tests/scripts/check_jobs_done.py --triggering-workflow "${WORKFLOW}" --job-done-files "${PIPELINE_JOBS_FOLDER}"
+
+
+.clone-content-test-conf-and-infra: # same code for all the Repos
+  - section_start "Clone content-test-conf and infra" --collapsed
+  - exec 3>&1 4>&2
+  - exec > >(tee -a "${ARTIFACTS_FOLDER}/logs/clone_demisto_content_test_conf_and_infra.log") 2>&1
+  - |
+    set +e
+
+    clone_repository() {
+      local host=$1
+      local user=$2
+      local token=$3
+      local repo_name=$4
+      local branch=$5
+      local retry_count=$6
+      local sleep_time=${7:-10}  # default sleep time is 10 seconds.
+      local exit_code=0
+      local i=1
+      echo -e "${PURPLE}Checking if repository repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} already exists in ${CI_PROJECT_DIR}/artifacts/repositories/${repo_name}${NC}"
+      if [ -d "${CI_PROJECT_DIR}/artifacts/repositories/${repo_name}" ]; then
+        echo -e "${GREEN}Repository ${repo_name} already exists, no need to clone it again${NC}"
+        return 0
+      fi
+      echo -e "${PURPLE}Cloning repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} from ${host} branch:${branch} with ${retry_count} retries${NC}"
+      if [ -z "${user}" ] && [ -z "${token}" ]; then
+        user_info=""
+      else
+        user_info="${user}:${token}@"
+        # If either user or token is not empty, then we need to add them to the url.
+      fi
+      pushd "${CI_PROJECT_DIR}/artifacts/repositories" || exit 1
+      for ((i=1; i <= retry_count; i++)); do
+        git -c advice.detachedHead=false clone --depth=1 "https://${user_info}${host}/${CI_PROJECT_NAMESPACE}/${repo_name}.git" --branch "${branch}" && exit_code=0 && break || exit_code=$?
+        if [ ${i} -ne "${retry_count}" ]; then
+          echo -e "${YELLOW}Failed to clone repository:${repo_name}, with branch:${branch}, project namespace:${CI_PROJECT_NAMESPACE}, exit code:${exit_code}, sleeping for ${sleep_time} seconds and trying again${NC}"
+          sleep "${sleep_time}"
+        else
+          echo -e "${RED}Failed to clone repository:${repo_name} with branch:${branch}, project namespace:${CI_PROJECT_NAMESPACE}, exit code:${exit_code}, exhausted all ${retry_count} retries${NC}"
+          break
+        fi
+      done
+      popd || exit 1
+      return ${exit_code}
+    }
+
+    clone_repository_with_fallback_branch() {
+      local host=$1
+      local user=$2
+      local token=$3
+      local repo_name=$4
+      local branch=$5
+      local retry_count=$6
+      local sleep_time=${7:-10}  # default sleep time is 10 seconds.
+      local fallback_branch="${8:-master}"
+
+      # Check if branch exists in the repository.
+      echo -e "${PURPLE}Checking if branch/tag ${branch} exists in repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE}${NC}"
+      if [ -z "${user}" ] && [ -z "${token}" ]; then
+        user_info=""
+      else
+        # If either user or token is not empty, then we need to add them to the url.
+        user_info="${user}:${token}@"
+      fi
+      local tag_exists
+      local branch_type="branch"
+      if [[ ${branch} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "branch ${branch} is formatted like a version (v0.0.0), checking for a matching tag"
+          git ls-remote --exit-code --quiet --tags "https://${user_info}${host}/${CI_PROJECT_NAMESPACE}/${repo_name}.git" "${branch}" 1>/dev/null 2>&1
+          tag_exists=$?
+          if [[ "${tag_exists}" -ne 0 ]]; then
+            echo -e "${PURPLE}Could not find a tag called ${branch}${NC}"
+          else
+            branch_type="tag"
+            echo -e "${GREEN}Found a tag called ${branch}${NC}"
+          fi
+      else
+          echo "branch ${branch} is not formatted like a version (v0.0.0), skipping tag check"
+          tag_exists=-1 # default, for when the branch isn't version-like named
+      fi
+
+      if [[ "${tag_exists}" -ne 0 ]]; then
+          echo "Searching for a branch called ${branch}"
+          git ls-remote --exit-code --quiet --heads "https://${user_info}${host}/${CI_PROJECT_NAMESPACE}/${repo_name}.git" "${branch}" 1>/dev/null 2>&1
+          local branch_exists=$?
+      fi
+
+      if [[ "${tag_exists}" -ne 0 ]] && [[ "${branch_exists}" -ne 0 ]]; then
+        echo -e "${YELLOW}branch/tag:${branch} does not exist in repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE}, defaulting to ${fallback_branch}${NC}"
+        local exit_code=1
+      else
+        echo -e "${GREEN}${branch_type}:${branch} exists in repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE}, trying to clone${NC}"
+        clone_repository "${host}" "${user}" "${token}" "${repo_name}" "${branch}" "${retry_count}" "${sleep_time}"
+        local exit_code=$?
+        if [ "${exit_code}" -ne 0 ]; then
+          echo -e "${YELLOW}Failed to clone repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} with ${branch_type}:${branch}, exit code:${exit_code}${NC}"
+        fi
+      fi
+      if [ "${exit_code}" -ne 0 ]; then
+        # Trying to clone from fallback branch.
+        echo -e "${PURPLE}Trying to clone repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} with fallback branch ${fallback_branch}!${NC}"
+        clone_repository "${host}" "${user}" "${token}" "${repo_name}" "${fallback_branch}" "${retry_count}" "${sleep_time}"
+        local exit_code=$?
+        if [ ${exit_code} -ne 0 ]; then
+          echo -e "${RED}ERROR: Failed to clone repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} with fallback branch:${fallback_branch}, exit code:${exit_code}, exiting!${NC}"
+          exit ${exit_code}
+        else
+          echo -e "${GREEN}Successfully cloned repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} with fallback branch:${fallback_branch}${NC}"
+          return 0
+        fi
+      else
+        echo -e "${GREEN}Successfully cloned repository:${repo_name}, project namespace:${CI_PROJECT_NAMESPACE} with branch:${branch}${NC}"
+        return 0
+      fi
+    }
+
+    TEST_UPLOAD_BRANCH_SUFFIX="-upload_test_branch-"
+    # Search for the branch name with the suffix of '-upload_test_branch-' in case it exists using CI_COMMIT_REF_NAME to clone content-test-conf.
+    if [[ "${CI_COMMIT_REF_NAME}" == *"${TEST_UPLOAD_BRANCH_SUFFIX}"* ]]; then
+      # Using bash string pattern matching to search only the last occurrence of the suffix, that's why we use a single '%'.
+      SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF="${CI_COMMIT_REF_NAME%"${TEST_UPLOAD_BRANCH_SUFFIX}"*}"
+      echo "Found branch with suffix ${TEST_UPLOAD_BRANCH_SUFFIX} in branch name, using the branch ${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF} to clone content-test-conf repository"
+    else
+      # default to CI_COMMIT_REF_NAME when the suffix is not found.
+      echo "Didn't find a branch with suffix ${TEST_UPLOAD_BRANCH_SUFFIX} in branch name, using the branch ${CI_COMMIT_REF_NAME} to clone content-test-conf repository, with fallback to master"
+      SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF="${CI_COMMIT_REF_NAME}"
+    fi
+
+    if [[ "${CURRENT_BRANCH_NAME}" == "master" ]] || [[ ${CURRENT_BRANCH_NAME} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      echo "Getting infra with branch:${CURRENT_BRANCH_NAME}"
+      echo -e "${BLUE}NOTE: If you want to run the build on a specific branch in infra,\nYou need to replace the environment variable INFRA_BRANCH in the .gitlab-ci.yml file\nWith the name of the branch that exists in infra.${NC}"
+    else
+      echo "Getting infra with branch:${CURRENT_BRANCH_NAME}, with fallback to master"
+    fi
+
+    echo "Getting content-test-conf with branch${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF}, with fallback to master"
+
+    CI_SERVER_HOST=${CI_SERVER_HOST:-gitlab.xdr.pan.local} # disable-secrets-detection
+
+    clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "content-test-conf" "${SEARCHED_BRANCH_NAME_CONTENT_TEST_CONF}" 3 10 "master"
+
+    if [ ! -d "${CI_PROJECT_DIR}/config" ]; then mkdir -p "${CI_PROJECT_DIR}/config"; else echo "Directory ${CI_PROJECT_DIR}/config already exists"; fi
+    cp -r "${CI_PROJECT_DIR}/artifacts/repositories/content-test-conf/config/"* "${CI_PROJECT_DIR}/config/"
+
+    NAME_MAPPING_PATH="${CI_PROJECT_DIR}/config/name_mapping.json"
+    if [ ! -f "${NAME_MAPPING_PATH}" ]; then
+      echo "File ${NAME_MAPPING_PATH} does not exist, exiting!"
+      exit 1;
+    fi
+
+    clone_repository_with_fallback_branch "${CI_SERVER_HOST}" "gitlab-ci-token" "${CI_JOB_TOKEN}" "infra" "${CURRENT_BRANCH_NAME}" 3 10 "master"
+
+    [ ! -d "${CI_PROJECT_DIR}/Tests" ] && mkdir -p "${CI_PROJECT_DIR}/Tests" || echo "Tests directory already exists"
+    [ ! -d "${CI_PROJECT_DIR}/Utils" ] && mkdir -p "${CI_PROJECT_DIR}/Utils" || echo "Utils directory already exists"
+    [ ! -d "${CI_PROJECT_DIR}/config" ] && mkdir -p "${CI_PROJECT_DIR}/config" || echo "config directory already exists"
+    [ ! -d "${CI_PROJECT_DIR}/rit_automations" ] && mkdir -p "${CI_PROJECT_DIR}/rit_automations" || echo "rit_automations directory already exists"
+    # COPY DIRECTORIES
+    cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/Tests/"* "${CI_PROJECT_DIR}/Tests"
+    cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/rit_automations/"* "${CI_PROJECT_DIR}/rit_automations"
+    cp -rf "${CI_PROJECT_DIR}/artifacts/repositories/infra/Utils/"* "${CI_PROJECT_DIR}/Utils"
+    # COPY FILES
+    if [ "${USE_INFRA_PYPROJECT_TOML}" = "true" ]; then
+      echo "Copying infra pyproject.toml and poetry.lock files to the root directory"
+      cp -f "${CI_PROJECT_DIR}/artifacts/repositories/infra/pyproject.toml"* "${CI_PROJECT_DIR}"
+      cp -f "${CI_PROJECT_DIR}/artifacts/repositories/infra/poetry.lock"* "${CI_PROJECT_DIR}"
+    else
+      echo "Not copying infra pyproject.toml and poetry.lock files to the root directory"
+    fi
+
+    set -e
+    echo "Successfully cloned content-test-conf and infra repositories"
+
+  - exec 1>&3 2>&4
+  - exec 3>&- 4>&-
+  - section_end "Clone content-test-conf and infra"
