@@ -1163,7 +1163,7 @@ def search_and_install_packs_and_their_dependencies(
                 one_by_one_success = True
                 for one_by_one_packs in batch_dependencies:
                     pack_success, _ = install_packs(
-                        client, host, one_by_one_packs, attempts_count=1, all_packs_dependencies_data=all_packs_dependencies_data
+                        client, host, one_by_one_packs, attempts_count=2, all_packs_dependencies_data=all_packs_dependencies_data
                     )
                     if not pack_success:
                         logging.error(f"Failed to install pack one by one: {one_by_one_packs}.")
