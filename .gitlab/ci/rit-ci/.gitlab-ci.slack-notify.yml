@@ -12,10 +12,10 @@ stages:
 
 include:
   - file: .gitlab/ci/rit-ci/.gitlab-ci.variables.yml
-    ref: "new-rit-ci-cd" # TODO
+    ref: "master"
     project: "${CI_PROJECT_NAMESPACE}/infra"
   - file: .gitlab/ci/rit-ci/.gitlab-ci.global.yml
-    ref: "new-rit-ci-cd" # TODO
+    ref: "master"
     project: "${CI_PROJECT_NAMESPACE}/infra"
 
 

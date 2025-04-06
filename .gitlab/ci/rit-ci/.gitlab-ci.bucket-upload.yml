@@ -186,7 +186,7 @@ slack-notify-publish:
     SLACK_ALLOW_FAILURE: 'true'
     CI_PROJECT_ID: $CI_PROJECT_ID
     CI_SERVER_URL: $CI_SERVER_URL
-    CURRENT_BRANCH_NAME: "new-rit-ci-cd" # TODO
+    CURRENT_BRANCH_NAME: "master"
     REPOSITORY_NAME: "cortex-content/prisma-collectors"
     ARTIFACTS_FOLDER: $ARTIFACTS_FOLDER
     SLACK_MSG_FILE: "${ARTIFACTS_FOLDER}/slack_publish_file.txt"

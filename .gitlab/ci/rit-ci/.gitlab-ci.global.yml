@@ -98,7 +98,7 @@
   trigger:
     include:
       - file: .gitlab/ci/rit-ci/.gitlab-ci.slack-notify.yml
-        ref: "new-rit-ci-cd" # TODO
+        ref: "master"
         project: "${CI_PROJECT_NAMESPACE}/infra"
   inherit: # see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27775
     variables: false
