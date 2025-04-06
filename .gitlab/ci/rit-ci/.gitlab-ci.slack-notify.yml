@@ -1,0 +1,55 @@
+default:
+  image: ${DOCKER_IO}/devdemisto/gitlab-content-ci:1.0.0.64455
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - ${CI_PROJECT_DIR}/artifacts/*
+      - ${CI_PROJECT_DIR}/pipeline_jobs_folder/*
+    when: always
+
+stages:
+  - notify
+
+include:
+  - file: .gitlab/ci/rit-ci/.gitlab-ci.variables.yml
+    ref: "new-rit-ci-cd" # TODO
+    project: "${CI_PROJECT_NAMESPACE}/infra"
+  - file: .gitlab/ci/rit-ci/.gitlab-ci.global.yml
+    ref: "new-rit-ci-cd" # TODO
+    project: "${CI_PROJECT_NAMESPACE}/infra"
+
+
+.before-script-slack-notify:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.gitlab_ci_build_parameters]
+    - !reference [.create_artifacts_folder]
+    - !reference [.create-artifacts-repositories-folder]
+    - !reference [.clone-content-test-conf-and-infra]
+    - !reference [.poetry-install]
+
+slack-notify:
+  tags:
+    - gke
+  stage: notify
+  rules:
+    - when: always
+  extends:
+    - .before-script-slack-notify
+  script:
+    - |
+      SLACK_ARGS=()
+      SLACK_ARGS=()
+      if [ -n "${SLACK_MSG_FILE}" ] && [ -f "${SLACK_MSG_FILE}" ]; then
+        SLACK_ARGS+=("--file" "${SLACK_MSG_FILE}")
+      fi
+      if [ -n "${SLACK_MSG_THREAD}" ] && [ -f "${SLACK_MSG_THREAD}" ]; then
+        SLACK_ARGS+=("--thread" "${SLACK_MSG_THREAD}")
+      fi
+      poetry run python3 -u ./Tests/scripts/gitlab_slack_notifier.py -p "${PIPELINE_TO_QUERY}" -s "${SLACK_TOKEN}" -c "${GITLAB_STATUS_TOKEN}" -ch "${SLACK_CHANNEL}" --triggering-workflow "${WORKFLOW}" --allow-failure "${SLACK_ALLOW_FAILURE}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json" "${SLACK_ARGS[@]}"
+  retry:
+    max: 2
+  needs:
+    - pipeline: $PIPELINE_TO_QUERY
+      job: $JOB_NAME

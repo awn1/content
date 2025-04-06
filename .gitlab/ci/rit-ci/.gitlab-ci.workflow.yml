@@ -1,0 +1,47 @@
+variables:
+  WORKFLOW_PIPELINE_NAME: 'Pipeline for branch: $CI_COMMIT_REF_NAME'
+
+workflow:
+  name: '$WORKFLOW_PIPELINE_NAME'
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Merge request #$CI_MERGE_REQUEST_IID pipeline for branch $CI_COMMIT_REF_NAME to $CI_MERGE_REQUEST_TARGET_BRANCH_NAME'
+        WORKFLOW: 'RIT MR'
+
+    # Rule for Nightly
+    - if: '$IS_NIGHTLY == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Scheduled RIT Nightly pipeline for branch: $CI_COMMIT_REF_NAME'
+        WORKFLOW: 'RIT Nightly'
+
+    # Rule for RELEASE
+    - if: '$RELEASE == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Release pipeline for branch: $CI_COMMIT_REF_NAME, platform version: $PLATFORM_VERSION'
+        WORKFLOW: 'RIT Release'
+
+    # Rule for Publish new version to buckets
+    - if: '$PUBLISH == "true" && $DEST_BUCKET == "prod"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Publish pipeline for platform version: $PLATFORM_VERSION to ${DEST_BUCKET} bucket'
+        DESTINATION_BUCKET: "${GCS_PROD_BUCKET}"
+        WORKFLOW: 'RIT Publish'
+        JOB_TAG: 'cortex-content-prod-1738'
+
+    - if: '$PUBLISH == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Publish pipeline for platform version: $PLATFORM_VERSION to ${DEST_BUCKET} bucket'
+        DESTINATION_BUCKET: "${GCS_PROD_DEV_BUCKET}"
+        WORKFLOW: 'RIT Publish'
+        JOB_TAG: 'cortex-content-1738'
+
+    # Rule for dev branch merged into master OR for hotfix branch merged into hotfix branch OR for private branch merged to dev branch
+    - if: '$CI_PIPELINE_SOURCE == "push" && ($CI_COMMIT_REF_NAME == "master" || $CI_COMMIT_REF_NAME == "dev" || $CI_COMMIT_REF_NAME =~ /^hotfix.*/)'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Merge to $CI_COMMIT_REF_NAME pipeline'
+        WORKFLOW: $CI_PIPELINE_NAME
+        SLACK_CHANNEL: $INTERNAL_SLACK_CHANNEL
+
+    # Don't add any other rules after this one.
+    - when: always  # Other pipelines can run, but use the default name

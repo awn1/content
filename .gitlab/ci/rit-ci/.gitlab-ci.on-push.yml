@@ -1,0 +1,298 @@
+.default-build-rule:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && ($CI_COMMIT_REF_NAME == "master" || $CI_COMMIT_REF_NAME == "dev" || $CI_COMMIT_REF_NAME =~ /^hotfix.*/)'
+    - if: '$RELEASE == "true"'
+    - if: '$IS_NIGHTLY == "true"'
+
+.default-build-rule-always:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+      variables:
+        WORKFLOW: 'RIT MR'
+    - if: '$CI_PIPELINE_SOURCE == "push" && ($CI_COMMIT_REF_NAME == "master" || $CI_COMMIT_REF_NAME == "dev" || $CI_COMMIT_REF_NAME =~ /^hotfix.*/)'
+      when: always
+      variables:
+        WORKFLOW: 'Merge to $CI_COMMIT_REF_NAME pipeline'
+        SLACK_CHANNEL: $INTERNAL_SLACK_CHANNEL
+    - if: '$IS_NIGHTLY == "true"'
+      when: always
+      variables:
+        WORKFLOW: 'RIT Nightly'
+        SLACK_CHANNEL: $INTERNAL_SLACK_CHANNEL
+
+upload-to-internal-dev-bucket:
+  stage: Upload
+  tags:
+    - cortex-content-1738
+  extends:
+    - .default-job-settings
+    - .default-build-rule
+  variables:
+    BUCKET_NAME: "${GCS_INTERNAL_DEV_BUCKET}/builds/${CI_COMMIT_REF_NAME}/${CI_PIPELINE_ID}" # Default BUCKET_NAME value
+  script:
+    - section_start "Zip RITs files" --collapsed
+    - TIMESTAMP="${CI_JOB_TIMESTAMP:-$(date +%Y%m%d%H%M%S)}"
+    - CI_COMMIT_SHA="${CI_COMMIT_SHORT_SHA}"
+    - |
+      if [ -n "${PLATFORM_VERSION}" ]; then
+        echo "Using given platform version ${PLATFORM_VERSION}"
+        ZIP_FILE_NAME="${PLATFORM_VERSION}_${TIMESTAMP}_${CI_COMMIT_SHA}_content.zip"
+      else
+        ZIP_FILE_NAME="${TIMESTAMP}_${CI_COMMIT_SHA}_content.zip"
+      fi
+    - echo "ZIP metadata -> TIMESTAMP=$TIMESTAMP, CI_COMMIT_SHA=$CI_COMMIT_SHA, PLATFORM_VERSION=$PLATFORM_VERSION"
+    - echo "ZIP file name will be -> ${ZIP_FILE_NAME}"
+    - zip -r "${ZIP_FILE_NAME}" "${RIT_FOLDER_NAME}"
+    - section_end "Zip RITs files"
+
+    - section_start "Upload Packs To Marketplace Storage"
+    - |
+      if [[ "${RELEASE}" == "true" && "${CI_COMMIT_REF_NAME}" == "master" ]]; then
+        BUCKET_NAME="${GCS_INTERNAL_DEV_BUCKET}/release"
+      elif [[ "${RELEASE}" == "true" ]]; then
+        BUCKET_NAME="${GCS_INTERNAL_DEV_BUCKET}/hotfix"
+      fi
+      echo "Destination bucket name: $BUCKET_NAME"
+    - DEST_URL="${BUCKET_NAME}/${TIMESTAMP}/"
+    - echo "Uploading ${ZIP_FILE_NAME} to bucket -> https://console.cloud.google.com/storage/browser/${DEST_URL}"
+    - gcloud storage cp "${ZIP_FILE_NAME}" gs://${DEST_URL}
+    - |
+      echo -e "${PINK}Copy gsutil URI:\ngs://${DEST_URL}${ZIP_FILE_NAME}${NC}"
+      echo "[{\"color\": \"good\", \"text\": \"The released file gsutil URI: <gs://${DEST_URL}${ZIP_FILE_NAME}|${ZIP_FILE_NAME}>\"}]" > "${ARTIFACTS_FOLDER}/gcs_destination_path.txt"
+    - section_end "Upload Packs To Marketplace Storage"
+    - job-done
+
+
+release-tag:
+  stage: Release
+  tags:
+    - cortex-content-1738
+  extends:
+    - .default-job-settings
+  rules:
+    - if: '$RELEASE == "true"'
+  script:
+    - !reference [ .create-artifacts-repositories-folder ]
+    - !reference [ .clone-content-test-conf-and-infra ]
+    - !reference [ .poetry-install ]
+    - section_start "Release new tag and changelog"
+    - poetry run python3 -u ./rit_automations/gitlab_generate_tag.py --tag "${PLATFORM_VERSION}" --gitlab-token "${GITLAB_STATUS_TOKEN}"
+    - section_end "Release new tag and changelog"
+    - section_start "Update Publish Logs file"
+    - poetry run python3 -u ./rit_automations/update_publish_logs.py --gitlab-token "${GITLAB_STATUS_TOKEN}"
+    - section_end "Update Publish Logs file"
+    - job-done
+
+
+run-schema-validator:
+  stage: Test RIT
+  extends:
+    - .default-build-rule
+    - .default-job-settings
+  script:
+    - section_start "Check Changed YAML Files"
+    - |
+      if [ -n "$CI_MERGE_REQUEST_ID" ]; then
+        git fetch origin ${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}
+        CHANGED_FILES=$(git diff --name-only ${CI_MERGE_REQUEST_DIFF_BASE_SHA}...${CI_COMMIT_SHA})
+        CHANGED_YAML_FILES=$(echo "${CHANGED_FILES}" | grep "${RIT_FOLDER_NAME}/.*\.yaml" || true)
+        if [[ -z "$CHANGED_YAML_FILES" ]]; then
+          echo -e "${PINK}No relevant YAML files changed in this merge request. Skipping execution.${NC}"
+          job-done
+          exit 0
+        fi
+        echo -e "Changed YAML files:\n${CHANGED_YAML_FILES}"
+      else
+        echo -e "${PINK}Not a merge request. Processing all rit files...${NC}"
+        CHANGED_YAML_FILES=$(find "${RIT_FOLDER_NAME}" -type f \( -iname "*.yaml" -o -iname "*.yml" \))
+      fi
+    - section_end "Check Changed YAML Files"
+    - !reference [ .install-go ]
+    - !reference [ .build-rit-schema-validator ]
+    - section_start "Validate changed files"
+    - |
+      set +e
+      SKIP_LIST=$(grep -vE '^\s*#|^\s*$' skip_rit_schema_validator.csv || true)
+      passed=0 total=0 skipped=0 failed_files=()
+      for file in $CHANGED_YAML_FILES; do
+        total=$((total + 1))
+        if echo "$SKIP_LIST" | grep -q "^$(basename $file)$"; then
+          skipped=$((skipped + 1))
+          echo -e "${YELLOW}⚠️ SKIPPED validation of ${file} (listed in skip_rit_schema_validator.csv)${NC}"
+          continue
+        fi
+        validation_output=$(/tmp/cortex-gonzo/src/xdr.panw/collection/cloud-assets/cmd/rit-schema-validator/rit-schema-validator "$file")
+        if [ $? -eq 0 ]; then
+          passed=$((passed + 1))
+          echo -e "${GREEN}✅ PASSED validation of ${file}${NC}"
+        else
+          failed_files+=("$(basename $file .yaml)")
+          echo -e "${RED}❌ FAILED validation of ${file}${NC}"
+          echo -e "${RED}$validation_output${NC}"
+        fi
+      done
+      set -e
+      echo -e "\n${CYAN}${BOLD}Test Results:${NC}\n${CYAN}${BOLD}Total: $total${NC}\n${GREEN}${BOLD}✅ Passed: $passed${NC}\n${YELLOW}${BOLD}⚠️ Skipped: $skipped${NC}\n${RED}${BOLD}❌ Failed: ${#failed_files[@]}${NC}"
+      [[ ${#failed_files[@]} -gt 0 ]] && echo -e "${RED}${BOLD}❌ Failed RIT tests:${NC}\n$(printf "${RED}%s${NC}\n" "${failed_files[@]}")" && exit 1
+      echo -e "${GREEN}${BOLD}All RIT validations passed successfully!${NC}"
+    - section_end "Validate changed files"
+    - job-done
+
+
+verify-settings-release:
+  stage: .pre
+  rules:
+    - if: '$RELEASE == "true"'
+      when: always
+  extends:
+    - .default-job-settings
+  script:
+    - section_start "Validating input parameters"
+    - |
+      # Check if required parameters are provided and valid
+      if [[ ! "${CI_COMMIT_REF_NAME}" =~ ^hotfix.*$ && "${CI_COMMIT_REF_NAME}" != "master" ]]; then
+        echo -e "${RED}Error: Releases can only be triggered from 'master' or 'hotfix*' branches.${NC}"
+        exit 1
+      fi
+    - |
+      if [ -z "${PLATFORM_VERSION}" ]; then
+        echo -e "${RED}Error: PLATFORM_VERSION is not provided. This parameter is required.${NC}"
+        exit 1
+      fi
+    - echo -e "${GREEN}Validation passed successfully.${NC}"
+    - section_end "Validating input parameters"
+    - job-done
+
+
+run-rit-executor:
+  stage: Test RIT
+  extends:
+    - .default-build-rule
+    - .default-job-settings
+  script:
+    - section_start "Check Changed YAML Files"
+    - |
+      if [ -n "$CI_MERGE_REQUEST_ID" ]; then
+        git fetch origin ${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}
+        CHANGED_FILES=$(git diff --name-only ${CI_MERGE_REQUEST_DIFF_BASE_SHA}...${CI_COMMIT_SHA})
+        CHANGED_YAML_FILES=$(echo "${CHANGED_FILES}" | grep "${RIT_FOLDER_NAME}/.*\.yaml" || true)
+        if [ -z "$CHANGED_YAML_FILES" ]; then
+          echo -e "${PINK}No relevant YAML files changed in this merge request. Skipping execution.${NC}"
+          job-done
+          exit 0
+        fi
+        echo -e "Changed YAML files:\n${CHANGED_YAML_FILES}"
+      fi
+    - section_end "Check Changed YAML Files"
+    - !reference [ .create-artifacts-repositories-folder ]
+    - !reference [ .clone-content-test-conf-and-infra ]
+    - !reference [ .poetry-install ]
+    - !reference [ .install-go ]
+    - !reference [ .build-rit-executor ]
+    - section_start "Run rit-executor"
+    - poetry run python3 -u ./rit_automations/rit_executor.py
+    - section_end "Run rit-executor"
+    - section_start "Validate Recordings for Changed YAML Files"
+    - |
+      for file in ${CHANGED_YAML_FILES}; do
+        rit_name=$(basename "${file}" .yaml)
+        recording_path="${RECORDINGS_DIR}/${rit_name}"
+        if [ ! -d "${recording_path}" ]; then
+          echo -e "${YELLOW}Warning: No recording folder '${recording_path}' found for changed file '${file}'. Please record the RIT execution."
+        else
+          echo -e "${YELLOW}Note: Please verify that the recording for '${rit_name}' is up to date. If needed, record a new RIT execution."
+        fi
+      done
+    - section_end "Validate Recordings for Changed YAML Files"
+    - job-done
+
+
+jobs-done-check-on-push:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  extends:
+    - .jobs-done-check
+  needs:
+    - run-schema-validator
+    - run-rit-executor
+    - upload-to-internal-dev-bucket
+
+
+jobs-done-check-on-release:
+  rules:
+    - if: '$RELEASE == "true"'
+  extends:
+    - .jobs-done-check
+  needs:
+    - verify-settings-release
+    - run-schema-validator
+    - run-rit-executor
+    - upload-to-internal-dev-bucket
+    - release-tag
+
+
+fan-in:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "push" && ($CI_COMMIT_REF_NAME == "master" || $CI_COMMIT_REF_NAME == "dev" || $CI_COMMIT_REF_NAME =~ /^hotfix.*/)'
+      when: always
+    - if: '$RELEASE == "true"'
+      when: always
+    - if: '$PUBLISH == "true"'
+      when: always
+    - if: '$IS_NIGHTLY == "true"'
+      when: always
+  stage: fan-in
+  tags:
+    - gke
+  script:
+    - echo "RIT - fan in"
+
+
+slack-notify-release:
+  rules:
+    - if: '$RELEASE == "true"'
+      when: always
+  extends:
+    - .trigger-slack-notification
+  variables:  # Passes the environment variable from the parent pipeline to the child which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
+    JOB_NAME: 'fan-in'
+    WORKFLOW: 'RIT Release $CI_COMMIT_REF_NAME'
+    INTERNAL_SLACK_CHANNEL: $INTERNAL_SLACK_CHANNEL
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_JOB: 'true'
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
+    SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
+    SLACK_ALLOW_FAILURE: 'true'
+    CI_PROJECT_ID: $CI_PROJECT_ID
+    CI_SERVER_URL: $CI_SERVER_URL
+    CURRENT_BRANCH_NAME: "new-rit-ci-cd" # TODO
+    REPOSITORY_NAME: "cortex-content/prisma-collectors"
+    ARTIFACTS_FOLDER: $ARTIFACTS_FOLDER
+    SLACK_MSG_FILE: "${ARTIFACTS_FOLDER}/slack_changelog.txt"
+    SLACK_MSG_THREAD: "${ARTIFACTS_FOLDER}/publish_logs_opened_mr.txt"
+
+slack-notify-on-push:
+  extends:
+    - .trigger-slack-notification
+    - .default-build-rule-always
+  variables:  # Passes the environment variable from the parent pipeline to the child which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    WORKFLOW: $WORKFLOW
+    JOB_NAME: 'fan-in'
+    INTERNAL_SLACK_CHANNEL: $INTERNAL_SLACK_CHANNEL
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
+    SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
+    SLACK_JOB: 'true'
+    SLACK_ALLOW_FAILURE: 'true'
+    CI_PROJECT_ID: $CI_PROJECT_ID
+    CI_SERVER_URL: $CI_SERVER_URL
+    CURRENT_BRANCH_NAME: "new-rit-ci-cd" # TODO
+    REPOSITORY_NAME: "cortex-content/prisma-collectors"
+    ARTIFACTS_FOLDER: $ARTIFACTS_FOLDER
+    SLACK_MSG_FILE: "${ARTIFACTS_FOLDER}/gcs_destination_path.txt"
