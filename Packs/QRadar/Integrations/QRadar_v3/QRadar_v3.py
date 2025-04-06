@@ -2635,9 +2635,9 @@ def perform_long_running_loop(
         demisto.createIncidents(incidents, {LAST_FETCH_KEY: str(new_highest_id)})
         safely_update_context_data(context_data=context_data, version=ctx_version, should_update_last_fetch=True)
 
-        print_debug_msg(
-            f'Successfully Created {len(incidents)} incidents. Incidents created: {[incident["name"] for incident in incidents]}'
-        )
+        print_debug_msg(f'Successfully Created {len(incidents)} incidents. Incidents created:')
+        for incident in incidents:
+            print_debug_msg(f'Name: {incident["name"]} | Raw: {incident["rawJSON"]}')
 
 
 def recover_from_last_run(ctx: dict | None = None, version: Any = None):
