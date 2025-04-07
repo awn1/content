@@ -1,0 +1,201 @@
+# To run the creating-disposable-tenants pipeline
+# The following variables should be set in the pipeline's variables:
+#  1. CREATING_DISPOSABLE_TENANTS: "true"
+#  2. COUNT_PER_TYPE: <the number of new tenants to create per flow type>
+#  3. SERVER_TYPE: <the server type to create tenants for, either 'XSIAM' or 'XSOAR SAAS'>
+#  4. OWNER: <The username should be the owner of the tenants>
+#  5. FLOW_TYPES: <The flow types to create tenants for, e.g. "build,nightly,upload">
+#  6. TTL: <The number of hours the tenants should be kept for, e.g. "12">
+#  7. PIPELINE_SLACK_CHANNEL: <The Slack channel to notify duringhen the pipeline>
+#  8. PERMISSIONS_APPROVER: <The username of the permissions approver>
+#  9. PERMISSION_TICKET: <The ticket number for the permissions request>
+# https://gitlab.xdr.pan.local/xdr/cortex-content/infra/-/pipelines/new?ref=master&var[CREATING_DISPOSABLE_TENANTS]=true&var[COUNT_PER_TYPE]=&var[SERVER_TYPE]=&var[OWNER]=&var[FLOW_TYPES]=&var[TTL]=&var[PIPELINE_SLACK_CHANNEL]=dmst-content-machines&var[PERMISSIONS_APPROVER]=&var[PERMISSION_TICKET]=
+
+.creating-disposable-tenants-schedule-rule:
+  rules:
+    - if: '$CREATING_DISPOSABLE_TENANTS == "true"'
+
+.before-script-creating-disposable-tenants:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.poetry-install]
+    - !reference [.granting_execute_permissions_on_files]
+    - !reference [.setup-artifactory]
+    - !reference [.create_artifacts_folder]
+    - !reference [.create-artifacts-repositories-folder]
+    - !reference [.clone-content-test-conf]
+
+creating-disposable-tenants-job:
+  stage: creating-disposable-tenants
+  extends:
+    - .creating-disposable-tenants-schedule-rule
+    - .before-script-creating-disposable-tenants
+  variables:
+    ARTIFACTS_FOLDER: artifacts
+    ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+    NEW_TENANTS_PATH: "${ARTIFACT_PATH}/new_tenants.json"
+    SLACK_ALLOW_FAILURE: "false"
+    MESSAGE_TEXT: "Starting to create `${COUNT_PER_TYPE}` disposable tenants with server type: `${SERVER_TYPE}` and flow types: `${FLOW_TYPES}` by @${GITLAB_USER_LOGIN}, permissions approver `${PERMISSIONS_APPROVER}` : ${CI_PIPELINE_URL}"
+  script: |
+    section_start "Create disposable tenants"
+    export THREAD_TS=$(poetry run python3 -u "${CI_PROJECT_DIR}/Tests/scripts/gitlab_basic_slack_notifier.py" --message_text "${MESSAGE_TEXT}" -s "${SLACK_TOKEN}" --allow-failure "${SLACK_ALLOW_FAILURE}" -ch "${PIPELINE_SLACK_CHANNEL}" --name-mapping_path "" --print-thread-ts "true" 2>&1 | tee >(cat) | tail -n 1)
+    echo "Got THREAD_TS=${THREAD_TS}"
+    echo "THREAD_TS=${THREAD_TS}" >> variables.env
+    echo "NEW_TENANTS_PATH=${NEW_TENANTS_PATH}" >> variables.env
+    poetry run python3 -u "${CI_PROJECT_DIR}/Tests/creating_disposable_tenants/create_disposable_tenants.py" -c "${COUNT_PER_TYPE}" --server-type "${SERVER_TYPE}" -o "${NEW_TENANTS_PATH}" --owner "${OWNER}" --versions-file-path "${SAAS_SERVERS_VERSIONS_PATH}" --flow-types "${FLOW_TYPES}" --ttl "${TTL}"
+    section_end "Create disposable tenants"
+  artifacts:
+    reports:
+      dotenv: variables.env
+    expire_in: 30 days
+    paths:
+      - ${CI_PROJECT_DIR}/artifacts/*
+    when: always
+
+wait-for-disposable-tenants-to-be-created-job:
+  tags:
+    - long-running
+  stage: creating-disposable-tenants
+  extends:
+    - .creating-disposable-tenants-schedule-rule
+    - .before-script-creating-disposable-tenants
+  needs:
+    - creating-disposable-tenants-job
+  script:
+    - section_start "Wait for disposable tenants to be created"
+    - poetry run python3 -u "${CI_PROJECT_DIR}/Tests/creating_disposable_tenants/wait_disposable_tenants_ready.py" --tenants-file-path "${NEW_TENANTS_PATH}"
+    - section_end "Wait for disposable tenants to be created"
+
+request-permissions-job:
+  stage: ask-permissions
+  extends:
+    - .creating-disposable-tenants-schedule-rule
+    - .before-script-creating-disposable-tenants
+  variables:
+    ARTIFACTS_FOLDER: artifacts
+    ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+  script:
+    - section_start "Request permissions"
+    - poetry run python3 -u "${CI_PROJECT_DIR}/Tests/creating_disposable_tenants/ask_permissions_build_machines.py" --approver "${PERMISSIONS_APPROVER}" --artifact-folder "${ARTIFACT_PATH}" --tenants-file-path "${NEW_TENANTS_PATH}" --permission-ticket "${PERMISSION_TICKET}"
+    - section_end "Request permissions"
+
+wait-for-permissions-to-be-approved-job:
+  tags:
+    - long-running
+  stage: ask-permissions
+  extends:
+    - .creating-disposable-tenants-schedule-rule
+    - .before-script-creating-disposable-tenants
+  needs:
+    - request-permissions-job
+    - creating-disposable-tenants-job
+  variables:
+    ARTIFACTS_FOLDER: artifacts
+    ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+  script:
+    - section_start "Wait for permissions to be approved"
+    - poetry run python3 -u "${CI_PROJECT_DIR}/Tests/creating_disposable_tenants/wait_for_slack_permission_approval.py" --approver "${PERMISSIONS_APPROVER}" --tenants-file-path "${NEW_TENANTS_PATH}" --artifact_folder "${ARTIFACT_PATH}"
+    - section_end "Wait for permissions to be approved"
+
+update-workload-job:
+  tags:
+    - cortex-content-1738
+  stage: update-workloads-and-configmap
+  image: ${DOCKER_IO}/devdemisto/gitlab-content-ci:1.0.0.2485751
+  extends:
+    - .creating-disposable-tenants-schedule-rule
+    - .before-script-creating-disposable-tenants
+  script:
+    - section_start "Update workload"
+    - poetry run python3 -u "${CI_PROJECT_DIR}/Tests/creating_disposable_tenants/update_tenants_workloads.py" --tenants-file-path "${NEW_TENANTS_PATH}"
+    - section_end "Update workload"
+
+update-configmap-job:
+  stage: update-workloads-and-configmap
+  extends:
+    - .creating-disposable-tenants-schedule-rule
+    - .before-script-creating-disposable-tenants
+  script:
+    - section_start "Wait for disposable tenants to be created"
+    - poetry run python3 -u "${CI_PROJECT_DIR}/Tests/creating_disposable_tenants/update_tenant_configmap.py" --tenants-file-path "${NEW_TENANTS_PATH}"
+    - section_end "Wait for disposable tenants to be created"
+
+tenants-health-check-job:
+  stage: tenants-health-check
+  extends:
+    - .creating-disposable-tenants-schedule-rule
+    - .before-script-creating-disposable-tenants
+  script:
+    - section_start "Tenants health check"
+    - poetry run python3 -u "${CI_PROJECT_DIR}/Tests/creating_disposable_tenants/tenants_health_check.py" --tenants-file-path "${NEW_TENANTS_PATH}"
+    - section_end "Tenants health check"
+
+create-buckets-directories-job:
+  stage: tenants-health-check
+  tags:
+    - cortex-content-1738
+  extends:
+    - .creating-disposable-tenants-schedule-rule
+    - .before-script-creating-disposable-tenants
+  variables:
+    ARTIFACTS_FOLDER: artifacts
+    ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+    LOG_FILE: "${ARTIFACT_PATH}/logs/create-buckets-directories.log"
+    XSIAM_BUCKETS: "marketplace-v2-dist"
+    XSOAR_SAAS_BUCKETS: "marketplace-saas-dist"
+    XSIAM_GCS_MACHINES_BUCKET: "marketplace-v2-dist-dev/upload-flow/builds-xsiam"
+    XSOAR_SAAS_GCS_MACHINES_BUCKET: "marketplace-saas-dist-dev/upload-flow/builds-xsoar-ng"
+  script:
+    - section_start "Copy files to cloud machines"
+    - |
+      CONTENTS=$(cat "${NEW_TENANTS_PATH}")
+      for KEY in $(echo "${CONTENTS}" | jq -r 'keys[]'); do
+        SERVER_TYPE=$(echo "${CONTENTS}" | jq -r --arg key "${KEY}" '.[$key].server_type')
+        if [ "${SERVER_TYPE}" == "XSIAM" ]; then
+          GCS_SOURCE_BUCKET="${XSIAM_BUCKETS}"
+          GCS_MACHINES_BUCKET="${XSIAM_GCS_MACHINES_BUCKET}"
+        elif [ "${SERVER_TYPE}" == "XSOAR SAAS" ]; then
+          GCS_SOURCE_BUCKET="${XSOAR_SAAS_BUCKETS}"
+          GCS_MACHINES_BUCKET="${XSOAR_SAAS_GCS_MACHINES_BUCKET}"
+        else
+          echo "Skipping ${KEY}: unknown server_type ${SERVER_TYPE}"
+          continue
+        fi
+        CLOUD_CHOSEN_MACHINE_ID="${KEY}"
+        echo "Creating GCS directory for ${CLOUD_CHOSEN_MACHINE_ID} in ${GCS_MACHINES_BUCKET}"
+        gcloud storage cp /dev/null "gs://${GCS_MACHINES_BUCKET}/${CLOUD_CHOSEN_MACHINE_ID}/" 2>&1 | tee -a "${LOG_FILE}"
+        echo "Finished creating GCS directory for ${CLOUD_CHOSEN_MACHINE_ID} in ${GCS_MACHINES_BUCKET}"
+      done
+    - section_end "Copy files to cloud machines"
+
+create-mr-for-new-tenants-job:
+  stage: create-mr-for-new-tenants
+  extends:
+    - .creating-disposable-tenants-schedule-rule
+    - .before-script-creating-disposable-tenants
+  variables:
+    ARTIFACTS_FOLDER: artifacts
+    ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+  script:
+    - section_start "Create MR for new tenants"
+    - poetry run python3 -u "${CI_PROJECT_DIR}/Tests/creating_disposable_tenants/create_mr_for_new_tenants.py" --tenants-file-path "${NEW_TENANTS_PATH}" --reviewer "${GITLAB_USER_LOGIN}" --ci-token "${GITLAB_API_TOKEN_CONTENT}"
+    - section_end "Create MR for new tenants"
+
+wait-for-new-tenants-mr-job:
+  tags:
+    - long-running
+  stage: create-mr-for-new-tenants
+  extends:
+    - .creating-disposable-tenants-schedule-rule
+    - .before-script-creating-disposable-tenants
+  needs:
+    - create-mr-for-new-tenants-job
+    - creating-disposable-tenants-job
+  variables:
+    ARTIFACTS_FOLDER: artifacts
+    ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+  script:
+    - section_start "Wait for new tenants MR to be merged"
+    - poetry run python3 -u "${CI_PROJECT_DIR}/Tests/creating_disposable_tenants/wait_for_new_tenants_mr.py" --ci-token "${GITLAB_API_TOKEN_CONTENT}"
+    - section_end "Wait for new tenants MR to be merged"

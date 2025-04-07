@@ -17,8 +17,10 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
+from slack_sdk import WebClient
 
 from Tests.scripts.common import string_to_bool
+from Tests.scripts.gitlab_basic_slack_notifier import build_link_to_message
 from Tests.scripts.infra.viso_api import DEFAULT_TTL, VisoAPI
 from Tests.scripts.infra.xsoar_api import XsiamClient, XsoarClient
 from Tests.scripts.utils.log_util import install_logging
@@ -28,7 +30,12 @@ load_dotenv()
 CONTENT_TENANTS_GROUP_OWNER = os.getenv("CONTENT_TENANTS_GROUP_OWNER", "")
 CONTENT_GITLAB_CI = bool(strtobool(os.getenv("CONTENT_GITLAB_CI", "true")))
 NEW_TENANTS_INFO_PATH = os.getenv("NEW_TENANTS_INFO_PATH", "new_tenants_info.json")
-VERSIONS_FILE_PATH = os.getenv("VERSIONS_FILE_PATH", "")
+VERSIONS_FILE_PATH = os.getenv("VERSIONS_FILE_PATH")
+
+SLACK_TOKEN = os.getenv("SLACK_TOKEN", "")
+SLACK_WORKSPACE_NAME = os.getenv("SLACK_WORKSPACE_NAME", "")
+PIPELINE_SLACK_CHANNEL = os.getenv("PIPELINE_SLACK_CHANNEL")
+THREAD_TS = os.getenv("THREAD_TS")
 
 INSTANCE_NAME_PREFIX = "qa2-test-"
 XSIAM_VERSION = "ga"
@@ -38,7 +45,7 @@ AGENT_NAME_DEFAULT_MESSAGE = "<ADD_AGENT_HOST_NAME_HERE>"
 AGENT_IP_DEFAULT_MESSAGE = "<ADD_AGENT_HOST_IP_HERE>"
 SERVER_TYPES = [XsoarClient.SERVER_TYPE, XsiamClient.SERVER_TYPE]
 
-MAX_TTL = 420  # hours
+MAX_TTL = 144  # hours
 
 
 class FlowType:
@@ -136,7 +143,7 @@ def prepare_outputs(
                 if flow_type.lower() in FLOWS_WITH_AGENT:
                     outputs_info[instance_name].update(
                         {
-                            "agent_host_name": AGENT_IP_DEFAULT_MESSAGE,
+                            "agent_host_name": AGENT_NAME_DEFAULT_MESSAGE,
                             "agent_host_ip": AGENT_IP_DEFAULT_MESSAGE,
                         }
                     )
@@ -196,6 +203,47 @@ def save_to_output_file(output_path: Path, output_data: dict) -> None:
         logging.error(f"Unexpected error occurred: {e}")
 
 
+def send_slack_notification(color: str, title: str, text: str = "", title_link: str = "") -> None:
+    """
+    Send a Slack notification with the output data.
+
+    Args:
+        color (str): The color to be used for the Slack attachment.
+        title (str): The title of the Slack attachment.
+        text (str, optional): The text to be included in the Slack attachment.
+        title_link (str, optional): The URL to be used as the title link for the Slack attachment. Defaults to an empty string.
+
+    Raises:
+        Exception: For any errors during the Slack notification process.
+    """
+    required_env = (PIPELINE_SLACK_CHANNEL, SLACK_TOKEN)
+    if all(required_env):
+        try:
+            slack_client = WebClient(token=SLACK_TOKEN)
+            response = slack_client.chat_postMessage(
+                channel=PIPELINE_SLACK_CHANNEL,
+                thread_ts=THREAD_TS,
+                attachments=[
+                    {
+                        "color": color,
+                        "title": title,
+                        "fallback": title,
+                        "text": text,
+                        "title_link": title_link,
+                    }
+                ],
+                link_names=True,
+            )
+            link = build_link_to_message(response)
+            logging.info(
+                f"Successfully sent Slack message to channel {PIPELINE_SLACK_CHANNEL}." f" Message link: {link}" if link else ""
+            )
+        except Exception as e:
+            logging.error(f"Error sending Slack notification: {e}")
+    else:
+        logging.info("Skipping Slack notification due to missing configuration.")
+
+
 def options_handler() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Script to create a disposable tenants.")
     parser.add_argument(
@@ -233,8 +281,7 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument(
         "--flow-types",
         help="The flow type for the disposable tenants. Can be one or more.",
-        default=[""],
-        nargs="+",
+        default="",
     )
     parser.add_argument(
         "--ttl", help=f"The TTL (Time-to-Live) in hours for the disposable tenants (1-{MAX_TTL}).", default=DEFAULT_TTL, type=int
@@ -257,13 +304,14 @@ def main() -> None:
         owner: str = args.owner
         count_per_type: int = args.count_per_type
         server_type: str = args.server_type
-        flow_types: list[str] = args.flow_types
+        flow_types: list[str] = args.flow_types.split(",")
         versions_file_path: Path | None = args.versions_file_path
         ttl: int = args.ttl
         total_count: int = count_per_type * len(flow_types)
         VISO_API_URL = os.environ["VISO_API_URL"]
         VISO_API_KEY = os.environ["VISO_API_KEY"]
         viso_api = VisoAPI(base_url=VISO_API_URL, api_key=VISO_API_KEY)
+
         if invalid_args := get_invalid_args(
             viso_api=viso_api,
             count_per_type=count_per_type,
@@ -274,10 +322,13 @@ def main() -> None:
             owner=owner,
         ):
             logging.error(f"The following errors were found in the input arguments:\n- {f'{os.linesep}- '.join(invalid_args)}")
+            send_slack_notification(
+                "danger", "Error creating disposable tenants, invaid arguments", "\n".join("• " + arg for arg in invalid_args)
+            )
             sys.exit(1)
         versions = {}
         if versions_file_path:
-            versions = json.loads(versions_file_path.read_text()).get(server_type, {})
+            versions = json.loads(versions_file_path.read_text()).get("types", {}).get(server_type, {})
         logging.info(
             f"Starting to create total of {total_count} disposable tenants, "
             f"for {server_type=} and flow_types={', '.join(flow_types)} with {versions=}"
@@ -315,7 +366,15 @@ def main() -> None:
         if outputs := prepare_outputs(new_tenants_info, tenants_info, server_type, args.enabled):
             save_to_output_file(args.output_path, outputs)
         if is_error:
+            send_slack_notification(
+                "danger", "Error creating disposable tenants", f"Failed to create {total_count} disposable tenants."
+            )
             sys.exit(1)
+        send_slack_notification(
+            "good",
+            "Successfully created disposable tenants",
+            f"Created {total_count} disposable tenants.\n{os.linesep.join(map(lambda tenant: f'• {tenant}', outputs))}",
+        )
     except Exception as e:
         logging.exception(f"Unexpected error occurred while running the script:\n{e}")
         sys.exit(1)

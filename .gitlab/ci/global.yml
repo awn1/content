@@ -218,6 +218,11 @@
       echo "File ${CLOUD_SAAS_SERVERS_PATH} does not exist, exiting!"
       exit 1
     fi
+    export SAAS_SERVERS_VERSIONS_PATH="${CI_PROJECT_DIR}/config/servers_tenants_versions.json"
+    if [ ! -f "${SAAS_SERVERS_VERSIONS_PATH}" ]; then
+      echo "File ${SAAS_SERVERS_VERSIONS_PATH} does not exist, exiting!"
+      exit 1
+    fi
     echo "Successfully cloned content-test-conf repository"
 
   - exec 1>&3 2>&4

@@ -585,7 +585,7 @@ class XsoarClient(XsoarOnPremClient):
             cloud_machine_details, secret_version = self.get_gsm_cloud_machine_details()
             self.check_api_key_validity(cloud_machine_details, secret_version)
         except (NotFound, InvalidAPIKey) as e:
-            logger.error(f"Got an error while fetching API key for {self.tenant_name} from GSM: {e}")
+            logger.warning(f"Got an error while fetching API key for {self.tenant_name} from GSM: {e}")
             logger.info(f"Generating a new API key for {self.tenant_name}.")
             self.login_auth(force_login=True)
             cloud_machine_details, secret_version = self.create_and_save_api_key(token)

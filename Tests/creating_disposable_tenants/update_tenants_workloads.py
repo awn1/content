@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from Tests.creating_disposable_tenants.create_disposable_tenants import send_slack_notification
 from Tests.scripts.infra.resources.constants import COMMENT_FIELD_NAME
 from Tests.scripts.infra.xsoar_api import XsiamClient
 from Tests.scripts.utils import logging_wrapper as logging
@@ -127,10 +128,23 @@ def main() -> None:
             )
 
         if error_tenants:
-            raise Exception(f"The following tenants could not be processed:{os.linesep}{os.linesep.join(error_tenants)}")
+            logging.error(f"The following tenants could not be processed:{os.linesep}{os.linesep.join(error_tenants)}")
+            send_slack_notification(
+                "danger",
+                f"Failed to update workloads for {len(error_tenants)} tenants",
+                f"The following tenants failed to update their workloads:\n"
+                f"{os.linesep.join(map(lambda tenant: f'• {tenant}', error_tenants))}",
+            )
+            sys.exit(1)
+        send_slack_notification(
+            "good",
+            "Successfully updated workloads for all tenants",
+            f"Updated workloads for {len(successfully_tenants)} tenants.",
+        )
 
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
+        send_slack_notification("danger", "Error occurred while updating tenants workloads", "See logs for more details.")
         sys.exit(1)
 
 

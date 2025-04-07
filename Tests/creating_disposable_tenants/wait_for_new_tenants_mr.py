@@ -4,7 +4,12 @@ import time
 
 import urllib3
 
-from Tests.creating_disposable_tenants.create_mr_for_new_tenants import GITLAB_PROJECT_ID, MR_NUMBER_FILE, get_gitlab_project
+from Tests.creating_disposable_tenants.create_disposable_tenants import send_slack_notification
+from Tests.creating_disposable_tenants.create_mr_for_new_tenants import (
+    GITLAB_CONTENT_TEST_CONF_PROJECT_ID,
+    MR_NUMBER_FILE,
+    get_gitlab_project,
+)
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 
@@ -31,7 +36,7 @@ def main():
         ci_token = args.ci_token
         mr_number = int(args.mr_number or MR_NUMBER_FILE.read_text().strip())
 
-        project = get_gitlab_project(ci_token, GITLAB_PROJECT_ID)
+        project = get_gitlab_project(ci_token, GITLAB_CONTENT_TEST_CONF_PROJECT_ID)
         # initialize timer
         start = time.time()
         elapsed: float = 0
@@ -51,6 +56,7 @@ def main():
 
             if elapsed >= TIMEOUT:
                 logging.error("Timeout reached while waiting for SDK and content pull requests to be merged")
+                send_slack_notification("danger", "Timeout reached while waiting for new tenants MR to be merged")
                 sys.exit(1)
 
             logging.info(f"Go to sleep for {SLEEP_TIMEOUT//60} minutes, and check again.")
@@ -60,9 +66,11 @@ def main():
         if mr.state != "merged":
             raise Exception(f"The merge request #{mr_number} was closed but not merged. url: {mr.web_url}")
 
+        send_slack_notification("good", "The new tenants MR has been merged successfully")
         logging.success(f"The merge request #{mr_number} has been merged successfully!")
     except Exception as e:
         logging.exception(e)
+        send_slack_notification("danger", "The new tenants MR was not merged successfully", "See logs for more details.")
         sys.exit(1)
 
 
