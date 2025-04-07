@@ -1,4 +1,5 @@
 import argparse
+import base64
 import json
 import os
 import sys
@@ -13,18 +14,22 @@ import urllib3
 from gitlab.v4.objects import Project
 from tabulate import tabulate
 
+from Tests.creating_disposable_tenants.create_disposable_tenants import send_slack_notification
 from Tests.scripts.infra.resources.constants import COMMENT_FIELD_NAME
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
+from Tests.scripts.utils.slack import tag_user
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# the default is the id of content-test-conf repo in xdr.pan.local
-GITLAB_PROJECT_ID = str(os.getenv("CI_PROJECT_ID", 1709))
-# disable-secrets-detection
+# the id of the project where the MR will be created (content-test-conf repo in xdr.pan.local)
+GITLAB_CONTENT_TEST_CONF_PROJECT_ID = "1709"
+SAAS_SERVERS_FOLDER = "config"
+SAAS_SERVERS_FILE = "saas_servers.json"
+
 GITLAB_SERVER_URL = os.getenv("CI_SERVER_URL", "https://gitlab.xdr.pan.local")
-ARTIFACTS_FOLDER: Path = Path(os.getenv("ARTIFACTS_FOLDER", "."))
-MR_NUMBER_FILE: Path = ARTIFACTS_FOLDER / "MR_NUMBER.txt"
+ARTIFACT_PATH: Path = Path(os.getenv("ARTIFACT_PATH", "."))
+MR_NUMBER_FILE: Path = ARTIFACT_PATH / "MR_NUMBER.txt"
 GITLAB_SSL_VERIFY = bool(strtobool(os.getenv("GITLAB_SSL_VERIFY", "true")))
 SLEEP_INTERVAL = 5  # seconds
 ATTEMPTS_NUMBER = 4
@@ -57,7 +62,7 @@ def get_mr_content(new_tenants_info: list[dict]) -> tuple[str, str]:
     return mr_title, mr_description
 
 
-def update_saas_servers_with_new(saas_servers_path: Path, new_tenants_path: Path) -> tuple[dict, list[dict]]:
+def update_saas_servers_with_new(project: Project, new_tenants_path: Path) -> tuple[dict, list[dict]]:
     """Updates the SaaS servers information with new tenants' data.
 
     This function reads SaaS servers and new tenants information from JSON files,
@@ -72,7 +77,11 @@ def update_saas_servers_with_new(saas_servers_path: Path, new_tenants_path: Path
             - An OrderedDict with the merged and sorted server information.
             - A list of dictionaries containing the new tenants' information.
     """
-    saas_servers_info = json.loads(saas_servers_path.read_text())
+    config_files = project.repository_tree(SAAS_SERVERS_FOLDER)
+    saas_servers_id = next((file["id"] for file in config_files if file["name"] == SAAS_SERVERS_FILE), None)
+    saas_servers_info_file = project.repository_blob(saas_servers_id)
+
+    saas_servers_info = json.loads(base64.b64decode(saas_servers_info_file["content"]))
     new_tenants_info = json.loads(new_tenants_path.read_text())
     merged_info: dict = saas_servers_info | new_tenants_info
 
@@ -130,23 +139,10 @@ def options_handler() -> argparse.Namespace:
     parser.add_argument("-c", "--ci-token", help="The token for circleci/gitlab", required=True)
     parser.add_argument("-r", "--reviewer", help="The gitlab username of the reviewer", required=True)
     parser.add_argument(
-        "-gp",
-        "--gitlab_project_id",
-        help="The gitlab project id",
-        default=GITLAB_PROJECT_ID,
-        type=str,
-    )
-    parser.add_argument(
         "--tenants-file-path",
         required=True,
         type=Path,
         help="The path to the file containing the tenants info.",
-    )
-    parser.add_argument(
-        "--cloud-servers-path",
-        required=True,
-        type=Path,
-        help="The path to the file containing the cloud servers info.",
     )
     options = parser.parse_args()
 
@@ -157,13 +153,14 @@ def main():
     install_logging("create_mr_for_new_tenants.log", logger=logging)
     try:
         args = options_handler()
-        ci_token = args.ci_token
-        updated_saas_servers, new_tenants_info = update_saas_servers_with_new(args.cloud_servers_path, args.tenants_file_path)
-        mr_title, mr_description = get_mr_content(new_tenants_info)
+        ci_token: str = args.ci_token
+        reviewer: str = args.reviewer
 
         logging.info("Connecting to gitlab.")
-        project = get_gitlab_project(ci_token, args.gitlab_project_id)
-
+        project = get_gitlab_project(ci_token, GITLAB_CONTENT_TEST_CONF_PROJECT_ID)
+        updated_saas_servers, new_tenants_info = update_saas_servers_with_new(project, args.tenants_file_path)
+        mr_title, mr_description = get_mr_content(new_tenants_info)
+        reviewer_id = project.users.list(search=reviewer)[0].id
         branch_name = f"update_saas_servers_with_new_tenants_{uuid.uuid4().hex[:8]}"
         branch = project.branches.create({"branch": branch_name, "ref": "master"})
         logging.info(f"Created the branch {branch.name}")
@@ -189,7 +186,7 @@ def main():
                 "target_branch": "master",
                 "title": mr_title,
                 "description": mr_description,
-                "reviewer_ids": [args.reviewer],
+                "reviewer_ids": [reviewer_id],
                 "remove_source_branch": True,
             }
         )
@@ -205,8 +202,19 @@ def main():
         # Write the merge request number to a file
         MR_NUMBER_FILE.write_text(str(mr.iid))
         logging.info(f"Merge request number written to {MR_NUMBER_FILE.as_posix()}")
+        send_slack_notification(
+            "good",
+            "Merge request created successfully",
+            f"Merge request with ID {mr.iid} has been created and is available at {mr.web_url}.\n"
+            f"{tag_user(reviewer)} please review the changes.",
+        )
     except Exception as e:
         logging.exception(f"Error occurred: {e}")
+        send_slack_notification(
+            "danger",
+            "Error creating merge request",
+            "An error occurred while creating the merge request.\nSee logs for more details.",
+        )
         sys.exit(1)
 
 

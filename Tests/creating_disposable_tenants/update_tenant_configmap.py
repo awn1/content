@@ -9,8 +9,11 @@ import contextlib
 import json
 import logging
 import os
+import sys
+import time
 from pathlib import Path
 
+from Tests.creating_disposable_tenants.create_disposable_tenants import send_slack_notification
 from Tests.scripts.infra.resources.constants import COMMENT_FIELD_NAME
 from Tests.scripts.infra.viso_api import VisoAPI
 from Tests.scripts.infra.xsoar_api import XsiamClient, XsoarClient
@@ -58,6 +61,7 @@ SERVER_TYPE_TO_MARKETPLACE_BYPASS_URL = {
     XsoarClient.SERVER_TYPE: XSOAR_MARKETPLACE_BYPASS_URL,
     XsiamClient.SERVER_TYPE: XSIAM_MARKETPLACE_BYPASS_URL,
 }
+SLEEP_TIME_BETWEEN_REQUESTS = 5  # seconds
 
 
 def load_json_file(file_path: Path) -> dict:
@@ -71,7 +75,7 @@ def options_handler() -> argparse.Namespace:
     install_logging("Update_tenant_config_map.log")
     parser = argparse.ArgumentParser(description="Script to update the tenant config map.")
     parser.add_argument(
-        "--tenates-file-path",
+        "--tenants-file-path",
         required=True,
         type=Path,
         help="The path to the file containing the tenants info.",
@@ -88,30 +92,53 @@ def main() -> None:
         VISO_API_KEY = os.environ["VISO_API_KEY"]
         viso_api = VisoAPI(base_url=VISO_API_URL, api_key=VISO_API_KEY)
 
-        tenates_info = load_json_file(args.tenates_file_path)
+        tenates_info = load_json_file(args.tenants_file_path)
         tenates_info.pop(COMMENT_FIELD_NAME, None)
+        updated_tenants: list[str] = []
+        error_tenants: list[str] = []
+        is_error = False
         for tenant_id, tenant_data in tenates_info.items():
-            logging.info(f"Updating config map for tenant: {tenant_id}")
-            lcaas_id = tenant_id.split("-")[-1]
-            server_type = tenant_data.get("server_type")
-            xsoar_configmap_dict = SERVER_TYPE_TO_MAP_DICT[server_type]
-            if tenant_data.get("build_machine"):
-                xsoar_configmap_dict.update(
-                    {
-                        MARKETPLACE_BOOTSTRAP_BYPASS_URL_KEY: SERVER_TYPE_TO_MARKETPLACE_BYPASS_URL[server_type].format(
-                            lcaas_id=lcaas_id
-                        )
-                    }
-                )
+            try:
+                logging.info(f"Updating config map for tenant: {tenant_id}")
+                lcaas_id = tenant_id.split("-")[-1]
+                server_type = tenant_data.get("server_type")
+                xsoar_configmap_dict = SERVER_TYPE_TO_MAP_DICT[server_type]
+                if tenant_data.get("build_machine"):
+                    xsoar_configmap_dict.update(
+                        {
+                            MARKETPLACE_BOOTSTRAP_BYPASS_URL_KEY: SERVER_TYPE_TO_MARKETPLACE_BYPASS_URL[server_type].format(
+                                lcaas_id=lcaas_id
+                            )
+                        }
+                    )
 
-            viso_api.update_config_map([lcaas_id], XSOAR_CONFIGMAP_NAME, xsoar_configmap_dict)
-            logging.info(f"Successfully updated '{XSOAR_CONFIGMAP_NAME}' configmap for tenant: {tenant_id}")
-            if server_type == XsiamClient.SERVER_TYPE:
-                viso_api.update_config_map([lcaas_id], CONFIG_MAP_NAME, CONFIGMAP_DICT)
-                logging.info(f"Successfully updated '{CONFIG_MAP_NAME}' configmap for tenant: {tenant_id}")
+                viso_api.update_config_map([lcaas_id], XSOAR_CONFIGMAP_NAME, xsoar_configmap_dict)
+                logging.info(f"Successfully updated '{XSOAR_CONFIGMAP_NAME}' configmap for tenant: {tenant_id}")
+                if server_type == XsiamClient.SERVER_TYPE:
+                    time.sleep(SLEEP_TIME_BETWEEN_REQUESTS)
+                    viso_api.update_config_map([lcaas_id], CONFIG_MAP_NAME, CONFIGMAP_DICT)
+                    logging.info(f"Successfully updated '{CONFIG_MAP_NAME}' configmap for tenant: {tenant_id}")
+                updated_tenants.append(tenant_id)
+                time.sleep(SLEEP_TIME_BETWEEN_REQUESTS)
+            except Exception as e:
+                is_error = True
+                error_tenants.append(tenant_id)
+                logging.exception(f"Failed to update configmap for tenant: {tenant_id}. Error: {e}")
+        if is_error:
+            send_slack_notification(
+                "danger",
+                f"Failed to update configmap for {len(error_tenants)} tenants",
+                "The following tenants failed to update their configmap:\n"
+                f"{os.linesep.join(map(lambda tenant: f'• {tenant}', error_tenants))}",
+            )
+            sys.exit(1)
+        else:
+            send_slack_notification("good", f"Successfully updated configmap for {len(updated_tenants)} tenants")
 
     except Exception as e:
         logging.error(f"Unexpected error occurred while running the script: {e}")
+        send_slack_notification("danger", "Failed to update configmap for tenants", "See logs for more details.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

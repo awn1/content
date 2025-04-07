@@ -17,6 +17,9 @@ workflow:
     - if: '$DAILY_BUILD_STATUS == "true"'
       variables:
         WORKFLOW_PIPELINE_NAME: 'Daily build status pipeline - triggered by:$CI_PIPELINE_SOURCE'
+    - if: '$CREATING_DISPOSABLE_TENANTS == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Create disposable tenants pipeline - triggered by:$CI_PIPELINE_SOURCE'
     - if: '$UPDATE_BIG_QUERY_LOGS == "true"'
       variables:
           WORKFLOW_PIPELINE_NAME: 'Update marketplace bucket logs pipeline'

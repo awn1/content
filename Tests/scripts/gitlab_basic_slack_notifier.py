@@ -6,10 +6,10 @@ from distutils.util import strtobool
 from pathlib import Path
 
 import requests
-from common import get_slack_user_name
 from slack_sdk import WebClient
 from slack_sdk.web import SlackResponse
 
+from Tests.scripts.common import get_slack_user_name
 from Tests.scripts.utils.log_util import install_logging
 
 CONTENT_CHANNEL = "dmst-build-test"
@@ -33,16 +33,23 @@ def options_handler() -> argparse.Namespace:
         "-a", "--allow-failure", help="Allow posting message to fail in case the channel doesn't exist", required=True
     )
     parser.add_argument("-n", "--name-mapping_path", help="Path to name mapping file.", required=True)
+    parser.add_argument(
+        "-tts",
+        "--thread-ts",
+        help="'thread timestamp' of the Slack message to update. If not provided, a new message will be posted.",
+    )
+    parser.add_argument("-pts", "--print-thread-ts", help="Print thread timestamp", type=strtobool, default="false")
     return parser.parse_args()
 
 
-def build_link_to_message(response: SlackResponse) -> str:
+def build_link_to_message(response: SlackResponse) -> tuple[str, str]:
     if SLACK_WORKSPACE_NAME and response.status_code == requests.codes.ok:
         data: dict = response.data  # type: ignore[assignment]
         channel_id: str = data["channel"]
-        message_ts: str = data["ts"].replace(".", "")
-        return f"https://{SLACK_WORKSPACE_NAME}.slack.com/archives/{channel_id}/p{message_ts}"
-    return ""
+        message_ts: str = data["ts"]
+        message_ts_formatted = message_ts.replace(".", "")
+        return f"https://{SLACK_WORKSPACE_NAME}.slack.com/archives/{channel_id}/p{message_ts_formatted}", message_ts
+    return "", ""
 
 
 def main():
@@ -54,6 +61,8 @@ def main():
     text_file = options.file
     gitlab_token = options.gitlab_token
     github_username = options.github_username
+    thread_ts: str = options.thread_ts
+    print_thread_ts: bool = options.print_thread_ts
 
     if github_username and not gitlab_token:
         logging.error("In order to use the --github_username, --gitlab_token must be provided")
@@ -79,9 +88,13 @@ def main():
         text = f"Hi @{get_slack_user_name(github_username, github_username, options.name_mapping_path)} {text}"
 
     try:
-        response = slack_client.chat_postMessage(channel=slack_channel, text=text, username=SLACK_USERNAME, link_names=True)
-        link = build_link_to_message(response)
+        response = slack_client.chat_postMessage(
+            channel=slack_channel, text=text, username=SLACK_USERNAME, link_names=True, thread_ts=thread_ts
+        )
+        link, message_ts = build_link_to_message(response)
         logging.info(f"Successfully sent Slack message to channel {slack_channel} link: {link}")
+        if print_thread_ts:
+            print(message_ts)
     except Exception:
         if strtobool(options.allow_failure):
             logging.warning(f"Failed to send Slack message to channel {slack_channel} not failing build")

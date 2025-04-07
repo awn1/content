@@ -25,6 +25,11 @@ stages:
   - trigger-dev-nightly-builds
   - wait-for-build-to-finish
   - release-flow
+  - creating-disposable-tenants
+  - ask-permissions
+  - update-workloads-and-configmap
+  - tenants-health-check
+  - create-mr-for-new-tenants
   - cleanup
   - fan-in
 
@@ -39,6 +44,7 @@ include:
   - local: .gitlab/ci/secret-expiration-report.yml
   - local: .gitlab/ci/build-machines-report.yml
   - local: .gitlab/ci/daily_build_status.yml
+  - local: .gitlab/ci/creating-disposable-tenants.yml
   - local: .gitlab/ci/trigger-content-build/.gitlab-ci.trigger-content-build.yml
   - local: .gitlab/ci/pre-commit/.gitlab-ci.pre-commit.yml
   - local: .gitlab/ci/sdk-release-ci/.gitlab-ci.sdk-release.yml

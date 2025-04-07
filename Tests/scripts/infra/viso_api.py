@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 
 import requests
 from urllib3.util import Retry
@@ -142,5 +143,7 @@ class VisoAPI:
         Get the number of available disposable tokens for the given group owner.
         """
         tokens_count = self.get_disposable_token_count(group_owner)
-        tenants_used = len(self.get_all_tenants(group_owner, fields=[]))
-        return tokens_count - tenants_used
+        disposable_tenants = self.get_all_tenants(group_owner, fields=["ttl"])
+        # Filter out expired disposable tenants (logic aligned with DevOps code)
+        used_disposable_tenants = [t for t in disposable_tenants if datetime.now(timezone.utc).timestamp() < float(t["ttl"])]
+        return tokens_count - len(used_disposable_tenants)
