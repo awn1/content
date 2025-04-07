@@ -891,6 +891,6 @@ def get_previous_pipeline(last_pipelines, given_pipeline_id) -> str | None:
         str: The ID of the pipeline that ran immediately before the given pipeline, or None if there is no previous pipeline.
     """
     for i in range(1, len(last_pipelines)):
-        if last_pipelines[i].id == given_pipeline_id:
-            return last_pipelines[i - 1].id if i > 0 else None
+        if str(last_pipelines[i].id) == given_pipeline_id:
+            return str(last_pipelines[i - 1].id) if i > 0 else None
     return None
