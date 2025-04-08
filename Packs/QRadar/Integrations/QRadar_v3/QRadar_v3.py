@@ -4225,7 +4225,8 @@ def create_events_search(
             offense_start_time = offense["start_time"]
         query_expression = (
             f"SELECT {events_columns} FROM events WHERE INOFFENSE({offense_id}) {additional_where} limit {events_limit} "  # noqa: S608, E501
-            f"START {offense_start_time}"
+            f"times OFFENSE_TIME({offense_id})"
+            # f"START {offense_start_time}"
         )
         print_debug_msg(f"Creating search for offense ID: {offense_id}, query_expression: {query_expression}")
         search_response = client.search_create(query_expression)
@@ -4336,6 +4337,8 @@ def qradar_search_retrieve_events_command(
     if not search_id:
         search_command_results = qradar_search_create_command(client, params, args)
         search_id = search_command_results.outputs[0].get("ID")  # type: ignore
+        print_debug_msg("Sleep for 2 min before checking the results (in first run)")
+        time.sleep(120)
     calling_context = demisto.callingContext.get("context", {})
     sm = get_schedule_metadata(context=calling_context)
     end_date: datetime | None = dateparser.parse(sm.get("end_date"))
