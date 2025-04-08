@@ -10,6 +10,7 @@ default:
 
 stages:
   - cleanup
+  - auto-update-docker
   - security
   - packwise
   - unittests-and-validations
@@ -39,6 +40,7 @@ include:
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.workflow.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.global.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.on-push.yml
+  - local: .gitlab/ci/content-ci/ci/.gitlab-ci.auto-update-docker.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.bucket-upload.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.sdk-nightly.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.miscellaneous.yml

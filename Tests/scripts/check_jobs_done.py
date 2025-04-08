@@ -5,6 +5,7 @@ from pathlib import Path
 from gitlab_slack_notifier import ARTIFACTS_FOLDER_XSIAM, ARTIFACTS_FOLDER_XSOAR, IS_CHOSEN_MACHINE_FILE_NAME, get_artifact_data
 
 from Tests.scripts.common import (
+    AUTO_UPDATE_DOCKER,
     BUCKET_UPLOAD,
     CONTENT_DOCS_NIGHTLY,
     CONTENT_DOCS_PR,
@@ -33,6 +34,10 @@ DOCKERFILES_PR_JOBS = [
     "scan_images",
     "test_ssl_connection",
     "parse_report",
+]
+
+AUTO_UPDATE_DOCKER_JOBS = [
+    "auto-update-docker",
 ]
 
 RIT_MR_JOBS = [
@@ -150,6 +155,7 @@ CONTENT_DOCS_NIGHTLY_JOBS = CONTENT_DOCS_JOBS_BASE
 
 JOBS_PER_TRIGGERING_WORKFLOW = {
     DOCKERFILES_PR: DOCKERFILES_PR_JOBS,
+    AUTO_UPDATE_DOCKER: AUTO_UPDATE_DOCKER_JOBS,
     CONTENT_NIGHTLY: CONTENT_NIGHTLY_JOBS,
     SDK_NIGHTLY: SDK_NIGHTLY_JOBS,
     NATIVE_NIGHTLY: NATIVE_NIGHTLY_JOBS,

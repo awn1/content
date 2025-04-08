@@ -1,0 +1,108 @@
+.auto-update-docker-schedule-rule:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $AUTO_UPDATE_DOCKER == "true"'
+
+.auto-update-docker-schedule-rule-always:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $AUTO_UPDATE_DOCKER == "true"'
+      when: always
+
+cloning-repositories-auto-update-docker:
+  stage: .pre
+  extends:
+    - .auto-update-docker-schedule-rule
+    - .cloning-repositories
+  script:
+    - job-done
+
+auto-update-docker:
+  stage: auto-update-docker
+  extends:
+    - .auto-update-docker-schedule-rule
+    - .default-job-settings
+  tags:
+    - cortex-content-1738
+  variables:
+    GCS_MARKET_BUCKET_DEV: "marketplace-dist-dev"
+    GCS_ARTICAT_BUCKET: "xsoar-ci-artifacts"
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
+  script:
+    - echo "Updating the content graph"
+    - demisto-sdk graph update
+    - echo "Successfully updated content graph"
+    - echo "Downloading coverage report"
+    - gcloud storage cp "gs://${GCS_MARKET_BUCKET_DEV}/code-coverage-reports/coverage-min.json" "${ARTIFACTS_FOLDER}/coverage_report.json"
+    - echo "Successfully downloaded coverage report"
+    - echo "Downloading docker state file"
+    - gcloud storage cp "gs://${GCS_ARTICAT_BUCKET}/docker/auto-update-docker/state.csv" "${ARTIFACTS_FOLDER}/current_state.csv"
+    - echo "Successfully downloaded docker state file"
+    - echo "Setup git configs"
+    - git remote set-url origin "https://${GITHUB_TOKEN}@github.com/demisto/content.git"  # Set the remote URL with the token for authentication.
+    - git config --global user.email "content-bot@users.noreply.github.com"
+    - git config --global user.name "content-bot"
+    - git fetch origin master -q # Allows `git diff`ing in posting GitHub comment (otherwise there's no origin/master).
+    - git clean -d -f Packs # Remove untracked files from Packs directory.
+    - |
+
+      echo "Processing affected content items...";
+      poetry run python3 -u "${CI_PROJECT_DIR}/Tests/scripts/auto_update_docker/extract_affected_content_items.py" \
+        --state-path "${ARTIFACTS_FOLDER}/current_state.csv" \
+        --coverage-report-path "${ARTIFACTS_FOLDER}/coverage_report.json" \
+        --affected-content-items-path "${ARTIFACTS_FOLDER}/affected_content_items.json" \
+        --slack-thread-msg-path "${ARTIFACTS_FOLDER}/slack_thread_msg.txt"
+
+      echo "Opening PRs..."
+      poetry run python3 -u "${CI_PROJECT_DIR}/Tests/scripts/auto_update_docker/open_prs_for_affected_content_items.py" \
+        --state-path "${ARTIFACTS_FOLDER}/current_state.csv" \
+        --affected-content-items-path "${ARTIFACTS_FOLDER}/affected_content_items.json" \
+        --docker-table-path "${ARTIFACTS_FOLDER}/docker_table.txt" \
+        --slack-attachment-path "${ARTIFACTS_FOLDER}/slack_attachments.json" \
+        --slack-msg-path "${ARTIFACTS_FOLDER}/slack_msg.txt"
+
+    - echo "Uploading docker state file"
+    - gcloud storage cp "${ARTIFACTS_FOLDER}/updated_state.csv" "gs://${GCS_ARTICAT_BUCKET}/code-coverage-reports/docker/state.csv"
+    - echo "Successfully uploaded docker state file"
+
+    - job-done
+
+
+jobs-done-check-auto-update-docker:
+  extends:
+    - .auto-update-docker-schedule-rule
+    - .jobs-done-check
+  needs:
+    - auto-update-docker
+  variables:
+    WORKFLOW: 'Auto Update Docker'
+  rules:
+    - if: '$AUTO_UPDATE_DOCKER == "true"'
+      when: always
+  when: always
+
+fan-in-auto-update-docker:
+  stage: fan-in
+  extends:
+    - .auto-update-docker-schedule-rule
+  script:
+    - echo "Auto Update Docker - fan in nightly"
+  when: always
+
+slack-notify-auto-update-docker:
+  extends:
+    - .auto-update-docker-schedule-rule-always
+    - .trigger-slack-notification
+  variables:  # Passes the environment variable from the parent pipeline to the child, which can be useful for cases when triggering pipeline with alternate env variable value passed in the API call.
+    ARTIFACTS_FOLDER: "${CI_PROJECT_DIR}/artifacts"
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: "fan-in-auto-update-docker"
+    WORKFLOW: "Auto Update Docker"
+    SLACK_MSG_FILE: "${ARTIFACTS_FOLDER}/slack_msg.txt"
+    SLACK_THREAD_MSG_FILE: "${ARTIFACTS_FOLDER}/slack_thread_msg.txt"
+    SLACK_MSG_ATTACHMENTS: "${ARTIFACTS_FOLDER}/slack_attachments.json"
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
+    SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
+    SLACK_JOB: "true"
+    SLACK_ALLOW_FAILURE: "true"
+    CURRENT_BRANCH_NAME: $INFRA_BRANCH
