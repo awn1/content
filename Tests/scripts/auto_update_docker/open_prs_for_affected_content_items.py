@@ -1,289 +1,434 @@
 import logging
-import math
 import os
 import re
+import subprocess
 import sys
-from collections import defaultdict
+import traceback
+from datetime import datetime
 from typing import Any
 
 import typer
-from demisto_sdk.commands.common.handlers import DEFAULT_JSON_HANDLER as json
 from dotenv import load_dotenv
-from git import Git, Remote, Repo  # pip install GitPython
+from git import Git, Repo  # pip install GitPython
 from github import Github, Repository  # pip install PyGithub
+from tabulate import tabulate
+
+from Tests.scripts.auto_update_docker.utils import (
+    STATE_FILE_FIELD_NAMES,
+    load_csv_file,
+    load_json_file,
+    save_csv_file,
+    save_json_file,
+)
+from Tests.scripts.common import slack_link
+from Tests.scripts.utils.log_util import install_logging
 
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
 app = typer.Typer(no_args_is_help=True)
-CWD = os.getcwd()
+ORG_NAME = "demisto"
+REPO_NAME = "content"
+BASE_BRANCH = "master"
 
 
-def load_json(path: str) -> dict[str, Any]:
-    with open(path, encoding="utf-8") as f:
-        return json.loads(f.read())
+def create_local_branch(git: Git, branch_name: str):
+    """
+    Create a new local branch from master or switch to it if it already exists.
+
+    This function attempts to create a new branch from master.
+    If the branch already exists, it switches to the existing branch instead.
+
+    Args:
+        git (Git): The Git object to perform operations on.
+        branch_name (str): The name of the branch to create or switch to.
+
+    Raises:
+        git.GitCommandError: If there's an error during Git operations other than
+                             the branch already existing.
+    """
+    try:
+        # Try to create a new branch
+        git.checkout("-b", branch_name, "master")
+        logging.info(f"Branch created: {branch_name}")
+    except git.GitCommandError as e:
+        # If the branch already exists, check out the existing one
+        if "already exists" in str(e):
+            logging.info(f"Branch {branch_name} already exists, checking it out.")
+            git.checkout(branch_name)
+        else:
+            raise e  # Re-raise the exception if it's a different error
+
+
+def create_docker_image_table(docker_images_info: dict) -> str:
+    """
+    Generate a formatted table of Docker image information.
+
+    This function takes a dictionary of Docker image information and creates
+    a GitHub-flavored Markdown table representing the data.
+
+    Args:
+        docker_images_info (dict): A dictionary containing Docker image information.
+            Each key is a Docker image name, and the value is a dictionary with
+            'target_tag', 'next_batch_number', 'total_batches', and 'content_items' keys.
+
+    Returns:
+        str: A string containing the GitHub-flavored markdown table of Docker image information.
+
+    Example:
+        docker_images_info = {
+            'image1': {'target_tag': 'v1.0', 'next_batch_number': 2, 'total_batches': 3, 'content_items': ['item1', 'item2']},
+            'image2': {'target_tag': 'v2.0', 'next_batch_number': 1, 'total_batches': 2, 'content_items': ['item3']}
+        }
+        table = create_docker_image_table(docker_images_info)
+    """
+    table_data: list = []
+    for i, (docker_image, info) in enumerate(docker_images_info.items(), 1):
+        table_data.append(
+            [i, docker_image, info["target_tag"], info["next_batch_number"], info["total_batches"], len(info["content_items"])]
+        )
+
+    headers = ["#", "Docker Image", "Target Tag", "Current Batch", "Total Batches", "Updated Items"]
+    table = tabulate(table_data, headers=headers, tablefmt="github")
+
+    return table
+
+
+def create_pr_body(gitlab_pipeline_url: str, affected_content_items: dict[str, Any]) -> str:
+    """
+    Generate the body content for a pull request.
+
+    This function creates a formatted pull request body that includes details about
+    updated Docker images and affected content items. It provides a summary of changes
+    with collapsible sections for each Docker image.
+
+    Args:
+        gitlab_pipeline_url (str): The URL of the GitLab pipeline associated with the changes.
+        affected_content_items (dict[str, Any]): A dictionary containing information about
+            affected content items for each Docker image.
+
+    Returns:
+        str: A formatted string representing the pull request body.
+
+    The generated PR body includes:
+    - A header indicating the purpose of the PR
+    - A link to the associated GitLab pipeline
+    - Collapsible sections for each Docker image, listing the files changed
+    """
+    body = f"## Auto updated docker images for the following content items\n " f"[GitLab pipline]({gitlab_pipeline_url})\n"
+
+    for docker_image, content_item_info in affected_content_items.items():
+        content_items = content_item_info["content_items"]
+        if not content_items:
+            continue
+
+        changed_files = "\n- ".join(content_items)
+        body += f"""<details>
+<summary>{docker_image}</summary>
+
+### Files Changed
+- {changed_files}
+
+</details>
+"""
+    return body
 
 
 def create_remote_pr(
-    docker_image: str,
-    current_batch: int,
-    number_of_batches: int,
-    target_tag: str,
+    gitlab_pipeline_url: str,
+    output_table_path: str,
+    affected_content_items: dict[str, dict[str, Any]],
     head_branch: str,
     remote_content_repo: Repository.Repository,
-    updated_content_items: list[str],
-    coverage: str,
-    pr_labels: list[str] = [],
-    pr_assignees: list[str] = [],
-    pr_reviewers: list[str] = [],
-    base_branch: str = "master",
+    pr_reviewer: str,
+    pr_assignee: str,
 ) -> str:
     """Create the PR with the changes in the docker tag on the remote repo.
 
     Args:
-        docker_image (str): The docker image.
-        current_batch (int): PR batch number, with respect to docker image.
-        number_of_batches (int): Overall number of batches.
-        target_tag (str): The docker's target tag.
+        gitlab_pipeline_url (str): A link to the Gitlab pipeline.
+        output_table_path (str): The path of the output table file.
+        affected_content_items (dict[str, dict[str, Any]]): A dict of docker-image and affected content items.
         head_branch (str): The head branch, that has the committed changes.
         remote_content_repo (Repository.Repository): Remote repository.
-        updated_content_items (list[str]): The content items that hold the changes of their docker tag.
-        pr_labels (list[str]): The PR labels.
-        pr_assignees (list[str], optional): PR assignee/s. Defaults to [].
-        pr_reviewers (list[str], optional): PR reviewer/s. Defaults to [].
-        base_branch (str, optional): The base branch. Defaults to "master".
+        pr_reviewer (str): PR reviewer.
+        pr_assignee (str): PR assignee.
 
     Returns:
         The PR URL link.
     """
-
-    joined_content_items = "\n".join(updated_content_items)
-    body = f"Auto updated docker tags for the following content items:\n{joined_content_items}"
-    title = f"{docker_image}:{target_tag} | {coverage} | PR batch #{current_batch}/{number_of_batches}"
+    pipeline_id = gitlab_pipeline_url.split("/")[-1]
+    title = f"Auto Updated Docker PR from {datetime.now().strftime('%Y-%m-%d')} GitLab Pipeline ID {pipeline_id}"
+    body = create_pr_body(gitlab_pipeline_url, affected_content_items)
     pr = remote_content_repo.create_pull(
         title=title,
         body=body,
-        base=base_branch,
+        base=BASE_BRANCH,
         head=head_branch,
-        draft=True,
     )
 
-    if pr_reviewers:
-        pr.create_review_request(reviewers=pr_reviewers)
-        logging.info(f'Requested review from {",".join(sorted(pr_reviewers))}')
+    if pr_reviewer:
+        pr.create_review_request(reviewers=[pr_reviewer])
+        logging.info(f"Requested review from {pr_reviewer}")
 
-    if pr_assignees:
-        pr.add_to_assignees(*pr_assignees)
-        logging.info(f'Assigned to {",".join(sorted(pr_assignees))}')
+    if pr_assignee:
+        pr.add_to_assignees(pr_assignee)
+        logging.info(f"Assigned to {pr_assignee}")
 
-    if pr_labels:
-        pr.set_labels(*pr_labels)
-        logging.info(f'Set labels to {",".join(sorted(pr_labels))}')
+    pr_labels = ["auto-update-docker", "docs-approved"]
+    pr.set_labels(*pr_labels)
+    logging.info(f'Set labels to {",".join(sorted(pr_labels))}')
+
+    sum_batches_done = sum(item["next_batch_number"] for item in affected_content_items.values())
+    sum_batches_in_progress = (
+        sum(item["total_batches"] for item in affected_content_items.values() if item["next_batch_number"] > 0) - sum_batches_done
+    )
+    comment = "# Batches distribution\n"
+    comment += """```mermaid
+%%{init: {"pie": {"textPosition": 0.75}}%%
+"""
+    comment += f"""pie showData
+    "Done" : {sum_batches_done}
+    "In progress" : {sum_batches_in_progress}
+```
+\n
+---
+# Batches summary
+\n
+"""
+    with open(output_table_path) as f:
+        comment += f.read()
+    pr.create_issue_comment(comment)
+    logging.info("Added comment to the PR")
+
     return pr.html_url
 
 
-def update_content_items_docker_images_and_push(
+def update_content_items_docker_images(
     docker_image: str,
-    content_items: list[str],
     target_tag: str,
-    coverage: str,
-    pr_labels: list[str],
-    support_levels: list[str],
-    current_batch: int,
-    number_of_batches: int,
-    staging_branch: str,
-    git: Git,
-    remote_content_repo: Repository.Repository,
-    origin: Remote,
-    pr_assignees: list[str],
-    pr_reviewers: list[str],
-) -> dict[str, Any]:
-    """Updates the content items' docker tags, and pushes the changes to a remote branch.
+    content_items: list[str],
+) -> list:
+    """Updates the content items' docker tags.
 
     Args:
         docker_image (str): The docker image.
-        content_items (list[str]): Content items to update their docker images.
         target_tag (str): Target tag of docker image.
-        coverage (str): The coverage of the content items in the PR batch.
-        pr_labels (list[str]): The PR labels.
-        current_batch (int): PR batch number, with respect to docker image.
-        number_of_batches (int): Overall number of batches.
-        staging_branch (str): The staging branch, which is treated as the base branch of the PR.
-        git (Git): Git object to stage and commit files.
-        remote_content_repo (Repository.Repository): he remote repository. Used to created PRs.
-        origin (Remote):  Remote object. Used to open PRs on the remote repository.
-        pr_assignees (list[str]): The PR assignees.
-        pr_reviewers (list[str]): The PR reviewers.
+        content_items (list[str]): Content items to update their docker images.
 
     Returns:
-        dict[str, Any]: A dictionary that holds the content items that were updated, and their PR link.
+        list[str]: The updated content items.
     """
-    logging.info(f"Updating the following content items: {','.join(content_items)}")
-    current_batch_branch_name = (
-        f"AUD-{docker_image}-{target_tag}-pr-batch-{current_batch}{'-' if support_levels else ''}{','.join(support_levels)}"
-    )
-    # Create branch off of master
-    try:
-        # Try to create a new branch
-        git.checkout("-b", current_batch_branch_name, "master")
-        print(f"Branch created: {current_batch_branch_name}")
-    except git.GitCommandError as e:
-        # If the branch already exists, check out the existing one
-        if "already exists" in str(e):
-            print(f"Branch {current_batch_branch_name} already exists, checking it out.")
-            git.checkout(current_batch_branch_name)
-        else:
-            raise e  # Re-raise the exception if it's a different error
-
     updated_content_items: list[str] = []
     new_docker_image = f"{docker_image}:{target_tag}"
     for content_item in content_items:
         with open(content_item) as file:
             content = file.read()
 
-        # Update `dockerimage` value, allowing for an optional space after the colon in the original
+        # Update `docker-image` value, allowing for an optional space after the colon in the original
         new_content = re.sub(
-            r"(dockerimage:\s*)([^\s]+)",  # Matches `dockerimage:` with or without space after the colon
-            rf"\1{new_docker_image}",  # Replaces with the new Docker image (with a space)
+            r"(dockerimage:\s*)([^\s]+)",  # Matches `docker-image:` with or without space after the colon
+            rf"\1{new_docker_image}",  # Replaces it with the new Docker image (with a space)
             content,
         )
-
-        if content == new_content:
-            logging.info(f"Docker image is already the target, skipping {content_item}")
-            continue
-
         logging.info(f"Updating docker image of {content_item} to {new_docker_image}")
 
         # Write the modified content back to the file
         with open(content_item, "w") as file:
             file.write(new_content)
         updated_content_items.append(content_item)
-    if not updated_content_items:
-        # No content items were updated, skipping PR creation
-        return {}
 
-    git.add(updated_content_items)
-    git.commit(
-        "-m",
-        f"Updated docker image to {docker_image}:{target_tag}. PR batch #{current_batch}/{number_of_batches}",
-    )
-
-    push_changes_to_remote_pr = origin.push(f"+refs/heads/{current_batch_branch_name}:refs/heads/{current_batch_branch_name}")
-    logging.info(f"Created remote branch {current_batch_branch_name}")
-    push_changes_to_remote_pr.raise_if_error()
-    pr_link = create_remote_pr(
-        remote_content_repo=remote_content_repo,
-        docker_image=docker_image,
-        current_batch=current_batch,
-        number_of_batches=number_of_batches,
-        target_tag=target_tag,
-        head_branch=current_batch_branch_name,
-        base_branch=staging_branch,
-        pr_labels=pr_labels,
-        updated_content_items=updated_content_items,
-        pr_assignees=pr_assignees,
-        pr_reviewers=pr_reviewers,
-        coverage=coverage,
-    )
-    return {"content_items": updated_content_items, "pr_link": pr_link}
+    return updated_content_items
 
 
-def comma_list(raw_data: str) -> list[str]:
-    return raw_data.split(",") if raw_data else []
+def update_docker_state(state: dict[str, Any], affected_content_items: dict[str, Any], pr_number: str | None) -> dict[str, Any]:
+    """
+    Update the Docker state with new batch number and PR information.
+
+    This function iterates through the affected content items and updates the state dictionary for each Docker image.
+    It sets the new batch number and if there are content items updates the last PR number.
+
+    Args:
+        state (dict[str, Any]): The current state of Docker images.
+        affected_content_items (dict[str, Any]): A dictionary of affected content items,
+        pr_number (str | None): The number of the current pull request.
+
+    Returns:
+        dict[str, Any]: The updated state dictionary.
+
+    Example:
+        >>> state = {'image1': {'batch_number': 1, 'last_pr_number': '100'}}
+        >>> affected_items = {'image1': {'content_items': ['item1'], 'next_batch_number': 2}}
+        >>> update_docker_state(state, affected_items, '101')
+        {'image1': {'batch_number': 2, 'last_pr_number': '101'}}
+    """
+    for docker_image, content_item_info in affected_content_items.items():
+        state[docker_image]["batch_number"] = content_item_info["next_batch_number"]
+        if content_item_info["content_items"] and int(content_item_info["next_batch_number"]) > 0:
+            state[docker_image]["last_pr_number"] = pr_number
+        else:
+            state[docker_image]["last_pr_number"] = None
+
+    # Remove docker images with batch number 0 from the state file
+    return dict(filter(lambda item: int(item[1]["batch_number"]) > 0, state.items()))
 
 
 @app.command()
 def open_prs_for_content_items(
-    staging_branch: str = typer.Option(
-        help="The staging branch, that will act as the base branch for the PRs. This branch should already exist.",
+    affected_content_items_path: str = typer.Option(
+        default="affected_content_items.json",
+        help="The affected content items file path",
     ),
-    batch_dir: str = typer.Option(
-        default="",
-        help="The batch directory, holds the input of the script, under the file affected_content_items.json,"
-        " and the output of the current script",
+    state_path: str = typer.Option(
+        default="state.csv",
+        help="Teh docker state file path",
     ),
-    prs_limit: str = typer.Option(
-        default="10",
-        help="The maximum number of content items to open in one PR",
+    docker_table_path: str = typer.Option(
+        default="docker_table.txt",
+        help="The path of the output table file",
     ),
-    pr_assignees: list = typer.Option(
-        default="",
-        help="The PR assignees",
-        parser=comma_list,
+    slack_attachment_path: str = typer.Option(
+        default="slack_attachments.json",
+        help="The path of the slack attachment file",
     ),
-    pr_reviewers: list = typer.Option(
-        default="",
-        help="The PR reviewers",
-        parser=comma_list,
+    slack_msg_path: str = typer.Option(
+        default="msg.txt",
+        help="The path of the slack message file",
     ),
-    github_token: str = typer.Option(help="GitHub token used to commit changes to remote repo."),
+    github_token: str = typer.Option(
+        help="The GitHub token to use for the GitHub API calls",
+        envvar="GITHUB_TOKEN",
+    ),
+    gitlab_pipeline_url: str = typer.Option(
+        help="The URL of the GitLab pipeline that triggers this script",
+        envvar="CI_PIPELINE_URL",
+    ),
 ):
-    prs_limit_int = int(prs_limit)
-    affected_content_items = load_json(f"{batch_dir}/affected_content_items.json")
-    org_name = "demisto"
-    repo_name = "content"
-    remote_github_controller = Github(github_token)
-    # Get the remote repo that is at Github
-    remote_content_repo = remote_github_controller.get_repo(f"{org_name}/{repo_name}")
-    # Run the script in a git-initialized repo
-    repo = Repo(".")
-
-    current_active_branch = repo.active_branch
-    logging.info(f"Current active branch: {current_active_branch}")
-
-    git = repo.git
-    origin = repo.remotes.origin
-
     try:
-        docker_images_prs_output: dict[str, list[dict[str, Any]]] = defaultdict(list)
-        for docker_image in affected_content_items:
-            image_config = affected_content_items[docker_image]
+        install_logging("Auto_Update_Docker.log")
+
+        # Setup git
+        repo = Repo(".")
+        git = repo.git
+        origin = repo.remotes.origin
+        logging.info(f"origin: {origin}")
+
+        # Create the local branch
+        pipeline_id = gitlab_pipeline_url.split("/")[-1]
+        new_branch_name = f"AUD-demisto/{datetime.now().strftime('%Y-%m-%d')}/gitlab-pipeline-{pipeline_id}"
+        create_local_branch(git, new_branch_name)
+
+        # Update the content items
+        affected_content_items = load_json_file(affected_content_items_path)
+        for docker_image, image_config in affected_content_items.items():
             if content_items := image_config["content_items"]:
-                number_of_batches = math.ceil(len(content_items) / prs_limit_int)
-                # We divide the content items to PR batches
-                pr_batch_start = 0
-                pr_batch_end = pr_batch_start + prs_limit_int
-                for current_batch in range(1, number_of_batches + 1):
-                    logging.info(f"{current_batch=}")
-                    content_items_for_batch = content_items[pr_batch_start:pr_batch_end]
-                    pr_content = update_content_items_docker_images_and_push(
-                        current_batch=current_batch,
-                        number_of_batches=number_of_batches,
-                        docker_image=docker_image,
-                        staging_branch=staging_branch,
-                        git=git,
-                        remote_content_repo=remote_content_repo,
-                        origin=origin,
-                        content_items=content_items_for_batch,
-                        pr_labels=image_config["pr_labels"],
-                        target_tag=image_config["target_tag"],
-                        coverage=image_config["coverage"],
-                        support_levels=image_config["support_levels"],
-                        pr_assignees=pr_assignees,
-                        pr_reviewers=pr_reviewers,
-                    )
-                    if pr_content:
-                        docker_images_prs_output[docker_image].append(pr_content)
-                    else:
-                        # Not all PR batches will have updated content items
-                        logging.info(
-                            f"PR batch {current_batch} for {docker_image} with {content_items_for_batch = }"
-                            " did not contain updates"
-                        )
-                    pr_batch_start = pr_batch_end
-                    pr_batch_end = pr_batch_start + prs_limit_int
-        if batch_dir:
-            # Output the content items and PRs
-            with open(f"{batch_dir}/docker_images_prs_output.json", "w") as images_prs_output:
-                json.dump(docker_images_prs_output, images_prs_output)
+                update_content_items = update_content_items_docker_images(
+                    docker_image=docker_image,
+                    target_tag=image_config["target_tag"],
+                    content_items=content_items,
+                )
+                affected_content_items[docker_image]["content_items"] = update_content_items
+
+        # Git commit
+        git.add("Packs")
+        if git.status("--porcelain"):
+            git.commit(
+                "-m",
+                "Updated Docker Images.",
+            )
+
+            # Update release notes
+            logging.info("starting to update release notes...")
+            command = "demisto-sdk update-release-notes -g"
+            subprocess.run(command, shell=True, check=True, capture_output=True)
+
+            # Git commit
+            git.add("Packs")
+            if git.status("--porcelain"):
+                git.commit(
+                    "-m",
+                    "Updated Release Notes.",
+                )
+            else:
+                logging.info("No changes to commit in Packs directory.")
+
+            # Push the local changes to the remote branch.
+            origin.push(f"+refs/heads/{new_branch_name}:refs/heads/{new_branch_name}")
+            logging.info(f"Pushed branch {new_branch_name} to remote repository")
+
+            # Create and save the output table file
+            table_text = create_docker_image_table(affected_content_items)
+            with open(docker_table_path, "w") as f:
+                f.write(table_text)
+
+            # Setup GitHub client
+            github_client = Github(github_token, verify=False)
+            remote_content_repo = github_client.get_repo(f"{ORG_NAME}/{REPO_NAME}")
+
+            # Create the remote PR.
+            content_roles = load_json_file(".github/content_roles.json")
+            pr_reviewer = pr_assignee = content_roles["AUTO_UPDATE_DOCKER_REVIEWER"]
+            pr_link = create_remote_pr(
+                gitlab_pipeline_url=gitlab_pipeline_url,
+                output_table_path=docker_table_path,
+                affected_content_items=affected_content_items,
+                head_branch=new_branch_name,
+                remote_content_repo=remote_content_repo,
+                pr_reviewer=pr_reviewer,
+                pr_assignee=pr_assignee,
+            )
+
+            pr_number = pr_link.split("/")[-1]
+            slack_msg_file_content = [
+                {
+                    "title": "",
+                    "color": "good",
+                    "text": f"Some content items were updated in PR #{slack_link(pr_link, pr_number)}.",
+                }
+            ]
+            logging.info(f"PR {pr_link} was created.")
+
+            sum_finished_batches = sum(item["next_batch_number"] for item in affected_content_items.values())
+            sum_all_batches = sum(
+                item["total_batches"] for item in affected_content_items.values() if item["next_batch_number"] > 0
+            )
+            finished_batches_in_percent = (sum_finished_batches / sum_all_batches) * 100 if sum_all_batches > 0 else 100
+            docker_table_file_content = [
+                {
+                    "file": docker_table_path,
+                    "filename": os.path.basename(docker_table_path),
+                    "title": "Docker batches state",
+                    "initial_comment": f"{finished_batches_in_percent:.2f} % of all batches have been completed.",
+                }
+            ]
+        else:
+            slack_msg_file_content = [
+                {
+                    "title": "",
+                    "color": "good",
+                    "text": "There are no Docker images to update. No new PR have been opened.",
+                }
+            ]
+            docker_table_file_content = []
+            pr_number = None
+            logging.info("No Docker images to update. No new PR have been opened.")
+
+        # Save the Slack msg file
+        save_json_file(slack_msg_path, slack_msg_file_content)
+
+        # Save the Slack attachments file content
+        save_json_file(slack_attachment_path, docker_table_file_content)
+
+        # Update the batch number and the PR number in the docker state file
+        docker_state = load_csv_file(state_path, "docker_image")
+        updated_docker_state = update_docker_state(docker_state, affected_content_items, pr_number)
+        updated_state_path = os.path.join(os.path.dirname(state_path), "updated_state.csv")
+        save_csv_file(updated_state_path, updated_docker_state, "docker_image", STATE_FILE_FIELD_NAMES)
 
     except Exception as e:
         logging.error(f"Got error when opening PRs {e}")
+        logging.error(traceback.format_exc())
         sys.exit(1)
 
 
-def main():
-    app()
-
-
 if __name__ == "__main__":
-    main()
+    app()

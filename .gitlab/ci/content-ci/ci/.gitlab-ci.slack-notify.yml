@@ -24,7 +24,7 @@ slack-notify:
   stage: notify
   extends: .default-job-settings
   script:
-    - python3 ./Tests/scripts/gitlab_slack_notifier.py -p "${PIPELINE_TO_QUERY}" -s "${SLACK_TOKEN}" -c "${GITLAB_STATUS_TOKEN}" -ch "${SLACK_CHANNEL}" --triggering-workflow "${WORKFLOW}" --allow-failure "${SLACK_ALLOW_FAILURE}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json" --dry_run "${DRY_RUN}"
+    - python3 ./Tests/scripts/gitlab_slack_notifier.py -p "${PIPELINE_TO_QUERY}" -s "${SLACK_TOKEN}" -c "${GITLAB_STATUS_TOKEN}" -ch "${SLACK_CHANNEL}" --attachments "${SLACK_MSG_ATTACHMENTS}" --file "${SLACK_MSG_FILE}" --thread "${SLACK_THREAD_MSG_FILE}" --triggering-workflow "${WORKFLOW}" --allow-failure "${SLACK_ALLOW_FAILURE}" --name-mapping_path "${CI_PROJECT_DIR}/config/name_mapping.json" --dry_run "${DRY_RUN}"
   retry:
     max: 2
   needs:
