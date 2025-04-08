@@ -172,7 +172,7 @@ SCHEMA = [
     bigquery.SchemaField("weeks", "INTEGER"),
     bigquery.SchemaField("widget_type", "STRING"),
 ]
-NOT_RELEVANT_FIELDS: list[str] = ["updated"]
+NOT_RELEVANT_FIELDS: list[str] = ["updated", "select_values"]
 DEFAULT_BATCH_SIZE: int = 1_000
 
 ARTIFACTS_FOLDER: Path = Path(os.getenv("ARTIFACTS_FOLDER", "./artifacts"))
@@ -340,6 +340,7 @@ def batch_iterable(iterable: Iterable[Any], batch_size: int = DEFAULT_BATCH_SIZE
 
 def upload_to_bigquery(
     bq_client: bigquery.Client,
+    dataset_ref: bigquery.DatasetReference,
     table_ref: bigquery.TableReference,
     driver: Driver,
     data: Iterator[dict[Any, Any]],
@@ -349,7 +350,8 @@ def upload_to_bigquery(
     Uploads content items data to BigQuery in batches.
 
     Populates the referenced table in batches.
-    Ensures data integrity by maintaining the temporary copy of the table if any part of the process fails.
+    Ensures data integrity by uploading the data to a temporary table and copying it to the
+    original table only if the process completes successfully.
 
     Args:
         bq_client (bigquery.Client): The BigQuery client instance.
@@ -359,9 +361,8 @@ def upload_to_bigquery(
         stats_object (Stats): An object to collect data for sanity checks.
     """
     temp_table_id = f"{TABLE_ID}_temp_{int(time())}"
-    temp_table_ref = bq_client.dataset(DATASET_ID).table(temp_table_id)
-    bq_client.copy_table(table_ref, temp_table_ref)
-
+    temp_table_ref = dataset_ref.table(temp_table_id)
+    success = False
     batch_number = 0
     try:
         for batch_number, batch in enumerate(batch_iterable(data)):
@@ -376,27 +377,30 @@ def upload_to_bigquery(
                     schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
                 )
 
-            job = bq_client.load_table_from_json(data_to_push, table_ref, job_config=job_config)
+            job = bq_client.load_table_from_json(data_to_push, temp_table_ref, job_config=job_config)
             res = job.result()
             logging.info(f"Batch #{batch_number} (size {len(batch)}): {res.state}")
-
+        success = True
         # Write success message to file for slack-notification:
         SUCCESS_FILE_PATH.write_text("Success")
     except Exception as e:
         logging.error(f"Got error while uploading batch #{batch_number}: {e}")
         logging.error(traceback.format_exc())
-        # Rollback to the temporary table.
-        logging.error("Reverting to original table data.")
-        bq_client.copy_table(temp_table_ref, table_ref)
         # Write failure to file for slack-notification:
         FAILURE_FILE_PATH.write_text(str(e))
     finally:
+        if success:
+            copy_job_config = bigquery.CopyJobConfig(write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE)
+            copy_job = bq_client.copy_table(temp_table_ref, table_ref, job_config=copy_job_config)
+            copy_job.result()
+            logging.info(f"Table {TABLE_ID} updated successfully.")
+
         # Cleanup temporary table
         bq_client.delete_table(temp_table_ref, not_found_ok=True)
-        logging.info(f"Temporary table {temp_table_id} deleted successfully.")
+        logging.info(f"Temporary table {temp_table_id} deleted.")
 
 
-def create_dataset(bq_client: bigquery.Client, dataset_id: str) -> bigquery.Dataset:
+def get_dataset_reference(bq_client: bigquery.Client, dataset_id: str) -> bigquery.DatasetReference:
     """Fetches the dataset if it exists; otherwise, creates a new one."""
     dataset_ref = bq_client.dataset(dataset_id)
     try:
@@ -408,19 +412,24 @@ def create_dataset(bq_client: bigquery.Client, dataset_id: str) -> bigquery.Data
         dataset = bq_client.create_dataset(dataset)
         logging.info(f"Dataset '{dataset_id}' created successfully.")
 
+    # Return the dataset (existing or newly created)
+    return dataset.reference
 
-def create_bigquery_table(bq_client: bigquery.Client, table_ref: bigquery.TableReference):
+
+def get_table_reference(bq_client: bigquery.Client, dataset: bigquery.DatasetReference) -> bigquery.TableReference:
     """Fetches the table if it exists; otherwise, creates a new one."""
-    # Ensure dataset exists
-    create_dataset(bq_client, DATASET_ID)
-
+    # Create the table reference using dataset and table_id
+    table_ref = dataset.table(TABLE_ID)
     try:
-        bq_client.get_table(table_ref)
+        table = bq_client.get_table(table_ref)
         logging.info(f"Table {table_ref} exists. Proceeding with data upload.")
     except NotFound:
         logging.warning("Table does not exist. Creating a new table.")
         table = bigquery.Table(table_ref, schema=SCHEMA)
         bq_client.create_table(table, exists_ok=True)
+
+    # Return the table (whether it was fetched or created)
+    return table_ref
 
 
 def main():
@@ -439,13 +448,12 @@ def main():
         graph_db_driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
         all_content_items_iterator: Iterator[dict] = run_query(graph_db_driver, ALL_BASECONTENT_QUERY)
 
-        bq_client = bigquery.Client(project=PROJECT_ID)
-        table_ref: bigquery.TableReference = bq_client.dataset(DATASET_ID).table(TABLE_ID)
-
         # We do not want to upload test data to the BQ table, unless explicitly sought.
         if not strtobool(os.getenv("TEST_UPLOAD", "false")) or args.force_upload:
-            create_bigquery_table(bq_client, table_ref)
-            upload_to_bigquery(bq_client, table_ref, graph_db_driver, all_content_items_iterator, stats_object)
+            bq_client = bigquery.Client(project=PROJECT_ID)
+            dataset_ref = get_dataset_reference(bq_client, DATASET_ID)
+            table_ref = get_table_reference(bq_client, dataset_ref)
+            upload_to_bigquery(bq_client, dataset_ref, table_ref, graph_db_driver, all_content_items_iterator, stats_object)
 
     except Exception as e:
         logging.error(f"An error occurred in the main function: {e!s}")
