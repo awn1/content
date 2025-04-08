@@ -840,7 +840,7 @@ upload-content-graph-data-to-bigquery:
   stage: upload-content-graph-data-to-bigquery
   needs: ["upload-packs-to-marketplace", "upload-packs-to-marketplace-v2", "upload-packs-to-xpanse-marketplace", "upload-packs-to-xsoar-saas-marketplace", "upload-packs-to-platform-marketplace"]
   tags:
-    - cortex-content-1738
+    - $BUILD_JOB_TAG
   extends:
     - .bucket-upload-rule
     - .default-job-settings
@@ -849,6 +849,8 @@ upload-content-graph-data-to-bigquery:
     MP_ANALYTICS_DATASET_ID: "marketplace_analytics"
     CONTENT_ITEMS_METADATA_TABLE_ID: "content_items_data"
     CONTENT_GRAPH_ZIP: "${ARTIFACTS_FOLDER}/xsoar/server_type_XSOAR/content_graph/xsoar.zip"
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
   script:
     - section_start "Load graph from artifacts"
     - demisto-sdk graph update -i "${CONTENT_GRAPH_ZIP}"
