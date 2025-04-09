@@ -590,6 +590,10 @@ def fetch_incidents(
 
         message_delivered = raw_events.get("messagesDelivered", [])
         demisto.debug(f'Fetched {len(message_delivered)} messagesDelivered events')
+        
+        start_query_time = dateparser.parse(start_query_time)
+        end_query_time = dateparser.parse(end_query_time)
+        
         for raw_event in message_delivered:
             raw_event["type"] = "messages delivered"
             event_guid = raw_event.get("GUID", "")
@@ -597,6 +601,16 @@ def fetch_incidents(
                 raw_json = json.dumps(raw_event, ensure_ascii=False).encode(raw_json_encoding).decode()
             else:
                 raw_json = json.dumps(raw_event)
+            
+            ### CUSTOM CHANGE TO FIND INCORRECT DATES:
+            
+            event_time = dateparser.parse(raw_event["messageTime"])
+
+            if end_query_time <= start_query_time or end_query_time >= end_query_time:
+                demisto.debug(f"message received out of time range: {event_guid=}")
+            
+            ######
+            
             incident = {
                 "name": f"Proofpoint - Message Delivered - {event_guid}",
                 "rawJSON": raw_json,
