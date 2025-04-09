@@ -19,7 +19,7 @@
     - if: '$IS_NIGHTLY == "true"'
       when: always
       variables:
-        WORKFLOW: 'RIT Nightly'
+        WORKFLOW: 'RIT $CI_COMMIT_REF_NAME Nightly'
         SLACK_CHANNEL: $INTERNAL_SLACK_CHANNEL
 
 upload-to-internal-dev-bucket:
