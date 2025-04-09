@@ -411,7 +411,7 @@
             <thead>
                 <tr>
                     {% for column in columns %}
-                        <th class="{% if column.visible %}visible-column{% else %}not-visible-column{% endif %} {% if column.exportable %}exportable{% endif %}">{{ column.data }}</th>
+                        <th class="{% if column.visible %}visible-column{% else %}not-visible-column{% endif %} {% if column.exportable %}exportable{% endif %}">{{ column.display }}</th>
                     {% endfor %}
                 </tr>
             </thead>
@@ -456,7 +456,7 @@
             <tfoot>
             <tr>
                 {% for column in columns %}
-                    <th class="{% if column.visible %}visible-column{% else %}not-visible-column{% endif %} {% if column.exportable %}exportable{% endif %}">{{ column.data }}</th>
+                    <th class="{% if column.visible %}visible-column{% else %}not-visible-column{% endif %} {% if column.exportable %}exportable{% endif %}">{{ column.display }}</th>
                 {% endfor %}
             </tr>
             </tfoot>

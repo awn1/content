@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 import requests
 from urllib3.util import Retry
@@ -147,3 +148,34 @@ class VisoAPI:
         # Filter out expired disposable tenants (logic aligned with DevOps code)
         used_disposable_tenants = [t for t in disposable_tenants if datetime.now(timezone.utc).timestamp() < float(t["ttl"])]
         return tokens_count - len(used_disposable_tenants)
+
+    def local_playbook(
+        self, lcaas_ids: list[str], playbook_name: str, run_with_executor_sa: bool, playbook_vars: dict | None
+    ) -> dict:
+        """
+        Run playbook locally.
+        """
+        data: dict[Any, Any] = {
+            "lcaas_ids": lcaas_ids,
+            "use_only_lcaas_ids": True,
+            "deploy_details": {
+                "playbook_name": playbook_name,
+                "run_with_executor_sa": run_with_executor_sa,
+            },
+        }
+        if playbook_vars is not None:
+            data["deploy_details"]["playbook_vars"] = playbook_vars
+        res = self.post_request("api/v4.0/soft-deploy/local-playbook", data)
+        return res.json()
+
+    def start_tenants(self, lcaas_ids: list[str]) -> dict:
+        """
+        Start the given tenants.
+        """
+        return self.local_playbook(lcaas_ids, "start_stop_tenant", True, {"action": "start"})
+
+    def stop_tenants(self, lcaas_ids: list[str]) -> dict:
+        """
+        Stop the given tenants.
+        """
+        return self.local_playbook(lcaas_ids, "start_stop_tenant", True, {"action": "stop"})

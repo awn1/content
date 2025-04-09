@@ -92,6 +92,7 @@ GITLAB_PROJECT_ID = os.getenv("CI_PROJECT_ID") or 1061
 GITLAB_SSL_VERIFY = bool(strtobool(os.getenv("GITLAB_SSL_VERIFY", "true")))
 CONTENT_CHANNEL = "dmst-build-test"
 XDR_CONTENT_SYNC_CHANNEL_ID = os.getenv("XDR_CONTENT_SYNC_CHANNEL_ID", "")
+DEVOPS_CORTEX_TOOLING_CHANNEL_ID = os.getenv("DEVOPS_CORTEX_TOOLING_CHANNEL_ID", "")
 SLACK_USERNAME = "Content GitlabCI"
 SLACK_WORKSPACE_NAME = os.getenv("SLACK_WORKSPACE_NAME", "")
 REPOSITORY_NAME = os.getenv("REPOSITORY_NAME", "demisto/content")
@@ -678,10 +679,10 @@ def bucket_upload_results(
 
 def construct_slack_message_for_bigquery_content_upload() -> dict[str, str] | None:
     """
-    Construct the slack message indicating the status of the content graph data upload to BigQuery job
+    Construct the Slack message indicating the status of the content graph data upload to BigQuery job
     within the upload-flow or None if wasn't executed.
     Returns:
-        dict[str, str] | None: A dictionary containing the slack message object, or None if the upload job wasn't executed.
+        dict[str, str] | None: A dictionary containing the Slack message object, or None if the upload job wasn't executed.
     """
     if BIGQUERY_UPLOAD_SUCCESS_FILE.exists():
         return {"color": "good", "title": "Successfully uploaded content graph data to BigQuery"}
@@ -773,7 +774,7 @@ def construct_slack_msg(
         test_modeling_rules_slack_msg_xsiam, test_modeling_rules_has_failure_xsiam = test_modeling_rules_results(
             ARTIFACTS_FOLDER_XSIAM, pipeline_url, title="XSIAM"
         )
-        test_use_case_slack_msg_xsiam, test_use_acse_has_failure_xsiam = test_use_case_results(
+        test_use_case_slack_msg_xsiam, test_use_case_has_failure_xsiam = test_use_case_results(
             ARTIFACTS_FOLDER_XSIAM, pipeline_url, title="XSIAM"
         )
         slack_msg_append += (
@@ -786,7 +787,7 @@ def construct_slack_msg(
             test_playbooks_has_failure_xsoar
             or test_playbooks_has_failure_xsiam
             or test_modeling_rules_has_failure_xsiam
-            or test_use_acse_has_failure_xsiam
+            or test_use_case_has_failure_xsiam
         )
         slack_msg_append += missing_content_packs_test_conf(ARTIFACTS_FOLDER_XSOAR_SERVER_TYPE)
     if triggering_workflow == CONTENT_NIGHTLY:
@@ -820,7 +821,7 @@ def construct_slack_msg(
         mr_title = replace_escape_characters(merge_request.data["title"])
         title += f" (MR#{mr_number} - {mr_title})"
 
-    # In case we have failed tests we override the color only in case all the pipeline jobs have passed.
+    # In case we have failed tests, we override the color only in case all the pipeline jobs have passed.
     if has_failed_tests:
         title_append = " [Has Failed Tests]"
         color = "warning"
@@ -847,7 +848,7 @@ def construct_slack_msg(
 
 
 def read_and_parse(file_path: str, error_title: str, on_error_append_to: list):
-    # Read and parse the file, if an error occurs append the error message to the append_to list.
+    # Read and parse the file, if an error occurs, append the error message to the append_to list.
     try:
         return json.loads(Path(file_path).read_text())
     except Exception:
@@ -897,7 +898,7 @@ def collect_pipeline_data(gitlab_client: Gitlab, project_id: str, pipeline_id: s
     return pipeline.web_url, failed_jobs
 
 
-def construct_coverage_slack_msg(sleep_interval: int = 1) -> list[dict[str, Any]]:
+def construct_coverage_slack_msg() -> list[dict[str, Any]]:
     from demisto_sdk.commands.coverage_analyze.tools import get_total_coverage
 
     coverage_today = get_total_coverage(filename=(ROOT_ARTIFACTS_FOLDER / "coverage_report" / "coverage-min.json").as_posix())
@@ -1093,7 +1094,7 @@ def should_send_blacklist_message(
 def main():
     install_logging("Slack_Notifier.log")
     options = options_handler()
-    triggering_workflow = options.triggering_workflow  # ci workflow type that is triggering the slack notifier
+    triggering_workflow = options.triggering_workflow  # ci workflow type that is triggering the Slack notifier
     pipeline_id = options.pipeline_id
     project_id = options.gitlab_project_id
     server_url = options.url
@@ -1246,7 +1247,6 @@ def main():
                 attachments=slack_msg_data,
                 username=SLACK_USERNAME,
                 link_names=True,
-                text=title,
                 thread_ts=parent_thread,
             )
             data: dict = response.data  # type: ignore[assignment]
@@ -1264,7 +1264,6 @@ def main():
                         attachments=[slack_msg],
                         username=SLACK_USERNAME,
                         thread_ts=threaded_ts,
-                        text=slack_msg.get("title", title),
                     )
             if attachments_json:
                 for attachment in attachments_json:

@@ -11,9 +11,12 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_LABELS !~ /Force Merge/'
       variables:
         WORKFLOW_PIPELINE_NAME: 'Merge request !$CI_MERGE_REQUEST_IID pipeline for branch $CI_COMMIT_REF_NAME to $CI_MERGE_REQUEST_TARGET_BRANCH_NAME'
-    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $BUILD_MACHINES_REPORT == "true"'
+    - if: '$BUILD_MACHINES_REPORT == "true"'
       variables:
-        WORKFLOW_PIPELINE_NAME: 'Build machines report pipeline'
+        WORKFLOW_PIPELINE_NAME: 'Build machines report pipeline - triggered by:$CI_PIPELINE_SOURCE'
+    - if: '$MACHINES_DAILY_ROUTINE == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Machines daily routine pipeline - Action:$MACHINES_DAILY_ROUTINE_ACTION, Dry-Run:$DRY_RUN - triggered by:$CI_PIPELINE_SOURCE'
     - if: '$DAILY_BUILD_STATUS == "true"'
       variables:
         WORKFLOW_PIPELINE_NAME: 'Daily build status pipeline - triggered by:$CI_PIPELINE_SOURCE'

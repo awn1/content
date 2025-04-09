@@ -30,6 +30,7 @@ stages:
   - update-workloads-and-configmap
   - tenants-health-check
   - create-mr-for-new-tenants
+  - machines-daily-routine
   - cleanup
   - fan-in
 
@@ -43,6 +44,7 @@ include:
   - local: .gitlab/ci/bucket-logs.yml
   - local: .gitlab/ci/secret-expiration-report.yml
   - local: .gitlab/ci/build-machines-report.yml
+  - local: .gitlab/ci/machines-daily-routine.yml
   - local: .gitlab/ci/daily_build_status.yml
   - local: .gitlab/ci/creating-disposable-tenants.yml
   - local: .gitlab/ci/trigger-content-build/.gitlab-ci.trigger-content-build.yml

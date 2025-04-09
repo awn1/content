@@ -14,6 +14,8 @@ from Tests.scripts.infra.viso_api import VisoAPI
 from Tests.scripts.utils.log_util import install_logging
 
 STATUS_FIELD_NAME = "status"
+STOP_STATUS_FIELD_NAME = "stop_status"
+STOP_STATUS_STARTED = "started"
 READY_STATUS = "running"
 ERROR_STATUS = ("provisioning_error", "updating_error", "expired", "deleting", "deleting_error", "deleted")
 TIMEOUT = 60 * 120  # 2 hours
