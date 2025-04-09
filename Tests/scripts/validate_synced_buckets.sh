@@ -37,8 +37,14 @@ function compare_revision() {
 
     echo "Comparing revisions for $bucket1 and $bucket2"
 
-    gsutil cp "gs://$bucket1$json_file_path" $ARTIFACTS_FOLDER/sync/origin_index.json
-    gsutil cp "gs://$bucket2$json_file_path" $ARTIFACTS_FOLDER/sync/prod_index.json
+    gsutil cp "gs://$bucket1$json_file_path" $ARTIFACTS_FOLDER/sync/origin_index.json || {
+      echo "Failed to copy from $bucket1"
+      exit 1
+    }
+    gsutil cp "gs://$bucket2$json_file_path" $ARTIFACTS_FOLDER/sync/prod_index.json || {
+      echo "Failed to copy from $bucket2"
+      exit 1
+    }
 
     revision_origin=$(jq -r '.revision' $ARTIFACTS_FOLDER/sync/origin_index.json)
     revision_prod=$(jq -r '.revision' $ARTIFACTS_FOLDER/sync/prod_index.json)
