@@ -54,6 +54,14 @@
     # Install gonzo RIT utilities
     - section_start "Install RIT utilities"
     - echo "Installing gonzo RIT utilities"
+    - TARGET_BRANCH="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_COMMIT_REF_NAME}"
+    - | # the default is "dev-platform"
+      if [[ "$TARGET_BRANCH" == "master" ]]; then
+          GONZO_BRANCH_NAME="stable-platform"
+      elif [[ "$TARGET_BRANCH" =~ ^hotfix.* ]]; then
+          GONZO_BRANCH_NAME="master-hf-platform"
+      fi
+    - echo -e "${PINK}Using gonzo branch $GONZO_BRANCH_NAME (based on target branch $TARGET_BRANCH)${NC}"
     - git clone https://svc-xsoar-gitlab-mir:$GITLAB_STATUS_TOKEN@gitlab.xdr.pan.local/xdr/development/gonzo.git --single-branch --branch ${GONZO_BRANCH_NAME} /tmp/cortex-gonzo;
     - section_end "Install RIT utilities"
     - section_end "Install go utilities"

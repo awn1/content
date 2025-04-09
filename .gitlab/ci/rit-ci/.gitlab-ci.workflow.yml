@@ -13,7 +13,8 @@ workflow:
     - if: '$IS_NIGHTLY == "true"'
       variables:
         WORKFLOW_PIPELINE_NAME: 'Scheduled RIT Nightly pipeline for branch: $CI_COMMIT_REF_NAME'
-        WORKFLOW: 'RIT Nightly'
+        WORKFLOW: 'RIT $CI_COMMIT_REF_NAME Nightly'
+        SLACK_CHANNEL: $INTERNAL_SLACK_CHANNEL
 
     # Rule for RELEASE
     - if: '$RELEASE == "true"'
