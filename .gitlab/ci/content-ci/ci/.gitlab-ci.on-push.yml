@@ -610,6 +610,8 @@ jobs-done-check-on-push:
     - xsiam-test_playbooks_results
     - xsiam-test_modeling_rule_results
     - xsiam-test_use_case_results
+    - job: check-ready-for-pipeline-running-label
+      optional: true
   tags:
     - gke
   variables:
@@ -747,6 +749,7 @@ slack-notify-on-merge:
   script:
     - EXIT_CODE=0
 
+    - echo "Running the job since PR is ready for pipeline running"
     - section_start "Are there tests to run?" --collapsed
     - |
       if ! [[ -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/modeling_rules_to_test.json" || -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/filter_file.txt" || -s "${ARTIFACTS_FOLDER_SERVER_TYPE}/test_use_cases_to_test.json" ]]; then
@@ -796,6 +799,124 @@ slack-notify-on-merge:
     - !reference [.clean-machine]
     - !reference [.unlock-machine]
 
+check-ready-for-pipeline-running-label:
+  stage: .pre
+  needs: []
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_NAME != "master"'
+  before_script:
+    - source .gitlab/helper_functions.sh
+  script:
+    - section_start "Start checking if ready-for-pipeline-running Label in the PR"
+    - |
+      RED='\033[0;31m'
+      GREEN='\033[0;32m'
+      NC='\033[0m'
+
+      WARNING_COMMENT_BODY="⚠️ The PR is missing the **ready-for-pipeline-running** label. Please add the label when the PR is ready in order to proceed."
+
+      delete_existing_label_comment() {
+        echo "Checking for existing warning comment..."
+        comment_id=""
+        page=1
+        MAX_PAGES=200
+        while true; do
+          response=$(curl -sS --get -w "%{http_code}" \
+            --header "Accept: application/vnd.github.v3.raw" \
+            --header "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/demisto/content/issues/${pr_number}/comments?per_page=30&page=${page}")
+
+          # Extract HTTP status code and comments body
+          http_code="${response: -3}"
+          comments="${response::-3}"
+          if [[ "$http_code" != "200" && "$http_code" != "204" ]]; then
+            echo -e "${RED}❌ Failed to fetch PR comments, status code: $http_code.${NC}"
+            break
+          fi
+
+          echo "Fetched page number ${page}."
+          if [[ $(echo "$comments" | jq length) -eq 0 ]]; then
+            echo "No more comments. Exiting loop."
+            break
+          fi
+          current_id=$(echo "$comments" | jq --arg body "$WARNING_COMMENT_BODY" -r '.[] | select(.body == $body) | .id')
+          if [[ -n "$current_id" && "$current_id" != "null" ]]; then
+            comment_id=$current_id
+            echo "Found the relevant comment. Exiting loop."
+            break
+          fi
+          if [[ $page -ge $MAX_PAGES ]]; then
+            echo "Reached max page limit ($MAX_PAGES). Stopping to prevent infinite loop."
+            break
+          fi
+          page=$((page + 1))
+        done
+
+        if [[ -n "$comment_id" && "$comment_id" != "null" ]]; then
+          echo "Found existing warning comment, deleting it."
+          delete_response=$(curl -sS -o /dev/null -w "%{http_code}" --request DELETE \
+            --header "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/demisto/content/issues/comments/${comment_id}")
+
+          if [[ "$delete_response" != "200" && "$delete_response" != "204" ]]; then
+            echo -e "${RED}❌ Failed to delete PR warning comment, status code: $delete_response.${NC}"
+          else
+            echo "Successfully deleted the comment."
+          fi
+        else
+          echo "No existing warning comment found."
+        fi
+      }
+
+      fetch_pr_details() {
+        pr=$(curl -sS --get --header "Accept: application/vnd.github.v3.raw" --header "Authorization: token $GITHUB_TOKEN" \
+        "https://api.github.com/repos/demisto/content/pulls?state=open&base=master" \
+        --data-urlencode "head=demisto:${CI_COMMIT_BRANCH}" | jq '.[0]')
+        EXIT_CODE=$?
+        if [[ "${EXIT_CODE}" -ne 0 ]]; then
+          echo -e "${RED}❌ Failed to fetch PR details, exit code:${EXIT_CODE}.${NC}"
+          exit "${EXIT_CODE}"
+        fi
+      }
+
+      fetch_pr_labels() {
+        pr_number=$(echo "$pr" | jq -r '.number')
+        pr_labels=$(curl -sS --get --header "Accept: application/vnd.github.v3.raw" \
+        --header "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/demisto/content/issues/${pr_number}/labels" | jq '.[].name')
+        EXIT_CODE=$?
+        if [[ "${EXIT_CODE}" -ne 0 ]]; then
+          echo -e "${RED}❌ Failed to fetch PR labels. Exit code: $EXIT_CODE.${NC}"
+          exit "${EXIT_CODE}"
+        fi
+      }
+
+      post_warning_comment() {
+        comment_data=$(jq -n --arg body "$WARNING_COMMENT_BODY" '{ body: $body }')
+
+        curl -sS --request POST --header "Accept: application/vnd.github.v3+json" \
+          --header "Authorization: token $GITHUB_TOKEN" \
+          --data "$comment_data" "https://api.github.com/repos/demisto/content/issues/${pr_number}/comments" >/dev/null 2>&1
+      }
+
+      echo "Pipeline source is push and branch is not master — checking label..."
+      fetch_pr_details
+      if [[ $pr != 'null' ]]; then
+        fetch_pr_labels
+        delete_existing_label_comment
+        if echo "$pr_labels" | grep -q "ready-for-pipeline-running"; then
+          echo -e "${GREEN}✅ The PR has the ready-for-pipeline-running label.${NC}"
+        else
+          echo -e "${RED}❌ The PR does not have the ready-for-pipeline-running label.${NC}"
+          echo "Adding a warning comment to the PR."
+          post_warning_comment
+          echo "Added a comment to PR #${pr_number}"
+          exit 1
+        fi
+      fi
+    - section_end "End checking if ready-for-pipeline-running Label in the PR"
+    - job-done
+    - exit 0
+
 xsiam_server_ga:
   extends:
     - .test_content_on_cloud_server_instances_base
@@ -844,6 +965,8 @@ xsiam_server_ga:
     MARKETPLACE_NAME: "marketplacev2"
     NON_REMOVABLE_PACKS: "Base"
   needs:
+    - job: check-ready-for-pipeline-running-label
+      optional: true
     - job: mpv2-prepare-testing-bucket
       optional: true
   artifacts:
@@ -908,6 +1031,8 @@ xsoar_ng_server_ga:
     MARKETPLACE_NAME: "xsoar_saas"
     NON_REMOVABLE_PACKS: "Base"
   needs:
+    - job: check-ready-for-pipeline-running-label
+      optional: true
     - job: xsoar-saas-prepare-testing-bucket
   artifacts:
     when: always
