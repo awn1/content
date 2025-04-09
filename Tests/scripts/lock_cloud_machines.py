@@ -40,9 +40,9 @@ urllib3.disable_warnings(InsecureRequestWarning)
 warnings.filterwarnings("ignore", _default._CLOUD_SDK_CREDENTIALS_WARNING)
 from Tests.scripts.infra.viso_api import VisoAPI  # noqa
 
-VISO_API_URL: str = get_env_var("VISO_API_URL")
-VISO_API_KEY = get_env_var("VISO_API_KEY")
-CONTENT_TENANTS_GROUP_OWNER = get_env_var("CONTENT_TENANTS_GROUP_OWNER")
+VISO_API_URL: str = get_env_var("VISO_API_URL", "")
+VISO_API_KEY = get_env_var("VISO_API_KEY", "")
+CONTENT_TENANTS_GROUP_OWNER = get_env_var("CONTENT_TENANTS_GROUP_OWNER", "")
 
 
 def send_slack_notification(slack_client: SlackWebClient, text_list: list[str]):
