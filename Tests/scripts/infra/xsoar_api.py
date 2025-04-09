@@ -554,9 +554,19 @@ class XsoarClient(XsoarOnPremClient):
             }
             machine_health_response = requests.get(f"https://api-{self.xsoar_host_base}/xsoar/health", headers=headers)
             health_check_success = machine_health_response.ok
+
+            logger.info(f"Health check success: {health_check_success}")
+
+            xsoar_pod_machine_health_response = requests.get(
+                f"https://api-{self.xsoar_host_base}/xsoar/cm/health", headers=headers
+            )
+            xsoar_pod_health_check_success = xsoar_pod_machine_health_response.ok
+
+            logger.info(f"XSOAR Pod - Health check success: {xsoar_pod_health_check_success}")
         except requests.exceptions.ConnectionError:
             health_check_success = False
-        if not health_check_success:
+            xsoar_pod_health_check_success = False
+        if not health_check_success or not xsoar_pod_health_check_success:
             raise InvalidAPIKey(
                 self.tenant_name, f"Health check was unsuccessful with the API key provided from secret version {secret_version}."
             )

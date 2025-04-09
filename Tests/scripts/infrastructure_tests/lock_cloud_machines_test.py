@@ -304,7 +304,15 @@ def test_validate_connection_for_machines(mocker):
     )
     Machine_Health_Response = collections.namedtuple("Machine_Health_Response", ["ok"])
     mocker.patch.object(
-        requests, "get", side_effect=[Machine_Health_Response(False), Machine_Health_Response(True)] * len(machine_list)
+        requests,
+        "get",
+        side_effect=[
+            Machine_Health_Response(False),
+            Machine_Health_Response(False),
+            Machine_Health_Response(True),
+            Machine_Health_Response(True),
+        ]
+        * len(machine_list),
     )
     mocker.patch.object(XsoarClient, "login_via_okta")
     mocker_get_api_key = mocker.patch.object(XsoarClient, "create_api_key", return_value=PublicApiKey(id="3", key="b"))
