@@ -1057,8 +1057,8 @@ upload-id-set-bucket:
         gsutil -m -q rsync -r gs://xpanse-dist gs://marketplace-xpanse-dev
 
         ./Tests/scripts/validate_synced_buckets.sh \
-          --origin-bucket-list="${GCS_MARKET_XSOAR_SAAS_BUCKET} ${GCS_MARKET_V2_BUCKET} ${GCS_MARKET_XPANSE_BUCKET}" \
-          --prod-bucket-list="${MARKETPLACE_XSOAR_PROD}-dev ${MARKETPLACE_V2_PROD}-dev ${MARKETPLACE_XPANSE_PROD}-dev"
+          --origin-bucket-list="${GCS_MARKET_XSOAR_SAAS_BUCKET}, ${GCS_MARKET_V2_BUCKET}, ${GCS_MARKET_XPANSE_BUCKET}" \
+          --prod-bucket-list="${MARKETPLACE_XSOAR_PROD}-dev, ${MARKETPLACE_V2_PROD}-dev, ${MARKETPLACE_XPANSE_PROD}-dev"
 
         gcloud auth activate-service-account --key-file="$GCS_XSOAR_CONTENT_PROD_KEY" >> "${ARTIFACTS_FOLDER}/logs/gcloud_auth.log" 2>&1
 
@@ -1071,8 +1071,8 @@ upload-id-set-bucket:
 
 
         ./Tests/scripts/validate_synced_buckets.sh \
-          --origin-bucket-list="${GCS_MARKET_XSOAR_SAAS_BUCKET} ${GCS_MARKET_V2_BUCKET} ${GCS_MARKET_XPANSE_BUCKET}" \
-          --prod-bucket-list="${MARKETPLACE_XSOAR_PROD}-prod-us ${MARKETPLACE_V2_PROD}-prod-us ${MARKETPLACE_XPANSE_PROD}-prod-us"
+          --origin-bucket-list="${GCS_MARKET_XSOAR_SAAS_BUCKET}, ${GCS_MARKET_V2_BUCKET}, ${GCS_MARKET_XPANSE_BUCKET}" \
+          --prod-bucket-list="${MARKETPLACE_XSOAR_PROD}-prod-us, ${MARKETPLACE_V2_PROD}-prod-us, ${MARKETPLACE_XPANSE_PROD}-prod-us"
 
         echo "Bucket prod-us sync completed"
       fi
