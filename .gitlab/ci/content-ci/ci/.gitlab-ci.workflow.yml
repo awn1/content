@@ -37,7 +37,7 @@ workflow:
       variables:
           WORKFLOW_PIPELINE_NAME: 'Packwise trigger pipeline using config branch $CONTENT_CONFIG_BRANCH'
 
-    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_PIPELINE_SOURCE =~ /^(push|contrib)$/ && $CI_COMMIT_REF_NAME == "master"'
       variables:
         WORKFLOW_PIPELINE_NAME: 'Merge to master pipeline'
 
