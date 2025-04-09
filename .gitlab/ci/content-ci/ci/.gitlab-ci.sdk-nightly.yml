@@ -309,7 +309,6 @@ demisto-sdk-nightly:test-upload-flow:
   needs:
     - demisto-sdk-nightly:cloning-repositories
   tags:
-    - gke
     - $BUILD_JOB_TAG
   extends:
     - .default-job-settings
