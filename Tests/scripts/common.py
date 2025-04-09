@@ -1,3 +1,4 @@
+import contextlib
 import json
 import operator
 import tempfile
@@ -134,6 +135,13 @@ def string_to_bool(
             return default_when_empty
 
     raise ValueError(f"cannot convert {input_} to bool")
+
+
+def load_json_file(file_path: str) -> dict | list:
+    with contextlib.suppress(Exception):
+        with open(file_path) as f:
+            return json.load(f)
+    return {}
 
 
 def get_instance_directories(artifacts_path: Path) -> dict[str, Path]:

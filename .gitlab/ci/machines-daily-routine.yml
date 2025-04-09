@@ -1,0 +1,65 @@
+.machines-daily-routine-schedule-rule:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $MACHINES_DAILY_ROUTINE == "true"'
+
+.machines-daily-routine-schedule-rule-always:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $MACHINES_DAILY_ROUTINE == "true"'
+      when: always
+
+.before-script-machines-daily-routine:
+  before_script:
+    - source .gitlab/helper_functions.sh
+    - !reference [.setup-network-certs]
+    - !reference [.poetry-install]
+    - !reference [.granting_execute_permissions_on_files]
+    - !reference [.setup-artifactory]
+    - !reference [.create_artifacts_folder]
+    - !reference [.create-artifacts-repositories-folder]
+    - !reference [.clone-content-test-conf]
+
+machines-daily-routine-job:
+  extends:
+    - .machines-daily-routine-schedule-rule
+    - .before-script-machines-daily-routine
+
+  stage: machines-daily-routine
+  artifacts:
+      expire_in: 30 days
+      paths:
+        - ${ARTIFACTS_FOLDER}/*
+        - public
+      when: always
+  variables:
+    ARTIFACTS_FOLDER: artifacts
+    ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+  script:
+    - EXIT_CODE=0
+    - gcloud auth activate-service-account --key-file="${GCS_ARTIFACTS_KEY}" >> "${ARTIFACT_PATH}/logs/gcloud_auth.log" 2>&1
+    - export PYTHONPATH="${PYTHONPATH}:${CI_PROJECT_DIR}"
+    - poetry run python3 -u "${CI_PROJECT_DIR}/Tests/scripts/machines_daily_routine.py" --cloud_servers_path "${CLOUD_SAAS_SERVERS_PATH}" -o "${ARTIFACT_PATH}" --action "${MACHINES_DAILY_ROUTINE_ACTION}" --dry-run "${DRY_RUN}" || EXIT_CODE=$?
+    - exit $EXIT_CODE
+
+machines-daily-routine-fan-in:
+  stage: fan-in
+  extends:
+    - .machines-daily-routine-schedule-rule-always
+  script:
+    - echo "fan in"
+
+machines-daily-routine-slack-notify:
+  extends:
+    - .machines-daily-routine-schedule-rule-always
+    - .trigger-slack-notification
+  variables:
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    JOB_NAME: "machines-daily-routine-fan-in"
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_JOB: 'true'
+    ARTIFACTS_FOLDER: artifacts
+    ARTIFACT_PATH: ${CI_PROJECT_DIR}/${ARTIFACTS_FOLDER}
+    SLACK_MSG_FILE: "${ARTIFACT_PATH}/slack_msg.txt"
+    SLACK_MSG_ATTACHMENTS: "${ARTIFACT_PATH}/slack_attachments.json"
+    SLACK_MSG_THREAD: "${ARTIFACT_PATH}/slack_thread.json"
+    WORKFLOW: "Machines daily routine"
+    SLACK_ALLOW_FAILURE: 'false'
