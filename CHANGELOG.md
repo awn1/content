@@ -1,3 +1,30 @@
+# Content Infrastructure 0.0.40 (2025-04-10)
+
+### Features
+
+- Add new pipeline creating-disposable-tenants. ([CIAC-10887](https://jira-dc.paloaltonetworks.com/browse/CIAC-10887))
+- Refactor auto update docker image pipeline ([CIAC-12565](https://jira-dc.paloaltonetworks.com/browse/CIAC-12565))
+- Added the ready-for-pipeline-running label in order to control the run-instances step on SAAS tenants. ([CIAC-13223](https://jira-dc.paloaltonetworks.com/browse/CIAC-13223))
+- # Adding platform upload summary to upload slack message ([CIAC-13285](https://jira-dc.paloaltonetworks.com/browse/CIAC-13285))
+- Added support for Prisma Cloud RITs CI/CD. ([12419](https://jira-dc.paloaltonetworks.com/browse/12419))
+- Added support to specify a root_folder parameter when triggering the Jenkins sync job, allowing partial bucket syncs instead of syncing the entire bucket.
+- Updated the RIT CI/CD files.
+- Updated the demisto-sdk version 1.37.1 in Infra.
+- Updated the demisto-sdk version 1.37.2 in Infra.
+- add a daily machines routine to stop/start non-build machines
+- checking the health endpoint for the xsoar content pod in the health check.
+
+### Bugfixes
+
+- Fix the fallback mechanism in *upload_marketplace_data_to_bigquery.py*. ([CIAC-13282](https://jira-dc.paloaltonetworks.com/browse/CIAC-13282))
+- Fix function names ([CIAC-13282](https://jira-dc.paloaltonetworks.com/browse/CIAC-13282))
+- Fix synced buckets validation.
+- Fixed a permission issue in demisto-sdk nightly test-upload-flow job by updating the tags.
+- Fixed an issue where certain steps in the upload pipeline failed due to lack of graph memory.
+- Removed gke tag from demisto-sdk test-upload-flow job.
+- Resolved a type casting issue in the Slack notifier used for blacklist validation.
+
+
 # Content Infrastructure 0.0.39 (2025-04-06)
 
 ### Features
