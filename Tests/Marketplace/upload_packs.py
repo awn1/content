@@ -113,7 +113,7 @@ def extract_packs_artifacts(packs_artifacts_path: str, extract_destination_path:
 
 def download_and_extract_pack(
     pack_id, pack_version, storage_bucket: Any, extract_destination_path: str, storage_base_path: str
-) -> str | bool:
+) -> str:
     """
     Downloads and extracts the pack.zip folder of the current pack version from the storage bucket.
 
@@ -125,7 +125,7 @@ def download_and_extract_pack(
         storage_base_path (str): The base path in the storage bucket where packs are stored.
 
     Returns:
-        bool: False if the pack was not found in the bucket, otherwise true.
+        str: Path of extracted pack if it was successfully downloaded and extracted, otherwise an empty string.
     """
     logging.debug(f"Start of download_and_extract_pack, {pack_id}, version {pack_version}")
     pack_path = os.path.join(storage_base_path, pack_id, pack_version, f"{pack_id}.zip")
@@ -138,7 +138,7 @@ def download_and_extract_pack(
         return os.path.join(extract_destination_path, pack_id)
     else:
         logging.warning(f"{pack_id} pack of version {pack_version} was not found in the bucket. {pack_path=}")
-        return False
+        return ""
 
 
 def download_and_extract_index(

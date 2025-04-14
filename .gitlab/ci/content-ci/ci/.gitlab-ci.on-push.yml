@@ -293,12 +293,12 @@ validate-content-conf:
         ./Tests/Marketplace/upload_versions_core_files.sh "$MARKETPLACE_BUCKET" "$STORAGE_BASE_PATH" "$MARKETPLACE_VERSION" "$LAST_UPLOAD_COMMIT"
         section_end "Override and upload core packs versions"
 
-        section_start "Validate core packs list versions" --collapsed
-        python3 ./Tests/Marketplace/validate_core_packs_list_versions.py -s "${GCS_MARKET_KEY}" -c "${CI_COMMIT_REF_NAME}" -mp "${MARKETPLACE_VERSION}" -bb "${GCS_BUILD_BUCKET}" -n "${CI_PIPELINE_ID}"
-        section_end "Validate core packs list versions"
+        section_start "Validate core packs list" --collapsed
+        python3 ./Tests/Marketplace/validate_core_packs_list.py -s "${GCS_MARKET_KEY}" -c "${CI_COMMIT_REF_NAME}" -mp "${MARKETPLACE_VERSION}" -bb "${GCS_BUILD_BUCKET}" -n "${CI_PIPELINE_ID}"
+        section_end "Validate core packs list"
 
       else
-        echo "Skipping - Prepare Content Packs for Testing, Override and upload core packs versions, Validate core packs list versions."
+        echo "Skipping - Prepare Content Packs for Testing, Override and upload core packs versions, Validate core packs list."
       fi
 
     - *create-xsoar-instances
