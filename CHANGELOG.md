@@ -1,3 +1,16 @@
+# Content Infrastructure 0.0.41 (2025-04-14)
+
+### Features
+
+- Adapted `validate_core_packs_list_versions.py` script to support platform core-packs new structure. ([CIAC-13064](https://jira-dc.paloaltonetworks.com/browse/CIAC-13064))
+- Added a script ***start-stop-mechanism*** which gets an action to execute and tenants id list and start or stop the all given tenants accordingly. ([13291](https://jira-dc.paloaltonetworks.com/browse/13291))
+
+### Bugfixes
+
+- Fix *validate_synced_buckets.sh* argument passing.
+- Removed reference for .gitlab/ci/dockerfiles/.gitlab-ci.auto-update-docker.yml
+
+
 # Content Infrastructure 0.0.40 (2025-04-10)
 
 ### Features
