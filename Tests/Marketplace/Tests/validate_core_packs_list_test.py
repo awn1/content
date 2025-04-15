@@ -233,6 +233,71 @@ def test_validate_mandatory_dependencies_and_supported_modules_invalid_2(mocker,
     )
 
 
+def test_validate_mandatory_dependencies_and_supported_modules_invalid_3(mocker, tmp_path):
+    """
+    Scenario: Test the validate_mandatory_dependencies_and_supported_modules function.
+    Given:
+     - Pack name, pack version, pack dependencies, core pack list.
+     - The core pack `FeedMitreAttackv2` has a mandatory dependency 'A'.
+    When:
+     - validate_mandatory_dependencies_and_supported_modules called.
+    Then:
+     - The method raises one logged error, regarding the dependancy 'A' not being a core-pack.
+    """
+    from Tests.Marketplace.validate_core_packs_list import validate_mandatory_dependencies_and_supported_modules
+
+    mocker_logs = mocker.patch.object(validate_core_packs_list.LogAggregator, "add_log")
+    mocker.patch("Tests.Marketplace.validate_core_packs_list.get_pack_supported_modules", return_value={"C1", "C3"})
+    mocker.patch("Tests.Marketplace.validate_core_packs_list.check_if_test_dependency", return_value=False)
+    dependencies = {
+        "Base": {
+            "author": "Cortex XSOAR",
+            "certification": "certified",
+            "mandatory": True,
+            "minVersion": "1.34.10",
+            "name": "Base",
+        },
+        "A": {
+            "author": "Cortex XSOAR",
+            "certification": "certified",
+            "mandatory": True,
+            "minVersion": "1.0.0",
+            "name": "Base",
+        },
+    }
+    core_packs = {
+        "FeedMitreAttackv2": {
+            "index_zip_path": "FeedMitreAttackv2/metadata-1.1.39.json",
+            "version": "1.1.39",
+            "supportedModules": ["C1", "C3"],
+        },
+        "Base": {
+            "index_zip_path": "FeedMitreAttackv2/metadata-1.1.39.json",
+            "version": "1.34.11",
+            "supportedModules": ["C1", "C3", "X0"],
+        },
+    }
+
+    validate_mandatory_dependencies_and_supported_modules(
+        "FeedMitreAttackv2",
+        "1.1.39",
+        ["C1", "C3"],
+        dependencies,
+        core_packs,
+        "corepacks-x.x.x.json",
+        "xsoar",
+        "index.zip",
+        tmp_path,
+        LogAggregator(),
+    )
+
+    assert mocker_logs.call_count == 1
+    assert mocker_logs.call_args.args[0] == (
+        "The dependency A with min version number 1.0.0 of the pack FeedMitreAttackv2/1.1.39 "
+        "Does not exists in core pack list corepacks-x.x.x.json."
+    )
+
+
 def test_validate_mandatory_dependencies_and_supported_modules_valid(mocker, tmp_path):
     """
     Scenario: Test the validate_mandatory_dependencies_and_supported_modules function.
