@@ -21,7 +21,7 @@ def options_handler() -> Namespace:
     parser.add_argument("--username", help="Jenkins username.", required=True)
     parser.add_argument("--token", help="Jenkins API token.", required=True)
     parser.add_argument(
-        "--root_folder",
+        "--root-folder",
         help="Optional: if provided, only this root_folder will be synced. If omitted, the entire bucket will be synced.",
         required=False,
     )
