@@ -1150,6 +1150,18 @@ force-upload-sync-buckets-between-projects:
         echo "Platform bucket prod-us sync completed"
     - section_end "Sync platform buckets between projects"
 
+    - section_start "Trigger sync for all buckets" --collapsed
+    - |
+      # The next step triggers a pipeline by the DevOps team that synchronizes between the `prod us` bucket and all the other buckets (gov, fr).
+      # If this step fails, a message will appear in the Slack channel `dmst-build`.
+      # If the step is successful, a message will appear in the thread under the upload message.
+      # Note: Failure of this step indicates an issue with triggering the pipeline, not with its process.
+      # For job status updates see xdr-content-sync channel.
+      poetry run python3 -u ./Tests/scripts/trigger_jenkins_job.py --url "${JENKINS_SYNC_PLATFORM_BUCKETS_JOB_URL}" --username "${JENKINS_USER}" --token "${JENKINS_TOKEN}" --root-folder "${PLATFORM_CONTENT_ROOT_FOLDER}"
+    - section_end "Trigger sync for all buckets"
+
+    - job-done
+
 
 sync-platform-buckets-between-projects:
   extends: .sync-platform-buckets-between-projects
