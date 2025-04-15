@@ -1,3 +1,10 @@
+# Content Infrastructure 0.0.42 (2025-04-15)
+
+### Bugfixes
+
+- Fix platform core-packs validation.
+
+
 # Content Infrastructure 0.0.41 (2025-04-14)
 
 ### Features
