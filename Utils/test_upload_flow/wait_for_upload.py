@@ -50,11 +50,12 @@ def get_upload_job_status(pipeline_id, token):
         xsoar_upload_job_status = get_job_status('upload-packs-to-marketplace', jobs_info)
         xsiam_upload_job_status = get_job_status('upload-packs-to-marketplace-v2', jobs_info)
         xsoar_saas_upload_job_status = get_job_status("upload-packs-to-xsoar-saas-marketplace", jobs_info)
+        platform_upload_job_status = get_job_status("upload-packs-to-platform-marketplace", jobs_info)
     except Exception as e:
         logging.error(f'Unable to parse pipeline status response: {e}')
         sys.exit(1)
 
-    return pipeline_status, xsoar_upload_job_status, xsiam_upload_job_status, xsoar_saas_upload_job_status
+    return pipeline_status, xsoar_upload_job_status, xsiam_upload_job_status, xsoar_saas_upload_job_status, platform_upload_job_status
 
 
 def get_job_status(job_name, pipelines_jobs_response):
@@ -84,7 +85,7 @@ def main():
     while pipeline_status not in ['failed', 'success', 'canceled'] and elapsed < TIMEOUT:
         logging.info(f'Pipeline {pipeline_id} status is {pipeline_status}')
         time.sleep(300)
-        pipeline_status, xsoar_upload_job_status, xsiam_upload_job_status, xsoar_saas_upload_job_status = get_upload_job_status(
+        pipeline_status, xsoar_upload_job_status, xsiam_upload_job_status, xsoar_saas_upload_job_status, platform_upload_job_status = get_upload_job_status(
             pipeline_id, token
         )
         elapsed = time.time() - start
@@ -100,6 +101,7 @@ def main():
             xsoar_upload_job_status == "skipped"
             or xsiam_upload_job_status == "skipped"
             or xsoar_saas_upload_job_status == "skipped"
+            or platform_upload_job_status == "skipped"
         ):
             logging.error(f'Upload pipeline failed before upload-to-marketplace step. See here: {pipeline_url}')
             sys.exit(1)

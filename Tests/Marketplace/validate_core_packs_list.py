@@ -474,11 +474,11 @@ def validate_mandatory_dependencies_and_supported_modules(
                     )
                     valid = False
 
-        # For platform packs, validate for which product types the dependencies' are core packs at.
-        if pack_supported_modules:
-            valid = valid and validate_dependency_supported_modules(
-                core_packs, pack_name, pack_supported_modules, dependency_name, index_folder_path, log_aggregator
-            )
+            # For platform packs, validate for which product types the dependencies' are core packs at.
+            if pack_supported_modules:
+                valid = valid and validate_dependency_supported_modules(
+                    core_packs, pack_name, pack_supported_modules, dependency_name, index_folder_path, log_aggregator
+                )
 
     return valid
 
