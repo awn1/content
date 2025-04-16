@@ -1,7 +1,7 @@
-### This script creates disposable tenants for our test builds.
-### For more information, see the Confluence pages:
-### https://confluence-dc.paloaltonetworks.com/pages/viewpage.action?spaceKey=DemistoContent&title=XSOAR-NG+-+Build+Machines
-### https://confluence-dc.paloaltonetworks.com/display/DemistoContent/XSIAM+-+Build+Machines
+#  This script creates disposable tenants for our test builds.
+#  For more information, see the Confluence pages:
+#  https://confluence-dc.paloaltonetworks.com/pages/viewpage.action?spaceKey=DemistoContent&title=XSOAR-NG+-+Build+Machines
+#  https://confluence-dc.paloaltonetworks.com/display/DemistoContent/XSIAM+-+Build+Machines
 
 
 import argparse
@@ -11,12 +11,14 @@ import logging
 import os
 import re
 import sys
+import uuid
 from collections import OrderedDict, defaultdict
 from distutils.util import strtobool
 from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
+from requests.exceptions import HTTPError
 from slack_sdk import WebClient
 
 from Tests.scripts.common import string_to_bool
@@ -36,6 +38,8 @@ SLACK_TOKEN = os.getenv("SLACK_TOKEN", "")
 SLACK_WORKSPACE_NAME = os.getenv("SLACK_WORKSPACE_NAME", "")
 PIPELINE_SLACK_CHANNEL = os.getenv("PIPELINE_SLACK_CHANNEL")
 THREAD_TS = os.getenv("THREAD_TS")
+VISO_API_URL = os.getenv("VISO_API_URL")
+VISO_API_KEY = os.getenv("VISO_API_KEY")
 
 INSTANCE_NAME_PREFIX = "qa2-test-"
 XSIAM_VERSION = "ga"
@@ -44,8 +48,14 @@ FIELDS_TO_GET_FROM_VISO = ["fqdn", "xsoar_version"]
 AGENT_NAME_DEFAULT_MESSAGE = "<ADD_AGENT_HOST_NAME_HERE>"
 AGENT_IP_DEFAULT_MESSAGE = "<ADD_AGENT_HOST_IP_HERE>"
 SERVER_TYPES = [XsoarClient.SERVER_TYPE, XsiamClient.SERVER_TYPE]
+SERVER_TYPE_TO_PRODUCT_TYPE: dict[str, str] = {
+    XsoarClient.SERVER_TYPE: XsoarClient.PRODUCT_TYPE,
+    XsiamClient.SERVER_TYPE: XsiamClient.PRODUCT_TYPE,
+}
 
 MAX_TTL = 144  # hours
+MAX_SUBDOMAIN_UUID_LENGTH: int = 4
+MAX_SUBDOMAIN_LENGTH: int = 63  # limit to 63 characters (subdomain label max length).
 
 
 class FlowType:
@@ -93,11 +103,29 @@ def get_invalid_args(
 
 def extract_xsoar_ng_version(version: str) -> str:
     """Extract the XSOAR NG version from the provided version string.
-    E.g. master-v8.8.0-1436883-667f2e66 -> 8.8.0
+    E.g., master-v8.8.0-1436883-667f2e66 -> 8.8.0
     """
     if match_xsoar_version := re.search(r".-v(\d+\.\d+\.\d+)", version):
         return match_xsoar_version.group(1)
     return version
+
+
+def clean_subdomain(input_str: str) -> str:
+    # Remove any character that is not a-z, 0-9, or hyphen
+    cleaned = re.sub(r"[^a-z0-9-]", "", input_str.lower())
+
+    # Strip hyphens from the start and end
+    cleaned = re.sub(r"^-+|-+$", "", cleaned)
+
+    return cleaned[:MAX_SUBDOMAIN_LENGTH]
+
+
+def generate_subdomain(server_type: str, flow_type: str) -> str:
+    platform_type = SERVER_TYPE_TO_PRODUCT_TYPE[server_type].lower()
+    build_machine = flow_type.lower() in BUILD_MACHINE_FLOWS
+    prefix = "bld" if build_machine else "ownr"
+    unique_short_id = uuid.uuid4().hex[:MAX_SUBDOMAIN_UUID_LENGTH].lower()
+    return clean_subdomain(f"crtx-cntnt-{prefix}-{platform_type}-{flow_type}-{unique_short_id}")
 
 
 def prepare_outputs(
@@ -308,10 +336,14 @@ def main() -> None:
         versions_file_path: Path | None = args.versions_file_path
         ttl: int = args.ttl
         total_count: int = count_per_type * len(flow_types)
-        VISO_API_URL = os.environ["VISO_API_URL"]
-        VISO_API_KEY = os.environ["VISO_API_KEY"]
-        viso_api = VisoAPI(base_url=VISO_API_URL, api_key=VISO_API_KEY)
-
+        if not VISO_API_URL or not VISO_API_KEY:
+            logging.error("VISO_API_URL or VISO_API_KEY env vars are not set.")
+            sys.exit(1)
+        else:
+            viso_api = VisoAPI(base_url=VISO_API_URL, api_key=VISO_API_KEY)
+        existing_subdomains = {
+            tenant["subdomain"] for tenant in viso_api.get_all_tenants(CONTENT_TENANTS_GROUP_OWNER, fields=["subdomain"])
+        }
         if invalid_args := get_invalid_args(
             viso_api=viso_api,
             count_per_type=count_per_type,
@@ -323,7 +355,7 @@ def main() -> None:
         ):
             logging.error(f"The following errors were found in the input arguments:\n- {f'{os.linesep}- '.join(invalid_args)}")
             send_slack_notification(
-                "danger", "Error creating disposable tenants, invaid arguments", "\n".join("• " + arg for arg in invalid_args)
+                "danger", "Error creating disposable tenants, invalid arguments", "\n".join("• " + arg for arg in invalid_args)
             )
             sys.exit(1)
         versions = {}
@@ -339,25 +371,43 @@ def main() -> None:
         owner = owner or getpass.getuser()
         for total, (flow_type, _) in enumerate(pairs, start=1):
             try:
-                tenant_lcaas_id = viso_api.create_disposable_tenant(
-                    owner=owner,
-                    group_owner=CONTENT_TENANTS_GROUP_OWNER,
-                    server_type=server_type,
-                    viso_version=versions.get("viso_version", ""),
-                    frontend_version=versions.get("frontend_version", ""),
-                    backend_version=versions.get("backend_version", ""),
-                    xsoar_version=versions.get("xsoar_version", ""),
-                    pipeline_version=versions.get("pipeline_version", ""),
-                    storybuilder_version=versions.get("storybuilder_version", ""),
-                    rocksdb_version=versions.get("rocksdb_version", ""),
-                    scortex_version=versions.get("scortex_version", ""),
-                    vsg_version=versions.get("vsg_version", ""),
-                    ttl=ttl,
-                )["lcaas_id"]
-                new_tenants_info[flow_type].append(tenant_lcaas_id)
-                logging.info(
-                    f"Created {total}/{total_count} disposable tenants for {flow_type=} with LCAAS ID: {tenant_lcaas_id}"
-                )
+                while True:
+                    while True:
+                        subdomain = generate_subdomain(server_type, flow_type)
+                        if subdomain not in existing_subdomains:
+                            break
+                    try:
+                        tenant_lcaas_id = viso_api.create_disposable_tenant(
+                            owner=owner,
+                            group_owner=CONTENT_TENANTS_GROUP_OWNER,
+                            server_type=server_type,
+                            subdomain=subdomain,
+                            viso_version=versions.get("viso_version", ""),
+                            frontend_version=versions.get("frontend_version", ""),
+                            backend_version=versions.get("backend_version", ""),
+                            xsoar_version=versions.get("xsoar_version", ""),
+                            pipeline_version=versions.get("pipeline_version", ""),
+                            storybuilder_version=versions.get("storybuilder_version", ""),
+                            rocksdb_version=versions.get("rocksdb_version", ""),
+                            scortex_version=versions.get("scortex_version", ""),
+                            vsg_version=versions.get("vsg_version", ""),
+                            ttl=ttl,
+                        )["lcaas_id"]
+                        new_tenants_info[flow_type].append(tenant_lcaas_id)
+                        existing_subdomains.add(subdomain)
+                        logging.info(
+                            f"Created {total}/{total_count} disposable tenants for {flow_type=} with LCAAS ID: {tenant_lcaas_id}"
+                        )
+                        break
+                    except HTTPError as http_ex:
+                        if (
+                            http_ex.response.status_code == 400
+                            and f"subdomain {subdomain} already exists" in http_ex.response.text
+                        ):
+                            logging.warning("Tenant subdomain already exists, retrying")
+                            existing_subdomains.add(subdomain)
+                        else:
+                            raise http_ex
             except Exception as e:
                 is_error = True
                 logging.error(f"Failed to create disposable tenant {total}/{total_count} for {flow_type=}:\n{e}")
