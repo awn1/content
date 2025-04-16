@@ -20,7 +20,7 @@ from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 from Tests.scripts.utils.slack import tag_user
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)  # noqa
 
 # the id of the project where the MR will be created (content-test-conf repo in xdr.pan.local)
 GITLAB_CONTENT_TEST_CONF_PROJECT_ID = "1709"
@@ -69,7 +69,7 @@ def update_saas_servers_with_new(project: Project, new_tenants_path: Path) -> tu
     merges them, and sorts the result based on server_type and flow_type.
 
     Args:
-        saas_servers_path (Path): Path to the JSON file containing SaaS servers information.
+        project (Project): The GitLab project where the SaaS servers information is stored.
         new_tenants_path (Path): Path to the JSON file containing new tenants information.
 
     Returns:
@@ -109,6 +109,7 @@ def is_merge_request_ready(project: Project, mr_id: int) -> bool:
         bool: True if the merge request is ready to be merged, False otherwise.
     """
     logging.info("Waiting for the merge request to be ready for merge.")
+    merge_status = None
     for i in range(1, ATTEMPTS_NUMBER + 1):
         logging.debug(f"Checking merge status for attempt {i}/{ATTEMPTS_NUMBER}.")
         mr = project.mergerequests.get(mr_id)
@@ -118,8 +119,8 @@ def is_merge_request_ready(project: Project, mr_id: int) -> bool:
         logging.debug(f"Current merge status: {merge_status}, sleeping for {SLEEP_INTERVAL} seconds...")
         time.sleep(SLEEP_INTERVAL)
 
-    logging.info(f"Final merge status: {mr.merge_status}")
-    return mr.merge_status == "can_be_merged"
+    logging.info(f"Final merge status: {merge_status}")
+    return merge_status == "can_be_merged"
 
 
 def get_gitlab_project(ci_token: str, project_id: str) -> Project:

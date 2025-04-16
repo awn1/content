@@ -67,6 +67,7 @@ class VisoAPI:
         owner: str,
         group_owner: str,
         server_type: str,
+        subdomain: str,
         viso_version: str = "",
         frontend_version: str = "",
         backend_version: str = "",
@@ -88,6 +89,7 @@ class VisoAPI:
             "owner": owner,
             "token_group": group_owner,
             "viso_version": viso_version,
+            "subdomain": subdomain,
             "fake_license": True,
             "versions": {
                 "frontend": frontend_version,
