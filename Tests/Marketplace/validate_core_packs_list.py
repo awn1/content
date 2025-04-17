@@ -262,7 +262,8 @@ def extract_pack_version_from_pack_path(path_of_the_pack: str, pack_name: str) -
 
 
 def check_if_test_dependency(dependency_name: str, pack_name: str, marketplace: str) -> bool:
-    """Checks if the dependency of the pack is test dependency.
+    """
+    Checks if the dependency of the pack is a test dependency.
     Args:
         dependency_name (str): The name of the dependency.
         pack_name (str): The name of the pack.
@@ -374,26 +375,21 @@ def validate_dependency_supported_modules(
         valid (bool): Whether the dependency is a core pack for all the product types that the main pack is a core pack for.
     """
     valid: bool = True
-    if dependency_name in core_packs.keys():
-        # Check that the dependency is a core pack for all "modules" (product types) that the main pack is a core pack at.
-        missing_dependency_supported_modules: set = set(pack_supported_modules) - set(
-            core_packs[dependency_name].get("supportedModules", [])
-        )
-        # Check if the dependency is supported on those `missing_supported_modules` (product licenses),
-        # otherwise the dependency is not-relevant.
-        dependency_supported_modules: set[str] = get_pack_supported_modules(dependency_name, index_folder_path)
-        if missing_dependency_supported_modules & dependency_supported_modules:
-            log_aggregator.add_log(
-                f"The core-pack {pack_name} is a core-pack for the following licenses: "
-                f"{', '.join(missing_dependency_supported_modules)} where "
-                f"the dependency {dependency_name} is not a core-pack at."
-            )
-            valid = False
-    else:
-        valid = False
+    # Check that the dependency is a core pack for all "modules" (product types) that the main pack is a core pack at.
+    missing_dependency_supported_modules: set = set(pack_supported_modules) - set(
+        core_packs[dependency_name].get("supportedModules", [])
+    )
+    # Check if the dependency is supported on those `missing_supported_modules` (product licenses),
+    # otherwise the dependency is not-relevant.
+    dependency_supported_modules: set[str] = get_pack_supported_modules(dependency_name, index_folder_path)
+    if missing_dependency_supported_modules & dependency_supported_modules:
         log_aggregator.add_log(
-            f"The dependency {dependency_name} is not a core-pack, but the core-pack {pack_name} has it as a dependency."
+            f"The core-pack {pack_name} is a core-pack for the following licenses: "
+            f"{', '.join(missing_dependency_supported_modules)} where "
+            f"the dependency {dependency_name} is not a core-pack at."
         )
+        valid = False
+
     return valid
 
 
@@ -466,13 +462,16 @@ def validate_mandatory_dependencies_and_supported_modules(
                     f"of the pack {pack_name}/{pack_version} "
                     f"Does not exists in core pack list. - check_if_test_dependency."
                 )
-                if not (check_if_test_dependency(dependency_name, pack_name, marketplace)):
+                if not check_if_test_dependency(dependency_name, pack_name, marketplace):
                     log_aggregator.add_log(
                         f"The dependency {dependency_name} with min version number {min_version} "
                         f"of the pack {pack_name}/{pack_version} "
                         f"Does not exists in core pack list {file_to_check}."
                     )
                     valid = False
+                else:
+                    logging.debug(f"The dependency {dependency_name} of {pack_name} pack is a test-dependency.")
+                    continue
 
             # For platform packs, validate for which product types the dependencies' are core packs at.
             if pack_supported_modules:
@@ -511,7 +510,7 @@ def validate_core_packs(
     logging.debug(f"{json.dumps(core_packs, indent=2)}")
     valid: bool = True
     for pack_name, pack_data in core_packs.items():
-        logging.info(f"Validating {pack_name} core-pack:")
+        logging.info(f"Validating {pack_name} core-pack")
         pack_version = pack_data.get("version")
         pack_supported_modules: set[str] = pack_data.get("supportedModules", set())
         if pack_path_after_extraction := download_and_extract_pack(
