@@ -5,6 +5,7 @@ import sys
 from time import sleep
 from typing import NamedTuple
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 from Tests.scripts.infra.viso_api import VisoAPI
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
@@ -13,7 +14,7 @@ from Tests.scripts.utils.log_util import install_logging
 
 VISO_API_URL = os.environ["VISO_API_URL"]
 VISO_API_KEY = os.environ["VISO_API_KEY"]
-GROUP_OWNER = os.environ["GROUP_OWNER"]
+GROUP_OWNER = os.environ.get("GROUP_OWNER", "aazadaliyev")
 DEFAULT_TIMEOUT = 1200  # 20 minutes
 
 # ------------- Tuple Report for each machine -----------

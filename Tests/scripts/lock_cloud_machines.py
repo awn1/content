@@ -24,6 +24,7 @@ from Tests.scripts.infra.xsoar_api import SERVER_TYPE_TO_CLIENT_TYPE, XsiamClien
 from Tests.scripts.utils import logging_wrapper as logging
 from Tests.scripts.utils.log_util import install_logging
 from Utils.github_workflow_scripts.utils import get_env_var
+from Utils.start_stop_mechanism import start_stop_mechanism
 
 GITLAB_SERVER_URL = get_env_var("CI_SERVER_URL", "https://gitlab.xdr.pan.local")  # disable-secrets-detection
 LOCKS_BUCKET = "xsoar-ci-artifacts"
@@ -40,9 +41,9 @@ urllib3.disable_warnings(InsecureRequestWarning)
 warnings.filterwarnings("ignore", _default._CLOUD_SDK_CREDENTIALS_WARNING)
 from Tests.scripts.infra.viso_api import VisoAPI  # noqa
 
-VISO_API_URL: str = get_env_var("VISO_API_URL", "")
-VISO_API_KEY = get_env_var("VISO_API_KEY", "")
-CONTENT_TENANTS_GROUP_OWNER = get_env_var("CONTENT_TENANTS_GROUP_OWNER", "")
+VISO_API_URL: str = get_env_var("VISO_API_URL")
+VISO_API_KEY = get_env_var("VISO_API_KEY")
+CONTENT_TENANTS_GROUP_OWNER = get_env_var("CONTENT_TENANTS_GROUP_OWNER")
 
 
 def send_slack_notification(slack_client: SlackWebClient, text_list: list[str]):
@@ -541,26 +542,39 @@ def get_viso_tenants() -> dict[str, dict]:
     return tenants
 
 
-def validate_connection_for_machines(machine_list: list[str], cloud_servers: dict[str, dict], token_map: dict[str, str]):
+def validate_connection_for_machines(
+    machine_list: list[str], cloud_servers: dict[str, dict], token_map: dict[str, str]
+) -> list[str]:
     """
     For relevant server types, gets the cloud machine API key from GSM and checks it.
     If it is not valid or doesn't exist, creates one and saves it to GSM.
 
     Raises InvalidAPIKey Exception if creating a new API key was unsuccessful.
     """
+
+    successful_machines: list[str] = []
+
     for cloud_machine in machine_list:
-        conf = cloud_servers.get(cloud_machine)
+        conf = cloud_servers.get(cloud_machine, {})
         if client_type := SERVER_TYPE_TO_CLIENT_TYPE.get(conf.get("server_type")):  # type: ignore[union-attr, arg-type]
             xsoar_admin_user = Settings.xsoar_admin_user
             client = client_type(
-                xsoar_host=conf.get("base_url").replace("https://api-", "").replace("/", ""),  # type: ignore[union-attr]
+                xsoar_host=conf.get("base_url", "").replace("https://api-", "").replace("/", ""),
+                # type: ignore[union-attr]
                 xsoar_user=xsoar_admin_user.username,
                 xsoar_pass=xsoar_admin_user.password,
                 tenant_name=cloud_machine,
                 project_id=AUTOMATION_GCP_PROJECT,
             )
             client_token = token_map.get(client.tenant_name)
-            client.login_using_gsm(client_token)
+
+            try:
+                client.login_using_gsm(client_token)
+                successful_machines.append(cloud_machine)
+            except Exception as e:
+                logging.error(f"Failed to login to {cloud_machine} using GSM: {e}")
+
+    return successful_machines
 
 
 def generate_tenant_token_map(tenants_data: dict[str, dict]) -> dict:
@@ -819,12 +833,47 @@ def main():
         file_path=f"{options.gcs_locks_path}/{QUEUE_REPO}/{GITLAB_PROJECT_ID}-queue-{options.ci_job_id}",
     )
 
-    with open(options.response_machine, "w") as f:
-        f.write(f"{','.join(lock_machine_list)}")
+    mapping_tenants_id = {item.split("-")[-1]: item for item in lock_machine_list}  # {'999': 'qa2-test-999'}
+    relevant_machine_list: list[str] = []
+
+    if final_report := start_stop_mechanism(tenants_id=set(mapping_tenants_id.keys()), action="start"):
+        relevant_machine_list.extend(
+            mapping_tenants_id[tenant_report.lcaas_id] for tenant_report in final_report if tenant_report.success
+        )
+
+    logging.info(
+        f"Stayed with {len(relevant_machine_list)} machines after trying to start them, " f"and they are: {relevant_machine_list}"
+    )
 
     tenants = get_viso_tenants()
     tenant_token_map = generate_tenant_token_map(tenants_data=tenants)
-    validate_connection_for_machines(lock_machine_list, cloud_servers_path_json, tenant_token_map)
+
+    successful_machines = validate_connection_for_machines(relevant_machine_list, cloud_servers_path_json, tenant_token_map)
+
+    logging.info(
+        f"Stayed with {len(successful_machines)} machines after executing validate_connection_for_machines, "
+        f"and they are: {successful_machines}"
+    )
+
+    if not evaluate_condition(len(successful_machines), options.machines_count_minimum_condition, len(successful_machines)):
+        logging.error(
+            f"Won't be able to lock the minimum number of machines. Available machines: {len(successful_machines)}, "
+            f"condition: {options.machines_count_minimum_condition}"
+        )
+
+        send_slack_notification(
+            slack_client,
+            [
+                "The number of available machines is below the threshold required",
+                f"{len(successful_machines)} Available machines: {successful_machines}",
+                f"This is the minimum required: {options.machines_count_minimum_condition}",
+            ],
+        )
+
+        sys.exit(1)
+
+    with open(options.response_machine, "w") as f:
+        f.write(f"{','.join(lock_machine_list)}")
 
     end_time = time.time()
     duration_minutes = (end_time - start_time) // 60
