@@ -1,3 +1,16 @@
+# Content Infrastructure 0.0.43 (2025-04-20)
+
+### Features
+
+- Trigger platform-bucket sync jenkins job within Upload-Flow. ([CIAC-13476](https://jira-dc.paloaltonetworks.com/browse/CIAC-13476))
+- Inserting the start_stop_mechanism function into lock_cloud_machines. ([13291](https://jira-dc.paloaltonetworks.com/browse/13291))
+- custom sub domain for tenants
+
+### Bugfixes
+
+- Fix platform core-packs validation.
+
+
 # Content Infrastructure 0.0.42 (2025-04-15)
 
 ### Bugfixes
