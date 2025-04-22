@@ -565,6 +565,8 @@ def fetch_incidents(
     integration_context=None,
     raw_json_encoding: str | None = None,
 ) -> tuple[dict, list, list]:
+    
+    demisto.debug("Starting fetch")
     incidents = []
     end_query_time = ''
     # check if there're incidents saved in context
@@ -580,9 +582,13 @@ def fetch_incidents(
     if not start_query_time:
         start_query_time, _ = parse_date_range(first_fetch_time, date_format=DATE_FORMAT, utc=True)
     fetch_times = get_fetch_times(start_query_time)
+    
+    
     for i in range(len(fetch_times) - 1):
         start_query_time = fetch_times[i]
         end_query_time = fetch_times[i + 1]
+        converted_start_query_time = dateparser.parse(start_query_time)
+        converted_end_query_time = dateparser.parse(end_query_time)
         demisto.debug(f'{start_query_time=}  {end_query_time=}')
         raw_events = client.get_events(interval=start_query_time + "/" + end_query_time,
                                        event_type_filter=event_type_filter,
@@ -590,9 +596,6 @@ def fetch_incidents(
 
         message_delivered = raw_events.get("messagesDelivered", [])
         demisto.debug(f'Fetched {len(message_delivered)} messagesDelivered events')
-        
-        start_query_time = dateparser.parse(start_query_time)
-        end_query_time = dateparser.parse(end_query_time)
         
         for raw_event in message_delivered:
             raw_event["type"] = "messages delivered"
@@ -604,10 +607,10 @@ def fetch_incidents(
             
             ### CUSTOM CHANGE TO FIND INCORRECT DATES:
             
-            event_time = dateparser.parse(raw_event["messageTime"])
+            event_time = dateparser.parse(raw_event["messageTime"]) - timedelta(days=1)
 
-            if end_query_time <= start_query_time or end_query_time >= end_query_time:
-                demisto.debug(f"message received out of time range: {event_guid=}")
+            if event_time <= converted_start_query_time or event_time >= converted_end_query_time:
+                demisto.debug(f"message received out of time range: {event_guid=}, {event_time=}, {converted_start_query_time=}, {converted_end_query_time=}")
             
             ######
             
@@ -633,6 +636,15 @@ def fetch_incidents(
                 "rawJSON": raw_json,
                 "occured": raw_event["messageTime"],
             }
+            ### CUSTOM CHANGE TO FIND INCORRECT DATES:
+            
+            event_time = dateparser.parse(raw_event["messageTime"]) - timedelta(days=1)
+
+            if event_time <= converted_start_query_time or event_time >= converted_end_query_time:
+                demisto.debug(f"message received out of time range: {event_guid=}, {event_time=}, {converted_start_query_time=}, {converted_end_query_time=}")
+            
+            ######
+            
             demisto.debug(f'Event Time: {incident.get("occurred")}')
             incidents.append(incident)
 
@@ -653,6 +665,14 @@ def fetch_incidents(
             }
             demisto.debug(f'Event Time: {incident.get("occurred")}')
             incidents.append(incident)
+            ### CUSTOM CHANGE TO FIND INCORRECT DATES:
+            
+            event_time = dateparser.parse(raw_event["clickTime"]) - timedelta(days=1)
+
+            if event_time <= converted_start_query_time or event_time >= converted_end_query_time:
+                demisto.debug(f"message received out of time range: {event_guid=}, {event_time=}, {converted_start_query_time=}, {converted_end_query_time=}")
+            
+            ######
 
         clicks_blocked = raw_events.get("clicksBlocked", [])
         demisto.debug(f'Fetched {len(clicks_blocked)} clicks_blocked events')
@@ -671,11 +691,19 @@ def fetch_incidents(
             }
             demisto.debug(f'Event Time: {incident.get("occurred")}')
             incidents.append(incident)
+            ### CUSTOM CHANGE TO FIND INCORRECT DATES:
+            
+            event_time = dateparser.parse(raw_event["clickTime"]) - timedelta(days=1)
+
+            if event_time <= converted_start_query_time or event_time >= converted_end_query_time:
+                demisto.debug(f"message received out of time range: {event_guid=}, {event_time=}, {converted_start_query_time=}, {converted_end_query_time=}")
+            
+            ######
 
     # Cut the milliseconds from last fetch if exists
     end_query_time = end_query_time[:-5] + 'Z' if end_query_time[-5] == '.' else end_query_time
     next_run = {"last_fetch": end_query_time}
-    demisto.debug(f'{last_run}=')
+    demisto.debug(f'{next_run=}')
     return next_run, incidents[:limit], incidents[limit:]
 
 
