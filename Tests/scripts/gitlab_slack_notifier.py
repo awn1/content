@@ -737,6 +737,14 @@ def construct_slack_msg(
                 "short": False,
             }
         )
+    if custom_title:
+        content_fields.append(
+            {
+                "title": custom_title,
+                "short": False,
+            }
+        )
+
     # report failing unit-tests
     triggering_workflow_lower = triggering_workflow.lower()
 
@@ -842,7 +850,7 @@ def construct_slack_msg(
         [{"fallback": title, "color": color, "title": title, "title_link": pipeline_url, "fields": content_fields}]
         + slack_msg_append,
         threaded_messages,
-        custom_title or title,
+        title,
         attachments_json,
     )
 
@@ -1154,7 +1162,7 @@ def main():
                 RIT_MR,
             }:
                 computed_slack_channel = f"@{get_slack_user_name(author, author, options.name_mapping_path)}"
-                logging.info(f"Sending slack message to channel {computed_slack_channel} for " f"Author:{author}")
+                logging.info(f"Sending slack message to channel {computed_slack_channel} for Author:{author}")
             else:
                 logging.info(f"Not supporting custom Slack channel for {triggering_workflow} workflow")
         except Exception as e:
