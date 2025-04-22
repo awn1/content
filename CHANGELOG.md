@@ -1,3 +1,14 @@
+# Content Infrastructure 0.0.44 (2025-04-22)
+
+### Features
+
+- Updated the demisto-sdk version 1.37.3 in Infra.
+
+### Bugfixes
+
+- Remove platform bucket from `verify_bucket.py`.
+
+
 # Content Infrastructure 0.0.43 (2025-04-20)
 
 ### Features
