@@ -174,7 +174,7 @@ def create_remote_pr(
         pr.add_to_assignees(pr_assignee)
         logging.info(f"Assigned to {pr_assignee}")
 
-    pr_labels = ["auto-update-docker", "docs-approved"]
+    pr_labels = ["auto-update-docker", "docs-approved", "ready-for-pipeline-running"]
     pr.set_labels(*pr_labels)
     logging.info(f'Set labels to {",".join(sorted(pr_labels))}')
 
