@@ -864,8 +864,8 @@ def main():
         send_slack_notification(
             slack_client,
             [
-                "The number of available machines is below the threshold required",
-                f"{len(successful_machines)} Available machines: {successful_machines}",
+                "The number of available tenants is below the threshold required",
+                f"{len(successful_machines)} Available tenants: {successful_machines}",
                 f"This is the minimum required: {options.machines_count_minimum_condition}",
             ],
         )
