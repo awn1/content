@@ -71,6 +71,7 @@ COLORS_PALETTE = [
 ]
 LOCK_DURATION = "Lock Duration"
 AVAILABLE_MACHINES = "Available machines"
+JOB_ID = "Job ID"
 BUILD_IN_QUEUE = "Builds in queue"
 TIMESTAMP = "Timestamp (UTC)"
 IMAGE_EXTENSION = ".png"
@@ -257,7 +258,7 @@ def create_available_machines_graph(
     data_raw, types_raw, timestamps_raw = [], [], []  # Available machines
 
     for message in messages:
-        if AVAILABLE_MACHINES in message:
+        if AVAILABLE_MACHINES and JOB_ID in message:
             message_split = message.split("\n")
             timestamps_raw.append(message_split[1])
             types_raw.append(message_split[0])
