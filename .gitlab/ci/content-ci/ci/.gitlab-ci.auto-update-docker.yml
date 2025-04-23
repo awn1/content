@@ -61,7 +61,7 @@ auto-update-docker:
         --slack-msg-path "${ARTIFACTS_FOLDER}/slack_msg.txt"
 
     - echo "Uploading docker state file"
-    - gcloud storage cp "${ARTIFACTS_FOLDER}/updated_state.csv" "gs://${GCS_ARTICAT_BUCKET}/code-coverage-reports/docker/state.csv"
+    - gcloud storage cp "${ARTIFACTS_FOLDER}/updated_state.csv" "gs://${GCS_ARTICAT_BUCKET}/docker/auto-update-docker/state.csv"
     - echo "Successfully uploaded docker state file"
 
     - job-done
