@@ -103,5 +103,12 @@ workflow:
       variables:
         WORKFLOW_PIPELINE_NAME: 'Scheduled Dockerfiles auto update docker pipeline'
 
+    - if: '$CI_PIPELINE_SOURCE == "trigger" && $UPDATE_DOCKER_STATE == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Trigger Dockerfiles update docker state pipeline'
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $UPDATE_DOCKER_STATE == "true"'
+      variables:
+        WORKFLOW_PIPELINE_NAME: 'Scheduled Dockerfiles update docker state pipeline'
+
     # Don't add any other rules after this one.
     - when: always  # Other pipelines can run, but use the default name

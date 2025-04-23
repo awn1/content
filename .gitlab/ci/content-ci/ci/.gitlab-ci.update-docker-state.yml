@@ -1,0 +1,87 @@
+.update-docker-state-schedule-rule:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $UPDATE_DOCKER_STATE == "true"'
+
+.update-docker-state-schedule-rule-always:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $UPDATE_DOCKER_STATE == "true"'
+      when: always
+
+cloning-repositories-update-docker-state:
+  stage:
+    .pre
+  extends:
+    - .update-docker-state-schedule-rule
+    - .cloning-repositories
+  script:
+    - job-done
+
+update-docker-state:
+  stage: update-docker-state
+  extends:
+    - .update-docker-state-schedule-rule
+    - .default-job-settings
+  needs:
+    - cloning-repositories-update-docker-state
+  tags:
+    - cortex-content-1738
+  variables:
+    GCS_ARTICAT_BUCKET: "xsoar-ci-artifacts"
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
+  script:
+    - echo "Updating the content graph"
+    - demisto-sdk graph update
+    - echo "Successfully updated content graph"
+    - echo "Downloading docker state file"
+    - gcloud storage cp "gs://${GCS_ARTICAT_BUCKET}/docker/auto-update-docker/state.csv" "${ARTIFACTS_FOLDER}/state.csv"
+    - echo "Finished to download state file from buket"
+    - echo "Successfully downloaded docker state file"
+    - |
+      echo "Starting to run update docker state script..."
+      poetry run python3 -u ${CI_PROJECT_DIR}/Tests/scripts/auto_update_docker/update_docker_state.py \
+        --state-path "${ARTIFACTS_FOLDER}/state.csv" \
+        --config-path "${ARTIFACTS_FOLDER}/repositories/content-test-conf/auto_update_docker/config.json" \
+        --docker-images "${DOCKER_IMAGES}" \
+        --action "${DOCKER_IMAGES_ACTION}" \
+        --slack-attachment-path "${ARTIFACTS_FOLDER}/slack_attachments.json"
+      echo "Finished to run update docker state script"
+    - echo "Uploading docker state file"
+    - gcloud storage cp "${ARTIFACTS_FOLDER}/state.csv" "gs://${GCS_ARTICAT_BUCKET}/docker/auto-update-docker/state.csv"
+    - echo "Successfully uploaded docker state file"
+    - job-done
+    - exit 0
+
+jobs-done-update-docker-state:
+  extends:
+    - .update-docker-state-schedule-rule
+    - .jobs-done-check
+  needs:
+    - update-docker-state
+  variables:
+    WORKFLOW: "Update Docker State"
+
+fan-in-update-docker-state:
+  stage: fan-in
+  extends:
+    - .update-docker-state-schedule-rule
+  script:
+    - echo "Update Docker State - fan in nightly"
+  when: always
+
+slack-notification-update-docker-state:
+  extends:
+    - .update-docker-state-schedule-rule-always
+    - .trigger-slack-notification
+  variables:
+    ARTIFACTS_FOLDER: ${CI_PROJECT_DIR}/artifacts
+    JOB_NAME: 'fan-in-update-docker-state'
+    WORKFLOW: 'Update Docker State'
+    PIPELINE_TO_QUERY: $CI_PIPELINE_ID
+    SLACK_CHANNEL: $SLACK_CHANNEL
+    SLACK_MSG_ATTACHMENTS: "${ARTIFACTS_FOLDER}/slack_attachments.json"
+    SLACK_PARENT_PIPELINE_ID: $SLACK_PARENT_PIPELINE_ID
+    SLACK_PARENT_PROJECT_ID: $SLACK_PARENT_PROJECT_ID
+    SLACK_JOB: "true"
+    SLACK_ALLOW_FAILURE: "true"
+    CURRENT_BRANCH_NAME: $INFRA_BRANCH

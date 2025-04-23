@@ -19,6 +19,7 @@ from Tests.scripts.common import (
     RIT_PUBLISH,
     RIT_RELEASE,
     SDK_NIGHTLY,
+    UPDATE_DOCKER_STATE,
     WORKFLOW_TYPES,
 )
 from Tests.scripts.utils import logging_wrapper as logging
@@ -61,6 +62,9 @@ RIT_PUBLISH_JOBS = [
     "update-publish-logs",
     "sync-prod-buckets",
 ]
+
+UPDATE_DOCKER_STATE_JOBS = ["update-docker-state"]
+
 
 NATIVE_NIGHTLY_JOBS = [
     "cloning-repositories",
@@ -156,6 +160,7 @@ CONTENT_DOCS_NIGHTLY_JOBS = CONTENT_DOCS_JOBS_BASE
 JOBS_PER_TRIGGERING_WORKFLOW = {
     DOCKERFILES_PR: DOCKERFILES_PR_JOBS,
     AUTO_UPDATE_DOCKER: AUTO_UPDATE_DOCKER_JOBS,
+    UPDATE_DOCKER_STATE: UPDATE_DOCKER_STATE_JOBS,
     CONTENT_NIGHTLY: CONTENT_NIGHTLY_JOBS,
     SDK_NIGHTLY: SDK_NIGHTLY_JOBS,
     NATIVE_NIGHTLY: NATIVE_NIGHTLY_JOBS,

@@ -23,6 +23,7 @@ from Tests.scripts.utils import logging_wrapper as logging
 
 DOCKERFILES_PR = "Dockerfiles PR"
 AUTO_UPDATE_DOCKER = "Auto Update Docker"
+UPDATE_DOCKER_STATE = "Update Docker State"
 CONTENT_NIGHTLY = "Content Nightly"
 CONTENT_PR = "Content PR"
 CONTENT_MERGE = "Content Merge"
@@ -44,6 +45,7 @@ RIT_PUBLISH = "RIT Publish"
 WORKFLOW_TYPES = {
     DOCKERFILES_PR,
     AUTO_UPDATE_DOCKER,
+    UPDATE_DOCKER_STATE,
     CONTENT_NIGHTLY,
     NATIVE_NIGHTLY,
     CONTENT_PR,

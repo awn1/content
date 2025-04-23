@@ -29,6 +29,7 @@ stages:
   - trigger-nightlies
   - wait-for-build-to-finish
   - release-flow
+  - update-docker-state
   - are-jobs-really-done
   - fan-in  # concentrate pipeline artifacts to single job before triggering child slack pipeline
   - trigger-contribution-build
@@ -52,3 +53,4 @@ include:
   - local: .gitlab/ci/content-ci/ci/override-corepacks.yml
   - local: .gitlab/ci/content-ci/ci/deploy-auto-upgrade-packs.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.packwise.yml
+  - local: .gitlab/ci/content-ci/ci/.gitlab-ci.update-docker-state.yml
