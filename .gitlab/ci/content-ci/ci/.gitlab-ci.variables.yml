@@ -95,3 +95,12 @@ variables:
     options:
       - "content-leaders"
       - "content-research"
+  DOCKER_IMAGES:
+    description: "Which docker images to update, available values: asterisk (*) for all docker images or a comma separated list of docker images."
+    value: "*"
+  DOCKER_IMAGES_ACTION:
+    description: "The docker image action to perform. Can be 'Start' or 'Stop'."
+    value: "start"
+    options:
+      - "start"
+      - "stop"
