@@ -1859,6 +1859,8 @@ def slack_send():
     """
 
     args = demisto.args()
+    demisto.debug(f"in slack args are: {args}")
+    demisto.info(f"in slack args are: {args}")
     message = args.get("message", "")
     to = args.get("to")
     original_channel = args.get("channel")

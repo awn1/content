@@ -12,6 +12,8 @@ class FormType(Enum):
 
 
 def main():
+    demisto.debug("running MicrosoftTeamsAsk")
+    demisto.info("running MicrosoftTeamsAsk")
     script_arguments: dict = demisto.args()
 
     team_member: str = script_arguments.get("team_member", "")
@@ -83,7 +85,7 @@ def main():
         command_arguments["team_member"] = team_member
 
     demisto.debug(f"Calling command 'send-notification' with arguments:\n{command_arguments}")
-    demisto.debug(f"{command_arguments=}")
+    demisto.info(f"{command_arguments=}")
     demisto.results(demisto.executeCommand("send-notification", command_arguments))
 
 

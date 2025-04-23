@@ -2250,6 +2250,8 @@ def mentioned_users_to_entities(mentioned_users: list, integration_context: dict
 
 
 def send_message():
+    demisto.debug(f"args are: {demisto.args()}")
+    demisto.info(f"args are: {demisto.args()}")
     message_type: str = demisto.args().get("messageType", "")
     original_message: str = demisto.args().get("originalMessage", "")
     message: str = demisto.args().get("message", "")
@@ -3421,6 +3423,7 @@ def main():  # pragma: no cover
     try:
         support_multithreading()
         handle_proxy()
+        demisto.debug(f"Command being called is {command}")
         LOG(f"Command being called is {command}")
         if command in commands:
             commands[command]()
