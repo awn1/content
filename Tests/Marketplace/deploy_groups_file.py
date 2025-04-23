@@ -25,6 +25,9 @@ def option_handler():
         "-dr", "--dry_run", type=strtobool, help="true for a dry run pipeline, false for a prod pipeline", default="true"
     )
     parser.add_argument("-mp", "--marketplace", help="The marketplace version.", default="xsoar")
+    parser.add_argument(
+        "-bb", "--build_bucket", help="Optional path to a build bucket. Defaults to the production bucket.", default=""
+    )
 
     # disable-secrets-detection-end
     return parser.parse_args()
@@ -111,6 +114,8 @@ def main():
     ci_pipeline_id = options.ci_pipeline_id
     dry_run = options.dry_run
     marketplace = options.marketplace
+    build_bucket = options.build_bucket
+
     dev_file_path = Path("")
 
     groups_name_to_packs = get_groups_packs_for_marketplace(marketplace)
@@ -122,9 +127,10 @@ def main():
         marketplace_bucket_name = marketplace_dev_bucket_name
         if groups_name_to_packs:
             # copy prod bucket to the new created dev bucket only if there are groups to upload
-            subprocess.run(
-                ["./Tests/scripts/prepare_auto_upgrade_dev_bucket.sh", marketplace_dev_bucket_name, marketplace_prod_bucket_name]
-            )
+
+            bucket_name = build_bucket if build_bucket and build_bucket != "prod-bucket" else marketplace_prod_bucket_name
+            subprocess.run(["./Tests/scripts/prepare_auto_upgrade_dev_bucket.sh", marketplace_dev_bucket_name, bucket_name])
+
     for group_name, group_packs in groups_name_to_packs.items():
         upload_to_bucket(
             bucket_name=marketplace_bucket_name, group_name=group_name, group_packs=group_packs, dev_file_path=dev_file_path

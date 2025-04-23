@@ -37,7 +37,7 @@ deploy-groups-file:
           - "xpanse"
   script:
     - section_start "Deploy Groups File" --collapsed
-    - poetry run python3 -u ./Tests/Marketplace/deploy_groups_file.py -cpi "$CI_PIPELINE_ID" -dr "$DRY_RUN" -mp "$MARKETPLACE_VERSION"
+    - poetry run python3 -u ./Tests/Marketplace/deploy_groups_file.py -cpi "$CI_PIPELINE_ID" -dr "$DRY_RUN" -mp "$MARKETPLACE_VERSION" -bb "$BUILD_BUCKET"
     - section_end "Deploy Groups File"
     - job-done
 
