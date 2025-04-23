@@ -938,9 +938,11 @@ def answer_question(text: str, question: dict, email: str = ""):
     entitlement = question.get("entitlement", "")
     content, guid, incident_id, task_id = extract_entitlement(entitlement, text)
     try:
+        demisto.debug(f'SV3: Starting handling entitlement {entitlement} for {incident_id=} and {task_id=} with {content=}')
         demisto.handleEntitlementForUser(incident_id, guid, email, content, task_id)
+        demisto.debug(f'SV3: Finished handling entitlement {entitlement}')
     except Exception as e:
-        demisto.debug(f"Failed handling entitlement {entitlement}: {e!s}")
+        demisto.debug(f"SV3: Failed handling entitlement {entitlement}: {e!s}")
     question["remove"] = True
     return incident_id
 
@@ -1201,17 +1203,21 @@ async def handle_dm(user: dict, text: str, client: AsyncWebClient):
                 data = f"Failed creating incidents: {e!s}"
     else:
         try:
+            demisto.debug(f"starting to handle dm with {text=} for {user.get('name')}")
             data = demisto.directMessage(text, user.get("name"), user.get("profile", {}).get("email"), ALLOW_INCIDENTS)
+            demisto.debug("finished handling dm")
         except Exception as e:
             data = str(e)
 
     if not data:
         data = "Sorry, I could not perform the selected operation."
     body = {"users": user.get("id")}
+    demisto.debug(f'SV3: Opening conversation with user body: {body}')
     im = await send_slack_request_async(client, "conversations.open", body=body)
     channel = im.get("channel", {}).get("id")  # type: ignore
     body = {"text": data, "channel": channel}
-
+    
+    demisto.debug(f'SV3: Sending reply to the dm with body: {body}')
     await send_slack_request_async(client, "chat.postMessage", body=body)
 
 
@@ -1379,8 +1385,9 @@ def search_text_for_entitlement(text: str, user: AsyncSlackResponse) -> str:
     entitlement_match = re.search(ENTITLEMENT_REGEX, text)
     if entitlement_match:
         content, guid, incident_id, task_id = extract_entitlement(entitlement_match.group(), text)
+        demisto.debug(f'SV3: Starting handling entitlement {entitlement_match} for {incident_id=} and {task_id=}')
         demisto.handleEntitlementForUser(incident_id, guid, user.get("profile", {}).get("email"), content, task_id)  # type: ignore
-
+        demisto.debug(f'SV3: Finish handling entitlement {entitlement_match} for {incident_id=} and {task_id=}')
         return "Thank you for your response."
     else:
         return ""
@@ -1416,6 +1423,7 @@ async def process_entitlement_reply(
             method="chat.update",
             body={"channel": channel, "ts": message_ts, "text": entitlement_reply, "blocks": []},
         )
+    demisto.debug(f'SV3: Updated the original poll post with {entitlement_reply} in channel {channel}')
 
 
 def is_dm(channel: str) -> bool:
@@ -1571,10 +1579,12 @@ async def listen(client: SocketModeClient, req: SocketModeRequest):
 
         # Check if the message is from a bot so we can quit processing ASAP
         if is_bot_message(data):
+            demisto.debug('SV3: Got message from bot, will not mirror')
             return
 
         # Quick check for entitlement
         if re.search(ENTITLEMENT_REGEX, quick_check_payload):
+            demisto.debug('SV3: Found entitlement in response')
             # At this point, we know there is an entitlement in the payload.
             # This is a check to determine if the event contains actions which are sent as part of a SlackAsk response.
             entitlement_reply = None
@@ -1593,10 +1603,14 @@ async def listen(client: SocketModeClient, req: SocketModeRequest):
                 else:
                     demisto.debug("Not handling a SlackBlockBuilder response.")
                     action_text = actions[0].get("text").get("text")
+                demisto.debug(f'SV3: Will answer the question with {entitlement_string=}')
                 _ = answer_question(action_text, entitlement_string, user.get("profile", {}).get("email"))  # type: ignore
                 entitlement_reply = entitlement_string.get("reply", "Thank you for your reply.")
             if entitlement_reply:
+                demisto.debug(f'SV3: Processing entitlement reply with {entitlement_reply} for {user_id=} and ' \
+                              f'{action_text=} and {entitlement_string=}')
                 await process_entitlement_reply(entitlement_reply, user_id, action_text, response_url=response_url)
+                demisto.debug(f'SV3: Finished processing entitlement reply {entitlement_reply} and {entitlement_string=}')
                 reset_listener_health()
                 return
 
@@ -1617,6 +1631,7 @@ async def listen(client: SocketModeClient, req: SocketModeRequest):
 
         # Check if the message is being sent directly to our bot.
         if is_dm(channel):
+            demisto.debug('SV3: Got a dm from a bot')
             user = await get_user_details(user_id=user_id)
             await handle_dm(user, text, ASYNC_CLIENT)  # type: ignore
             reset_listener_health()
@@ -1628,7 +1643,9 @@ async def listen(client: SocketModeClient, req: SocketModeRequest):
             user = await get_user_details(user_id=user_id)
             entitlement_reply = await check_and_handle_entitlement(text, user, thread)  # type: ignore
             if entitlement_reply:
+                demisto.debug(f'SV3: Processing entitlement reply with {entitlement_reply=} for {user_id=}')
                 await process_entitlement_reply(entitlement_reply, user_id, action_text, channel=channel, message_ts=message_ts)
+                demisto.debug(f'SV3: Finished processing entitlement reply {entitlement_reply=}')
                 reset_listener_health()
                 return
 
@@ -1697,7 +1714,9 @@ async def check_and_handle_entitlement(text: str, user: dict, thread_id: str) ->
             entitlement = question.get("entitlement")
             reply = question.get("reply", "Thank you for your response.")
             content, guid, incident_id, task_id = extract_entitlement(entitlement, text)
+            demisto.debug(f'SV3: Starting handling entitlement {entitlement} for {incident_id=} and {task_id=}')
             demisto.handleEntitlementForUser(incident_id, guid, user.get("profile", {}).get("email"), content, task_id)
+            demisto.debug(f'SV3: Finish handling entitlement {entitlement} for {incident_id=} and {task_id=}')
             question["remove"] = True
             set_to_integration_context_with_retries({"questions": questions}, OBJECTS_TO_KEYS, SYNC_CONTEXT)
 
@@ -1965,6 +1984,7 @@ def slack_send():
     if response:
         thread = response.get("ts")
         if entitlement:
+            demisto.debug(f'SV3: Saving entitlement {entitlement} in context with thread id {thread} with {default_response=}')
             save_entitlement(entitlement, thread, reply, expiry, default_response)
 
         demisto.results(
@@ -1997,8 +2017,7 @@ def save_entitlement(entitlement, thread, reply, expiry, default_response):
     questions = integration_context.get("questions", [])
     if questions:
         questions = json.loads(integration_context["questions"])
-    questions.append(
-        {
+    new_question = {
             "thread": thread,
             "entitlement": entitlement,
             "reply": reply,
@@ -2006,7 +2025,8 @@ def save_entitlement(entitlement, thread, reply, expiry, default_response):
             "sent": datetime.strftime(get_current_utc_time(), DATE_FORMAT),
             "default_response": default_response,
         }
-    )
+    questions.append(new_question)
+    demisto.debug(f'SV3: Saving {len(questions)} questions with {new_question=}')
 
     set_to_integration_context_with_retries({"questions": questions}, OBJECTS_TO_KEYS, SYNC_CONTEXT)
 

@@ -27,6 +27,7 @@ def create_blocks(text: str, entitlement: str, options: list, reply: str) -> lis
 
 
 def main():
+    demisto.debug('SA: Starting the slackAsk automation')
     res = demisto.executeCommand(
         "addEntitlement",
         {
@@ -59,6 +60,8 @@ def main():
     entitlement_string = entitlement + "@" + demisto.investigation()["id"]
     if demisto.get(demisto.args(), "task"):
         entitlement_string += "|" + demisto.get(demisto.args(), "task")
+    
+    demisto.debug(f'SA: Got the entitlement string: {entitlement_string}')
 
     args = {"ignoreAddURL": "true", "using-brand": slack_version}
     if slack_instance:
@@ -116,6 +119,7 @@ def main():
         return_error("Either a user or a channel must be provided.")
 
     try:
+        demisto.debug(f'SA: Executing the send-notification command with the args: {args}')
         demisto.results(demisto.executeCommand("send-notification", args))
     except ValueError as e:
         if "Unsupported Command" in str(e):
