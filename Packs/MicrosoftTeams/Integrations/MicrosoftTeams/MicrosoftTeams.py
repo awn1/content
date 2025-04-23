@@ -2357,7 +2357,7 @@ def send_message():
     service_url: str = integration_context.get("service_url", "")
     if not service_url:
         raise ValueError("Did not find service URL. Try messaging the bot on Microsoft Teams")
-
+    demisto.debug(f"{conversation=}")
     res: dict = send_message_request(service_url, recipient, conversation, message_id, team_aad_id)
     results = CommandResults(
         outputs={"ID": res.get("id")},

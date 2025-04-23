@@ -83,6 +83,7 @@ def main():
         command_arguments["team_member"] = team_member
 
     demisto.debug(f"Calling command 'send-notification' with arguments:\n{command_arguments}")
+    demisto.debug(f"{command_arguments=}")
     demisto.results(demisto.executeCommand("send-notification", command_arguments))
 
 
