@@ -89,6 +89,9 @@ variables:
     options:
       - "true"
       - "false"
+  BUILD_BUCKET:
+    value: "prod-bucket"
+    description: "Optional path to a build bucket (e.g., marketplace-ci-build-v2-dev/content/builds/my_branch_name/5555555). Defaults to the production bucket."
   PERMISSION_GROUP:
     description: "Specify the user group to be searched for when determining the permissions for a specific user."
     value: "content-leaders"
