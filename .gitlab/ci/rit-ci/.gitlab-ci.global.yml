@@ -57,7 +57,7 @@
     - TARGET_BRANCH="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_COMMIT_REF_NAME}"
     - | # the default is "dev-platform"
       if [[ "$TARGET_BRANCH" == "master" ]]; then
-          GONZO_BRANCH_NAME="stable-platform"
+          GONZO_BRANCH_NAME="master-platform"
       elif [[ "$TARGET_BRANCH" =~ ^hotfix.* ]]; then
           GONZO_BRANCH_NAME="master-hf-platform"
       fi
