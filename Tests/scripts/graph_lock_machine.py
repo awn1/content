@@ -258,7 +258,7 @@ def create_available_machines_graph(
     data_raw, types_raw, timestamps_raw = [], [], []  # Available machines
 
     for message in messages:
-        if AVAILABLE_MACHINES and JOB_ID in message:
+        if AVAILABLE_MACHINES in message and JOB_ID in message:
             message_split = message.split("\n")
             timestamps_raw.append(message_split[1])
             types_raw.append(message_split[0])
