@@ -97,7 +97,9 @@ def parse_published_file() -> tuple[str, str]:
 
 def get_mr_and_branch(gitlab_token: str, commit_hash: str) -> tuple[str, str, str]:
     """
-    Retrieve the merge request or branch name for a given commit hash.
+    Returns the branch and (if relevant) merge request for a given commit.
+    - If commit is in dev/master/hotfix*: return the branch, skip MR lookup.
+    - Otherwise: search for a merge request.
 
     Args:
         gitlab_token (str): GitLab private token to authenticate with the GitLab API.
@@ -111,19 +113,22 @@ def get_mr_and_branch(gitlab_token: str, commit_hash: str) -> tuple[str, str, st
     try:
         subprocess.run(["git", "fetch", "--all"], capture_output=True, text=True, check=True)
         result = subprocess.run(["git", "branch", "-r", "--contains", commit_hash], capture_output=True, text=True, check=True)
+        branches = [b.strip().replace("origin/", "") for b in result.stdout.splitlines()] if result.stdout else []
+        if not branches:
+            return "Unknown", "", ""
+        for branch in branches:
+            if branch in ("dev", "master") or branch.startswith("hotfix"):
+                return branch, "", ""
 
-        branch_name = result.stdout.splitlines()[0].strip().replace("origin/", "") if result.stdout else "Unknown"
-
+        branch = branches[0]
         # If there is an open merge request, return the MR link, otherwise return the branch
-        merge_request = GitlabMergeRequest(gitlab_token, branch=branch_name)
-        if mr_data := merge_request.data:
-            return branch_name, mr_data["iid"], mr_data["web_url"]
-        return branch_name, "", ""
+        mr = GitlabMergeRequest(gitlab_token, branch=branch)
+        if mr_data := mr.data:
+            return branch, mr_data["iid"], mr_data["web_url"]
+        return branch, "", ""
 
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Error fetching branch: {e}")
     except Exception as e:
-        logging.error(f"Unexpected error: {e}")
+        logging.error(f"Failed to resolve branch or MR for commit {commit_hash}: {e}")
     return "Unknown", "", ""
 
 
@@ -139,6 +144,7 @@ def update_merge_status(existing_rows: list[dict], gitlab_client: Gitlab) -> Non
 
     for row in existing_rows:
         mr_id = row.get("merge_request_number", "").strip()
+        mr_platform_version = row.get("platform_version", "").strip()
         if mr_id and not strtobool(row.get("is_merged") or "no"):
             try:
                 mr = gitlab_client.projects.get(GITLAB_PROJECT_ID).mergerequests.get(int(mr_id))
@@ -146,7 +152,7 @@ def update_merge_status(existing_rows: list[dict], gitlab_client: Gitlab) -> Non
             except Exception as e:
                 logging.warning(f"Failed to check MR-{mr_id} status: {e}")
                 row["is_merged"] = "no"
-            if row["is_merged"] == "no" and row.get("merge_request_link"):
+            if row["is_merged"] == "no" and row.get("merge_request_link") and mr_platform_version == PLATFORM_VERSION:
                 pending_mrs.add(row["merge_request_link"])
 
     if pending_mrs:
