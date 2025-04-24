@@ -32,9 +32,11 @@
 
 override-content:validate-variables:
   tags:
-    - gke
+    - $BUILD_JOB_TAG
   stage: unittests-and-validations
   variables:
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
     MARKETPLACE: $MARKETPLACE
     MARKETPLACES: $MARKETPLACE
     PATHS: $PATHS
@@ -45,19 +47,16 @@ override-content:validate-variables:
     - .override-content-rule
     - .default-job-settings
     - .pipeline-common-validations
+    - .docker_services
   script:
     - EXIT_CODE=0
 
     - section_start "Create content graph" --collapsed
-    - git fetch origin master:refs/remotes/origin/master
-    - echo "Checking out to master branch to create the Content graph"
-    - git checkout master
+    - gcloud auth configure-docker ${DOCKER_IO_DOMAIN} >> "${ARTIFACTS_FOLDER}/logs/configure_docker_with_registry.log" 2>&1
+    - echo "Creating content graph from bucket cache"
     - demisto-sdk graph update --marketplace "${MARKETPLACE}"
-    - echo "Successfully created content graph"
+    - echo "Successfully created content graph from bucket cache"
     - section_end "Create content graph"
-
-    - echo "Checking out to branch {$CI_COMMIT_BRANCH}"
-    - git checkout $CI_COMMIT_BRANCH
 
     - section_start "validate variables"
     - python3 ./Pipelines/override_content/override_content_validations.py  --paths ${PATHS} --packs ${PACKS} --marketplace ${MARKETPLACE} --tenant_ids ${TENANT_IDS} --env_type ${ENV_TYPE} || EXIT_CODE=$?
