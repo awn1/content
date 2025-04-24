@@ -1,0 +1,1 @@
+Fixed an issue with incorrect logic condition when creating a graph for the available machines.
