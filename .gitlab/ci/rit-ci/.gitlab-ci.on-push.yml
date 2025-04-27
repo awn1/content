@@ -96,7 +96,7 @@ run-schema-validator:
     - |
       if [ -n "$CI_MERGE_REQUEST_ID" ]; then
         git fetch origin ${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}
-        CHANGED_YAML_FILES=$(git diff --name-status ${CI_MERGE_REQUEST_DIFF_BASE_SHA}...${CI_COMMIT_SHA} | awk '$1 != "D" {print $2}' | grep "${RIT_FOLDER_NAME}/.*\.yaml" || true)
+        CHANGED_YAML_FILES=$(git diff --name-status ${CI_MERGE_REQUEST_DIFF_BASE_SHA}...${CI_COMMIT_SHA} | awk '$1 ~ /^[AM]$/ {print $2} $1 ~ /^R/ {print $3}' | grep "^${RIT_FOLDER_NAME}/.*\.yaml$" || true)
         if [[ -z "$CHANGED_YAML_FILES" ]]; then
           echo -e "${PINK}No relevant YAML files changed in this merge request (deleted files excluded). Skipping execution.${NC}"
           job-done
