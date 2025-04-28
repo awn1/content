@@ -27,6 +27,8 @@ auto-update-docker:
     GCS_ARTICAT_BUCKET: "xsoar-ci-artifacts"
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_MEMORY_LIMIT: 16Gi
+
+    
   script:
     - echo "Updating the content graph"
     - demisto-sdk graph update
