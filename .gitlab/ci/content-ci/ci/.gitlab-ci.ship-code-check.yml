@@ -53,6 +53,7 @@ fan-in-ship-code-check:
     - echo "Ship Code Check - fan in"
   when: always
 
+
 slack-notify-ship-code-check:
   extends:
     - .ship-code-check-schedule-rule-always
