@@ -15,7 +15,6 @@ cloning-repositories-ship-code-check:
   script:
     - job-done
 
-
 ship-code-check:
   stage: ship-code-check
   extends:
