@@ -11,6 +11,7 @@ cloning-repositories-ship-code-check:
   stage: .pre
   extends:
     - .ship-code-check-schedule-rule
+    - .cloning-repositories
   script:
     - job-done
 
