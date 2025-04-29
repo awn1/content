@@ -24,13 +24,6 @@ ship-code-check:
     - content-long-running-1738-sa@xdr-gitlab-prod-eu-01.iam.gserviceaccount.com
   script:
     - echo "Hello World!!!"
-    
-  # variables:
-  #   GCS_MARKET_BUCKET_DEV: "marketplace-dist-dev"
-  #   GCS_ARTICAT_BUCKET: "xsoar-ci-artifacts"
-  #   KUBERNETES_MEMORY_REQUEST: 8Gi
-  #   KUBERNETES_MEMORY_LIMIT: 16Gi
-# here we will run the ship code check
 
 jobs-done-check-ship-code-check:
   extends:
@@ -52,8 +45,7 @@ fan-in-ship-code-check:
   script:
     - echo "Ship Code Check - fan in"
   when: always
-
-
+  
 slack-notify-ship-code-check:
   extends:
     - .ship-code-check-schedule-rule-always
