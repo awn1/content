@@ -634,14 +634,14 @@ def fetch_incidents(
             incident = {
                 "name": f"Proofpoint - Message Blocked - {event_guid}",
                 "rawJSON": raw_json,
-                "occured": raw_event["messageTime"],
+                "occurred": raw_event["messageTime"],
             }
             ### CUSTOM CHANGE TO FIND INCORRECT DATES:
             
-            event_time = dateparser.parse(raw_event["messageTime"]) - timedelta(days=1)
+            event_time = dateparser.parse(raw_event["messageTime"])
 
             if event_time <= converted_start_query_time or event_time >= converted_end_query_time:
-                demisto.debug(f"message received out of time range: {event_guid=}, {event_time=}, {converted_start_query_time=}, {converted_end_query_time=}")
+                demisto.debug(f"message received out of time range: {event_guid=}, {event_time=}, {converted_start_query_time=}, {converted_end_query_time=}, {raw_json=}")
             
             ######
             
