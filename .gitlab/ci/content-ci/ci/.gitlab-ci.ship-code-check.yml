@@ -1,11 +1,11 @@
 .ship-code-check-schedule-rule:
   rules:
-    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $SHIP_CODE_CHECK == "true"'
+    - if: '$SHIP_CODE_CHECK == "true"'
 
-.ship-code-check-schedule-rule-always:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|trigger)$/ && $SHIP_CODE_CHECK == "true"'
-      when: always
+# .ship-code-check-schedule-rule-always:
+#   rules:
+#     - if: '$SHIP_CODE_CHECK == "true"'
+#       when: always
 
 cloning-repositories-ship-code-check:
   stage: .pre
