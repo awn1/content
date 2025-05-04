@@ -1,6 +1,7 @@
 .ship-code-check-schedule-rule:
   rules:
     - if: '$SHIP_CODE_CHECK == "true"'
+    
 
 # .ship-code-check-schedule-rule-always:
 #   rules:
