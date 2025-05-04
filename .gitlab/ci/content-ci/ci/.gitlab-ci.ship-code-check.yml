@@ -16,7 +16,7 @@
 #     - job-done
 
 ship-code-check:
-  stage: ship-code-check
+  stage: .pre
   extends:
     - .ship-code-check-schedule-rule
     # - .default-job-settings
