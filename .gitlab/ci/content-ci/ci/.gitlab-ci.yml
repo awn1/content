@@ -35,6 +35,7 @@ stages:
   - trigger-contribution-build
   - prepare-content
   - push-content
+  - ship-code-check
 
 include:
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.variables.yml
@@ -54,3 +55,4 @@ include:
   - local: .gitlab/ci/content-ci/ci/deploy-auto-upgrade-packs.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.packwise.yml
   - local: .gitlab/ci/content-ci/ci/.gitlab-ci.update-docker-state.yml
+  - local: .gitlab/ci/content-ci/ci/.gitlab-ci.ship-code-check.yml
