@@ -8,7 +8,6 @@ This integration was integrated and tested with version xx of SilentPush.
 | --- | --- |
 | Base URL | True |
 | API Key | False |
-| Password | False |
 | Trust any certificate (not secure) | False |
 | Use system proxy settings | False |
 
