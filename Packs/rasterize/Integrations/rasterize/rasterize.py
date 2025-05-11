@@ -1125,9 +1125,8 @@ def perform_rasterize(
             )
         )
     if not paths:
-        message = "There are no valid paths to rasterize"
-        demisto.error(message)
-        return_error(message)
+        message = "There are no valid paths to rasterize."
+        return_err_or_warn(message)
         return None
 
     # until https://issues.chromium.org/issues/379034728 is fixed, we can only use one chrome port
