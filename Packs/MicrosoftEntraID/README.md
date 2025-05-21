@@ -62,4 +62,5 @@ When configuring the Azure Event Hub data source, mark the following checkbox un
 
 ![MicrosoftEntraID_Azure_Event_Hub](./././doc_files/MicrosoftEntraID_Azure_Event_Hub.png)
 
+TEST TAGS
 </~XSIAM>
