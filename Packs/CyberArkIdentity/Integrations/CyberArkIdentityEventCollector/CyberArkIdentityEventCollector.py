@@ -130,6 +130,7 @@ class CyberArkIdentityEventsClient(IntegrationEventsClient):
 
     def authenticate(self):
         credentials = base64.b64encode(f"{self.credentials.identifier}:{self.credentials.password}".encode()).decode()
+        demisto.debug(f"request: {self.request}")
         request = IntegrationHTTPRequest(
             method=Method.POST,
             url=f"{str(self.request.url).removesuffix('/RedRock/Query')}/oauth2/platformtoken",  # type: ignore[arg-type]
@@ -166,10 +167,11 @@ class CyberArkIdentityGetEvents(IntegrationGetEvents):
 
     def _iter_events(self):
         self.client.authenticate()
-
+        demisto.debug(f"self.client.request: {self.client.request}")
         result = self.client.call(self.client.request).json()["Result"]
 
         events = result.get("Results")
+        demisto.debug(f"[test] events: {result}")
         if events:
             fetched_events_ids = demisto.getLastRun().get("ids", [])
             yield [event.get("Row") for event in events if event.get("Row", {}).get("ID") not in fetched_events_ids]

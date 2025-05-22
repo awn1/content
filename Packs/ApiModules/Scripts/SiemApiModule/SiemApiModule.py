@@ -145,6 +145,7 @@ class IntegrationGetEvents(ABC):
                 )
                 if len(stored) >= self.options.limit:
                     return stored[: self.options.limit]
+        demisto.debug(f"[test] {stored}")
         return stored
 
     def call(self) -> requests.Response:
