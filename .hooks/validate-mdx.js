@@ -1,7 +1,6 @@
 const { readFile } = require('fs-extra');
 const mdx = require('@mdx-js/mdx');
 
-
 const NO_HTML = "<!-- NOT_HTML_DOC -->";
 const YES_HTML = "<!-- HTML_DOC -->";
 
@@ -14,10 +13,7 @@ function isHtmlDoc(content) {
         ));
 }
 
-
 function fixMdx(readmeContent) {
-    // copied from: https://github.com/demisto/content-docs/blob/2402bd1ab1a71f5bf1a23e1028df6ce3b2729cbb/content-repo/mdx_utils.py#L11
-    // to use the same logic as we have in the content-docs build
     let txt = readmeContent;
 
     const replaceTuples = [
@@ -38,12 +34,12 @@ function fixMdx(readmeContent) {
 
 async function parseMDX(file) {
     try {
-
         let contents = await readFile(file, 'utf8');
 
         if (isHtmlDoc(contents)) {
             return true;
         }
+
         contents = fixMdx(contents);
         await mdx(contents);
         return true;
@@ -54,15 +50,15 @@ async function parseMDX(file) {
 }
 
 const files = process.argv.slice(2);
+
 (async () => {
-    const promises = [];
+    const results = [];
 
-    for (let i = 0; i < files.length; i++) {
-        const promise = parseMDX(files[i]);
-        promises.push(promise);
+    // Process files sequentially, one at a time
+    for (const file of files) {
+        const result = await parseMDX(file);
+        results.push(result);
     }
-
-    const results = await Promise.all(promises);
 
     if (results.includes(false)) {
         process.exit(1);
