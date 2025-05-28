@@ -7628,6 +7628,8 @@ def return_warning(message, exit=False, warning='', outputs=None, ignore_auto_ex
 
 
 class ExecutionMetrics(object):
+    _instance = None
+
     """
         ExecutionMetrics is used to collect and format metric data to be reported to the XSOAR server.
 
@@ -7686,6 +7688,12 @@ class ExecutionMetrics(object):
             :type metrics: ``CommandResults``
             :param metrics: Append this value to your CommandResults list to report the metrics to your server.
         """
+
+    @staticmethod
+    def get_instance():
+        if not ExecutionMetrics._instance:
+            ExecutionMetrics._instance = ExecutionMetrics()
+        return ExecutionMetrics._instance
 
     @staticmethod
     def is_supported():
@@ -7798,6 +7806,68 @@ class ExecutionMetrics(object):
                 else:
                     self._metrics.append({'Type': metric_type, 'APICallsCount': metric_value})
             self.metrics = CommandResults(execution_metrics=self._metrics)
+
+
+def initiate_metrics_hook():
+    original_request = requests.Session.request
+    
+    @wraps(original_request)
+    def hooked_request(self, method, url, *args, **kwargs):  # Remove 'session' parameter
+        try:
+            response = original_request(self, method, url, *args, **kwargs)  # Use 'self' directly
+            metrics = ExecutionMetrics.get_instance()
+            code = response.status_code
+            
+            if 200 <= code < 300:
+                metrics.success += 1
+            elif code == 429:
+                metrics.quota_error += 1
+            elif code in (401, 403):
+                metrics.auth_error += 1
+            elif 500 <= code < 600:
+                metrics.service_error += 1
+            else:
+                metrics.general_error += 1
+                
+            return response
+        except requests.exceptions.SSLError:
+            ExecutionMetrics.get_instance().ssl_error += 1
+            raise
+        except requests.exceptions.ProxyError:
+            ExecutionMetrics.get_instance().proxy_error += 1
+            raise
+        except requests.exceptions.ConnectTimeout:
+            ExecutionMetrics.get_instance().timeout_error += 1
+            raise
+        except requests.exceptions.ConnectionError:
+            ExecutionMetrics.get_instance().connection_error += 1
+            raise
+        except requests.exceptions.RetryError:
+            ExecutionMetrics.get_instance().retry_error += 1
+            raise
+        except Exception:
+            ExecutionMetrics.get_instance().general_error += 1
+            raise
+            
+    requests.Session.request = hooked_request
+
+
+def metrics_aware_main(main_func):
+    """
+    To use this in your code, decorate your main function with @metrics_aware_main.
+    Decorator to automatically install request hook and append execution metrics if configured.
+    """
+    def wrapped_main():
+        if demisto.params().get('should_report_metrics'):
+            initiate_metrics_hook()
+        try:
+            main_func()
+        finally:
+            metrics = ExecutionMetrics.get_instance()
+            if metrics and metrics.metrics:
+                return_results(metrics.metrics)
+
+    return wrapped_main
 
 
 def append_metrics(execution_metrics, results):

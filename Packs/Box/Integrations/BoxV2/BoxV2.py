@@ -1,5 +1,6 @@
 import demistomock as demisto
 from CommonServerPython import *
+from CommonServerPython import initiate_metrics_hook, metrics_aware_main
 from CommonServerUserPython import *
 
 import json
@@ -1735,6 +1736,7 @@ def fetch_incidents(
     return next_run, incidents
 
 
+@metrics_aware_main
 def main() -> None:  # pragma: no cover
     """main function, parses params and runs command functions
 
