@@ -22,8 +22,8 @@ VENDOR = "symantec"
 PRODUCT = "swg"
 DEFAULT_FETCH_SLEEP = 30
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-MAX_CHUNK_SIZE_TO_READ = 1024 * 1024 * 150  # 150 MB
-MAX_CHUNK_SIZE_TO_WRITE = 200 * (10**6)  # ~200 MB
+MAX_CHUNK_SIZE_TO_READ = 1024 * 1024 * 400  # 400 MB
+MAX_CHUNK_SIZE_TO_WRITE = 400 * (10**6)  # ~400 MB
 TEST_MODULE_READ_CHUNK_SIZE = 2000  # 2 KB
 STATUS_DONE = "done"
 STATUS_MORE = "more"
@@ -32,7 +32,224 @@ STATUS_ABORT = "abort"
 # REGEX
 REGEX_FOR_STATUS = re.compile(r"X-sync-status: (?P<status>.*?)(?=\\r\\n|$)")
 REGEX_FOR_TOKEN = re.compile(r"X-sync-token: (?P<token>.*?)(?=\\r\\n|$)")
+START_RATIO = 17
+PERCENT_BUFFER = 10
+MAX_SIZE = 9 * 2**20  # 5 MB
 
+class XSIAMCompressedChunkDeliver:
+
+    def __init__(self, data) -> None:
+        self.data = data
+        self.element_size = len(data[0].encode("utf-8"))
+        self.entrie_data_size = len(data) * self.element_size
+
+    def convert_to_compressable_data(self, data: list) -> bytes:
+        if data and isinstance(data[0], str):
+            return "\n".join(data).encode()
+        else:
+            return "\n".join([json.dumps(event) for event in data]).encode()
+
+    def compress_data(self, data: list[dict] | bytes):
+        start = time.time()
+        if isinstance(data, list):
+            data = self.convert_to_compressable_data(data)
+        return gzip.compress(data), time.time() - start
+
+    def calculate_end_index(
+        self,
+        compression_ratio: float,
+        start_index: int,
+        percent_buffer: int,
+        max_size: int,
+    ) -> int:
+        goal_size = (
+            (100 - percent_buffer) * 0.01 * max_size * compression_ratio
+        )  # for example: percent_buffer=20 -> 80 % from max_size * compression_ratio
+
+        return (int(goal_size) // self.element_size) + start_index
+
+    def get_compressed_chunks(
+        self,
+        compression_ratio: float = START_RATIO,
+        percent_buffer: int = PERCENT_BUFFER,
+        max_size: int = MAX_SIZE,
+    ):
+        """A generator for yielding a compressed chunks and thier comressed ratio
+
+        Args:
+            # data (list[dict]): The data to be chuked
+            compression_ratio (int, optional): The compression ratio (not compressed // compressed). Defaults to START_RATIO.
+            percent_buffer (int, optional): size in percent for buffering. Defaults to PERCENT_BUFFER.
+            max_size (int, optional): the max size of an XSIAM entry. Defaults to MAX_SIZE.
+
+        Yields:
+            Generator: A generator yielding the compressed_data, compression_ratio
+        """
+        start_index = 0
+        end_index = 0
+        chunk_index = 1
+        demisto.debug(
+            f"entrie_data_size={self.entrie_data_size/2**20:.2f} MB ({len(self.data):,} items * {self.element_size=:,}), max_size={max_size/2**20} MB, {compression_ratio=}"
+        )
+        while start_index < len(self.data):
+            end_index = self.calculate_end_index(
+                compression_ratio, start_index, percent_buffer, max_size
+            )
+            end_index = min(end_index, len(self.data))
+            before_compression_chunk = self.data[start_index:end_index]
+            compressable_chunk = self.convert_to_compressable_data(
+                before_compression_chunk
+            )
+            compressed_data, time_to_compress = self.compress_data(compressable_chunk)
+
+            before_compression_size = len(compressable_chunk)
+            compressed_size = len(compressed_data)
+
+            demisto.debug(
+                f"{chunk_index=:,}, {start_index=:,}, {end_index=:,}, {before_compression_size=:,}, {compressed_size=:,}, old_compression_ratio={compression_ratio:.2f}, new_compression_ratio={before_compression_size // compressed_size:.2f}, {time_to_compress=:.2f} sec"
+            )
+            compression_ratio = before_compression_size // compressed_size
+            if compressed_size > max_size:
+                demisto.debug(
+                    f"❌ {chunk_index=} failure: {compressed_size=:,} > {max_size=:,}, setting the next compression_ratio to be {compression_ratio * 0.7:.2f} (0.7 * {compression_ratio=:.2f})"
+                )
+                compression_ratio = compression_ratio * 0.7
+                # compression ratio was set, dont move forward with index, dont yield, do not pass go do not collect 200
+                # consider manually throttling ratio, i vote yes
+
+                continue
+            # we all good here
+            yield compressed_data, end_index - start_index
+            start_index = end_index
+            chunk_index += 1
+
+
+def send_data_to_xsiam_test(data, vendor, product, data_format=None, url_key='url', num_of_attempts=3,
+                    chunk_size=XSIAM_EVENT_CHUNK_SIZE, data_type=EVENTS, should_update_health_module=True,
+                    add_proxy_to_request=False, snapshot_id='', items_count=None, multiple_threads=False):
+
+    data_size = 0
+    params = demisto.params()
+    url = params.get(url_key)
+    calling_context = demisto.callingContext.get('context', {})
+    instance_name = calling_context.get('IntegrationInstance', '')
+    collector_name = calling_context.get('IntegrationBrand', '')
+    if not items_count:
+        items_count = len(data) if isinstance(data, list) else 1
+    if data_type not in DATA_TYPES:
+        demisto.debug("data type must be one of these values: {types}".format(types=DATA_TYPES))
+        return
+
+    if not data:
+        demisto.debug('send_data_to_xsiam function received no {data_type}, '
+                    'skipping the API call to send {data} to XSIAM'.format(data_type=data_type, data=data_type))
+        demisto.updateModuleHealth({'{data_type}Pulled'.format(data_type=data_type): data_size})
+        return
+
+    # only in case we have data to send to XSIAM we continue with this flow.
+    # Correspond to case 1: List of strings or dicts where each string or dict represents an one event or asset or snapshot.
+    if isinstance(data, list):
+        # In case we have list of dicts we set the data_format to json and parse each dict to a stringify each dict.
+        demisto.debug("Sending {size} {data_type} to XSIAM".format(size=len(data), data_type=data_type))
+        if isinstance(data[0], dict):
+            data = [json.dumps(item) for item in data]
+            data_format = 'json'
+        # Separating each event with a new line
+        data = '\n'.join(data)
+    elif not isinstance(data, str):
+        raise DemistoException('Unsupported type: {data} for the {data_type} parameter.'
+                            ' Should be a string or list.'.format(data=type(data), data_type=data_type))
+    if not data_format:
+        data_format = 'text'
+
+    xsiam_api_token = demisto.getLicenseCustomField('Http_Connector.token')
+    xsiam_domain = demisto.getLicenseCustomField('Http_Connector.url')
+    xsiam_url = 'https://api-{xsiam_domain}'.format(xsiam_domain=xsiam_domain)
+    headers = {
+        'authorization': xsiam_api_token,
+        'format': data_format,
+        'product': product,
+        'vendor': vendor,
+        'content-encoding': 'gzip',
+        'collector-name': collector_name,
+        'instance-name': instance_name,
+        'final-reporting-device': url,
+        'collector-type': ASSETS if data_type == ASSETS else EVENTS
+    }
+    if data_type == ASSETS:
+        if not snapshot_id:
+            snapshot_id = str(round(time.time() * 1000))
+
+        # We are setting a time stamp ahead of the instance name since snapshot-ids must be configured in ascending
+        # alphabetical order such that first_snapshot < second_snapshot etc.
+        headers['snapshot-id'] = snapshot_id + instance_name
+        headers['total-items-count'] = str(items_count)
+
+    header_msg = 'Error sending new {data_type} into XSIAM.\n'.format(data_type=data_type)
+
+    def data_error_handler(res):
+        """
+        Internal function to parse the XSIAM API errors
+        """
+        try:
+            response = res.json()
+            error = res.reason
+            if response.get('error').lower() == 'false':
+                xsiam_server_err_msg = response.get('error')
+                error += ": " + xsiam_server_err_msg
+
+        except ValueError:
+            if res.text:
+                error = '\n{}'.format(res.text)
+            else:
+                error = "Received empty response from the server"
+
+        api_call_info = (
+            'Parameters used:\n'
+            '\tURL: {xsiam_url}\n'
+            '\tHeaders: {headers}\n\n'
+            'Response status code: {status_code}\n'
+            'Error received:\n\t{error}'
+        ).format(xsiam_url=xsiam_url, headers=json.dumps(headers, indent=8), status_code=res.status_code, error=error)
+
+        demisto.error(header_msg + api_call_info)
+        raise DemistoException(header_msg + error, DemistoException)
+
+    client = BaseClient(base_url=xsiam_url, proxy=add_proxy_to_request)
+
+    def send_events(zipped_data):
+        xsiam_api_call_with_retries(client=client, events_error_handler=data_error_handler,
+                                    error_msg=header_msg, headers=headers,
+                                    num_of_attempts=num_of_attempts, xsiam_url=xsiam_url,
+                                    zipped_data=zipped_data, is_json_response=True, data_type=data_type)
+
+    demisto.info("Sending events to xsiam with a single thread.")
+    compressor = XSIAMCompressedChunkDeliver(data)
+    for chunk, size in compressor.get_compressed_chunks():
+        data_size += size
+        send_events(chunk)
+
+    if should_update_health_module:
+        demisto.updateModuleHealth({f'{data_type}Pulled': data_size})
+    return
+
+def send_events_to_xsiam_test(events, vendor, product, data_format=None, url_key='url', num_of_attempts=3,
+                         chunk_size=XSIAM_EVENT_CHUNK_SIZE, should_update_health_module=True,
+                         add_proxy_to_request=False, multiple_threads=False):
+
+    return send_data_to_xsiam(
+        events,
+        vendor,
+        product,
+        data_format,
+        url_key,
+        num_of_attempts,
+        chunk_size,
+        data_type="events",
+        should_update_health_module=should_update_health_module,
+        add_proxy_to_request=add_proxy_to_request,
+        multiple_threads=multiple_threads
+    )
 
 class LastRun(NamedTuple):
     start_date: str | None = None
@@ -468,7 +685,7 @@ def extract_logs_and_push_to_XSIAM(
         try:
             if events:
                 # Send events to XSIAM in batches
-                send_events_to_xsiam(
+                send_events_to_xsiam_test(
                     events,
                     VENDOR,
                     PRODUCT,
