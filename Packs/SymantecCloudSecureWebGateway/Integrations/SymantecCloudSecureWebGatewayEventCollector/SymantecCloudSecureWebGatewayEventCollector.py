@@ -789,6 +789,7 @@ def get_events_command(
             raise e
         # Removes the tmp file
         tmp_file_path.unlink()
+        demisto.debug("Temporary file unlinked successfully")
 
         last_run_model = calculate_next_fetch(
             start_date,
