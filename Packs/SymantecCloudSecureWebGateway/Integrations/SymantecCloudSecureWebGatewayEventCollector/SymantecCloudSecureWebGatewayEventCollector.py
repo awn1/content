@@ -726,58 +726,66 @@ def get_events_command(
             "endDate": end_date,
             "token": last_run_model.token or "none",
         }
-
         try:
-            tmp_file_path = get_events_and_write_to_file_system(
-                client,
-                params,
-            )
-        except DemistoException as e:
             try:
-                if e.res is not None and e.res.status_code == 410:
-                    # In case the token expired
-                    # Update last run model with expired_token = True
-                    # for handling duplicates in next fetch
-                    demisto.debug(f"The token has expired: {e}")
-                    last_run_model = LastRun(
-                        start_date=str(start_date),
-                        token="none",
-                        time_of_last_fetched_event=last_run_model.time_of_last_fetched_event,
-                        events_suspected_duplicates=last_run_model.events_suspected_duplicates,
-                        token_expired=True,
-                    )
-                    continue
-                elif e.res is not None and e.res.status_code == 423:
-                    demisto.debug(f"API access is blocked: {e}")
-                    time.sleep(client.fetch_interval)
-                    continue
-                elif e.res is not None and e.res.status_code == 429:
-                    demisto.debug(f"Call refused due to limit of api calls: {e}")
-                    time.sleep(client.fetch_interval)
-                    continue
-                else:
-                    demisto.info(f"ERROR: {e=}")
+                tmp_file_path = get_events_and_write_to_file_system(
+                    client,
+                    params,
+                )
+            except DemistoException as e:
+                try:
+                    if e.res is not None and e.res.status_code == 410:
+                        # In case the token expired
+                        # Update last run model with expired_token = True
+                        # for handling duplicates in next fetch
+                        demisto.debug(f"The token has expired: {e}")
+                        last_run_model = LastRun(
+                            start_date=str(start_date),
+                            token="none",
+                            time_of_last_fetched_event=last_run_model.time_of_last_fetched_event,
+                            events_suspected_duplicates=last_run_model.events_suspected_duplicates,
+                            token_expired=True,
+                        )
+                        continue
+                    elif e.res is not None and e.res.status_code == 423:
+                        demisto.debug(f"API access is blocked: {e}")
+                        time.sleep(client.fetch_interval)
+                        continue
+                    elif e.res is not None and e.res.status_code == 429:
+                        demisto.debug(f"Call refused due to limit of api calls: {e}")
+                        time.sleep(client.fetch_interval)
+                        continue
+                    else:
+                        demisto.info(f"ERROR: {e=}")
+                        raise e
+                except Exception as err:
+                    demisto.debug(f"ERROR: {e=} after the error: {err}")
                     raise e
             except Exception as err:
-                demisto.debug(f"ERROR: {e=} after the error: {err}")
-                raise e
-        except Exception as err:
-            raise err
+                raise err
 
-        status, new_token = get_status_and_token_from_file(tmp_file_path)
+            status, new_token = get_status_and_token_from_file(tmp_file_path)
 
-        # If status is "abort", deletes the tmp file
-        # and continue the loop to fetch with the same parameters.
-        if status == STATUS_ABORT:
-            tmp_file_path.unlink()
-            continue
+            # If status is "abort", deletes the tmp file
+            # and continue the loop to fetch with the same parameters.
+            if status == STATUS_ABORT:
+                tmp_file_path.unlink()
+                continue
 
-        (
-            time_of_last_fetched_event,
-            new_events_suspected_duplicates,
-            handling_duplicates,
-        ) = extract_logs_and_push_to_XSIAM(last_run_model, tmp_file_path, token_expired)
-
+            (
+                time_of_last_fetched_event,
+                new_events_suspected_duplicates,
+                handling_duplicates,
+            ) = extract_logs_and_push_to_XSIAM(last_run_model, tmp_file_path, token_expired)
+        except Exception as e:
+            if tmp_file_path.exists():
+                tmp_file_path.unlink()
+            else:
+                try:
+                    tmp_file_path.unlink()
+                except Exception:
+                    demisto.debug("No file to unlink")
+            raise e
         # Removes the tmp file
         tmp_file_path.unlink()
 
@@ -885,13 +893,13 @@ def main() -> None:  # pragma: no cover
         if command == "test-module":
             return_results(test_module(client, fetch_interval))
         if command == "long-running-execution":
-            integration_context = get_integration_context()
-            demisto.debug(f"{integration_context=}")
+            # integration_context = get_integration_context()
+            # demisto.debug(f"{integration_context=}")
             demisto.debug("Starting long running execution")
-            set_integration_context({})
-            demisto.debug("The integration context has been reset")
-            time.sleep(300)
-            # perform_long_running_loop(client)
+            # set_integration_context({})
+            # demisto.debug("The integration context has been reset")
+            # time.sleep(300)
+            perform_long_running_loop(client)
         else:
             raise NotImplementedError(f"Command {command} is not implemented.")
 
