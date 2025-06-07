@@ -238,7 +238,7 @@ def send_events_to_xsiam_test(events, vendor, product, data_format=None, url_key
                          chunk_size=XSIAM_EVENT_CHUNK_SIZE, should_update_health_module=True,
                          add_proxy_to_request=False, multiple_threads=False):
 
-    return send_data_to_xsiam(
+    return send_data_to_xsiam_test(
         events,
         vendor,
         product,
