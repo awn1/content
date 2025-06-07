@@ -229,6 +229,7 @@ def send_data_to_xsiam_test(data, vendor, product, data_format=None, url_key='ur
         data_size += size
         send_events(chunk)
 
+    demisto.debug(f"Sending chunk of {size} events to XSIAM")
     if should_update_health_module:
         demisto.updateModuleHealth({f'{data_type}Pulled': data_size})
     return
