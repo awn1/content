@@ -895,13 +895,13 @@ def main() -> None:  # pragma: no cover
         if command == "test-module":
             return_results(test_module(client, fetch_interval))
         if command == "long-running-execution":
-            # integration_context = get_integration_context()
-            # demisto.debug(f"{integration_context=}")
+            integration_context = get_integration_context()
+            demisto.debug(f"{integration_context=}")
             demisto.debug("Starting long running execution")
-            # set_integration_context({})
-            # demisto.debug("The integration context has been reset")
-            # time.sleep(300)
-            perform_long_running_loop(client)
+            set_integration_context({})
+            demisto.debug("The integration context has been reset")
+            time.sleep(1200)
+            # perform_long_running_loop(client)
         else:
             raise NotImplementedError(f"Command {command} is not implemented.")
 
