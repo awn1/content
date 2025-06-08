@@ -224,6 +224,7 @@ def send_data_to_xsiam_test(data, vendor, product, data_format=None, url_key='ur
                                     zipped_data=zipped_data, is_json_response=True, data_type=data_type)
 
     demisto.info("Sending events to xsiam with a single thread.")
+    data = data.split("\n")
     compressor = XSIAMCompressedChunkDeliver(data)
     for chunk, size in compressor.get_compressed_chunks():
         data_size += size
