@@ -111,3 +111,6 @@ outputs:
   description: The details of the linked incident.
   type: string
 autoUpdateDockerImage: false
+supportedModules:
+- C1
+- C3
