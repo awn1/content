@@ -22,8 +22,8 @@ VENDOR = "symantec"
 PRODUCT = "swg"
 DEFAULT_FETCH_SLEEP = 30
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-MAX_CHUNK_SIZE_TO_READ = 1024 * 1024 * 150  # 150 MB
-MAX_CHUNK_SIZE_TO_WRITE = 200 * (10**6)  # ~200 MB
+MAX_CHUNK_SIZE_TO_READ = 1024 * 1024 * 600  # 150 MB
+MAX_CHUNK_SIZE_TO_WRITE = 600 * (10**6)  # ~200 MB
 TEST_MODULE_READ_CHUNK_SIZE = 2000  # 2 KB
 STATUS_DONE = "done"
 STATUS_MORE = "more"
@@ -448,6 +448,9 @@ def extract_logs_and_push_to_XSIAM(
 
     # Extracts logs from the zip file downloaded from the API, parses the events,
     # sends them to XSIAM in batches if any events exist.
+    data_size = 0
+    total_events_count = 0
+    start_send_all_events = time.time()
     for part_logs in extract_logs_from_zip_file(tmp_file_path):
         try:
             # Parse the events
@@ -467,17 +470,32 @@ def extract_logs_and_push_to_XSIAM(
 
         try:
             if events:
+                start_send = time.time()
+                total_events_count += len(events)
                 # Send events to XSIAM in batches
-                send_events_to_xsiam(
+                futures = send_events_to_xsiam(
                     events,
                     VENDOR,
                     PRODUCT,
-                    chunk_size=XSIAM_EVENT_CHUNK_SIZE_LIMIT // 2,
+                    chunk_size=XSIAM_EVENT_CHUNK_SIZE_LIMIT,
+                    multiple_threads=True
                 )
                 demisto.debug(f"len of the events is: {len(events)}")
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        data_size += future.result()
+                    except Exception as e:
+                        demisto.info(f"Got an error when executing send_events_to_xsiam: {e}")
+                end_send = time.time() - start_send
+                demisto.info(f"Sending events to XSIAM took {end_send} seconds")
         except Exception as e:
             demisto.info(f"Failed to send events to XSOAR. Error: {e}")
             raise e
+    end_send_all_events = time.time() - start_send_all_events
+    demisto.info(
+        f"Done sending {data_size} events to xsiam, took {end_send_all_events} seconds. "
+        f"sent {total_events_count} events to xsiam in total during this interval."
+    )
 
     return (
         time_of_last_fetched_event,
@@ -669,6 +687,9 @@ def main() -> None:  # pragma: no cover
             return_results(test_module(client, fetch_interval))
         if command == "long-running-execution":
             demisto.debug("Starting long running execution")
+            # set_integration_context({})
+            # demisto.debug("Long-running execution context initialized")
+            # time.sleep(180)
             perform_long_running_loop(client)
         else:
             raise NotImplementedError(f"Command {command} is not implemented.")
