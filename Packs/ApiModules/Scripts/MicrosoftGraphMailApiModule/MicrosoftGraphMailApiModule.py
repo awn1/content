@@ -288,12 +288,15 @@ class MsGraphMailBaseClient(MicrosoftClient):
         attachments = self.http_request(
             "Get", f"users/{user_id}/messages/{message_id}/attachments", overwrite_rate_limit_retry=overwrite_rate_limit_retry
         ).get("value", [])
+        demisto.debug(f"[TEST] - Got {len(attachments)} attachments")
 
         for attachment in attachments:
+            demisto.debug(f"[TEST] - {attachment=}")
             attachment_type = attachment.get("@odata.type", "")
             attachment_content_id = attachment.get("contentId")
             attachment_is_inline = attachment.get("isInline")
             attachment_name = attachment.get("name", "untitled_attachment")
+            demisto.debug(f"[TEST] - first {attachment_type=}, {attachment_name=}")
             if attachment_is_inline and not self.legacy_name and attachment_content_id and attachment_content_id != "None":
                 attachment_name = f"{attachment_content_id}-attachmentName-{attachment_name}"
             if not attachment_name.isascii():
@@ -303,6 +306,7 @@ class MsGraphMailBaseClient(MicrosoftClient):
                 except Exception as e:
                     demisto.debug(f"Could not decode the {attachment_name=}: error: {e}")
 
+            demisto.debug(f"[TEST] - second {attachment_type=}, {attachment_name=}")
             if attachment_type == self.FILE_ATTACHMENT:
                 try:
                     attachment_content = b64_decode(attachment.get("contentBytes", ""))
@@ -315,6 +319,7 @@ class MsGraphMailBaseClient(MicrosoftClient):
                 attachment_name = f"{attachment_name}.eml"
             else:
                 # skip attachments that are not of the previous types (type referenceAttachment)
+                demisto.debug(f"[TEST] - Skipping uploading attachment for {attachment_name=}")
                 continue
             # upload the item/file attachment to War Room
             demisto.debug(f"Uploading attachment file: {attachment_name=}, {attachment_content=}")
