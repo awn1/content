@@ -973,7 +973,7 @@ def get_server_info_command(integration_context):
 
     server_info = edit_server_info(server_info)
     metadata = (
-        "**In case the default/api_roots URL is incorrect, you can override it by setting"
+        "**In case the default/api_roots URL is incorrect, you can override it by setting "
         '"TAXII2 Service URL Address" field in the integration configuration**\n\n'
     )
     hr = tableToMarkdown("Server Info", server_info, metadata=metadata)
