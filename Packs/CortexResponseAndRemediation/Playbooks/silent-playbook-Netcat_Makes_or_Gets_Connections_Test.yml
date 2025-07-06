@@ -152,7 +152,8 @@ tasks:
           transformers:
           - operator: uniq
     separatecontext: false
-    skipunavailable: false
+    skipunavailable: true
+    continueonerror: true
     task:
       brand: ''
       description: Checks the specified IP address against the AbuseIP database.
