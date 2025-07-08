@@ -14,7 +14,7 @@ configuration:
   section: Connect
   required: false
 - name: integrationReliability
-  additionalinfo: Reliability of the source providing the intelligence data.
+  additionalinfo: Reliability of the source providing the intelligence data
   defaultvalue: C - Fairly reliable
   display: Source Reliability
   options:
