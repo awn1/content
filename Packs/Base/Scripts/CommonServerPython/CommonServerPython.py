@@ -11354,12 +11354,15 @@ def polling_function(name, interval=30, timeout=600, poll_message='Fetching Resu
                 **kwargs: additional keyword arguments to the command function.
             """
             if not requires_polling_arg or argToBoolean(args.get(polling_arg_name, False)):
+                demisto.debug(f"Poll function running {name} with args: {args}")
                 ScheduledCommand.raise_error_if_not_supported()
                 poll_result = func(args, *arguments, **kwargs)
+                demisto.debug(f"Polling result: {poll_result}")
 
                 should_poll = poll_result.continue_to_poll if isinstance(poll_result.continue_to_poll, bool) \
                     else poll_result.continue_to_poll()
                 if not should_poll:
+                    demisto.debug("Stopping polling")
                     return poll_result.response
 
                 readable_output = poll_message if not args.get('hide_polling_output') else None
@@ -11369,8 +11372,10 @@ def polling_function(name, interval=30, timeout=600, poll_message='Fetching Resu
                 poll_response = poll_result.partial_result or CommandResults(readable_output=readable_output)
                 poll_response.scheduled_command = ScheduledCommand(command=name, next_run_in_seconds=interval,
                                                                    args=poll_args, timeout_in_seconds=timeout)
+                demisto.debug(f"Created a ScheduledCommand with args: {poll_args} for function name {name}")
                 return poll_response
             else:
+                demisto.debug(f"Else statement of poll function running {name} with args: {args}")
                 return func(args, *arguments, **kwargs).response
 
         return inner

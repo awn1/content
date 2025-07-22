@@ -5,7 +5,6 @@ from typing import Any
 import demistomock as demisto
 from CommonServerPython import *
 
-
 """ CONSTANTS """
 
 BRAND_CORE_IR = "Cortex Core - IR"
@@ -59,7 +58,7 @@ class Command:
 
         return CommandResults(readable_output=f"Error for {self}\n{human_readable}", entry_type=EntryType.ERROR)
 
-    def execute(self) -> tuple[list[dict], list[CommandResults]]:
+    def execute(self):
         """
         Executes the specified command with given arguments, handles any errors, and parses the execution results.
 
@@ -70,7 +69,7 @@ class Command:
         Returns:
             tuple[list[dict], list[CommandResults]]: A tuple of entry context dictionaries and human-readable CommandResults.
         """
-        demisto.debug(f"Starting to execute command: {self}.")
+        demisto.debug(f"Starting to execute command: {self.name}, with arguments: {self.args}.")
         execution_results = demisto.executeCommand(self.name, self.args)
 
         if not execution_results:
@@ -83,16 +82,27 @@ class Command:
         readable_command_results: list[CommandResults] = []
 
         demisto.debug(f"Parsing execution response of command: {self}.")
+        demisto.debug(f"{len(execution_results)} Execution response's. Raw: {execution_results}")
 
+        continue_to_poll = False
         for result in execution_results:
             if is_error(result):
+                demisto.debug(f"Got error response from command: {self}")
                 readable_command_results.append(self.prepare_human_readable(get_error(result), is_error=True))
                 continue
 
+            metadata = result.get("Metadata", {})
+            if metadata.get("polling"):
+                demisto.debug(f"The response received is a PollResult from command: {self}")
+                demisto.debug(f"The PollResult is: {metadata.get('polling')}")
+                continue_to_poll = True
+
             if human_readable := result.get("HumanReadable"):
+                demisto.debug(f"Got human readable response from command: {self}")
                 readable_command_results.append(self.prepare_human_readable(human_readable))
 
             if entry_context_item := result.get("EntryContext"):
+                demisto.debug(f"Got entry context from command: {self}")
                 if isinstance(entry_context_item, list):
                     entry_context.extend(entry_context_item)
                 else:
@@ -100,7 +110,7 @@ class Command:
 
         demisto.debug(f"Finished parsing execution response of command: {self}.")
 
-        return entry_context, readable_command_results
+        return entry_context, readable_command_results, continue_to_poll
 
     def execute_polling(self) -> CommandResults:
         """
@@ -237,7 +247,7 @@ def get_connected_xdr_endpoints(
     return connected_endpoints
 
 
-def get_endpoints_to_quarantine_with_xdr(
+def get_endpoints_to_quarantine_with_xdr(first_time,
     command_prefix: str,
     endpoint_ids: list,
     file_hash: str,
@@ -264,6 +274,8 @@ def get_endpoints_to_quarantine_with_xdr(
     endpoint_ids = get_connected_xdr_endpoints(
         command_prefix, endpoint_ids, file_hash, file_path, readable_context, context, verbose_command_results
     )
+    if not first_time:
+        return endpoint_ids, {}
     brand = BRAND_CORE_IR if command_prefix == CORE_COMMAND_PREFIX else BRAND_XDR_IR
 
     status_commands = {}
@@ -284,14 +296,20 @@ def get_endpoints_to_quarantine_with_xdr(
         for endpoint_id in endpoint_ids
     ]
 
+    demisto.debug(f"status_commands: {status_commands}")
+
     endpoints_to_quarantine = []
     for e_id, command in status_commands.items():
+        demisto.debug(f"Checking quarantine status for endpoint {e_id} with command: {command}")
         response = command.execute()
+        demisto.debug(f"response for getting the status: {response}")
         verbose_command_results.append(response[1])  # type: ignore
         quarantine_status = list(response[0][0].values())[0].get("status")
+        demisto.debug(f"quarantine_status: {quarantine_status}")
         if quarantine_status:
             message = "Already quarantined."
             readable_context.append({"endpoint_id": e_id, "message": message})
+            demisto.debug(f"update message for endpoint {e_id}: {message}")
             context.append(
                 {
                     "file_hash": file_hash,
@@ -303,11 +321,12 @@ def get_endpoints_to_quarantine_with_xdr(
                 }
             )
         else:
+            demisto.debug(f"endpoint {e_id} is not already quarantined")
             endpoints_to_quarantine.append(e_id)
     return endpoints_to_quarantine, status_commands
 
 
-def xdr_quarantine_file(
+def xdr_quarantine_file(args,
     command_prefix: str,
     endpoint_ids: list,
     file_hash: str,
@@ -328,40 +347,119 @@ def xdr_quarantine_file(
         verbose_command_results (list[CommandResults]): List of CommandResults.
     """
     brand = BRAND_CORE_IR if command_prefix == CORE_COMMAND_PREFIX else BRAND_XDR_IR
-    endpoints_to_quarantine, status_commands = get_endpoints_to_quarantine_with_xdr(
+
+    first_time = True
+    if "action_id" in args:
+        first_time = False
+
+    endpoints_to_quarantine, status_commands = get_endpoints_to_quarantine_with_xdr(first_time,
         command_prefix, endpoint_ids, file_hash, file_path, readable_context, context, verbose_command_results
     )
 
-    quarantine_results = Command(
-        name="core-quarantine-files" if command_prefix == CORE_COMMAND_PREFIX else "xdr-file-quarantine",
-        args={
+    command_args = {
             "endpoint_id_list": endpoints_to_quarantine,
             "file_hash": file_hash,
             "file_path": file_path,
             "timeout_in_seconds": timeout,
-        },
+        }
+
+    if not first_time:
+        demisto.debug(f"We received an action_id. meaning this is not the first run.")
+        command_args["action_id"] = args["action_id"]
+    else:
+        demisto.debug(f"Did not receive an action_id. Running xdr-file-quarantine command for the first time.")
+
+    demisto.debug(f"command args: {command_args}")
+    quarantine_command = Command(
+        name="core-quarantine-files" if command_prefix == CORE_COMMAND_PREFIX else "xdr-file-quarantine",
+        args=command_args,
         brand=brand,
-    ).execute_polling()
-    verbose_command_results.append(quarantine_results)
-    outputs = quarantine_results.outputs or []
+    )
+
+    entry_context, readable_context, continue_to_poll = quarantine_command.execute()
+    demisto.debug(f"received entry_context: {entry_context}")
+    demisto.debug(f"received readable_context: {readable_context}")
+    if continue_to_poll:
+        demisto.debug(f"continue_to_poll is True. We need to continue to poll.")
+        first_dict = entry_context[0]
+        nested_dict = list(first_dict.values())[0]
+
+        # Now get the actionId from the nested dictionary
+        action_id = nested_dict['actionId']
+        demisto.debug(f"action_id is {action_id}.")
+        # We must include the original args for the next run
+        args_for_next_run = demisto.args()
+        args_for_next_run["action_id"] = action_id
+        args_for_next_run["polling"] = True,
+        demisto.debug(f"action_id is {action_id}.  we will continue to poll, with args: {args_for_next_run}")
+        context_output = {"action_id": action_id, "Status": "Pending"}
+        commit_output = CommandResults(
+            outputs=context_output, readable_output=tableToMarkdown("Commit Status:", context_output, removeNull=True)
+        )
+        return PollResult(
+            response=commit_output,
+            continue_to_poll=True,
+            args_for_next_run=args_for_next_run,
+            partial_result=CommandResults(readable_output="Quarantine action initiated. Waiting for completion...")
+        )
+
+
+    else: # Not the first time
+        demisto.debug(f"This is not the first run, Raw entry_context: {entry_context}")
+        demisto.debug(f"Raw readable_context: {readable_context}")
+        status_command = Command(
+            name=f"{command_prefix}-get-quarantine-status",
+            args={
+                "endpoint_id": endpoints_to_quarantine[0],
+                "file_hash": file_hash,
+                "file_path": file_path,
+            },
+            brand=brand,
+        )
+        # check the file's quarantine status after attempting to quarantine it
+        demisto.debug(f"Attempting to get quarantine status for endpoint {endpoints_to_quarantine[0]}")
+        _,response,_ = status_command.execute()
+        demisto.debug(f"Raw response: of final status command: {response}")
+
+
+        return PollResult(
+            response=response,
+            continue_to_poll=False,
+        )
+    # verbose_command_results.append(quarantine_results)
+
+
     message = ""
     for res in outputs:  # type: ignore
         quarantine_status = False
         e_id = res.get("endpoint_id")
         status = res.get("status")
+        demisto.debug(f"Quarantine status for endpoint {e_id} is {status}")
+
         if status == "COMPLETED_SUCCESSFULLY":
-            status_command = status_commands.get(e_id)
-            if status_command:
-                # check the file's quarantine status after attempting to quarantine it
-                response = status_command.execute()
-                verbose_command_results.append(response[1])  # type: ignore
-                val = list(response[0][0].values())[0]
-                quarantine_status = val.get("status")
-                if quarantine_status:
-                    message = "File successfully quarantined."
-                else:
-                    message = f"Failed to quarantine file. {val.get('error_description')}"
+            status_command = Command(
+                name=f"{command_prefix}-get-quarantine-status",
+                args={
+                    "endpoint_id": e_id,
+                    "file_hash": file_hash,
+                    "file_path": file_path,
+                },
+                brand=brand,
+            )
+            demisto.debug(f"Attempting to get quarantine status for endpoint {e_id}")
+            # check the file's quarantine status after attempting to quarantine it
+            response = status_command.execute()
+            verbose_command_results.append(response[1])  # type: ignore
+            val = list(response[0][0].values())[0]
+            quarantine_status = val.get("status")
+            if quarantine_status:
+                demisto.debug(f"File successfully quarantined for endpoint {e_id}")
+                message = "File successfully quarantined."
+            else:
+                demisto.debug(f"Failed to quarantine file for endpoint {e_id}")
+                message = f"Failed to quarantine file. {val.get('error_description')}"
         else:
+            demisto.debug(f"Failed to quarantine file for endpoint {e_id}")
             message = f"Failed to quarantine file. {res.get('error_description')}"
 
         if not message:
@@ -381,8 +479,12 @@ def xdr_quarantine_file(
 
 """ SCRIPT FUNCTION """
 
-
-def quarantine_file_script(args: dict[str, Any]) -> list[CommandResults]:
+@polling_function(
+    name="quarantine-file",
+    interval=60,
+    timeout=600,
+)
+def quarantine_file_script(args: dict[str, Any]) -> PollResult:
     """
     implements the !quarantine-file command:
      - Selects which integration to use.
@@ -400,6 +502,7 @@ def quarantine_file_script(args: dict[str, Any]) -> list[CommandResults]:
         DemistoException: If none of the quarantine_brands has an enabled integration instance.
     """
     demisto.debug(f"Parsing and validating script args: {args}.")
+
     endpoint_ids: list = argToList(args.get("endpoint_ids"))
     file_hash: str = args.get("file_hash", "")
     file_path: str = args.get("file_path", "")
@@ -438,11 +541,14 @@ def quarantine_file_script(args: dict[str, Any]) -> list[CommandResults]:
     integration_for_hash = INTEGRATION_FOR_SHA256 if hash_type == HASH_SHA256 else INTEGRATION_FOR_SHA1
     supported_brands = list(set(quarantine_brands) & set(integration_for_hash)) if quarantine_brands else integration_for_hash
     quarantine_brands = list(set(supported_brands) & set(enabled_brands))
+
     if not quarantine_brands:
         raise DemistoException(
             "Could not find enabled integrations for the requested hash type.\n"
             f"For hash_type {hash_type.upper()} please use {integration_for_hash}."
         )
+
+
     if hash_type == HASH_SHA1:
         # supported only by MDE
         Microsoft_atp_quarantine_file(
@@ -450,11 +556,15 @@ def quarantine_file_script(args: dict[str, Any]) -> list[CommandResults]:
         )
 
     elif hash_type == HASH_SHA256:  # noqa: SIM102
+        demisto.debug(f"hash type is {hash_type} so XDR or Core")
         # supported by Core or XDR
         command_prefix = CORE_COMMAND_PREFIX if BRAND_CORE_IR in quarantine_brands else XDR_COMMAND_PREFIX
-        xdr_quarantine_file(
+        poll_result = xdr_quarantine_file(args,
             command_prefix, endpoint_ids, file_hash, file_path, timeout, readable_context, context, verbose_command_results
         )
+
+        return poll_result
+
 
     summary_command_results = CommandResults(
         outputs_prefix="QuarantineFile",
@@ -478,12 +588,14 @@ def quarantine_file_script(args: dict[str, Any]) -> list[CommandResults]:
 
 
 def main():  # pragma: no cover
-    demisto.debug("Stating to run quarantine-file script.")
+    demisto.debug("Starting to run quarantine-file script.")
     try:
+        demisto.debug("Running quarantine-file script. with args: {}".format(demisto.args()))
         args = demisto.args()
+        args["polling"] = True
         command_results = quarantine_file_script(args)
+        demisto.debug(f"Finishing running quarantine-file script. Got context output")
         return_results(command_results)
-        demisto.debug(f"Finishing running quarantine-file script. Got context output: {command_results[0].outputs}.")
 
     except Exception as e:
         demisto.error(f"Encountered error during execution of quarantine-file script: {traceback.format_exc()}.")

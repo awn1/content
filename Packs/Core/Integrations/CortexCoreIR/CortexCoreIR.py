@@ -735,7 +735,6 @@ def polling_block_ip_status(args, client) -> PollResult:
         else:
             demisto.debug("Polling continue")
             return PollResult(
-                response=None,
                 partial_result=CommandResults(readable_output="Blocking in progress..."),
                 continue_to_poll=True,
                 args_for_next_run=args,

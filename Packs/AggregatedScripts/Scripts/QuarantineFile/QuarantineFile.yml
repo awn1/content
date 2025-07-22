@@ -32,6 +32,9 @@ args:
   - 'true'
   - 'false'
   defaultValue: 'false'
+- name: action_id
+  description: action ID to use in polling commands. (automatically filled by polling).
+  hidden: true
 comment: This script executes the 'quarantine-file' command on a specified file via the appropriate agent. This script is used to isolate files identified as suspicious.
 name: quarantine-file
 outputs:
@@ -57,7 +60,8 @@ script: '-'
 timeout: '0'
 type: python
 subtype: python3
-dockerimage: demisto/python3:3.12.11.4095827
+dockerimage: demisto/python3:3.11.10.113941
 fromversion: 6.10.0
+polling: true
 tests:
 - No tests (auto formatted)
