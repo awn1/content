@@ -56,6 +56,8 @@ class ModuleManager:
         self._enabled_brands = {
             module.get("brand") for module in self.modules_context.values() if module.get("state") == "active"
         }
+        demisto.debug(f"Enabled brands: {self._enabled_brands}")
+        demisto.debug(f"Brands to run: {self._brands_to_run}")
 
     def is_brand_in_brands_to_run(self, command: Command) -> bool:
         """
@@ -67,6 +69,7 @@ class ModuleManager:
         Returns:
             bool: True if the brand is in the list of brands to run, or if the list is empty; False otherwise.
         """
+        demisto.debug(f"Checking if {command.brand} is in {self._brands_to_run}")
         return command.brand in self._brands_to_run if self._brands_to_run else True
 
     def is_brand_available(self, command: Command) -> bool:
@@ -83,6 +86,9 @@ class ModuleManager:
             bool: True if the brand is in both the list of brands to run and the set of enabled brands;
                   False otherwise.
         """
+
+        ret = False if not self.is_brand_in_brands_to_run(command) else command.brand in self._enabled_brands
+        demisto.debug(f"Checking if {command.brand} is available and in {self._brands_to_run}. Result: {ret}")
         return False if not self.is_brand_in_brands_to_run(command) else command.brand in self._enabled_brands
 
 
@@ -120,7 +126,11 @@ class EndpointCommandRunner:
             return [], []
 
         raw_outputs = self.run_execute_command(command, args)
+        demisto.debug(f"raw outputs for command {command.name}: {raw_outputs}")
         entry_context, human_readable, readable_errors = self.get_command_results(command.name, raw_outputs, args)
+        demisto.debug(f"entry context for command {command.name}: {entry_context}")
+        demisto.debug(f"human readable for command {command.name}: {human_readable}")
+        demisto.debug(f"readable errors for command {command.name}: {readable_errors}")
 
         if not entry_context:
             return readable_errors, []
@@ -195,7 +205,7 @@ class EndpointCommandRunner:
         human_readable_outputs = []
         command_error_outputs = []
         demisto.debug(f'get_commands_outputs for command "{command}" with {len(results)} entry results')
-
+        demisto.debug(f'get_commands_outputs for command "{command}" with RAW response: {results}')
         for entry in results:
             if is_error(entry):
                 command_error_outputs.append(hr_to_command_results(command, args, get_error(entry), is_error=True))
@@ -245,6 +255,13 @@ def initialize_commands(module_manager: ModuleManager) -> tuple[EndpointCommandR
             name="core-get-endpoints",
             output_keys=["Endpoint", "Account"],
             args_mapping={"endpoint_id_list": "agent_id", "ip_list": "agent_ip", "hostname": "agent_hostname"},
+            output_mapping={},
+        ),
+        Command(
+            brand="Microsoft Defender Advanced Threat Protection",
+            name="endpoint",
+            output_keys=["Endpoint"],
+            args_mapping={"id": "agent_id", "ip": "agent_ip", "name": "agent_hostname"},
             output_mapping={},
         ),
         Command(
@@ -436,10 +453,14 @@ def create_endpoint(command_output: dict[str, Any], output_mapping: dict[str, st
         return {}
 
     endpoint = {}
+    demisto.debug(f"Iterating over {command_output} to create output response.")
     for key, value in command_output.items():
+        demisto.debug(f"Given Key: {key} and value: {value}")
         endpoint_key = mapped_key if (mapped_key := output_mapping.get(key)) else key
         endpoint[endpoint_key] = {"Value": value, "Source": source}
+        demisto.debug(f"Set endpoint[{endpoint_key}] to equal [Value]: {value}, [Source]: {source}")
 
+    demisto.debug(f"Created endpoint: {endpoint} given data source: {source}")
     return endpoint
 
 
@@ -645,6 +666,8 @@ def get_raw_endpoints(output_keys: list[str], raw_context: list[dict[str, Any]])
     """
     raw_endpoints = []
 
+    demisto.debug(f"Raw context: {raw_context}")
+
     for context in raw_context:
         # Convert each key's data to a list using to_list
         lists_of_objects = [to_list(get_outputs(key, context)) for key in output_keys]
@@ -656,6 +679,7 @@ def get_raw_endpoints(output_keys: list[str], raw_context: list[dict[str, Any]])
                 raw_endpoint.update(raw_data)
             raw_endpoints.append(raw_endpoint)
 
+    demisto.debug(f"Raw endpoints: {raw_endpoints}")
     return raw_endpoints
 
 
@@ -671,6 +695,7 @@ def create_endpoints(raw_endpoints: list[dict[str, Any]], output_mapping: dict |
         list[dict[str, Any]]: A list of endpoint dictionaries.
     """
     endpoints = []
+    demisto.debug(f"Creating endpoints dict from raw endpoints: {raw_endpoints}")
     for raw_endpoint in raw_endpoints:
         output_map = output_mapping(raw_endpoint) if callable(output_mapping) else output_mapping
         endpoints.append(create_endpoint(raw_endpoint, output_map, brand))
@@ -689,7 +714,7 @@ def entry_context_to_endpoints(command: Command, entry_context: list) -> list[di
     """
     raw_endpoints = get_raw_endpoints(command.output_keys, entry_context)
     endpoints = create_endpoints(raw_endpoints, command.output_mapping, command.brand)
-    demisto.debug(f"Returning {len(endpoints)} endpoints")
+    demisto.debug(f"Created {len(endpoints)} endpoints")
     return endpoints
 
 

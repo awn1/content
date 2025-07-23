@@ -1367,6 +1367,7 @@ class MsClient:
         Returns:
             dict. Machine's info
         """
+        demisto.debug(f"Filter request: {filter_req}")
         cmd_url = "/machines"
         params = {"$filter": filter_req} if filter_req else {}
 
@@ -5704,6 +5705,7 @@ def handle_machines(machines_response: dict) -> list[CommandResults]:
     headers = ["ID", "Hostname", "OS", "OSVersion", "IPAddress", "Status", "MACAddress", "Vendor"]
 
     machines_outputs = []
+    demisto.debug(f"Converting raw response to CommandResults list for {INTEGRATION_NAME} and {len(machines_response.get('value', []))} devices")
 
     for machine in machines_response.get("value", []):
         machine_data = get_machine_data(machine)
@@ -5774,6 +5776,7 @@ def endpoint_command(client: MsClient, args: dict) -> list[CommandResults]:
     ids = argToList(args.get("id", ""))
     validate_args_endpoint_command(hostnames, ips, ids)
     machines_response = client.get_machines(create_filter_for_endpoint_command(hostnames, ips, ids))
+    demisto.debug("Calling handle_machines function to convert raw response to CommandResults list")
 
     return handle_machines(machines_response)
 
