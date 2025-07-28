@@ -4,6 +4,8 @@ import json
 import logging
 import uuid
 import os
+from typing import Literal, TypedDict
+
 
 integrationContext = {}
 is_debug = False  # type: bool
