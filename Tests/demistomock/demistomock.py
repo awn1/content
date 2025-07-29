@@ -4,8 +4,107 @@ import json
 import logging
 import uuid
 import os
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, Any, Optional
 
+
+class FilePath(TypedDict):
+    id: str
+    path: str
+    name: str
+
+class InvestigationID(TypedDict):
+    id: str
+
+class CommandResultMetadata(TypedDict):
+    "brand": "Builtin",
+    "category": "",
+    "contents": "",
+    "contentsSize": 0,
+    "created": "2019-02-24T09:50:28.652202+02:00",
+    "cronView": False,
+    "endingDate": "0001-01-01T00:00:00Z",
+    "entryTask": None,
+    "errorSource": "",
+    "file": "",
+    "fileID": "",
+    "fileMetadata": None,
+    "format": "json",
+    "hasRole": False,
+    "id": "",
+    "instance": "Builtin",
+    "investigationId": "7ab2ac46-4142-4af8-8cbe-538efb4e63d6",
+    "modified": "0001-01-01T00:00:00Z",
+    "note": False,
+    "parentContent": '!getContext id="1"',
+    "parentEntryTruncated": False,
+    "parentId": "120@7ab2ac46-4142-4af8-8cbe-538efb4e63d6",
+    "pinned": False,
+    "playbookId": "",
+    "previousRoles": None,
+    "recurrent": False,
+    "reputationSize": 0,
+    "reputations": None,
+    "roles": None,
+    "scheduled": False,
+    "startDate": "0001-01-01T00:00:00Z",
+    "system": "",
+    "tags": None,
+    "tagsRaw": None,
+    "taskId": "",
+    "times": 0,
+    "timezoneOffset": 0,
+    "type": 0,
+    "user": "",
+    "version": 0,
+
+
+class CommandResult(TypedDict):
+    Brand: str
+    Category: Literal["Builtin", "TODO"]
+    Contents: Any
+    ContentsFormat: Literal['html', 'table', 'json', 'text', 'dbotCommandResponse', 'markdown']
+    EntryContext: Any
+    "Evidence": False,
+    "EvidenceID": "",
+    "File": "",
+    "FileID": "",
+    FileMetadata: CommandResultMetadata
+    HumanReadable: Optional[str]
+    "ID": "",
+    "IgnoreAutoExtract": False,
+    "ImportantEntryContext": None,
+    "Metadata": ,
+    "ModuleName": "InnerServicesModule",
+    "Note": False,
+    "ReadableContentsFormat": "",
+    "System": "",
+    "Tags": None,
+    Type: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 17, 19]
+    "Version": 0,
+
+
+class DemistoURLs(TypedDict):
+    evidenceBoard: str
+    investigation: str
+    relatedIncidents: str
+    server: str
+    warRoom: str
+    workPlan: str
+
+class CreatedIncidents(TypedDict):
+    """TODO: Need to add an example of what the incident should look like"""
+
+
+class SetContextStatus(TypedDict):
+    status: bool
+
+
+class SystemUser(TypedDict):
+    """TODO"""
+
+class DemistoVersion(TypedDict):
+    version: str
+    buildNumber: str
 
 integrationContext = {}
 is_debug = False  # type: bool
@@ -400,7 +499,7 @@ exampleUsers = [
         "Version": 0,
     }
 ]
-exampleDemistoUrls = {
+exampleDemistoUrls: DemistoURLs = {
     "evidenceBoard": "https://test-address:8443/#/EvidenceBoard/7ab2ac46-4142-4af8-8cbe-538efb4e63d6",
     "investigation": "https://test-address:8443/#/Details/7ab2ac46-4142-4af8-8cbe-538efb4e63d6",
     "relatedIncidents": "https://test-address:8443/#/Cluster/7ab2ac46-4142-4af8-8cbe-538efb4e63d6",
@@ -612,7 +711,7 @@ def debug(msg, *args):
     logging.getLogger().info(msg, *args)
 
 
-def getAllSupportedCommands():
+def getAllSupportedCommands():  # TODO
     """(Script only)
     Retrieves all available integration commands and scripts
 
@@ -664,7 +763,7 @@ def credentials(credentials):
     log("credentials: {}".format(credentials))  # noqa: UP032
 
 
-def getFilePath(id):
+def getFilePath(id) -> FilePath:
     """Retrieves file path and name, given file entry ID
 
     Args:
@@ -677,7 +776,7 @@ def getFilePath(id):
     return {"id": id, "path": "test/test.txt", "name": "test.txt"}
 
 
-def investigation():
+def investigation() -> InvestigationID:
     """Retrieves the ID of the investigation in which being run in
 
 
@@ -688,7 +787,7 @@ def investigation():
     return {"id": "1"}
 
 
-def executeCommand(command, args):
+def executeCommand(command, args) -> list[CommandResult]:
     """(Script only)
     Executes given integration command / script and arguments
 
@@ -708,7 +807,7 @@ def executeCommand(command, args):
     if commands.get(command):
         return commands.get(command)
 
-    return ""
+    return []
 
 
 def getParam(param):
@@ -797,7 +896,7 @@ def getIntegrationContextVersioned(refresh=False):
     return integrationContext
 
 
-def incidents(incidents=None):
+def incidents(incidents: Optional[list[CreatedIncidents]] = None):
     """In script, retrieves the `Incidents` list from the context
     In integration, used to return incidents to the server.
 
@@ -830,7 +929,7 @@ def incident():
     return incidents()[0]
 
 
-def setContext(contextPath, value):
+def setContext(contextPath, value) -> SetContextStatus:
     """(Script only)
     Sets given value in path in the context data
 
@@ -845,7 +944,7 @@ def setContext(contextPath, value):
     return {"status": True}
 
 
-def demistoUrls():
+def demistoUrls() -> DemistoURLs:
     """Retrieves the following URLs related to the incident.
         - evidenceBoard
         - investigation
@@ -864,7 +963,7 @@ def demistoUrls():
     return exampleDemistoUrls
 
 
-def getAutoFocusApiKey():
+def getAutoFocusApiKey() -> str:
     """Retrieves the AutoFocus API Key related to this Cortex XSOAR License.
     You can use this API Key in all AutoFocus integrations and Feeds.
     This command is not available on tenants.
@@ -959,7 +1058,7 @@ def directMessage(message, username=None, email=None, anyoneCanOpenIncidents=Non
     return ""
 
 
-def createIncidents(incidents, lastRun=None, userID=None):
+def createIncidents(incidents: list[CreatedIncidents], lastRun=None, userID=None):
     """(Integration only)
     Creates incident in long running execution
 
@@ -982,7 +1081,7 @@ def createIncidents(incidents, lastRun=None, userID=None):
     return []
 
 
-def findUser(username=None, email=None):
+def findUser(username=None, email=None) -> SystemUser:
     """(Integration only)
     Looks up for a user in the system
 
@@ -1015,7 +1114,7 @@ def handleEntitlementForUser(incidentID, guid, email, content, taskID=""):
     return {}
 
 
-def demistoVersion():
+def demistoVersion() -> DemistoVersion:
     """Retrieves server version and build number
 
     Returns:
@@ -1025,7 +1124,7 @@ def demistoVersion():
     return {"version": "5.5.0", "buildNumber": "12345"}
 
 
-def integrationInstance():
+def integrationInstance() -> str:
     """(Integration only)
     Retrieves the integration instance name in which ran in
 
