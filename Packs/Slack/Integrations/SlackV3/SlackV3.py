@@ -2907,7 +2907,9 @@ def init_globals(command_name: str = ""):
         SSL_CONTEXT = None
 
     BOT_TOKEN = demisto.params().get("bot_token", {}).get("password", "")
+    print(f"{BOT_TOKEN=}")
     APP_TOKEN = demisto.params().get("app_token", {}).get("password", "")
+    print(f"{APP_TOKEN=}")
     USER_TOKEN = demisto.params().get("user_token", {}).get("password", "")
     PROXIES = handle_proxy()
     PROXY_URL = PROXIES.get("http")  # aiohttp only supports http proxy
