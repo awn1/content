@@ -9,8 +9,13 @@
     "categories": [
         "IT Services"
     ],
-    "tags": [],
-    "useCases": [],
+    "tags": [
+        "IAM",
+        "Security"
+    ],
+    "useCases": [
+        "Identity and Access Management"
+    ],
     "keywords": [
         "EPV",
         "CyberArk",

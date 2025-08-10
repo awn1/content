@@ -9,8 +9,14 @@
     "categories": [
         "Forensics & Malware Analysis"
     ],
-    "tags": [],
-    "useCases": [],
+    "tags": [
+        "Email",
+        "Security"
+    ],
+    "useCases": [
+        "Network Security",
+        "Phishing"
+    ],
     "keywords": [
         "cyren",
         "phishing",
