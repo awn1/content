@@ -1,7 +1,6 @@
 from pytest_mock import MockerFixture
 from PANOSQueryLogs import main
 
-
 def test_main(mocker: MockerFixture):
     """
     Given:
