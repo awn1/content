@@ -34,6 +34,8 @@ type: python
 fromversion: 6.0.0
 tests:
 - No tests (auto formatted)
+marketplaces:
+- platform
 supportedModules:
 - agentix
 marketplaces:
