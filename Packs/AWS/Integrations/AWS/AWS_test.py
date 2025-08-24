@@ -1069,3 +1069,308 @@ def test_register_proxydome_header_adds_correct_header(mocker):
     header_function(mock_request)
 
     assert mock_request.headers["x-caller-id"] == "test-token-123"
+
+
+def test_aws_error_handler_handle_response_error_with_request_id(mocker):
+    """
+    Given: A response dict with error details including RequestId and HTTPStatusCode.
+    When: handle_response_error is called with the response.
+    Then: It should raise DemistoException with detailed error information.
+    """
+    from AWS import AWSErrorHandler
+
+    mocker.patch("AWS.demisto.command", return_value="test-command")
+    mocker.patch("AWS.demisto.args", return_value={"param1": "value1"})
+    mock_demisto_error = mocker.patch("AWS.demisto.error")
+
+    response = {"ResponseMetadata": {"RequestId": "test-request-123", "HTTPStatusCode": 500}}
+
+    with pytest.raises(DemistoException, match="AWS API Error occurred while executing: test-command"):
+        AWSErrorHandler.handle_response_error(response)
+
+    mock_demisto_error.assert_called_once()
+
+
+def test_aws_error_handler_handle_response_error_without_metadata(mocker):
+    """
+    Given: A response dict without ResponseMetadata.
+    When: handle_response_error is called with the response.
+    Then: It should raise DemistoException with N/A values for missing metadata.
+    """
+    from AWS import AWSErrorHandler
+
+    mocker.patch("AWS.demisto.command", return_value="test-command")
+    mocker.patch("AWS.demisto.args", return_value={})
+    mocker.patch("AWS.demisto.error")
+
+    response = {}
+
+    with pytest.raises(DemistoException) as exc_info:
+        AWSErrorHandler.handle_response_error(response)
+
+    assert "Request Id: N/A" in str(exc_info.value)
+    assert "HTTP Status Code: N/A" in str(exc_info.value)
+
+
+def test_aws_error_handler_handle_client_error_access_denied(mocker):
+    """
+    Given: A ClientError with AccessDenied error code.
+    When: handle_client_error is called with the error.
+    Then: It should call _handle_permission_error instead of raising exception.
+    """
+    from AWS import AWSErrorHandler
+    from botocore.exceptions import ClientError
+
+    mock_handle_permission_error = mocker.patch.object(AWSErrorHandler, "_handle_permission_error")
+
+    error_response = {
+        "Error": {"Code": "AccessDenied", "Message": "User is not authorized to perform action"},
+        "ResponseMetadata": {"HTTPStatusCode": 403},
+    }
+    client_error = ClientError(error_response, "TestOperation")
+
+    AWSErrorHandler.handle_client_error(client_error, "123456789")
+
+    mock_handle_permission_error.assert_called_once_with(
+        client_error, "AccessDenied", "User is not authorized to perform action", "123456789"
+    )
+
+
+def test_aws_error_handler_handle_client_error_unauthorized_operation(mocker):
+    """
+    Given: A ClientError with UnauthorizedOperation error code.
+    When: handle_client_error is called with the error.
+    Then: It should call _handle_permission_error for permission-related error.
+    """
+    from AWS import AWSErrorHandler
+    from botocore.exceptions import ClientError
+
+    mock_handle_permission_error = mocker.patch.object(AWSErrorHandler, "_handle_permission_error")
+
+    error_response = {
+        "Error": {"Code": "UnauthorizedOperation", "Message": "You are not authorized to perform this operation"},
+        "ResponseMetadata": {"HTTPStatusCode": 401},
+    }
+    client_error = ClientError(error_response, "TestOperation")
+
+    AWSErrorHandler.handle_client_error(client_error)
+
+    mock_handle_permission_error.assert_called_once()
+
+
+def test_aws_error_handler_handle_client_error_http_403(mocker):
+    """
+    Given: A ClientError with non-permission error code but 403 HTTP status.
+    When: handle_client_error is called with the error.
+    Then: It should call _handle_permission_error due to HTTP status code.
+    """
+    from AWS import AWSErrorHandler
+    from botocore.exceptions import ClientError
+
+    mock_handle_permission_error = mocker.patch.object(AWSErrorHandler, "_handle_permission_error")
+
+    error_response = {
+        "Error": {"Code": "SomeOtherError", "Message": "Some error message"},
+        "ResponseMetadata": {"HTTPStatusCode": 403},
+    }
+    client_error = ClientError(error_response, "TestOperation")
+
+    AWSErrorHandler.handle_client_error(client_error)
+
+    mock_handle_permission_error.assert_called_once()
+
+
+def test_aws_error_handler_handle_client_error_general_error(mocker):
+    """
+    Given: A ClientError with non-permission error code and non-403/401 status.
+    When: handle_client_error is called with the error.
+    Then: It should call _handle_general_error instead of permission handler.
+    """
+    from AWS import AWSErrorHandler
+    from botocore.exceptions import ClientError
+
+    mock_handle_general_error = mocker.patch.object(AWSErrorHandler, "_handle_general_error")
+
+    error_response = {
+        "Error": {"Code": "InvalidParameterValue", "Message": "Invalid parameter value"},
+        "ResponseMetadata": {"HTTPStatusCode": 400},
+    }
+    client_error = ClientError(error_response, "TestOperation")
+
+    AWSErrorHandler.handle_client_error(client_error)
+
+    mock_handle_general_error.assert_called_once_with(client_error, "InvalidParameterValue", "Invalid parameter value")
+
+
+def test_aws_error_handler_handle_permission_error_with_account_id(mocker):
+    """
+    Given: A permission error with provided account_id.
+    When: _handle_permission_error is called with account_id parameter.
+    Then: It should create error entry with provided account_id and call return_multiple_permissions_error.
+    """
+    from AWS import AWSErrorHandler
+    from botocore.exceptions import ClientError
+
+    mock_return_multiple_permissions_error = mocker.patch("AWS.return_multiple_permissions_error")
+    mocker.patch("AWS.demisto.info")
+    mocker.patch("AWS.demisto.debug")
+
+    error_response = {
+        "Error": {"Code": "AccessDenied", "Message": "User is not authorized to perform ec2:DescribeInstances"},
+        "ResponseMetadata": {"HTTPStatusCode": 403},
+    }
+    client_error = ClientError(error_response, "TestOperation")
+
+    AWSErrorHandler._handle_permission_error(
+        client_error, "AccessDenied", "User is not authorized to perform ec2:DescribeInstances", "123456789"
+    )
+
+    expected_error_entry = {
+        "account_id": "123456789",
+        "message": "User is not authorized to perform ec2:DescribeInstances",
+        "name": "unknown",
+    }
+    mock_return_multiple_permissions_error.assert_called_once_with([expected_error_entry])
+
+
+def test_aws_error_handler_handle_permission_error_without_account_id(mocker):
+    """
+    Given: A permission error without provided account_id.
+    When: _handle_permission_error is called without account_id parameter.
+    Then: It should get account_id from demisto.args() and use it in error entry.
+    """
+    from AWS import AWSErrorHandler
+    from botocore.exceptions import ClientError
+
+    mock_return_multiple_permissions_error = mocker.patch("AWS.return_multiple_permissions_error")
+    mocker.patch("AWS.demisto.args", return_value={"account_id": "123456789"})
+    mocker.patch("AWS.demisto.info")
+    mocker.patch("AWS.demisto.debug")
+
+    error_response = {"Error": {"Code": "AccessDenied", "Message": "Access denied"}, "ResponseMetadata": {"HTTPStatusCode": 403}}
+    client_error = ClientError(error_response, "TestOperation")
+
+    AWSErrorHandler._handle_permission_error(client_error, "AccessDenied", "Access denied", None)
+
+    expected_error_entry = {"account_id": "123456789", "message": "Access denied", "name": "unknown"}
+    mock_return_multiple_permissions_error.assert_called_once_with([expected_error_entry])
+
+
+def test_aws_error_handler_handle_permission_error_no_account_in_args(mocker):
+    """
+    Given: A permission error without account_id in args or parameter.
+    When: _handle_permission_error is called without account_id.
+    Then: It should use 'unknown' as account_id in error entry.
+    """
+    from AWS import AWSErrorHandler
+    from botocore.exceptions import ClientError
+
+    mock_return_multiple_permissions_error = mocker.patch("AWS.return_multiple_permissions_error")
+    mocker.patch("AWS.demisto.args", return_value={})
+    mocker.patch("AWS.demisto.info")
+    mocker.patch("AWS.demisto.debug")
+
+    error_response = {"Error": {"Code": "AccessDenied", "Message": "Access denied"}, "ResponseMetadata": {"HTTPStatusCode": 403}}
+    client_error = ClientError(error_response, "TestOperation")
+
+    AWSErrorHandler._handle_permission_error(client_error, "AccessDenied", "Access denied", None)
+
+    expected_error_entry = {"account_id": "unknown", "message": "Access denied", "name": "unknown"}
+    mock_return_multiple_permissions_error.assert_called_once_with([expected_error_entry])
+
+
+def test_aws_error_handler_remove_encoded_authorization_message_with_encoded_message():
+    """
+    Given: An error message containing encoded authorization failure message.
+    When: remove_encoded_authorization_message is called with the message.
+    Then: It should return the message truncated before the encoded authorization part.
+    """
+    from AWS import AWSErrorHandler
+
+    original_message = "Access denied. Encoded authorization failure message: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+    expected_result = "Access denied. "
+
+    result = AWSErrorHandler.remove_encoded_authorization_message(original_message)
+    assert result == expected_result
+
+
+def test_aws_error_handler_remove_encoded_authorization_message_case_insensitive():
+    """
+    Given: An error message with uppercase encoded authorization failure message.
+    When: remove_encoded_authorization_message is called with the message.
+    Then: It should handle case-insensitive matching and truncate correctly.
+    """
+    from AWS import AWSErrorHandler
+
+    original_message = "Access denied. ENCODED AUTHORIZATION FAILURE MESSAGE: someEncodedData"
+    expected_result = "Access denied. "
+
+    result = AWSErrorHandler.remove_encoded_authorization_message(original_message)
+    assert result == expected_result
+
+
+def test_aws_error_handler_remove_encoded_authorization_message_no_encoded_message():
+    """
+    Given: An error message without encoded authorization failure message.
+    When: remove_encoded_authorization_message is called with the message.
+    Then: It should return the original message unchanged.
+    """
+    from AWS import AWSErrorHandler
+
+    original_message = "Access denied due to insufficient permissions"
+    result = AWSErrorHandler.remove_encoded_authorization_message(original_message)
+    assert result == original_message
+
+
+def test_aws_error_handler_handle_general_error_with_full_details(mocker):
+    """
+    Given: A ClientError with complete error response including RequestId.
+    When: _handle_general_error is called with the error.
+    Then: It should raise DemistoException with all error details formatted.
+    """
+    from AWS import AWSErrorHandler
+    from botocore.exceptions import ClientError
+
+    mocker.patch("AWS.demisto.command", return_value="test-command")
+    mocker.patch("AWS.demisto.args", return_value={"param": "value"})
+    mocker.patch("AWS.demisto.error")
+
+    error_response = {
+        "Error": {"Code": "InvalidParameterValue", "Message": "The parameter value is invalid"},
+        "ResponseMetadata": {"HTTPStatusCode": 400, "RequestId": "req-123456"},
+    }
+    client_error = ClientError(error_response, "TestOperation")
+
+    with pytest.raises(DemistoException) as exc_info:
+        AWSErrorHandler._handle_general_error(client_error, "InvalidParameterValue", "The parameter value is invalid")
+
+    error_message = str(exc_info.value)
+    assert "AWS API Error occurred while executing: test-command" in error_message
+    assert "Error Code: InvalidParameterValue" in error_message
+    assert "Error Message: The parameter value is invalid" in error_message
+    assert "HTTP Status Code: 400" in error_message
+    assert "Request ID: req-123456" in error_message
+
+
+def test_aws_error_handler_handle_general_error_missing_metadata(mocker):
+    """
+    Given: A ClientError with missing ResponseMetadata.
+    When: _handle_general_error is called with the error.
+    Then: It should raise DemistoException with N/A values for missing metadata.
+    """
+    from AWS import AWSErrorHandler
+    from botocore.exceptions import ClientError
+
+    mocker.patch("AWS.demisto.command", return_value="test-command")
+    mocker.patch("AWS.demisto.args", return_value={})
+    mocker.patch("AWS.demisto.error")
+
+    error_response = {"Error": {"Code": "SomeError", "Message": "Some error message"}}
+    client_error = ClientError(error_response, "TestOperation")
+
+    with pytest.raises(DemistoException) as exc_info:
+        AWSErrorHandler._handle_general_error(client_error, "SomeError", "Some error message")
+
+    error_message = str(exc_info.value)
+    assert "HTTP Status Code: N/A" in error_message
+    assert "Request ID: N/A" in error_message
