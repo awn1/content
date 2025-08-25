@@ -60,10 +60,10 @@ class CommandResultMetadata(TypedDict):
 
 class CommandResult(TypedDict):
     Brand: str
-    Category: Literal["Builtin", "TODO"]
+    Category: Literal["Builtin", "artifact", "chat", "procedural"]
     Contents: Any
     ContentsFormat: Literal['html', 'table', 'json', 'text', 'dbotCommandResponse', 'markdown']
-    EntryContext: Any
+    EntryContext: dict[str, Any]
     "Evidence": False,
     "EvidenceID": "",
     "File": "",
@@ -76,11 +76,12 @@ class CommandResult(TypedDict):
     "Metadata": ,
     "ModuleName": "InnerServicesModule",
     "Note": False,
-    "ReadableContentsFormat": "",
-    "System": "",
-    "Tags": None,
+    ReadableContentsFormat: str
+    System: str
+    Tags: Optional[list[str]]
     Type: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 17, 19]
     "Version": 0,
+
 
 
 class DemistoURLs(TypedDict):
@@ -90,6 +91,7 @@ class DemistoURLs(TypedDict):
     server: str
     warRoom: str
     workPlan: str
+
 
 class CreatedIncidents(TypedDict):
     """TODO: Need to add an example of what the incident should look like"""
@@ -105,6 +107,37 @@ class SystemUser(TypedDict):
 class DemistoVersion(TypedDict):
     version: str
     buildNumber: str
+
+class Argument(TypedDict):
+    """TODO"""
+    
+class Output(TypedDict):
+    """TODO"""
+
+class Command(TypedDict):
+    polling: bool
+# string name
+# string prettyName" yaml:",omitempty"`
+# bool   deprecated" yaml:",omitempty"`
+# []Argument          `json:"arguments"`
+# []Output            `json:"outputs" yaml:",omitempty"`
+# string description" yaml:",omitempty"`
+# bool   execution" yaml:",omitempty"`
+# bool   cartesian" yaml:",omitempty"` // mark that command needs cartesian product of arrays
+# bool   hidden" yaml:",omitempty"`    // indicates commands should not be exposed to client
+# bool   docsHidden" yaml:"-"`
+# bool   sensitive" yaml:",omitempty"`
+# int    timeout" yaml:",omitempty"`
+# bool   permitted" yaml:"-"`
+# bool   indicatorAction" yaml:"-"`
+# string definitionId" yaml:"-"`
+# bool   gomAction" yaml:"-"`
+# bool   polling" yaml:",omitempty"`
+# bool   quickAction" yaml:",omitempty"`
+# []string            `json:"compliantPolicies" yaml:",omitempty"`
+# bool   allowInternalExec,omitempty" yaml:",omitempty"`
+
+
 
 integrationContext = {}
 is_debug = False  # type: bool
@@ -711,7 +744,7 @@ def debug(msg, *args):
     logging.getLogger().info(msg, *args)
 
 
-def getAllSupportedCommands():  # TODO
+def getAllSupportedCommands() -> dict[str, list[Command]]:
     """(Script only)
     Retrieves all available integration commands and scripts
 
@@ -722,7 +755,7 @@ def getAllSupportedCommands():  # TODO
     return {}
 
 
-def results(results):
+def results(results):  # TODO
     """Outputs entries to the war-room
 
     Args:
