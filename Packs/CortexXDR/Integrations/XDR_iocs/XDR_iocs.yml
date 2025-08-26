@@ -261,3 +261,4 @@ script:
 tests:
 - Cortex XDR - IOC - Test
 fromversion: 5.5.0
+ 
