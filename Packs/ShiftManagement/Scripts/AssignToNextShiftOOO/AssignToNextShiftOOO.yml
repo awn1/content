@@ -22,4 +22,3 @@ dockerimage: demisto/python3:3.12.8.3296088
 tests:
 - test_AssignToNextShiftOOO
 fromversion: 5.0.0
- 

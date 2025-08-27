@@ -2,6 +2,7 @@ import random
 
 from CommonServerPython import *
 
+a = 5
 
 def main():
     # check if we have any users on call to assign to

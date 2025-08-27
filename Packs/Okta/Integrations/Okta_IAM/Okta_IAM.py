@@ -6,6 +6,7 @@ from CommonServerPython import *  # noqa: F401
 urllib3.disable_warnings()
 
 """CONSTANTS"""
+a = 5
 
 BATCH_SIZE = 2000
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
