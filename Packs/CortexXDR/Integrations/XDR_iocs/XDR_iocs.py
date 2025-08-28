@@ -14,6 +14,7 @@ from urllib3 import disable_warnings
 
 from CommonServerUserPython import *
 a = 5
+demisto.debug(a)
 disable_warnings()
 DEMISTO_TIME_FORMAT: str = "%Y-%m-%dT%H:%M:%SZ"
 MAX_INDICATORS_TO_SYNC: int = 40000
