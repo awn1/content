@@ -704,6 +704,7 @@ class EWSClient:
         :param message: Message to be sent
         """
         account = self.get_account()
+        demisto.debug(f"[test] account={account}")
         message.account = account
         message.send_and_save()
 

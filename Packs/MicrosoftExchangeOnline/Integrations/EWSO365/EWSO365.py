@@ -1115,6 +1115,7 @@ def send_email(
 
     # Basic validation - we allow pretty much everything but you have to have at least a recipient
     # We allow messages without subject and also without body
+    demisto.debug(f"[test] Preparing to send email with {to=}, {cc=}, {bcc=}")
     if not to and not cc and not bcc:
         return_error("You must have at least one recipient")
 
@@ -1159,6 +1160,7 @@ def send_email(
             reply_to,
             importance,
         )
+    demisto.debug(f"[test] Created message with {message.to_recipients=}, {message.cc_recipients=}, {message.bcc_recipients=}")
 
     client.send_email(message)
 
