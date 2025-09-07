@@ -14,7 +14,7 @@ def main():
         for brand in brands:
             return_results(send_notification_by_brand(brand, args))
     except Exception as ex:
-        return_error(f"Failed to execute SendNotificationAgetnix. Error: {str(ex)}")
+        return_error(f"Failed to execute SendNotificationAgentix. Error: {str(ex)}")
 
 
 """ ENTRY POINT """

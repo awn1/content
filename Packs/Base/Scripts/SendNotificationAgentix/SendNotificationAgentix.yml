@@ -17,17 +17,22 @@ comment: Sends a notification message to a user, group, or channel Supports send
 commonfields:
   id: SendNotificationAgentix
   version: -1
-isInternal: true
+name: SendNotificationAgentix
+outputs: []
+# isInternal: true
 script: "-"
 subtype: python3
-hidden: true
+# hidden: true
 timeout: "0"
 type: python
 dockerimage: demisto/python3:3.12.8.3720084
+dependson:
+  must:
+  - send-notification
 fromversion: 5.0.0
 tests:
-- No tests (auto formatted)
+  - No tests (auto formatted)
 marketplaces:
-- platform
+  - platform
 supportedModules:
-- agentix
+  - agentix
